@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useEffect, useState } from 'react'
 import Link from "next/link"
 import { ChevronRight, Menu, ShoppingCart, X } from "lucide-react"
@@ -29,8 +31,6 @@ export default function Navbar() {
 
   return (
     <nav className={`z-50 transition-all duration-300 text-white ${sticky ? 'sticky top-0 left-0 right-0 bg-[#0A0A0A]/80 backdrop-blur-md' : 'relative bg-transparent'}`}>
-      {/* Decorative lights/images */}
-      <Image src={'/images/Light-852x785.svg'} width={852} height={785} alt="light effect" className="-z-1 absolute top-0 right-0 " />
       <div className="container z-10 mx-auto px-2 md:px-10 py-4 flex justify-between items-center">
         {/* Desktop Nav */}
         <ul className="hidden md:flex items-center space-x-9">

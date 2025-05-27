@@ -14,9 +14,9 @@ const partners: Partner[] = [
 ]
 export default function Partners() {
   return (
-    <section id="#partner" className='container mx-auto relative  w-full overflow-hidden'>
-      <div className="mt-[150px] lg:mt-[400px] 2xl:mt-20 py-20">
-        <div className="mx-auto ">
+    <section id="#partner" className='z-10 py-20 relative  w-full overflow-hidden'>
+      <main className='container max-w-6xl mx-auto 2xl:mt-20 mt-[150px] lg:mt-[400px]'>
+        <div className="">
           <h2 className="text-[#F9F9F9] text-center text-2xl md:text-[2rem] font-bold -tracking-[3%] mb-16">Our Trusted Partners</h2>
           <div className="flex items-center space-x-9">
           {[...partners, ...partners].map((partner, index) => (
@@ -26,7 +26,7 @@ export default function Partners() {
           ))}
           </div>
         </div>
-      </div>
+      </main>
     </section>
   )
 }

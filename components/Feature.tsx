@@ -27,7 +27,7 @@ const features: Feature[] = [
 
 export default function Feature() {
   return (
-    <section id='feature' className='py-20 px-4'>
+    <section id='feature' className='z-10 py-20 px-4'>
       <main className='grid gap-40 container max-w-6xl mx-auto'>
         {features.map((feature) => (
           <div key={feature.title} className='max-w-[1240px] mx-auto min-h-[720px] p-6 bg-[#1A1A1A] rounded-[20px] flex flex-col lg:flex-row items-center gap-[30px]'>

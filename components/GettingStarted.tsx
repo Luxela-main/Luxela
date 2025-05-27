@@ -30,7 +30,7 @@ export default function GettingStarted() {
     <section id="brands" className='py-20 px-4'>
       <main className='max-w-6xl mx-auto'>
         <div className='text-center max-w-[1041px] mx-auto'>
-          <h2 className='text-[#F9F9F9] leading-[120%] text-[2rem] -tracking-[3%] font-bold'>
+          <h2 className='text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] -tracking-[3%] font-bold'>
             Getting Started with Luxela
           </h2>
           <p className='text-[#BFBFBF] mt-5 mb-12 text-sm md:text-base '>Join Luxela, the fashion marketplace where fashion creators and fashion lovers come together. Sign up, connect with passionate designers and be part of a global community that celebrates authenticity and creativity in fashion.</p>

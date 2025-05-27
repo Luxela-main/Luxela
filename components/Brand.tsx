@@ -26,10 +26,10 @@ const brands: Brand[] = [
 
 export default function Brand() {
   return (
-    <section id="brands" className='py-20 px-4'>
+    <section id="brands" className='z-10  py-20 px-4'>
       <main className='max-w-6xl mx-auto'>
         <div className='text-center max-w-[1041px] mx-auto'>
-          <h2 className='text-[#F9F9F9] leading-[120%] text-[2rem] -tracking-[3%] font-bold'>
+          <h2 className='text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] -tracking-[3%] font-bold'>
             Featured Brands on Luxela
           </h2>
         </div>
@@ -43,14 +43,14 @@ export default function Brand() {
               <div className={`lg:w-[500px]`}>
                 <h3 className='text-lg lg:text-[2rem] font-semibold text-[#F9F9F9]'>{brand.title}</h3>
                 <p className='text-sm lg:text-lg text-[#BFBFBF] my-9'>{brand.description}</p>
-                <Link href="#" className="hidden lg:inline-flex items-center justify-center mt-6 h-[42px] bg-gradient-to-r from-[#9872DD] via-[#8451E1] to-[#5C2EAF] transition text-white rounded-[6px] px-6">
+                <Link href="#" className="hidden lg:inline-flex cursor-pointer items-center justify-center mt-6 h-[42px] bg-gradient-to-r from-[#9872DD] via-[#8451E1] to-[#5C2EAF] transition text-white rounded-[6px] px-6">
                   Shop now
                 </Link>
               </div>
               {/* image */}
               <Image src={brand.image} width={500} height={402} alt={`Photo of ${brand.title}`} className='my-9 lg:my-0'/>
               {/* cta */}
-              <Link href="#" className="lg:hidden w-full flex items-center justify-center mt-6 h-[42px] bg-gradient-to-r from-[#9872DD] via-[#8451E1] to-[#5C2EAF] transition text-white rounded-[6px] px-6">
+              <Link href="#" className="lg:hidden w-full flex items-center cursor-pointer justify-center mt-6 h-[42px] bg-gradient-to-r from-[#9872DD] via-[#8451E1] to-[#5C2EAF] transition text-white rounded-[6px] px-6">
                   Shop now
                 </Link>
             </div>
