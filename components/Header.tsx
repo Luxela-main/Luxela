@@ -11,7 +11,7 @@ export default function Header() {
 
       <header className="bg-[url('/images/hero-bg-1440x1066.png')] bg-cover bg-center bg-no-repeat h-screen 2xl:h-[1024px] mx-auto w-full relative">
         {/* Glare background image */}
-        <div className="absolute top-0 left-0 2xl:left-1/2 transform -translate-x-1/2 bg-[url('/images/Glare-1321x760.png')] h-[760px] w-[1321px] pointer-events-none"></div>
+        <div className="absolute top-0 left-0 2xl:left-1/2 transform -translate-x-1/2 bg-[url('/images/Glare-1321x760.png')] h-[760px] w-[200px] bg-center lg:w-[1321px] pointer-events-none"></div>
 
         {/* Optional dark overlay */}
         <div className="absolute inset-0 bg-[#0E0E0E] opacity-35 z-5"></div>
@@ -34,15 +34,15 @@ export default function Header() {
             </div>            
           </div>
           {/* main content with cta */}
-          <div className='text-center max-w-[793px] mt-6'>
-            <h1 className="text-white lg:text-[3rem] font-bold leading-[120%] tracking-[6%] ">
-              Authentic Fashion, <span className='text-[#8451E1]'>Global Reach</span>, <br />A New Era of E-commerce
+          <div className='text-center w-full max-w-[793px] px-8 lg:px-0 mt-6'>
+            <h1 className="text-white text-[1.5rem] lg:text-[3rem] font-bold leading-[120%] tracking-[6%] ">
+              Authentic Fashion, <span className='text-[#8451E1]'>Global Reach</span><br/> A New Era of E-commerce
             </h1>
-            <p className='text-[#BFBFBF] my-5'>
+            <p className='text-sm md:text-base text-[#BFBFBF] my-5'>
               An e-commerce platform where you can buy and sell authentic fashion products easily. Pay with local currencies or digital assets, and experience seamless, affordable fashion like never before.
             </p>
 
-            <div className='grid sm:grid-cols-2 gap-5 w-full h-12 max-w-[338px] mx-auto'>              
+            <div className='grid grid-cols-2 gap-5 w-full h-12 max-w-[338px] mx-auto'>              
              <Link href={'#'} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] p-0.5">
                 <div className='rounded-md w-full h-full flex items-center justify-center '>
                   <span>Shop Now</span>
@@ -55,8 +55,8 @@ export default function Header() {
               </Link>            
             </div>
           </div>  
-          {/* samples */}
-          <div className="z-10 mt-10 w-full max-w-[1611px] mx-auto h-full min-h-[700px] relative overflow-x-hidden">
+          {/* samples lg screen */}
+          <div className="hidden lg:flex z-10 mt-10 w-full max-w-[1611px] mx-auto h-full min-h-[700px] relative overflow-x-hidden">
             <div className='rounded-[16px] border-[0.75px] border-[#8451E1] -left-[93px] absolute w-[300px] h-[375px]'>
               <Image src="/images/hero/1st.png" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
             </div>
@@ -70,6 +70,25 @@ export default function Header() {
               <Image src="/images/hero/4th.png" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
             </div>
             <div className='rounded-[16px] border-[0.75px] border-[#8451E1] -right-[145px] absolute w-[300px] h-[375px]'>
+              <Image src="/images/hero/5th.png" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
+            </div>
+          </div>
+
+          {/* samples small screen */}
+          <div className="lg:hidden z-10 mt-10 w-full max-w-[1611px] mx-auto h-full min-h-[700px] relative overflow-x-hidden">
+            <div className='rounded-[16px] border-[0.75px] border-[#8451E1] -left-[22px] absolute w-[78px] h-[170px]'>
+              <Image src="/images/hero/1st.png" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
+            </div>
+            <div className='rounded-[16px] border-[0.75px] border-[#8451E1] absolute top-[72px] left-[74px] w-[78px] h-[170px]'>
+              <Image src="/images/hero/2nd.jpg" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
+            </div>
+            <div className='rounded-[16px] border-[0.75px] border-[#8451E1] absolute top-[173px] left-[200px] w-[78px] h-[170px]'>
+              <Image src="/images/hero/3rd.png" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
+            </div>
+            <div className='rounded-[16px] border-[0.75px] border-[#8451E1] absolute top-[72px] left-[320px] w-[78px] h-[170px]'>
+              <Image src="/images/hero/4th.png" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
+            </div>
+            <div className='rounded-[16px] border-[0.75px] border-[#8451E1] -right-[30px] absolute w-[78px] h-[170px]'>
               <Image src="/images/hero/5th.png" width={300} height={375} alt="Image of cloth" className="rounded-[16px] w-full h-full" />
             </div>
           </div>
