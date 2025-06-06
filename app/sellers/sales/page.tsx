@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Filter, MoreVertical, X } from "lucide-react"
 import SearchBar from "@/components/search-bar"
 import { salesData, orderDetail } from "@/lib/data"
-import { Button } from "@/components/ui/Button"
+import { Button } from "@/components/ui/button"
 
 export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
@@ -37,9 +37,8 @@ export default function Sales() {
           {tabs.map((tab) => (
             <button
               key={tab}
-              className={`px-4 py-2 ${
-                activeTab === tab ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white" : "text-gray-400"
-              }`}
+              className={`px-4 py-2 ${activeTab === tab ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white" : "text-gray-400"
+                }`}
               onClick={() => setActiveTab(tab)}
             >
               {tab}
@@ -110,35 +109,32 @@ export default function Sales() {
               <div>{order.amount}</div>
               <div>
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    order.payoutStatus === "Paid"
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.payoutStatus === "Paid"
                       ? "bg-green-100 text-green-800"
                       : order.payoutStatus === "Processing"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full mr-1 ${
-                      order.payoutStatus === "Paid"
+                    className={`w-1.5 h-1.5 rounded-full mr-1 ${order.payoutStatus === "Paid"
                         ? "bg-green-600"
                         : order.payoutStatus === "Processing"
                           ? "bg-yellow-600"
                           : "bg-red-600"
-                    }`}
+                      }`}
                   ></span>
                   {order.payoutStatus}
                 </span>
               </div>
               <div>
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    order.deliveryStatus === "Delivered"
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.deliveryStatus === "Delivered"
                       ? "bg-green-100 text-green-800"
                       : order.deliveryStatus === "In transit"
                         ? "bg-blue-100 text-blue-800"
                         : "bg-red-100 text-red-800"
-                  }`}
+                    }`}
                 >
                   {order.deliveryStatus}
                 </span>

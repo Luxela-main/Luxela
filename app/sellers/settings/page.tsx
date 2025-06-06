@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { User, Store, CreditCard, Bell, Shield, HelpCircle } from "lucide-react"
-import { Button } from "@/components/ui/Button"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -22,54 +22,48 @@ export default function Settings() {
         <div className="w-64 pr-8">
           <div className="space-y-1">
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
-                activeTab === "Profile" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
-              }`}
+              className={`flex items-center w-full px-3 py-2 rounded-md ${activeTab === "Profile" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
+                }`}
               onClick={() => setActiveTab("Profile")}
             >
               <User className="h-5 w-5 mr-3" />
               <span>Profile</span>
             </button>
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
-                activeTab === "Store" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
-              }`}
+              className={`flex items-center w-full px-3 py-2 rounded-md ${activeTab === "Store" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
+                }`}
               onClick={() => setActiveTab("Store")}
             >
               <Store className="h-5 w-5 mr-3" />
               <span>Store</span>
             </button>
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
-                activeTab === "Payment" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
-              }`}
+              className={`flex items-center w-full px-3 py-2 rounded-md ${activeTab === "Payment" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
+                }`}
               onClick={() => setActiveTab("Payment")}
             >
               <CreditCard className="h-5 w-5 mr-3" />
               <span>Payment</span>
             </button>
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
-                activeTab === "Notifications" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
-              }`}
+              className={`flex items-center w-full px-3 py-2 rounded-md ${activeTab === "Notifications" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
+                }`}
               onClick={() => setActiveTab("Notifications")}
             >
               <Bell className="h-5 w-5 mr-3" />
               <span>Notifications</span>
             </button>
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
-                activeTab === "Security" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
-              }`}
+              className={`flex items-center w-full px-3 py-2 rounded-md ${activeTab === "Security" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
+                }`}
               onClick={() => setActiveTab("Security")}
             >
               <Shield className="h-5 w-5 mr-3" />
               <span>Security</span>
             </button>
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
-                activeTab === "Help" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
-              }`}
+              className={`flex items-center w-full px-3 py-2 rounded-md ${activeTab === "Help" ? "bg-[#1a1a1a] text-white" : "text-gray-400 hover:bg-[#1a1a1a]"
+                }`}
               onClick={() => setActiveTab("Help")}
             >
               <HelpCircle className="h-5 w-5 mr-3" />

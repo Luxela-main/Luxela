@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, Pencil } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -176,7 +176,7 @@ export default function CartPage() {
         </div>
 
         {cartItems.length === 0 ? (
-           <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
+          <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
             <div className="max-w-md text-center">
               <div className="mb-6">
                 <Image
@@ -198,17 +198,17 @@ export default function CartPage() {
               </Button>
             </div>
           </div>
-          ) : (         
+        ) : (
           cartItems.map((item) => (
-          <CartItem
-            key={item.id}
-            item={item}
-            increment={increment}
-            decrement={decrement}
-            removeItem={removeItem}
-          />
+            <CartItem
+              key={item.id}
+              item={item}
+              increment={increment}
+              decrement={decrement}
+              removeItem={removeItem}
+            />
           )))}
-  
+
       </div>
       <div className="bg-[#1a1a1a] p-6 rounded-lg space-y-4 h-fit">
         <div className="flex justify-between">
