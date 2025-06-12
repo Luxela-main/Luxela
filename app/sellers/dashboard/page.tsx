@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Wallet, ShoppingBag, Package, RefreshCcw, Shirt } from "lucide-react"
 import SearchBar from "@/components/search-bar"
 import { dashboardData } from "@/lib/data"
-import { Button } from "@/components/ui/Button"
+import { Button } from "@/components/ui/button"
 
 export default function Dashboard() {
   const [timeframe, setTimeframe] = useState("Month")
@@ -207,15 +207,14 @@ export default function Dashboard() {
             {dashboardData.visitorTraffic.map((item, index) => (
               <div key={index} className="flex items-center">
                 <div
-                  className={`w-3 h-3 rounded-full mr-2 ${
-                    index === 0
+                  className={`w-3 h-3 rounded-full mr-2 ${index === 0
                       ? "bg-blue-500"
                       : index === 1
                         ? "bg-[#B8A179]"
                         : index === 2
                           ? "bg-gray-400"
                           : "bg-pink-200"
-                  }`}
+                    }`}
                 ></div>
                 <span className="text-sm text-gray-400">
                   {item.source} <span className="ml-1">{item.percentage}%</span>
@@ -268,22 +267,20 @@ export default function Dashboard() {
               <div>{product.quantitySold}</div>
               <div>
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    product.status === "In stock"
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${product.status === "In stock"
                       ? "bg-green-100 text-green-800"
                       : product.status === "Low stock"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full mr-1 ${
-                      product.status === "In stock"
+                    className={`w-1.5 h-1.5 rounded-full mr-1 ${product.status === "In stock"
                         ? "bg-green-600"
                         : product.status === "Low stock"
                           ? "bg-yellow-600"
                           : "bg-red-600"
-                    }`}
+                      }`}
                   ></span>
                   {product.status}
                 </span>
