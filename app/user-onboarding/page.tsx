@@ -1,12 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSignUp } from "../auth/index"; 
+import { Form, FormikProps } from 'formik';
+import { useAddUserData, useSignIn, useSignUp } from "../auth/index"; 
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
+import { ApTextInput } from "@/components/input/TextInput";
+import { ApForm } from "@/components/input/Form";
+import * as Yup from 'yup'
+
+const FormSchema = Yup.object().shape({
+  email: Yup.string().required('Email is required').email('Invalid email'),
+  password: Yup.string().required('Password is required')
+});
 
 export default function SignUpPage() {
   const { signUp, loading: signupLoading, error: signupError, uid } = useSignUp();
+  const { signIn } = useSignIn();
+  const { addUserData } = useAddUserData();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,25 +27,23 @@ export default function SignUpPage() {
   const toast = useToast();
 
   const handleSignUp = async (event: React.FormEvent) => {
-    event.preventDefault();
+  event.preventDefault();
+  if (!agreeTerms) return toast.warning("Agree to the terms");
 
-    if (!agreeTerms) {
-      toast.warning("You must agree to the terms and conditions")
-      return;
-    }
+  try {
+    await signUp(email, password); // Firebase user created
 
-    try {
-      await signUp(email, password);
-      if (!signupError) {
-      //   toast.error("Sign up failed");
-      // } else {
-        toast.success("Sign up successfully");
-        router.push("/email-verification")
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    const { uid, token } = await signIn(email, password); // Get token
+
+    await addUserData({ uid, email }, token); // Store in DB
+
+    toast.success("Account created successfully!");
+    router.push("/email-verification");
+
+  } catch (error: any) {
+    toast.error(error.message || "Signup failed");
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
@@ -56,6 +65,7 @@ export default function SignUpPage() {
         <div className="text-center text-zinc-500 my-4 text-sm">Or</div>
 
         <form className="space-y-4" onSubmit={handleSignUp}>
+    
           <input
             type="email"
             placeholder="Enter your email address"
@@ -64,6 +74,7 @@ export default function SignUpPage() {
             onChange={e => setEmail(e.target.value)}
             required
           />
+
           <input
             type="password"
             placeholder="At least 8 characters"
@@ -72,7 +83,7 @@ export default function SignUpPage() {
             onChange={e => setPassword(e.target.value)}
             minLength={8}
             required
-          />
+          /> 
           <div className="flex items-start text-sm">
             <input
               type="checkbox"
@@ -105,3 +116,33 @@ export default function SignUpPage() {
     </div>
   );
 }
+
+
+
+       {/* <ApForm
+              initialValues={{ email: '', password: '' }}
+              validationSchema={FormSchema}
+              onSubmit={handleSignUp}
+            >
+              {(props: FormikProps<any>) => (
+                <Form>
+                  <ApTextInput
+                    label="Email"
+                    name="email"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Enter Email..."
+                    containerClassName="!w-full"
+                  />
+                  <ApTextInput
+                    label="Email"
+                    name="email"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Enter Email..."
+                    containerClassName="!w-full"
+                  />
+                </Form>
+              )}
+
+            </ApForm> */}
