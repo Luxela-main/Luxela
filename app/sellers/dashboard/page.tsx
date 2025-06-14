@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button"
 export default function Dashboard() {
   const [timeframe, setTimeframe] = useState("Month")
   const [visitorTimeframe, setVisitorTimeframe] = useState("Month")
+  const [search, setSearch] = useState('')
 
   return (
     <div className="p-6">
@@ -22,7 +23,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="w-80">
-          <SearchBar />
+          <SearchBar search={search} setSearch={setSearch}/>
         </div>
       </div>
 
