@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 import { Input } from './ui/input'
-import { Button } from './ui/Button'
+import { Button } from './ui/button'
 
 
 interface FooterLinkItem {
@@ -59,7 +59,7 @@ export default function Footer() {
               Ready to share your fashion with the world? Join Luxela today to connect with a global audience, showcase your designs, and grow your brand.
             </p>
 
-            <Link href={"#"} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5'/></Link>
+            <Link href={"#"} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5' /></Link>
           </div>
 
           {/* newsletter */}
@@ -77,7 +77,7 @@ export default function Footer() {
                 Subscribe
               </Button>
             </div>
-            <div className='mt-10 grid grid-cols-2 md:grid-cols-3 gap-20 md:gap-10'> 
+            <div className='mt-10 grid grid-cols-2 md:grid-cols-3 gap-20 md:gap-10'>
               {footerLinks.map((section) => (
                 <div key={section.title} className="space-y-4">
                   <h3 className="text-sm md:text-base text-[#FBFBFB] font-semibold">{section.title}</h3>
@@ -100,7 +100,7 @@ export default function Footer() {
           <div className='my-10'>
             <Image src='/images/LUXELA-1185x242.svg' width={1185} height={242} alt={'Luxela'} />
           </div>
-          <p className="text-gray-500 text-sm mb-4 md:mb-0 text-center">© 2025 Luxela. All rights reserved.</p>          
+          <p className="text-gray-500 text-sm mb-4 md:mb-0 text-center">© 2025 Luxela. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -2,7 +2,7 @@
 
 import { X, ChevronRight, ShoppingCart } from "lucide-react"
 import Link from "next/link"
-import { Button } from "./ui/Button"
+import { Button } from "./ui/button"
 
 interface MobileMenuProps {
   isOpen: boolean

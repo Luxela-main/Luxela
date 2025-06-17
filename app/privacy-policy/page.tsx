@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import Header from "../user-onboarding/components/header";
 import { useRouter } from "next/navigation";
 
@@ -42,11 +42,11 @@ export default function SignUpPage() {
             </label>
 
             <div className="flex space-x-4 pt-2">
-              <Button  
-              className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto px-6 py-2 rounded-md"
+              <Button
+                className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto px-6 py-2 rounded-md"
                 onClick={(e) => {
                   e.preventDefault();
-                  
+
                 }}
               >
                 Proceed

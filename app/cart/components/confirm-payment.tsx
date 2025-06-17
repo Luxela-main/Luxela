@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import Header from "../../user-onboarding/components/header";
 import { CheckCircle } from "lucide-react";
 
