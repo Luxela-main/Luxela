@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("All")
+  const [search, setSearch] = useState("");
 
   const handleOrderClick = (orderId: string) => {
     setSelectedOrder(orderId)
@@ -28,7 +29,7 @@ export default function Sales() {
           <p className="text-gray-400 mt-1">View and manage all your sales</p>
         </div>
         <div className="w-80">
-          <SearchBar />
+          <SearchBar search={search} setSearch={setSearch}/>
         </div>
       </div>
 

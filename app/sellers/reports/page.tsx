@@ -1,8 +1,13 @@
+"use client"
+
+import { useState } from "react"
 import { BarChart3 } from "lucide-react"
 import SearchBar from "@/components/search-bar"
 import EmptyState from "@/components/empty-state"
 
 export default function Reports() {
+  const [search, setSearch] = useState("");
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -11,7 +16,7 @@ export default function Reports() {
           <p className="text-gray-400 mt-1">View detailed reports and analytics for your store.</p>
         </div>
         <div className="w-80">
-          <SearchBar />
+          <SearchBar search={search} setSearch={setSearch}/>
         </div>
       </div>
 
