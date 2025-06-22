@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, Star, Trash } from "lucide-react"
+import { Bell, Search, Star, Trash } from "lucide-react"
 import SearchBar from "@/components/search-bar"
 import { notificationsData } from "@/lib/data"
 
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState("All")
   const [notifications, setNotifications] = useState(notificationsData)
+  const [search, setSearch] = useState("");
 
   const markAllAsRead = () => {
     setNotifications(
@@ -45,7 +46,7 @@ export default function Notifications() {
           <p className="text-gray-400 mt-1">See all notification</p>
         </div>
         <div className="w-80">
-          <SearchBar />
+          <SearchBar search={search} setSearch={setSearch}/>
         </div>
       </div>
 

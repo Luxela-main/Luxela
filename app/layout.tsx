@@ -2,6 +2,9 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Space_Grotesk } from "next/font/google"
 import "./globals.css"
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] })
 
@@ -19,6 +22,7 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={spaceGrotesk.className}>
         {children}
+         <ToastContainer />
         </body>
     </html>
   )
