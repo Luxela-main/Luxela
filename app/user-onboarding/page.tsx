@@ -1,21 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Form, FormikProps } from 'formik';
 import { useAddUserData, useSignIn, useSignUp } from "../auth/index"; 
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
-import { ApTextInput } from "@/components/input/TextInput";
-import { ApForm } from "@/components/input/Form";
-import * as Yup from 'yup'
-
-const FormSchema = Yup.object().shape({
-  email: Yup.string().required('Email is required').email('Invalid email'),
-  password: Yup.string().required('Password is required')
-});
 
 export default function SignUpPage() {
-  const { signUp, loading: signupLoading, error: signupError, uid } = useSignUp();
+  const { signUp, loading: signupLoading, error: signupError } = useSignUp();
   const { signIn } = useSignIn();
   const { addUserData } = useAddUserData();
 
@@ -27,24 +18,26 @@ export default function SignUpPage() {
   const toast = useToast();
 
   const handleSignUp = async (event: React.FormEvent) => {
-  event.preventDefault();
-  if (!agreeTerms) return toast.warning("Agree to the terms");
+    event.preventDefault();
+    if (!agreeTerms) return toast.warning("Agree to the terms");
 
-  try {
-    await signUp(email, password); // Firebase user created
+    try {
+      // 1. Create user in Firebase
+      await signUp(email, password);
+      
+      // 2. Sign in to get the ID token
+      const { uid, token } = await signIn(email, password);
+      
+      // 3. Store user data in the backend
+      await addUserData({ uid, email }, token);
 
-    const { uid, token } = await signIn(email, password); // Get token
+      toast.success("Account created successfully!");
+      router.push("/email-verification");
 
-    await addUserData({ uid, email }, token); // Store in DB
-
-    toast.success("Account created successfully!");
-    router.push("/email-verification");
-
-  } catch (error: any) {
-    toast.error(error.message || "Signup failed");
-  }
-};
-
+    } catch (error: any) {
+      toast.error(error.message || "Signup failed");
+    }
+  };
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <div className="bg-zinc-900 text-white rounded-xl shadow-lg p-8 w-full max-w-md">
@@ -116,33 +109,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
-
-
-       {/* <ApForm
-              initialValues={{ email: '', password: '' }}
-              validationSchema={FormSchema}
-              onSubmit={handleSignUp}
-            >
-              {(props: FormikProps<any>) => (
-                <Form>
-                  <ApTextInput
-                    label="Email"
-                    name="email"
-                    type="text"
-                    autoComplete="off"
-                    placeholder="Enter Email..."
-                    containerClassName="!w-full"
-                  />
-                  <ApTextInput
-                    label="Email"
-                    name="email"
-                    type="text"
-                    autoComplete="off"
-                    placeholder="Enter Email..."
-                    containerClassName="!w-full"
-                  />
-                </Form>
-              )}
-
-            </ApForm> */}

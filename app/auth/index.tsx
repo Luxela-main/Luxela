@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  getIdToken
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 type AuthError = string | null;
 
@@ -9,37 +15,22 @@ class AuthService {
   private userBaseUrl = "https://auth-backend-kx7l.onrender.com/api/user";
 
   async signUp(email: string, password: string): Promise<string> {
-    const url = `${this.baseUrl}/signup`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Signup failed");
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      return userCredential.user.uid;
+    } catch (error: any) {
+      throw new Error(error.message || "Firebase signup failed");
     }
-
-    const data = await response.json();
-    return data.uid;
   }
 
   async signIn(email: string, password: string): Promise<{ uid: string; token: string }> {
-    const url = `${this.baseUrl}/signin`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Signin failed");
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const token = await getIdToken(userCredential.user);
+      return { uid: userCredential.user.uid, token };
+    } catch (error: any) {
+      throw new Error(error.message || "Firebase signin failed");
     }
-
-    const data = await response.json();
-    return { uid: data.uid, token: data.token };
   }
 
   async verifyToken(firebaseIdToken: string): Promise<string> {
@@ -156,31 +147,6 @@ export function useSignUp() {
   return { signUp, loading, error, uid };
 }
 
-// export function useSignIn() {
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState<AuthError>(null);
-//   const [uid, setUid] = useState<string | null>(null);
-//   const [token, setToken] = useState<string | null>(null);
-
-//   async function signIn(email: string, password: string) {
-//     setLoading(true);
-//     setError(null);
-
-//     try {
-//       const { uid: userUid, token: userToken } = await authService.signIn(email, password);
-//       setUid(userUid);
-//       setToken(userToken);
-//       localStorage.setItem("authToken", userToken);
-//     } catch (err: any) {
-//       setError(err.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   }
-
-//   return { signIn, loading, error, uid, token };
-// }
-
 export function useSignIn() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError>(null);
@@ -196,10 +162,10 @@ export function useSignIn() {
       setUid(userUid);
       setToken(userToken);
       localStorage.setItem("authToken", userToken);
-      return { uid: userUid, token: userToken }; 
+      return { uid: userUid, token: userToken };
     } catch (err: any) {
       setError(err.message);
-      throw err; 
+      throw err;
     } finally {
       setLoading(false);
     }

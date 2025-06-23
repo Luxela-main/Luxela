@@ -8,7 +8,7 @@ import { useToast } from "@/components/hooks/useToast";
 export default function SignInPage() {
   const router = useRouter();
   const toast = useToast();
-  const { signIn, loading, error, uid } = useSignIn();
+  const { signIn, loading } = useSignIn();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,13 +22,13 @@ export default function SignInPage() {
       return;
     }
 
-    await signIn(email, password);
-
-    if (uid) {
-      router.push("/privacy-policy"); // Redirect after success
+    try {
+      await signIn(email, password);
+      router.push("/privacy-policy");
+    } catch (error: any) {
+      toast.error(error.message || "Sign in failed");
     }
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <div className="bg-zinc-900 text-white rounded-xl shadow-lg p-8 w-full max-w-md">
@@ -36,11 +36,6 @@ export default function SignInPage() {
         <p className="text-sm text-center text-zinc-400 mb-6">
           Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
         </p>
-{/* 
-        <button className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-sm py-2 rounded">
-          <span>Sign up with Google</span>
-          <img src="../../public/google.svg" alt="Google" className="h-4 w-4" />
-        </button> */}
 
         <button
           className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-sm py-2 rounded mb-4"
@@ -89,10 +84,6 @@ export default function SignInPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
-
-        {error && 
-          toast.error(`${error}`)
-        }
 
         <p className="text-center text-zinc-500 text-sm mt-4">
           Don’t have an account? <a href="../user-onboarding" className="text-purple-400 underline">Sign Up here</a>

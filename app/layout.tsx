@@ -4,7 +4,7 @@ import { Space_Grotesk } from "next/font/google"
 import "./globals.css"
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import { AuthProvider } from "@/context/AuthContext";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] })
 
@@ -21,8 +21,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className={spaceGrotesk.className}>
-        {children}
-         <ToastContainer />
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        <ToastContainer />
         </body>
     </html>
   )

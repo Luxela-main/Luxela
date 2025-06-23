@@ -1,14 +1,15 @@
 "use client"
 
 import type React from "react"
+import withAuth from "@/app/hoc/withAuth"
 
 import { useState } from "react"
 import { Wallet, ShoppingBag, Package, RefreshCcw, Shirt } from "lucide-react"
 import SearchBar from "@/components/search-bar"
 import { dashboardData } from "@/lib/data"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 
-export default function Dashboard() {
+function Dashboard() {
   const [timeframe, setTimeframe] = useState("Month")
   const [visitorTimeframe, setVisitorTimeframe] = useState("Month")
   const [search, setSearch] = useState('')
@@ -347,3 +348,6 @@ function StatCard({ title, value, change, changeType, subtext, icon }: StatCardP
     </div>
   )
 }
+
+
+export default withAuth(Dashboard)
