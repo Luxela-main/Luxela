@@ -6,6 +6,7 @@ import SearchBar from "@/components/search-bar"
 import { salesData, orderDetail } from "@/lib/data"
 import { Button } from "@/components/ui/button"
 
+
 export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("All")
@@ -29,7 +30,7 @@ export default function Sales() {
           <p className="text-gray-400 mt-1">View and manage all your sales</p>
         </div>
         <div className="w-80">
-          <SearchBar search={search} setSearch={setSearch}/>
+          <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>
 
@@ -111,18 +112,18 @@ export default function Sales() {
               <div>
                 <span
                   className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.payoutStatus === "Paid"
-                      ? "bg-green-100 text-green-800"
-                      : order.payoutStatus === "Processing"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
+                    ? "bg-green-100 text-green-800"
+                    : order.payoutStatus === "Processing"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
                     }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full mr-1 ${order.payoutStatus === "Paid"
-                        ? "bg-green-600"
-                        : order.payoutStatus === "Processing"
-                          ? "bg-yellow-600"
-                          : "bg-red-600"
+                      ? "bg-green-600"
+                      : order.payoutStatus === "Processing"
+                        ? "bg-yellow-600"
+                        : "bg-red-600"
                       }`}
                   ></span>
                   {order.payoutStatus}
@@ -131,10 +132,10 @@ export default function Sales() {
               <div>
                 <span
                   className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.deliveryStatus === "Delivered"
-                      ? "bg-green-100 text-green-800"
-                      : order.deliveryStatus === "In transit"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-red-100 text-red-800"
+                    ? "bg-green-100 text-green-800"
+                    : order.deliveryStatus === "In transit"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-red-100 text-red-800"
                     }`}
                 >
                   {order.deliveryStatus}

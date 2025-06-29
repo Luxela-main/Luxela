@@ -19,7 +19,11 @@ interface IProps {
   onChange?: (val?: string) => void;
 }
 
-export const ApTextInput = forwardRef((props: IProps, ref) => {
+interface ApTextInputHandle {
+  setCursorPosition: (start: number, end: number) => void;
+}
+
+export const ApTextInput = forwardRef<ApTextInputHandle, IProps>((props, ref) => {
   const {
     label,
     type,
@@ -33,16 +37,16 @@ export const ApTextInput = forwardRef((props: IProps, ref) => {
     disabled,
     ignoreFormik
   } = props;
-  let formikField: any = null;
-  const inputRef: any = useRef(null);
+  let formikField: [any, any, any] | null = null;
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   if (name && !ignoreFormik) {
     formikField = useField(name);
   }
 
   // Expose a function to set cursor position externally
   useImperativeHandle(ref, () => ({
-    setCursorPosition: (start: any, end: any) => {
-      inputRef.current.setSelectionRange(start, end);
+    setCursorPosition: (start: number, end: number) => {
+      inputRef.current?.setSelectionRange(start, end);
     }
   }));
 
@@ -60,13 +64,13 @@ export const ApTextInput = forwardRef((props: IProps, ref) => {
           focus:border-gray-400 resize-none 		
         ${inputClassName}`}
           {...props}
-          {...(!ignoreFormik ? formikField[0] : {})}
+          {...(!ignoreFormik ? formikField?.[0] : {})}
           name={name}
           rows={5}
-          ref={inputRef}
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
           autoComplete={autoComplete || 'off'}
           placeholder={placeholder}
-          onChange={(val) => {
+          onChange={(val: React.ChangeEvent<HTMLTextAreaElement>) => {
             if (!ignoreFormik) {
               formikField?.[2].setValue(val.target.value);
             }
@@ -77,17 +81,17 @@ export const ApTextInput = forwardRef((props: IProps, ref) => {
         <input
           type={type}
           {...props}
-          {...(!ignoreFormik ? formikField[0] : {})}
+          {...(!ignoreFormik ? formikField?.[0] : {})}
           autoComplete={autoComplete || 'off'}
-          ref={inputRef}
+          ref={inputRef as React.RefObject<HTMLInputElement>}
           name={name}
           disabled={disabled || false}
           min={min}
           className={` border px-3 text-[13px] outline-none w-full h-[45px] rounded-sm
-			   focus:border-gray-400 focus:h-[45px]
+         focus:border-gray-400 focus:h-[45px]
           ${inputClassName}`}
           placeholder={placeholder}
-          onChange={(val) => {
+          onChange={(val: React.ChangeEvent<HTMLInputElement>) => {
             if (!ignoreFormik) {
               formikField?.[2].setValue(val.target.value);
             }
