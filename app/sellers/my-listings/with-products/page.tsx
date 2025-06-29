@@ -1,7 +1,11 @@
+'use client'
+
 import { Filter, PlusCircle, Shirt, MoreVertical } from "lucide-react"
 import SearchBar from "@/components/search-bar"
+import React from "react";
 
 export default function MyListingsWithProducts() {
+  const [search, setSearch] = React.useState("");
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -10,7 +14,7 @@ export default function MyListingsWithProducts() {
           <p className="text-gray-400 mt-1">View and manage all your listed products in one place.</p>
         </div>
         <div className="w-80">
-          <SearchBar />
+          <SearchBar search={search} setSearch={setSearch}  />
         </div>
       </div>
 
