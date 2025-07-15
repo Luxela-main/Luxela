@@ -1,18 +1,20 @@
-import React from "react";
-import { ColorRing } from "react-loader-spinner";
+'use client';
+import React, { CSSProperties } from "react";
+import { motion } from 'framer-motion';
 interface IProps {}
+
 
 export const ApLoader: React.FC<IProps> = () => {
   return (
     <div className="w-full h-full flex justify-center items-center">
-      <ColorRing
-        visible={true}
-        height="120"
-        width="120"
-        ariaLabel="blocks-loading"
-        wrapperStyle={{ textAlign: "center" }}
-        wrapperClass="blocks-wrapper"
-        colors={["	#80DAEB", "	#80DAEB", "#	#80DAEB", "	#80DAEB", "#80DAEB"]}
+      <motion.div
+        className="w-24 h-24 border-4 border-t-[#80DAEB] border-b-[#80DAEB] border-l-transparent border-r-transparent rounded-full"
+        animate={{ rotate: 360 }}
+        transition={{
+          repeat: Infinity,
+          ease: 'linear',
+          duration: 1,
+        }}
       />
     </div>
   );
