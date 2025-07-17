@@ -4,11 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSignIn } from "../auth/index";
 import { useToast } from "@/components/hooks/useToast";
+import Header from "../user-onboarding/components/header";
+import { useGoogleAuth } from "../auth/singinWithGoogle";
 
 export default function SignInPage() {
   const router = useRouter();
   const toast = useToast();
   const { signIn, loading } = useSignIn();
+  const { signInWithGoogle } = useGoogleAuth();
+
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,8 +33,10 @@ export default function SignInPage() {
       toast.error(error.message || "Sign in failed");
     }
   };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
+      <Header />
       <div className="bg-zinc-900 text-white rounded-xl shadow-lg p-8 w-full max-w-md">
         <h2 className="text-2xl font-semibold text-center mb-2">Welcome to Luxela</h2>
         <p className="text-sm text-center text-zinc-400 mb-6">
@@ -39,10 +45,10 @@ export default function SignInPage() {
 
         <button
           className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-sm py-2 rounded mb-4"
-          onClick={() => alert("Google sign-in not implemented")}
+          onClick={signInWithGoogle}
           type="button"
         >
-          <span>Sign up with Google</span>
+          <span>Sign in with Google</span>
           <img src="/google.svg" alt="Google" className="h-4 w-4" />
         </button>
 

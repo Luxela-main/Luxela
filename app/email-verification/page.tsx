@@ -45,7 +45,7 @@ export default function VerifyEmailPage() {
         </div>
 
         <button 
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded text-sm"
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded text-sm cursor-pointer"
           onClick={() => {
         handleVerification
           }}

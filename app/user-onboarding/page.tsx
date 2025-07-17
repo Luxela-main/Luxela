@@ -4,11 +4,15 @@ import React, { useState } from "react";
 import { useAddUserData, useSignIn, useSignUp } from "../auth/index"; 
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
+import Header from "../user-onboarding/components/header";
+import { useGoogleAuth } from "../auth/singinWithGoogle";
 
 export default function SignUpPage() {
   const { signUp, loading: signupLoading, error: signupError } = useSignUp();
   const { signIn } = useSignIn();
   const { addUserData } = useAddUserData();
+  const { signInWithGoogle } = useGoogleAuth();
+
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,7 +23,7 @@ export default function SignUpPage() {
 
   const handleSignUp = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!agreeTerms) return toast.warning("Agree to the terms");
+    if (!agreeTerms) return toast.warning("Please agree to the terms and conditions");
 
     try {
       // 1. Create user in Firebase
@@ -32,7 +36,7 @@ export default function SignUpPage() {
       await addUserData({ uid, email }, token);
 
       toast.success("Account created successfully!");
-      router.push("/email-verification");
+      router.push("/signin");
 
     } catch (error: any) {
       toast.error(error.message || "Signup failed");
@@ -40,6 +44,7 @@ export default function SignUpPage() {
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
+      <Header />
       <div className="bg-zinc-900 text-white rounded-xl shadow-lg p-8 w-full max-w-md">
         <h2 className="text-2xl font-semibold text-center mb-2">Welcome to Luxela</h2>
         <p className="text-sm text-center text-zinc-400 mb-6">
@@ -48,10 +53,10 @@ export default function SignUpPage() {
 
         <button
           className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-sm py-2 rounded mb-4"
-          onClick={() => alert("Google sign-in not implemented")}
+          onClick={signInWithGoogle}
           type="button"
         >
-          <span>Sign up with Google</span>
+          <span>Sign in with Google</span>
           <img src="/google.svg" alt="Google" className="h-4 w-4" />
         </button>
 

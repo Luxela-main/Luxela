@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react'
 import Link from "next/link"
 import { ChevronRight, Menu, ShoppingCart, X } from "lucide-react"
 import Image from 'next/image'
+import { User } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext'
 
 interface NavItem {
   name: string;
@@ -19,6 +21,8 @@ const navItems: NavItem[] = [
 export default function Navbar() {
   const [sticky, setSticky] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,14 +58,62 @@ export default function Navbar() {
         </Link>
 
         {/* CTA Buttons */}
-        <div className="flex items-center space-x-2">
+        {/* <div className="flex items-center space-x-2">
           <Link href="/login" className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
             Sell
           </Link>
           <Link href="#" className="h-[42px] flex items-center space-x-2 border border-[#FFFFFF66]/40 hover:border-purple-500 transition text-white rounded-[4px] px-6">
             <span className='hidden md:block'>Shop now</span><ShoppingCart className="h-4 w-4" />
           </Link>
+          <Link href="/user-onboarding" className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
+            <User size={24}/>
+            Account 
+          </Link>
+        </div> */}
+
+        <div className="flex items-center space-x-2">
+          {
+            user ? (
+            <Link href="/sellers/dashboard" className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
+             Sell
+            </Link>
+            )
+            : (
+              <Link href="/signin" className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
+              Sell
+              </Link>
+            )}
+      
+          <Link href="#" className="h-[42px] flex items-center space-x-2 border border-[#FFFFFF66]/40 hover:border-purple-500 transition text-white rounded-[4px] px-6">
+            <span className='hidden md:block'>Shop now</span>
+            <ShoppingCart className="h-4 w-4" />
+          </Link>
+
+          {user ? (
+            <Link href="/account" className="h-[42px] w-[42px] rounded-full overflow-hidden border border-white/30 hover:border-purple-500 transition">
+              {user.photoURL ? (
+                <Image
+                  src={user.photoURL}
+                  alt="Profile"
+                  width={42}
+                  height={42}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-zinc-800">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+              )}
+            </Link>
+          ) : (
+            <Link href="/user-onboarding" className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
+              <User size={24} />
+              <span className="ml-2">Account</span>
+            </Link>
+          )}
         </div>
+
+
       </div>
 
       {/* Mobile Nav */}

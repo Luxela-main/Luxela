@@ -7,7 +7,7 @@ import { useState } from "react"
 import { Wallet, ShoppingBag, Package, RefreshCcw, Shirt } from "lucide-react"
 import SearchBar from "@/components/search-bar"
 import { dashboardData } from "@/lib/data"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button"
 
 function Dashboard() {
   const [timeframe, setTimeframe] = useState("Month")

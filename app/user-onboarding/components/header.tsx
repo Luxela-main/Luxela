@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 
 const navLinks = [
-  { label: 'About Luxela', href: '/about' },
+  { label: 'About Luxela', href: './#about' },
   { label: 'Become a Seller', href: '/become-a-seller' },
   { label: 'Help', href: '/help' },
   { label: 'Contact Support', href: '/support' },
@@ -18,7 +18,7 @@ const Navigation = () => {
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-14">
         {/* Logo */}
         <Link href="/" className="flex items-center text-white font-semibold text-xl tracking-widest">
-          <img src="/luxela.svg" alt="Luxela Logo" className="w-6 h-6 mr-2" />
+          <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mr-2" />
         </Link>
 
         {/* Desktop Navigation */}
@@ -27,7 +27,7 @@ const Navigation = () => {
             <Link
               key={link.label}
               href={link.href}
-              className="text-gray-300 hover:text-white text-sm transition-colors"
+              className="text-gray-300 hover:text-white text-md transition-colors"
             >
               {link.label}
             </Link>
@@ -71,7 +71,7 @@ const Navigation = () => {
             <Link
               key={link.label}
               href={link.href}
-              className="block text-gray-200 hover:text-white text-sm py-2"
+              className="block text-gray-200 hover:text-white text-2xl py-2"
               onClick={() => setIsMenuOpen(false)}
             >
               {link.label}

@@ -11,7 +11,9 @@ const nextConfig: NextConfig = {
     FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     FIREBASE_MEASUREMENT_ID: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
     },
-
+    images: {
+        domains: ["lh3.googleusercontent.com"], // ✅ allow external Google profile image URLs
+    },
   
 };
 
