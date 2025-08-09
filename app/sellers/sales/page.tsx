@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Filter, MoreVertical, X } from "lucide-react";
 import SearchBar from "@/components/search-bar";
 import { salesData, orderDetail } from "@/lib/data";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
