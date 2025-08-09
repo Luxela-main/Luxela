@@ -1,8 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button"
-  ;
-import Header from "../../user-onboarding/components/header";
+import { Button } from "@/components/ui/Button";
+import Header from "@/components/Header";
 import { CheckCircle } from "lucide-react";
 
 export default function ConfirmationPage() {
@@ -51,7 +50,10 @@ export default function ConfirmationPage() {
             <div>
               <h4 className="text-gray-500">Shipping Address</h4>
               <p className="text-sm text-white">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+                eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+                enim ad minim veniam, quis nostrud exercitation ullamco laboris
+                nisi ut aliquip ex ea commodo consequat.
               </p>
             </div>
 
@@ -67,7 +69,9 @@ export default function ConfirmationPage() {
             <Button className="bg-purple-600 hover:bg-purple-700 text-white w-full">
               Continue Shopping
             </Button>
-            <Button variant="outline" className="w-full border-gray-600 text-white hover:bg-zinc-800">
+            <Button
+              variant="outline"
+              className="w-full border-gray-600 text-white hover:bg-zinc-800">
               Track Order
             </Button>
           </div>

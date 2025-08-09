@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Minus, Plus, Trash2, Pencil } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/Card";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/Button";
 
 const initialCartItems = [
   { id: 1, name: "Luxela product 1", price: 30000, quantity: 1 },

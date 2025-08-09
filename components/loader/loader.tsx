@@ -1,18 +1,17 @@
-'use client';
-import React, { CSSProperties } from "react";
-import { motion } from 'framer-motion';
+"use client";
+import React from "react";
+import { motion } from "framer-motion";
 interface IProps {}
 
-
-export const ApLoader: React.FC<IProps> = () => {
+export const Loader: React.FC<IProps> = () => {
   return (
     <div className="w-full h-full flex justify-center items-center">
       <motion.div
-        className="w-24 h-24 border-4 border-t-[#80DAEB] border-b-[#80DAEB] border-l-transparent border-r-transparent rounded-full"
+        className="w-24 h-24 border-4 border-t-purple-500 border-b-purple-500 border-l-transparent border-r-transparent rounded-full"
         animate={{ rotate: 360 }}
         transition={{
           repeat: Infinity,
-          ease: 'linear',
+          ease: "linear",
           duration: 1,
         }}
       />
@@ -20,7 +19,7 @@ export const ApLoader: React.FC<IProps> = () => {
   );
 };
 
-export const ApSignInLoading = () => {
+export const SignInLoading = () => {
   return (
     <>
       <div className="animate-pulse">

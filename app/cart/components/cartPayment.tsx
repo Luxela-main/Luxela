@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button"
-  ;
+import { Button } from "@/components/ui/Button";
 import { Minus, Plus, Trash2, Pencil } from "lucide-react";
-// import  CartItem  from "./cartItems"
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/Card";
 
@@ -36,15 +34,23 @@ function CartItem({ item, increment, decrement, removeItem }: CartItemProps) {
           <div className="w-16 h-16 bg-gray-700 rounded" />
           <div>
             <h4 className="text-lg font-semibold">{item.name}</h4>
-            <p className="text-sm text-gray-400">NGN {item.price.toLocaleString()}</p>
+            <p className="text-sm text-gray-400">
+              NGN {item.price.toLocaleString()}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="icon" variant="outline" onClick={() => decrement(item.id)}>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => decrement(item.id)}>
             <Minus size={16} />
           </Button>
           <span className="w-8 text-center">{item.quantity}</span>
-          <Button size="icon" variant="outline" onClick={() => increment(item.id)}>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => increment(item.id)}>
             <Plus size={16} />
           </Button>
         </div>
@@ -52,7 +58,10 @@ function CartItem({ item, increment, decrement, removeItem }: CartItemProps) {
           <Button variant="outline" size="sm">
             <Pencil size={16} className="mr-1" /> Edit order
           </Button>
-          <Button variant="destructive" size="sm" onClick={() => removeItem(item.id)}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => removeItem(item.id)}>
             <Trash2 size={16} className="mr-1" /> Remove Item
           </Button>
         </div>
@@ -100,7 +109,10 @@ export default function CartPage() {
     setCartItems([]);
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   const discount = 0;
   const shipping = 1;
   const total = subtotal - discount + shipping;
@@ -108,21 +120,24 @@ export default function CartPage() {
   const StepIndicator = () => (
     <div className="flex justify-center gap-8 my-8 text-sm">
       <button
-        className={`font-bold ${currentStep === 1 ? "text-purple-500" : "text-gray-400"}`}
-        onClick={() => setCurrentStep(1)}
-      >
+        className={`font-bold ${
+          currentStep === 1 ? "text-purple-500" : "text-gray-400"
+        }`}
+        onClick={() => setCurrentStep(1)}>
         1. Cart review
       </button>
       <button
-        className={`font-bold ${currentStep === 2 ? "text-purple-500" : "text-gray-400"}`}
-        onClick={() => setCurrentStep(2)}
-      >
+        className={`font-bold ${
+          currentStep === 2 ? "text-purple-500" : "text-gray-400"
+        }`}
+        onClick={() => setCurrentStep(2)}>
         2. Billing address
       </button>
       <button
-        className={`font-bold ${currentStep === 3 ? "text-purple-500" : "text-gray-400"}`}
-        onClick={() => setCurrentStep(3)}
-      >
+        className={`font-bold ${
+          currentStep === 3 ? "text-purple-500" : "text-gray-400"
+        }`}
+        onClick={() => setCurrentStep(3)}>
         3. Payment
       </button>
     </div>
@@ -150,9 +165,12 @@ export default function CartPage() {
                 />
               </div>
 
-              <h2 className="text-xl font-semibold mb-2">Oops! Your cart is empty.</h2>
+              <h2 className="text-xl font-semibold mb-2">
+                Oops! Your cart is empty.
+              </h2>
               <p className="text-sm text-gray-400 mb-6">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+                eiusmod tempor incididunt ut labore et dolore magna aliqua.
               </p>
 
               <Button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md">
@@ -169,7 +187,8 @@ export default function CartPage() {
               decrement={decrement}
               removeItem={removeItem}
             />
-          )))}
+          ))
+        )}
       </div>
       <div className="bg-[#1a1a1a] p-6 rounded-lg space-y-4 h-fit">
         <div className="flex justify-between">
@@ -186,12 +205,13 @@ export default function CartPage() {
         </div>
         <div className="flex justify-between text-lg">
           <span className="font-semibold">Total amount</span>
-          <span className="font-bold text-white">NGN {total.toLocaleString()}</span>
+          <span className="font-bold text-white">
+            NGN {total.toLocaleString()}
+          </span>
         </div>
         <Button
           className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-          onClick={() => setCurrentStep(2)}
-        >
+          onClick={() => setCurrentStep(2)}>
           Continue to payment
         </Button>
       </div>
@@ -203,19 +223,35 @@ export default function CartPage() {
       <div className="lg:col-span-2 bg-[#1a1a1a] p-6 rounded-lg">
         <h3 className="text-lg font-semibold mb-4">Billing address</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-          <p><strong>Full name:</strong> {billingInfo.name}</p>
-          <p><strong>Email address:</strong> {billingInfo.email}</p>
-          <p><strong>Phone number:</strong> {billingInfo.phone}</p>
-          <p><strong>State of residence:</strong> {billingInfo.state}</p>
-          <p><strong>City:</strong> {billingInfo.city}</p>
-          <p><strong>Postal address:</strong> {billingInfo.postal}</p>
+          <p>
+            <strong>Full name:</strong> {billingInfo.name}
+          </p>
+          <p>
+            <strong>Email address:</strong> {billingInfo.email}
+          </p>
+          <p>
+            <strong>Phone number:</strong> {billingInfo.phone}
+          </p>
+          <p>
+            <strong>State of residence:</strong> {billingInfo.state}
+          </p>
+          <p>
+            <strong>City:</strong> {billingInfo.city}
+          </p>
+          <p>
+            <strong>Postal address:</strong> {billingInfo.postal}
+          </p>
           <div className="sm:col-span-2">
-            <p><strong>House address:</strong></p>
+            <p>
+              <strong>House address:</strong>
+            </p>
             <p>{billingInfo.house}</p>
           </div>
         </div>
         <div className="text-right mt-4">
-          <Button onClick={() => setCurrentStep(3)} className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button
+            onClick={() => setCurrentStep(3)}
+            className="bg-purple-600 hover:bg-purple-700 text-white">
             Continue to payment
           </Button>
         </div>
@@ -228,14 +264,28 @@ export default function CartPage() {
       <div className="lg:col-span-2 bg-[#1a1a1a] p-6 rounded-lg">
         <h3 className="text-lg font-semibold mb-4">Billing address</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-          <p><strong>Full name:</strong> {billingInfo.name}</p>
-          <p><strong>Email address:</strong> {billingInfo.email}</p>
-          <p><strong>Phone number:</strong> {billingInfo.phone}</p>
-          <p><strong>State of residence:</strong> {billingInfo.state}</p>
-          <p><strong>City:</strong> {billingInfo.city}</p>
-          <p><strong>Postal address:</strong> {billingInfo.postal}</p>
+          <p>
+            <strong>Full name:</strong> {billingInfo.name}
+          </p>
+          <p>
+            <strong>Email address:</strong> {billingInfo.email}
+          </p>
+          <p>
+            <strong>Phone number:</strong> {billingInfo.phone}
+          </p>
+          <p>
+            <strong>State of residence:</strong> {billingInfo.state}
+          </p>
+          <p>
+            <strong>City:</strong> {billingInfo.city}
+          </p>
+          <p>
+            <strong>Postal address:</strong> {billingInfo.postal}
+          </p>
           <div className="sm:col-span-2">
-            <p><strong>House address:</strong></p>
+            <p>
+              <strong>House address:</strong>
+            </p>
             <p>{billingInfo.house}</p>
           </div>
         </div>
@@ -255,7 +305,9 @@ export default function CartPage() {
         </div>
         <div className="flex justify-between text-lg">
           <span className="font-semibold">Total amount</span>
-          <span className="font-bold text-white">NGN {total.toLocaleString()}</span>
+          <span className="font-bold text-white">
+            NGN {total.toLocaleString()}
+          </span>
         </div>
         <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
           Make Payment

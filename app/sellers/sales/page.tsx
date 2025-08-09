@@ -1,26 +1,33 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Filter, MoreVertical, X } from "lucide-react"
-import SearchBar from "@/components/search-bar"
-import { salesData, orderDetail } from "@/lib/data"
-import { Button } from "@/components/ui/button"
-
+import { useState } from "react";
+import { Filter, MoreVertical, X } from "lucide-react";
+import SearchBar from "@/components/search-bar";
+import { salesData, orderDetail } from "@/lib/data";
+import { Button } from "@/components/ui/Button";
 
 export default function Sales() {
-  const [selectedOrder, setSelectedOrder] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("All")
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
 
   const handleOrderClick = (orderId: string) => {
-    setSelectedOrder(orderId)
-  }
+    setSelectedOrder(orderId);
+  };
 
   const closeOrderDetail = () => {
-    setSelectedOrder(null)
-  }
+    setSelectedOrder(null);
+  };
 
-  const tabs = ["All", "Not shipped", "Shipped", "In transit", "Delivered", "Canceled", "Returned"]
+  const tabs = [
+    "All",
+    "Not shipped",
+    "Shipped",
+    "In transit",
+    "Delivered",
+    "Canceled",
+    "Returned",
+  ];
 
   return (
     <div className="p-6 relative">
@@ -39,10 +46,12 @@ export default function Sales() {
           {tabs.map((tab) => (
             <button
               key={tab}
-              className={`px-4 py-2 ${activeTab === tab ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white" : "text-gray-400"
-                }`}
-              onClick={() => setActiveTab(tab)}
-            >
+              className={`px-4 py-2 ${
+                activeTab === tab
+                  ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white"
+                  : "text-gray-400"
+              }`}
+              onClick={() => setActiveTab(tab)}>
               {tab}
             </button>
           ))}
@@ -60,8 +69,7 @@ export default function Sales() {
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="ml-2"
-            >
+              className="ml-2">
               <path
                 d="M6 9L12 15L18 9"
                 stroke="currentColor"
@@ -71,7 +79,9 @@ export default function Sales() {
               />
             </svg>
           </button>
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-md">Export</button>
+          <button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+            Export
+          </button>
         </div>
       </div>
 
@@ -111,38 +121,40 @@ export default function Sales() {
               <div>{order.amount}</div>
               <div>
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.payoutStatus === "Paid"
-                    ? "bg-green-100 text-green-800"
-                    : order.payoutStatus === "Processing"
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    order.payoutStatus === "Paid"
+                      ? "bg-green-100 text-green-800"
+                      : order.payoutStatus === "Processing"
                       ? "bg-yellow-100 text-yellow-800"
                       : "bg-red-100 text-red-800"
-                    }`}
-                >
+                  }`}>
                   <span
-                    className={`w-1.5 h-1.5 rounded-full mr-1 ${order.payoutStatus === "Paid"
-                      ? "bg-green-600"
-                      : order.payoutStatus === "Processing"
+                    className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                      order.payoutStatus === "Paid"
+                        ? "bg-green-600"
+                        : order.payoutStatus === "Processing"
                         ? "bg-yellow-600"
                         : "bg-red-600"
-                      }`}
-                  ></span>
+                    }`}></span>
                   {order.payoutStatus}
                 </span>
               </div>
               <div>
                 <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.deliveryStatus === "Delivered"
-                    ? "bg-green-100 text-green-800"
-                    : order.deliveryStatus === "In transit"
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    order.deliveryStatus === "Delivered"
+                      ? "bg-green-100 text-green-800"
+                      : order.deliveryStatus === "In transit"
                       ? "bg-blue-100 text-blue-800"
                       : "bg-red-100 text-red-800"
-                    }`}
-                >
+                  }`}>
                   {order.deliveryStatus}
                 </span>
               </div>
               <div>
-                <button className="text-gray-400 hover:text-white" onClick={() => handleOrderClick(order.id)}>
+                <button
+                  className="text-gray-400 hover:text-white"
+                  onClick={() => handleOrderClick(order.id)}>
                   <MoreVertical className="h-5 w-5" />
                 </button>
               </div>
@@ -157,10 +169,16 @@ export default function Sales() {
           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
             <span className="mr-1">Previous</span>
           </button>
-          <button className="bg-purple-600 text-white px-3 py-1 rounded-md">1</button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">2</button>
+          <button className="bg-purple-600 text-white px-3 py-1 rounded-md">
+            1
+          </button>
+          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
+            2
+          </button>
           <button className="text-gray-400 px-3 py-1">...</button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">4</button>
+          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
+            4
+          </button>
           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
             <span className="mr-1">Next</span>
           </button>
@@ -176,7 +194,9 @@ export default function Sales() {
                   <span className="text-gray-400 mr-2">Order Id:</span>
                   <span className="font-medium">#{orderDetail.id}</span>
                 </div>
-                <button onClick={closeOrderDetail} className="text-gray-400 hover:text-white">
+                <button
+                  onClick={closeOrderDetail}
+                  className="text-gray-400 hover:text-white">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -243,7 +263,9 @@ export default function Sales() {
 
               <div className="bg-[#222] rounded-lg p-4 mb-6">
                 <div className="mb-2">
-                  <h3 className="text-lg font-medium mb-4">Estimated delivery window</h3>
+                  <h3 className="text-lg font-medium mb-4">
+                    Estimated delivery window
+                  </h3>
                   <div className="border border-[#333] rounded-md p-3 bg-[#1a1a1a]">
                     <div className="flex items-center">
                       <svg
@@ -252,9 +274,16 @@ export default function Sales() {
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="mr-2 text-gray-400"
-                      >
-                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+                        className="mr-2 text-gray-400">
+                        <rect
+                          x="3"
+                          y="4"
+                          width="18"
+                          height="18"
+                          rx="2"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        />
                         <path
                           d="M16 2V6"
                           stroke="currentColor"
@@ -293,8 +322,7 @@ export default function Sales() {
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="text-gray-400"
-                      >
+                        className="text-gray-400">
                         <path
                           d="M6 9L12 15L18 9"
                           stroke="currentColor"
@@ -309,12 +337,14 @@ export default function Sales() {
               </div>
 
               <div className="flex justify-end">
-                <Button className="bg-purple-600 hover:bg-purple-700">Update Status</Button>
+                <Button className="bg-purple-600 hover:bg-purple-700">
+                  Update Status
+                </Button>
               </div>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
