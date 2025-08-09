@@ -1,23 +1,11 @@
 "use client";
-<<<<<<< HEAD
-import { Button } from "@/components/ui/button"
-  ;
-import Header from "../user-onboarding/components/header";
-=======
-import { Button } from "@/components/ui/Button";
+import { useState } from "react";
+import { useToast } from "@/components/hooks/useToast";
+import { Button } from "@/components/ui/button";
 import { Header } from "../signup/components/header";
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
 import { useRouter } from "next/navigation";
 
 export default function SignUpPage() {
-<<<<<<< HEAD
-
-  const router = useRouter();
-
-  const handleProceed = () => {
-    console.log("Terms accepted");
-    router.push("../../page.tsx");
-=======
   const [agreed, setAgreed] = useState<boolean>(false);
   const router = useRouter();
   const toast = useToast();
@@ -29,43 +17,17 @@ export default function SignUpPage() {
       return;
     }
     router.push("/");
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
   };
 
   const handleDecline = () => {
     console.log("Terms declined");
-<<<<<<< HEAD
-    router.push("../page.tsx");
-  }
-=======
     router.back();
   };
 
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
   return (
     <>
       <Header />
 
-<<<<<<< HEAD
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4 py-12">
-        <div className="w-full max-w-4xl bg-zinc-900 rounded-xl p-10 shadow-lg">
-          <h2 className="text-2xl font-semibold mb-6 text-center">Terms of Agreement</h2>
-
-          <div className="text-sm text-gray-300 space-y-4 mb-6 h-64 overflow-y-scroll pr-2">
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua...
-            </p>
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua...
-            </p>
-          </div>
-
-          <form className="space-y-4">
-            <label className="flex items-start space-x-2 text-sm text-gray-300">
-              <input type="checkbox" className="mt-1" />
-              <span>
-                By clicking “Accept”, you agree to our Terms of Agreement and Privacy Policies
-=======
       <div className="min-h-screen bg-gradient-to-b from-[#141414] via-[#1a1a1a] to-[#141414] text-white flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-4xl backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 sm:p-12 shadow-2xl">
           {/* Sticky Title */}
@@ -254,29 +216,11 @@ export default function SignUpPage() {
               and{" "}
               <span className="text-purple-400 underline cursor-pointer">
                 Privacy Policies
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
               </span>
               .
             </span>
           </label>
 
-<<<<<<< HEAD
-            <div className="flex space-x-4 pt-2">
-              <Button
-                className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto px-6 py-2 rounded-md"
-                onClick={(e) => {
-                  e.preventDefault();
-
-                }}
-              >
-                Proceed
-              </Button>
-              <Button variant="ghost" className="w-full sm:w-auto px-6 py-2">
-                Decline
-              </Button>
-            </div>
-          </form>
-=======
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4 w-full items-center justify-center">
             <Button
@@ -291,7 +235,6 @@ export default function SignUpPage() {
               Decline
             </Button>
           </div>
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
         </div>
       </div>
 

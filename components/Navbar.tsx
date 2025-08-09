@@ -1,18 +1,11 @@
 "use client";
 
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react'
-import Link from "next/link"
-import { ChevronRight, Menu, ShoppingCart, X } from "lucide-react"
-import Image from 'next/image'
-=======
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Menu, ShoppingCart, X } from "lucide-react";
 import Image from "next/image";
 import { User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
 
 interface NavItem {
   name: string;
@@ -28,10 +21,7 @@ const navItems: NavItem[] = [
 export default function Navbar() {
   const [sticky, setSticky] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-<<<<<<< HEAD
-=======
   const { user } = useAuth();
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -83,16 +73,6 @@ export default function Navbar() {
           />
         </Link>
 
-<<<<<<< HEAD
-        {/* CTA Buttons */}
-        <div className="flex items-center space-x-2">
-          <Link href="/login" className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
-            Sell
-          </Link>
-          <Link href="#" className="h-[42px] flex items-center space-x-2 border border-[#FFFFFF66]/40 hover:border-purple-500 transition text-white rounded-[4px] px-6">
-            <span className='hidden md:block'>Shop now</span><ShoppingCart className="h-4 w-4" />
-          </Link>
-=======
         <div className="flex items-center space-x-2">
           {user ? (
             <Link
@@ -141,7 +121,6 @@ export default function Navbar() {
               <span className="ml-2">Account</span>
             </Link>
           )}
->>>>>>> 2b30e35 (Add validation schemas for auth forms)
         </div>
       </div>
 
