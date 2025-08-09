@@ -1,10 +1,26 @@
 "use client";
 
-import { useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useEffect } from "react";
+import { useVerifyEmail } from "../auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useToast } from "@/components/hooks/useToast";
 import { Header } from "../signup/components/header";
 
 export default function VerifyEmailPage() {
+  const { verifyEmail, loading, error } = useVerifyEmail();
+  const searchParams = useSearchParams();
+
+  const toast = useToast();
+  const router = useRouter();
+
+  const oobCode = searchParams.get("oobCode");
+
+  useEffect(() => {
+    if (oobCode) {
+      handleVerification(oobCode);
+    }
+  }, [oobCode]);
+
   const inputs = Array.from({ length: 6 }, () =>
     useRef<HTMLInputElement>(null)
   );
@@ -20,14 +36,15 @@ export default function VerifyEmailPage() {
       inputs[index - 1].current?.focus();
     }
   };
-  const router = useRouter();
 
-  const handleVerification = () => {
-    const code = inputs.map((input) => input.current?.value).join("");
-    console.log("Code entered:", code);
-
-    //Verification logic goes here
-    router.push("/privacy-policy");
+  const handleVerification = async (code: string) => {
+    try {
+      await verifyEmail(code);
+      toast.success("Email verified successfully!");
+      router.push("/privacy-policy");
+    } catch (error: any) {
+      toast.error(error.message || "Verification failed");
+    }
   };
 
   return (
@@ -52,7 +69,7 @@ export default function VerifyEmailPage() {
                 key={index}
                 ref={ref}
                 maxLength={1}
-                className="w-16 h-12 text-center text-lg bg-zinc-800 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-12 h-10 text-center text-lg bg-zinc-800 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
                 onChange={(e) => handleInput(e, index)}
               />
             ))}
@@ -61,7 +78,10 @@ export default function VerifyEmailPage() {
           <button
             className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded text-sm cursor-pointer"
             onClick={() => {
-              handleVerification();
+              const code = inputs
+                .map((ref) => ref.current?.value || "")
+                .join("");
+              handleVerification(code);
             }}>
             Verify
           </button>

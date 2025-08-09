@@ -15,6 +15,7 @@ import {
   FileText,
   Store,
   HelpCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { useToast } from "@/components/hooks/useToast";
 import { Loader } from "@/components/loader/loader";
@@ -54,6 +55,12 @@ const AccountPage = () => {
       <div className="max-w-3xl mx-auto bg-zinc-900 rounded-xl shadow-md p-8">
         {/* Header */}
         <div className="flex items-center space-x-4 mb-8">
+          <div>
+            <ArrowLeft
+              className="h-8 w-8 cursor-pointer"
+              onClick={router.back}
+            />
+          </div>
           <div className="h-16 w-16 rounded-full overflow-hidden border border-white/20">
             {user.photoURL ? (
               <Image

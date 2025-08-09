@@ -25,7 +25,7 @@ export default function About() {
             access and offer a trusted space for discovering authentic style. 
           </p>
         </div>
-        <div className="max-w-[1240px] mx-auto" data-aos="flip-down">
+        <div className="max-w-[1240px] mx-auto" data-aos="flip-right">
           <Image
             src={"/images/about-1240x802.png"}
             width={1240}

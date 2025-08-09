@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  createUserWithEmailAndPassword, 
+import {
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  getIdToken
+  getIdToken,
+  sendEmailVerification,
+  applyActionCode,
+  checkActionCode,
+  User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -16,16 +20,27 @@ class AuthService {
 
   async signUp(email: string, password: string): Promise<string> {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       return userCredential.user.uid;
     } catch (error: any) {
       throw new Error(error.message || "Firebase signup failed");
     }
   }
 
-  async signIn(email: string, password: string): Promise<{ uid: string; token: string }> {
+  async signIn(
+    email: string,
+    password: string
+  ): Promise<{ uid: string; token: string }> {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const token = await getIdToken(userCredential.user);
       return { uid: userCredential.user.uid, token };
     } catch (error: any) {
@@ -86,7 +101,11 @@ class AuthService {
     return await response.json();
   }
 
-  async updateUserData(id: string, update: any, token: string): Promise<{ message: string }> {
+  async updateUserData(
+    id: string,
+    update: any,
+    token: string
+  ): Promise<{ message: string }> {
     const response = await fetch(`${this.userBaseUrl}/update`, {
       method: "PUT",
       headers: {
@@ -104,7 +123,10 @@ class AuthService {
     return await response.json();
   }
 
-  async deleteUserData(id: string, token: string): Promise<{ message: string }> {
+  async deleteUserData(
+    id: string,
+    token: string
+  ): Promise<{ message: string }> {
     const response = await fetch(`${this.userBaseUrl}/delete`, {
       method: "DELETE",
       headers: {
@@ -121,6 +143,43 @@ class AuthService {
 
     return await response.json();
   }
+
+  async sendVerificationEmail(user: User): Promise<void> {
+    try {
+      await sendEmailVerification(user);
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to send verification email");
+    }
+  }
+
+  async verifyEmail(oobCode: string): Promise<{ email: string }> {
+    try {
+      // Check if the code is valid
+      const info = await checkActionCode(auth, oobCode);
+
+      // and apply the verification
+      await applyActionCode(auth, oobCode);
+
+      return { email: info.data.email || "" };
+    } catch (error: any) {
+      throw new Error(error.message || "Email verification failed");
+    }
+  }
+
+  async checkEmailVerified(uid: string): Promise<boolean> {
+    try {
+      const user = auth.currentUser;
+      if (user && user.uid === uid) {
+        await user.reload();
+        return user.emailVerified;
+      }
+      return false;
+    } catch (error: any) {
+      throw new Error(
+        error.message || "Failed to check email verification status"
+      );
+    }
+  }
 }
 
 const authService = new AuthService();
@@ -136,7 +195,13 @@ export function useSignUp() {
 
     try {
       const newUid = await authService.signUp(email, password);
-      setUid(newUid);
+      const user = auth.currentUser;
+
+      // setUid(newUid);
+      if (user) {
+        await authService.sendVerificationEmail(user);
+        setUid(newUid);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -153,12 +218,18 @@ export function useSignIn() {
   const [uid, setUid] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  async function signIn(email: string, password: string): Promise<{ uid: string; token: string }> {
+  async function signIn(
+    email: string,
+    password: string
+  ): Promise<{ uid: string; token: string }> {
     setLoading(true);
     setError(null);
 
     try {
-      const { uid: userUid, token: userToken } = await authService.signIn(email, password);
+      const { uid: userUid, token: userToken } = await authService.signIn(
+        email,
+        password
+      );
       setUid(userUid);
       setToken(userToken);
       localStorage.setItem("authToken", userToken);
@@ -173,7 +244,6 @@ export function useSignIn() {
 
   return { signIn, loading, error, uid, token };
 }
-
 
 export function useVerifyToken() {
   const [loading, setLoading] = useState(false);
@@ -283,4 +353,26 @@ export function useDeleteUserData() {
   }
 
   return { deleteUserData, loading, error, message };
+}
+
+export function useVerifyEmail() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<AuthError>(null);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+
+  async function verifyEmail(oobCode: string) {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { email } = await authService.verifyEmail(oobCode);
+      setVerifiedEmail(email);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return { verifyEmail, loading, error, verifiedEmail };
 }
