@@ -1,29 +1,29 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, Suspense } from "react";
 import { useVerifyEmail } from "../auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/hooks/useToast";
 import { Header } from "../signup/components/header";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const { verifyEmail, loading, error } = useVerifyEmail();
   const searchParams = useSearchParams();
-
   const toast = useToast();
   const router = useRouter();
 
   const oobCode = searchParams.get("oobCode");
 
+  const inputs = Array.from({ length: 6 }, () =>
+    useRef<HTMLInputElement>(null)
+  );
+
   useEffect(() => {
     if (oobCode) {
       handleVerification(oobCode);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [oobCode]);
-
-  const inputs = Array.from({ length: 6 }, () =>
-    useRef<HTMLInputElement>(null)
-  );
 
   const handleInput = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -82,7 +82,8 @@ export default function VerifyEmailPage() {
                 .map((ref) => ref.current?.value || "")
                 .join("");
               handleVerification(code);
-            }}>
+            }}
+          >
             Verify
           </button>
 
@@ -95,5 +96,13 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="text-center text-white mt-20">Loading...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
