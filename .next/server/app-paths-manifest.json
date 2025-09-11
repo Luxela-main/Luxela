@@ -1,21 +1,4 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/account/page": "app/account/page.js",
-  "/cart/page": "app/cart/page.js",
-  "/page": "app/page.js",
-  "/privacy-policy/page": "app/privacy-policy/page.js",
-  "/signin/page": "app/signin/page.js",
-  "/signup/page": "app/signup/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/sellers/dashboard/page": "app/sellers/dashboard/page.js",
-  "/sellers/my-listings/page": "app/sellers/my-listings/page.js",
-  "/sellers/my-listings/with-products/page": "app/sellers/my-listings/with-products/page.js",
-  "/sellers/new-listing/page": "app/sellers/new-listing/page.js",
-  "/sellers/notifications/page": "app/sellers/notifications/page.js",
-  "/sellers/pending-orders/page": "app/sellers/pending-orders/page.js",
-  "/sellers/reports/page": "app/sellers/reports/page.js",
-  "/sellers/sales/page": "app/sellers/sales/page.js",
-  "/sellers/settings/page": "app/sellers/settings/page.js",
-  "/sellers/support/page": "app/sellers/support/page.js",
-  "/verify-email/page": "app/verify-email/page.js"
+  "/page": "app/page.js"
 }
