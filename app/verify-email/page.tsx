@@ -1,15 +1,14 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, Suspense } from "react";
 import { useVerifyEmail } from "../auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/hooks/useToast";
 import { Header } from "../signup/components/header";
 
-export default function VerifyEmailPage() {
-  const { verifyEmail, loading, error } = useVerifyEmail();
+function VerifyEmailContent() {
+  const { verifyEmail } = useVerifyEmail();
   const searchParams = useSearchParams();
-
   const toast = useToast();
   const router = useRouter();
 
@@ -95,5 +94,14 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={<div className="text-white text-center pt-20">Loading...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
