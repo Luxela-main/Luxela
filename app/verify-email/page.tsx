@@ -7,7 +7,7 @@ import { useToast } from "@/components/hooks/useToast";
 import { Header } from "../signup/components/header";
 
 function VerifyEmailContent() {
-  const { verifyEmail, loading, error } = useVerifyEmail();
+  const { verifyEmail } = useVerifyEmail();
   const searchParams = useSearchParams();
   const toast = useToast();
   const router = useRouter();
@@ -101,7 +101,8 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="text-center text-white mt-20">Loading...</div>}>
+    <Suspense
+      fallback={<div className="text-white text-center pt-20">Loading...</div>}>
       <VerifyEmailContent />
     </Suspense>
   );
