@@ -2,5 +2,12 @@
   "/_not-found/page": "app/_not-found/page.js",
   "/account/page": "app/account/page.js",
   "/page": "app/page.js",
+  "/sellers/dashboard/page": "app/sellers/dashboard/page.js",
+  "/sellers/my-listings/page": "app/sellers/my-listings/page.js",
+  "/sellers/notifications/page": "app/sellers/notifications/page.js",
+  "/sellers/pending-orders/page": "app/sellers/pending-orders/page.js",
+  "/sellers/reports/page": "app/sellers/reports/page.js",
+  "/sellers/sales/page": "app/sellers/sales/page.js",
+  "/sellers/settings/page": "app/sellers/settings/page.js",
   "/sellers/support/page": "app/sellers/support/page.js"
 }
