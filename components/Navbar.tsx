@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Menu, ShoppingCart, X } from "lucide-react";
+import { ChevronRight, Menu, ShoppingCart, X, User } from "lucide-react";
 import Image from "next/image";
-import { User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface NavItem {
   name: string;
@@ -27,84 +27,81 @@ export default function Navbar() {
     const handleScroll = () => {
       setSticky(window.scrollY > 10);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
     <nav
-      className={`z-50 transition-all duration-300 text-white ${
+      className={`z-50 transition-all duration-300 ${
         sticky
-          ? "sticky top-0 left-0 right-0 bg-[#0A0A0A]/80 backdrop-blur-md"
+          ? "sticky top-0 left-0 right-0 bg-[#0A0A0A]/80 backdrop-blur-md shadow-md"
           : "relative bg-transparent"
       }`}>
-      <div className="container z-10 mx-auto px-2 md:px-10 py-4 flex justify-between items-center">
-        {/* Desktop Nav */}
-        <ul className="hidden md:flex items-center space-x-9">
+      <div className="container mx-auto px-4 lg:px-10 py-4 flex justify-between items-center">
+        {/* Left - Nav items (desktop only) */}
+        <ul className="hidden lg:flex items-center space-x-10">
           {navItems.map((item) => (
             <li key={item.name + item.route}>
               <Link
                 href={item.route}
-                className="text-xs lg:text-sm hover:text-purple-500 transition">
+                className="text-sm font-medium hover:text-purple-500 transition-colors duration-200">
                 {item.name}
               </Link>
             </li>
           ))}
         </ul>
 
-        {/* Hamburger */}
+        {/* Mobile menu button */}
         <button
-          className="cursor-pointer md:hidden text-white"
+          aria-label="Open menu"
+          className="lg:hidden text-white p-2 rounded-md hover:bg-white/10 transition"
           onClick={() => setMobileMenuOpen(true)}>
           <Menu className="h-6 w-6" />
         </button>
 
-        {/* Logo */}
+        {/* Center - Logo */}
         <Link
           href="/"
-          className="flex items-center w-[132px] md:w-[200px] h-[32px]">
+          className="flex items-center w-[120px] sm:w-[150px] md:w-[200px] h-auto">
           <Image
-            src={"/images/Luxela-white-logo-200x32.svg"}
+            src="/images/Luxela-white-logo-200x32.svg"
             width={200}
             height={32}
-            className="w-full h-full"
+            className="w-full h-auto"
             alt="Luxela logo"
+            priority
           />
         </Link>
 
-        <div className="flex items-center space-x-2">
-          {user ? (
-            <Link
-              href="/sellers/dashboard"
-              className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
-              Sell
-            </Link>
-          ) : (
-            <Link
-              href="/signin"
-              className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
-              Sell
-            </Link>
-          )}
+        {/* Right - Actions */}
+        <div className="flex items-center space-x-3 sm:space-x-5">
+          {/* Sell link */}
+          <Link
+            href={user ? "/sellers/dashboard" : "/signin"}
+            className="hidden sm:flex h-10 items-center text-sm hover:text-purple-500 transition px-4">
+            Sell
+          </Link>
 
+          {/* Shop now button */}
           <Link
             href="#"
-            className="h-[42px] flex items-center space-x-2 border border-[#FFFFFF66]/40 hover:border-purple-500 transition text-white rounded-[4px] px-6">
-            <span className="hidden md:block">Shop now</span>
+            className="h-10 flex items-center space-x-2 border border-white/40 hover:border-purple-500 transition rounded-md px-4 text-sm">
+            <span className="hidden sm:block">Shop now</span>
             <ShoppingCart className="h-4 w-4" />
           </Link>
 
+          {/* User account */}
           {user ? (
             <Link
               href="/account"
-              className="h-[42px] w-[42px] rounded-full overflow-hidden border border-white/30 hover:border-purple-500 transition">
+              className="h-10 w-10 rounded-full overflow-hidden border border-white/30 hover:border-purple-500 transition">
               {user.photoURL ? (
                 <Image
                   src={user.photoURL}
                   alt="Profile"
-                  width={42}
-                  height={42}
+                  width={40}
+                  height={40}
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
@@ -116,74 +113,69 @@ export default function Navbar() {
           ) : (
             <Link
               href="/signup"
-              className="h-[42px] flex items-center text-sm hover:text-purple-500 transition px-6">
-              <User size={24} />
-              <span className="ml-2">Account</span>
+              className="flex items-center text-sm hover:text-purple-500 transition">
+              <User size={22} />
+              <span className="ml-2 hidden sm:inline">Account</span>
             </Link>
           )}
         </div>
       </div>
 
-      {/* Mobile Nav */}
-      {mobileMenuOpen && <MobileNav setMobileMenuOpen={setMobileMenuOpen} />}
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            key="mobileNav"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 80, damping: 20 }}
+            className="lg:hidden fixed inset-0 bg-[#0E0E0E] z-50 flex flex-col px-6 py-6"
+            role="dialog"
+            aria-modal="true">
+            {/* Top bar */}
+            <div className="flex items-center">
+              <Link href="/" className="w-[132px] h-auto">
+                <Image
+                  src="/images/Luxela-white-logo-200x32.svg"
+                  width={132}
+                  height={32}
+                  alt="Luxela logo"
+                />
+              </Link>
+              <button
+                aria-label="Close menu"
+                className="ml-auto p-2 text-white hover:bg-white/10 rounded-md"
+                onClick={() => setMobileMenuOpen(false)}>
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Menu items */}
+            <ul className="mt-10 flex flex-col space-y-6 text-lg font-medium">
+              {navItems.map((item) => (
+                <li key={item.name + item.route}>
+                  <Link
+                    href={item.route}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center hover:text-purple-500 transition">
+                    {item.name}
+                    <ChevronRight className="ml-auto" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            {/* Bottom CTA */}
+            <Link
+              href="#"
+              className="mt-auto h-12 flex items-center justify-center space-x-2 bg-purple-500 hover:bg-purple-600 transition text-white rounded-lg">
+              <span>Shop now</span>
+              <ShoppingCart className="h-5 w-5" />
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
-
-const MobileNav = ({
-  setMobileMenuOpen,
-}: {
-  setMobileMenuOpen: (open: boolean) => void;
-}) => {
-  return (
-    <div className="md:hidden flex flex-col fixed top-0 w-screen h-screen bg-[#0E0E0E] z-40 px-6 py-4">
-      {/* Decorative lights/images */}
-      <Image
-        src={"/images/Light-852x785.svg"}
-        width={852}
-        height={785}
-        alt="light effect"
-        className="-z-1 absolute top-0 right-0 "
-      />
-      {/* Close Button and Logo */}
-      <div className="flex items-center mt-5 w-full">
-        <Link href="/" className="w-[132px] h-[21px] mx-auto ">
-          <Image
-            src={"/images/Luxela-white-logo-200x32.svg"}
-            width={132}
-            height={32}
-            className="w-full h-full"
-            alt="Luxela logo"
-          />
-        </Link>
-        <button
-          className="size-9 text-white ml-auto cursor-pointer"
-          onClick={() => setMobileMenuOpen(false)}>
-          <X className="size-6" />
-        </button>
-      </div>
-
-      {/* Menu Items */}
-      <ul className="mt-10 flex flex-col space-y-6 text-sm">
-        {navItems.map((item) => (
-          <li key={item.name + item.route}>
-            <Link
-              href={item.route}
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center hover:text-purple-500 transition text-[1.5rem]">
-              <span>{item.name}</span>{" "}
-              <ChevronRight className="ml-auto hover:text-[#8451E1] mr-10" />
-            </Link>
-          </li>
-        ))}
-      </ul>
-
-      <Link
-        href="#"
-        className="mt-auto h-[42px] flex items-center justify-center space-x-2 bg-purple-500 transition text-white rounded-[10px] px-6">
-        <span className="">Shop now</span>
-        <ShoppingCart className="ml-2 h-4 w-4" />
-      </Link>
-    </div>
-  );
-};
