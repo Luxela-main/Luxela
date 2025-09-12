@@ -1,17 +1,16 @@
-import Footer from "@/components/Footer"
-import Header from "@/components/Header"
-import Partners from "@/components/Partners"
-import About from "@/components/About"
-import Feature from "@/components/Feature"
-import Brand from "@/components/Brand"
-import GettingStarted from "@/components/GettingStarted"
-import FAQ from "@/components/FAQ"
-import CTA from "@/components/CTA"
+import Footer from "@/components/Footer";
+import Header from "@/components/Header";
+import Partners from "@/components/Partners";
+import About from "@/components/About";
+import Feature from "@/components/Feature";
+import Brand from "@/components/Brand";
+import GettingStarted from "@/components/GettingStarted";
+import FAQ from "@/components/FAQ";
+import CTA from "@/components/CTA";
 
 export default function LandingPage() {
-
   return (
-    <main>
+    <main className="overflow-x-hidden">
       {/* header */}
       <Header />
 
@@ -28,18 +27,14 @@ export default function LandingPage() {
       {/* Getting Started Section */}
       <GettingStarted />
 
-
       {/* FAQ Section */}
       <FAQ />
 
       {/* CTA Section */}
-      <CTA/>
-
+      <CTA />
 
       {/* Footer */}
       <Footer />
     </main>
-  )
+  );
 }
-
-
