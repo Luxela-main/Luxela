@@ -14,15 +14,16 @@ function VerifyEmailContent() {
 
   const oobCode = searchParams.get("oobCode");
 
+  const inputs = Array.from({ length: 6 }, () =>
+    useRef<HTMLInputElement>(null)
+  );
+
   useEffect(() => {
     if (oobCode) {
       handleVerification(oobCode);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [oobCode]);
-
-  const inputs = Array.from({ length: 6 }, () =>
-    useRef<HTMLInputElement>(null)
-  );
 
   const handleInput = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -81,7 +82,8 @@ function VerifyEmailContent() {
                 .map((ref) => ref.current?.value || "")
                 .join("");
               handleVerification(code);
-            }}>
+            }}
+          >
             Verify
           </button>
 
