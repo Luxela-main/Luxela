@@ -240,8 +240,15 @@ const getVariantColor = (variant: string): string => {
   return colorMap[variant] || 'bg-gray-400'
 }
 
+const BRANDS_PER_PAGE = 2
+
 const BrandCatalogGrid = () => {
   const [visibleProducts, setVisibleProducts] = useState<number[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const totalPages = Math.ceil(BRAND_CATALOG.length / BRANDS_PER_PAGE)
+  const startIndex = (currentPage - 1) * BRANDS_PER_PAGE
+  const paginatedBrands = BRAND_CATALOG.slice(startIndex, startIndex + BRANDS_PER_PAGE)
 
   // Animate products on load
   useEffect(() => {
@@ -281,7 +288,7 @@ const BrandCatalogGrid = () => {
         </div>
 
         {/* Brand Sections */}
-        {BRAND_CATALOG.map((brandSection) => (
+        {paginatedBrands.map((brandSection) => (
           <div key={brandSection.brandName} className="mb-12">
             {/* Brand Header */}
             <div className="flex items-center justify-between mb-6">
@@ -305,8 +312,8 @@ const BrandCatalogGrid = () => {
                   <div
                     key={product.id}
                     className={`group transition-all duration-700 ease-out ${visibleProducts.includes(currentIndex)
-                        ? 'opacity-100 translate-y-0'
-                        : 'opacity-0 translate-y-8'
+                      ? 'opacity-100 translate-y-0'
+                      : 'opacity-0 translate-y-8'
                       }`}
                   >
                     {/* Product Card */}
@@ -410,10 +417,57 @@ const BrandCatalogGrid = () => {
         ))}
 
         {/* Load More Button */}
-        <div className="flex justify-center mt-12">
+        {/* <div className="flex justify-center mt-12">
           <button className="bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white px-8 py-3 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
             Load More Brands
           </button>
+        </div> */}
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-end mt-8 gap-2">
+          {/* Prev */}
+          <button
+            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+            className={`px-3 py-2 rounded-lg ${currentPage === 1
+              ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+              : "bg-[#161616] text-white hover:bg-[#222]"
+              }`}
+          >
+            Prev
+          </button>
+
+          {/* Page Numbers */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+            <button
+              key={pageNum}
+              onClick={() => setCurrentPage(pageNum)}
+              className={`px-4 py-1 rounded-md ${currentPage === pageNum
+                ? "bg-[#9872DD] text-white"
+                : "text-gray-300 hover:bg-[#222]"
+                }`}
+            >
+              {pageNum}
+            </button>
+          ))}
+
+          {/* Next */}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-2 rounded-lg ${currentPage === totalPages
+              ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+              : "bg-[#161616] text-white hover:bg-[#222]"
+              }`}
+          >
+            Next
+          </button>
+        </div>
+
+        {/* Page Info */}
+        <div className="flex justify-end mt-4">
+          <span className="text-gray-400 text-sm">
+            Page {currentPage} of {totalPages} • Showing {paginatedBrands.length} of {BRAND_CATALOG.length} brands
+          </span>
         </div>
       </div>
     </div>
