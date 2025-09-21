@@ -377,16 +377,11 @@ const BrandCatalogGrid = () => {
                         {/* Price and Cart Button Row */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
-                            {/* Solana Icon */}
-                            <svg
-                              className="w-4 h-4 text-purple-500"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path d="M19.9 4.5L4.1 4.5c-.9 0-1.4 1.1-.7 1.7l5.6 4.8c.4.3 1 .3 1.4 0l5.6-4.8c.7-.6.2-1.7-.7-1.7zm0 6L4.1 10.5c-.9 0-1.4 1.1-.7 1.7l5.6 4.8c.4.3 1 .3 1.4 0l5.6-4.8c.7-.6.2-1.7-.7-1.7zm0 6L4.1 16.5c-.9 0-1.4 1.1-.7 1.7l5.6 4.8c.4.3 1 .3 1.4 0l5.6-4.8c.7-.6.2-1.7-.7-1.7z" />
-                            </svg>
                             <span className="text-white font-bold text-lg">
                               {product.price}
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {product.currency}
                             </span>
                           </div>
 
