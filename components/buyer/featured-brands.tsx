@@ -1,5 +1,6 @@
 'use client'
 
+import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
 
 
@@ -85,7 +86,7 @@ const FeaturedBrands = () => {
   const handleMouseUp = () => setIsDragging(false)
 
   return (
-    <div className="">
+    <div className="mt-16">
       <main className="px-6">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl capitalize font-bold text-white">Featured Brands</h2>
@@ -114,12 +115,12 @@ const FeaturedBrands = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
-            <a
-              href="#"
+            <Link
+              href="/buyer/brands"
               className="text-sm text-[#9872DD] hover:text-[#8451E1] transition-colors flex items-center gap-1 ml-2"
             >
               See all →
-            </a>
+            </Link>
           </div>
         </div>
 

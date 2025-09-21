@@ -244,7 +244,7 @@ const ExploreAllProducts = () => {
                 }`}
             >
               {/* Product Card */}
-              <div className="bg-[#161616] rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-gray-800 hover:border-[#9872DD]/30">
+              <div className="bg-[#161616] rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.01] border border-gray-800 hover:border-[#9872DD]/30">
                 {/* Image Container */}
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <img
@@ -329,7 +329,7 @@ const ExploreAllProducts = () => {
           <div className="flex justify-center mt-12">
             <button
               onClick={handleLoadMore}
-              className="bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white px-8 py-3 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="bg-gradient-to-b text-sm from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white px-8 py-3 rounded-lg font-medium hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer"
             >
               Load More Products
             </button>
