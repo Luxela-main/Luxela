@@ -86,7 +86,7 @@ const FeaturedBrands = () => {
 
   return (
     <div className="">
-      <main className="px-6 py-12">
+      <main className="px-6">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl capitalize font-bold text-white">Featured Brands</h2>
           <div className="flex items-center gap-4">
@@ -127,8 +127,7 @@ const FeaturedBrands = () => {
         <div className="relative">
           <div
             ref={carouselRef}
-            className={`flex gap-6 overflow-x-auto scrollbar-hide transition-all duration-200 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'
-              }`}
+            className={`py-6 flex gap-6 overflow-x-auto scrollbar-hide transition-all duration-200`}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
@@ -137,7 +136,7 @@ const FeaturedBrands = () => {
             {BRANDS.map((brand, i) => (
               <div
                 key={brand.id}
-                className="min-w-[320px] md:min-w-[480px] lg:min-w-[600px] bg-[#161616] rounded-[20px] p-8 overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] flex flex-col md:flex-row"
+                className="min-w-[320px] md:min-w-[480px] lg:min-w-[600px] bg-[#161616] rounded-[20px] p-8 overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] flex flex-col md:flex-row gap-6"
               >
                 {/* Text Content */}
                 <div className="flex-1 py-8 flex flex-col justify-between">
@@ -149,7 +148,7 @@ const FeaturedBrands = () => {
                   </div>
                   <button
                     onClick={() => window.open(brand.href, '_blank')}
-                    className="cursor-pointer max-w-[230px] mt-6 self-start bg-gradient-to-r from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white text-sm px-8 py-3 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    className="cursor-pointer w-full md:max-w-[230px] mt-6 self-start bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white text-sm px-8 py-3 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                   >
                     Shop Now
                   </button>

@@ -1,10 +1,14 @@
+import ExploreAllProducts from '@/components/buyer/explore-all-products'
 import FeaturedBrands from '@/components/buyer/featured-brands'
+import FeaturedCollection from '@/components/buyer/featured-collection'
 import React from 'react'
 
 const Homepage = () => {
   return (
-    <section>
+    <section className='py-8'>
       <FeaturedBrands />
+      <FeaturedCollection />
+      <ExploreAllProducts />
     </section>
   )
 }

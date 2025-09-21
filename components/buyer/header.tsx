@@ -22,7 +22,7 @@ const NAVLINKS = [
 
 const BuyerHeader = () => {
   return (
-    <nav className='bg-[#0E0E0E] px-10 py-[18px] border-b border-[#2B2B2B] w-full flex items-center justify-between'>
+    <nav className='z-[999] bg-[#0E0E0E] px-6 py-[18px] border-b border-[#2B2B2B] w-full flex items-center justify-between'>
       {/* Left Links */}
       <div className='flex items-center gap-6'>
         {NAVLINKS.map((link) => (
@@ -54,7 +54,7 @@ const BuyerHeader = () => {
         </button>
 
         {/* User Dropdown */}
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button
               className='flex items-center gap-2 text-sm text-[#F2F2F2] px-4 py-1 shadow-[inset_0_0_0_1px_#212121] active:shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] 
@@ -68,7 +68,10 @@ const BuyerHeader = () => {
             </button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent className="w-56 bg-[#0E0E0E] border border-[#2B2B2B] ">
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="w-56 z-[101] bg-[#0E0E0E] border border-[#2B2B2B]">
             <DropdownMenuGroup>
               <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">Track Order</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-[#2B2B2B]" />
