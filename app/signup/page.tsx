@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAddUserData, useSignIn, useSignUp } from "../auth/index";
+import { useSignIn, useSignUp } from "../auth/index";
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
 import { useGoogleAuth } from "../auth/signinWithGoogle";
@@ -13,11 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DialogModal from "@/components/dialog";
+import { api } from "@/lib/trpc";
 
 export default function SignUpPage() {
   const { signUp } = useSignUp();
   const { signIn } = useSignIn();
-  const { addUserData } = useAddUserData();
   const { signInWithGoogle } = useGoogleAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -28,10 +28,6 @@ export default function SignUpPage() {
   const handleSignUp = async (values: any) => {
     const { email, password, confirmPassword, agreeTerms } = values;
 
-    if (values.email) {
-      setDialogOpen(true);
-    }
-
     if (!agreeTerms) {
       return toast.warning("Please agree to the terms and conditions");
     }
@@ -41,41 +37,22 @@ export default function SignUpPage() {
     }
 
     try {
-      await signUp(email, password);
-      const { uid, token } = await signIn(email, password);
-      await addUserData({ uid, email }, token);
-
-      toast.success("Account created successfully!");
-      router.push("privacy-policy");
+      await api.auth.requestOtp.mutate({ email });
+      toast.success("We sent a 6-digit code to your email");
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
-      toast.error(error.message || "Signup failed");
+      if (
+        error.message?.toLowerCase().includes("already registered") ||
+        error.message?.toLowerCase().includes("already exists")
+      ) {
+        toast.error(
+          "This email is already registered. Please check your inbox (including spam) for a confirmation email, or try logging in or resetting your password."
+        );
+      } else {
+        toast.error(error.message || "Signup failed");
+      }
     }
   };
-  // const handleSignUp = async (values: any) => {
-  //   const { email, password, confirmPassword, agreeTerms } = values;
-
-  //   if (!agreeTerms) {
-  //     return toast.warning("Please agree to the terms and conditions");
-  //   }
-
-  //   if (password !== confirmPassword) {
-  //     return toast.error("Passwords do not match");
-  //   }
-
-  //   try {
-  //     await signUp(email, password);
-  //     toast.success(
-  //       "Verification email sent! Please check your inbox, you may check your spam "
-  //     );
-  //     router.push("/verify-email");
-  //   } catch (error: any) {
-  //     if (error.message.includes("email-already-in-use")) {
-  //       setDialogOpen(true);
-  //     } else {
-  //       toast.error(error.message || "Signup failed");
-  //     }
-  //   }
-  // };
 
   return (
     <>

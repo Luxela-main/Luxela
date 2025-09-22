@@ -1,25 +1,18 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { useVerifyEmail } from "../auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/hooks/useToast";
 import { Header } from "../signup/components/header";
+import { api } from "@/lib/trpc";
 
 export default function VerifyEmailPage() {
-  const { verifyEmail, loading, error } = useVerifyEmail();
   const searchParams = useSearchParams();
 
   const toast = useToast();
   const router = useRouter();
 
-  const oobCode = searchParams.get("oobCode");
-
-  useEffect(() => {
-    if (oobCode) {
-      handleVerification(oobCode);
-    }
-  }, [oobCode]);
+  const email = searchParams.get("email");
 
   const inputs = Array.from({ length: 6 }, () =>
     useRef<HTMLInputElement>(null)
@@ -38,10 +31,12 @@ export default function VerifyEmailPage() {
   };
 
   const handleVerification = async (code: string) => {
+    if (!email) return toast.error("Missing email context");
     try {
-      await verifyEmail(code);
+      const res = await api.auth.verifyOtp.mutate({ email, code });
+      localStorage.setItem("authToken", res.token);
       toast.success("Email verified successfully!");
-      router.push("/privacy-policy");
+      router.push("/");
     } catch (error: any) {
       toast.error(error.message || "Verification failed");
     }
@@ -88,7 +83,20 @@ export default function VerifyEmailPage() {
 
           <p className="text-sm text-zinc-500 mt-4">
             Didn't get a code?{" "}
-            <a href="#" className="text-purple-400 underline">
+            <a
+              href="#"
+              className="text-purple-400 underline"
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!email) return toast.error("Missing email context");
+                try {
+                  await api.auth.requestOtp.mutate({ email });
+                  toast.success("Code resent");
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to resend code");
+                }
+              }}
+            >
               Resend Code
             </a>
           </p>

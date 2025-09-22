@@ -11,6 +11,10 @@ import {
   User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { createClient } from "@/lib/supabase/client";
+// import { supabase } from "@/lib/supabaseClient";
+
+const supabase = createClient();
 
 type AuthError = string | null;
 
@@ -18,43 +22,58 @@ class AuthService {
   private baseUrl = "https://auth-backend-kx7l.onrender.com/api/auth";
   private userBaseUrl = "https://auth-backend-kx7l.onrender.com/api/user";
 
-  async signUp(email: string, password: string): Promise<string> {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      return userCredential.user.uid;
-    } catch (error: any) {
-      throw new Error(error.message || "Firebase signup failed");
-    }
+  // async signUp(email: string, password: string): Promise<string> {
+  //   try {
+  //     const userCredential = await createUserWithEmailAndPassword(
+  //       auth,
+  //       email,
+  //       password
+  //     );
+  //     return userCredential.user.uid;
+  //   } catch (error: any) {
+  //     throw new Error(error.message || "Firebase signup failed");
+  //   }
+  // }
+
+
+  async signUp(email: string, password: string) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+    return data.user?.id || "";
   }
 
-  async signIn(
-    email: string,
-    password: string
-  ): Promise<{ uid: string; token: string }> {
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const token = await getIdToken(userCredential.user);
-      return { uid: userCredential.user.uid, token };
-    } catch (error: any) {
-      throw new Error(error.message || "Firebase signin failed");
-    }
+
+  // async signIn(
+  //   email: string,
+  //   password: string
+  // ): Promise<{ uid: string; token: string }> {
+  //   try {
+  //     const userCredential = await signInWithEmailAndPassword(
+  //       auth,
+  //       email,
+  //       password
+  //     );
+  //     const token = await getIdToken(userCredential.user);
+  //     return { uid: userCredential.user.uid, token };
+  //   } catch (error: any) {
+  //     throw new Error(error.message || "Firebase signin failed");
+  //   }
+  // }
+
+  async signIn(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+
+    return { uid: data.user?.id!, token: data.session?.access_token! };
   }
 
-  async verifyToken(firebaseIdToken: string): Promise<string> {
+  async verifyToken(supabaseAccessToken: string): Promise<string> {
     const url = `${this.baseUrl}/verify-token`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${firebaseIdToken}`,
+        Authorization: `Bearer ${supabaseAccessToken}`,
       },
     });
 
@@ -144,41 +163,49 @@ class AuthService {
     return await response.json();
   }
 
-  async sendVerificationEmail(user: User): Promise<void> {
-    try {
-      await sendEmailVerification(user);
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to send verification email");
-    }
-  }
+  // async sendVerificationEmail(user: User): Promise<void> {
+  //   try {
+  //     await sendEmailVerification(user);
+  //   } catch (error: any) {
+  //     throw new Error(error.message || "Failed to send verification email");
+  //   }
+  // }
 
-  async verifyEmail(oobCode: string): Promise<{ email: string }> {
-    try {
-      // Check if the code is valid
-      const info = await checkActionCode(auth, oobCode);
+  // async verifyEmail(oobCode: string): Promise<{ email: string }> {
+  //   try {
+  //     // Check if the code is valid
+  //     const info = await checkActionCode(auth, oobCode);
 
-      // and apply the verification
-      await applyActionCode(auth, oobCode);
+  //     // and apply the verification
+  //     await applyActionCode(auth, oobCode);
 
-      return { email: info.data.email || "" };
-    } catch (error: any) {
-      throw new Error(error.message || "Email verification failed");
-    }
-  }
+  //     return { email: info.data.email || "" };
+  //   } catch (error: any) {
+  //     throw new Error(error.message || "Email verification failed");
+  //   }
+  // }
+
+  //   async checkEmailVerified(uid: string): Promise<boolean> {
+  //     try {
+  //       const user = auth.currentUser;
+  //       if (user && user.uid === uid) {
+  //         await user.reload();
+  //         return user.emailVerified;
+  //       }
+  //       return false;
+  //     } catch (error: any) {
+  //       throw new Error(
+  //         error.message || "Failed to check email verification status"
+  //       );
+  //     }
+  //   }
+  // }
 
   async checkEmailVerified(uid: string): Promise<boolean> {
-    try {
-      const user = auth.currentUser;
-      if (user && user.uid === uid) {
-        await user.reload();
-        return user.emailVerified;
-      }
-      return false;
-    } catch (error: any) {
-      throw new Error(
-        error.message || "Failed to check email verification status"
-      );
-    }
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw new Error(error.message);
+    return !!data.user?.email_confirmed_at;
   }
 }
 
@@ -195,13 +222,14 @@ export function useSignUp() {
 
     try {
       const newUid = await authService.signUp(email, password);
-      const user = auth.currentUser;
+      // const user = auth.currentUser;
+      setUid(newUid);
 
       // setUid(newUid);
-      if (user) {
-        await authService.sendVerificationEmail(user);
-        setUid(newUid);
-      }
+      // if (user) {
+      //   await authService.sendVerificationEmail(user);
+      //   setUid(newUid);
+      // }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -218,6 +246,29 @@ export function useSignIn() {
   const [uid, setUid] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
+  // async function signIn(
+  //   email: string,
+  //   password: string
+  // ): Promise<{ uid: string; token: string }> {
+  //   setLoading(true);
+  //   setError(null);
+
+  //   try {
+  //     const { uid: userUid, token: userToken } = await authService.signIn(
+  //       email,
+  //       password
+  //     );
+  //     setUid(userUid);
+  //     setToken(userToken);
+  //     localStorage.setItem("authToken", userToken);
+  //     return { uid: userUid, token: userToken };
+  //   } catch (err: any) {
+  //     setError(err.message);
+  //     throw err;
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
   async function signIn(
     email: string,
     password: string
@@ -226,14 +277,26 @@ export function useSignIn() {
     setError(null);
 
     try {
-      const { uid: userUid, token: userToken } = await authService.signIn(
+      const garri = await supabase.auth.signInWithPassword({
         email,
-        password
-      );
-      setUid(userUid);
-      setToken(userToken);
-      localStorage.setItem("authToken", userToken);
-      return { uid: userUid, token: userToken };
+        password,
+      });
+      console.log(garri);
+      if (garri.error) throw garri.error;
+
+      const user = garri.data.user;
+      const token = garri.data.session?.access_token;
+
+      if (!user || !token) {
+        throw new Error("Login failed: missing user or token");
+      }
+
+      setUid(user.id); // Supabase uses `id` (not `uid`)
+      setToken(token);
+
+      localStorage.setItem("authToken", token);
+
+      return { uid: user.id, token };
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -245,24 +308,49 @@ export function useSignIn() {
   return { signIn, loading, error, uid, token };
 }
 
+
+
 export function useVerifyToken() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError>(null);
   const [uid, setUid] = useState<string | null>(null);
+
+  // async function verifyToken(token: string) {
+  //   setLoading(true);
+  //   setError(null);
+
+  //   try {
+  //     const verifiedUid = await authService.verifyToken(token);
+  //     setUid(verifiedUid);
+  //   } catch (err: any) {
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
 
   async function verifyToken(token: string) {
     setLoading(true);
     setError(null);
 
     try {
-      const verifiedUid = await authService.verifyToken(token);
-      setUid(verifiedUid);
+      const { data, error } = await supabase.auth.getUser(token);
+
+      if (error) throw error;
+
+      const user = data.user;
+      if (!user) {
+        throw new Error("No user found for this token");
+      }
+
+      setUid(user.id); // Supabase uses `id` instead of `uid`
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }
+
 
   return { verifyToken, loading, error, uid };
 }
@@ -272,13 +360,34 @@ export function useAddUserData() {
   const [error, setError] = useState<AuthError>(null);
   const [id, setId] = useState<string | null>(null);
 
-  async function addUserData(data: any, token: string) {
+  // async function addUserData(data: any, token: string) {
+  //   setLoading(true);
+  //   setError(null);
+
+  //   try {
+  //     const res = await authService.addUserData(data, token);
+  //     setId(res.id);
+  //   } catch (err: any) {
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
+  async function addUserData(data: any) {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await authService.addUserData(data, token);
-      setId(res.id);
+      // Insert into your `users` (or whatever) table
+      const { data: inserted, error: supaError } = await supabase
+        .from("users")
+        .insert(data)
+        .select("id") // return just the id
+        .single();
+
+      if (supaError) throw supaError;
+
+      setId(inserted.id);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -294,13 +403,32 @@ export function useGetAllUserData() {
   const [error, setError] = useState<AuthError>(null);
   const [data, setData] = useState<any[]>([]);
 
-  async function getAllUserData(token: string) {
+  // async function getAllUserData(token: string) {
+  //   setLoading(true);
+  //   setError(null);
+
+  //   try {
+  //     const allData = await authService.getAllUserData(token);
+  //     setData(allData);
+  //   } catch (err: any) {
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
+
+  async function getAllUserData() {
     setLoading(true);
     setError(null);
 
     try {
-      const allData = await authService.getAllUserData(token);
-      setData(allData);
+      const { data: allData, error: supaError } = await supabase
+        .from("users")
+        .select("*");
+
+      if (supaError) throw supaError;
+
+      setData(allData || []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -316,19 +444,40 @@ export function useUpdateUserData() {
   const [error, setError] = useState<AuthError>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function updateUserData(id: string, update: any, token: string) {
+  // async function updateUserData(id: string, update: any, token: string) {
+  //   setLoading(true);
+  //   setError(null);
+
+  //   try {
+  //     const res = await authService.updateUserData(id, update, token);
+  //     setMessage(res.message);
+  //   } catch (err: any) {
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
+
+  async function updateUserData(id: string, update: any) {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await authService.updateUserData(id, update, token);
-      setMessage(res.message);
+      const { error: supaError } = await supabase
+        .from("users")
+        .update(update)
+        .eq("id", id);
+
+      if (supaError) throw supaError;
+
+      setMessage("User updated successfully");
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }
+
 
   return { updateUserData, loading, error, message };
 }
@@ -338,13 +487,33 @@ export function useDeleteUserData() {
   const [error, setError] = useState<AuthError>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function deleteUserData(id: string, token: string) {
+  // async function deleteUserData(id: string, token: string) {
+  //   setLoading(true);
+  //   setError(null);
+
+  //   try {
+  //     const res = await authService.deleteUserData(id, token);
+  //     setMessage(res.message);
+  //   } catch (err: any) {
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }
+
+  async function deleteUserData(id: string) {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await authService.deleteUserData(id, token);
-      setMessage(res.message);
+      const { error: supaError } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", id);
+
+      if (supaError) throw supaError;
+
+      setMessage("User deleted successfully");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -355,24 +524,24 @@ export function useDeleteUserData() {
   return { deleteUserData, loading, error, message };
 }
 
-export function useVerifyEmail() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<AuthError>(null);
-  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+// export function useVerifyEmail() {
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState<AuthError>(null);
+//   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
 
-  async function verifyEmail(oobCode: string) {
-    setLoading(true);
-    setError(null);
+//   async function verifyEmail(oobCode: string) {
+//     setLoading(true);
+//     setError(null);
 
-    try {
-      const { email } = await authService.verifyEmail(oobCode);
-      setVerifiedEmail(email);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+//     try {
+//       const { email } = await authService.verifyEmail(oobCode);
+//       setVerifiedEmail(email);
+//     } catch (err: any) {
+//       setError(err.message);
+//     } finally {
+//       setLoading(false);
+//     }
+//   }
 
-  return { verifyEmail, loading, error, verifiedEmail };
-}
+//   return { verifyEmail, loading, error, verifiedEmail };
+// }

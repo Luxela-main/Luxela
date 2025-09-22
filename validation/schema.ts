@@ -35,5 +35,6 @@ export const signInInitialValues = {
 export const signUpInitialValues = {
   email: "",
   password: "",
+  confirmPassword: "",
   agreeTerms: false,
 };
