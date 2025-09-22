@@ -36,7 +36,7 @@ export default function VerifyEmailPage() {
       const res = await api.auth.verifyOtp.mutate({ email, code });
       localStorage.setItem("authToken", res.token);
       toast.success("Email verified successfully!");
-      router.push("/");
+      router.push("/privacy-policy");
     } catch (error: any) {
       toast.error(error.message || "Verification failed");
     }
