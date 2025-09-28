@@ -1,5 +1,6 @@
 'use client'
 
+import { ShoppingCart } from "lucide-react"
 import { useState, useEffect } from "react"
 
 interface Product {
@@ -302,20 +303,8 @@ const ExploreAllProducts = () => {
                     </div>
 
                     {/* Add to Cart Button */}
-                    <button className="cursor-pointer bg-[#9872DD] hover:bg-[#8451E1] text-white p-2 rounded-lg transition-colors duration-200 group/cart">
-                      <svg
-                        className="w-4 h-4 group-hover/cart:scale-110 transition-transform"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4 0L3 3zM16 16a1 1 0 11-2 0 1 1 0 012 0zM9 16a1 1 0 11-2 0 1 1 0 012 0z"
-                        />
-                      </svg>
+                    <button className="cursor-pointer bg-gradient-to-b text-sm from-[#9872DD] via-[#8451E1] to-[#5C2EAF]  hover:bg-[#8451E1] text-white px-4 py-2 rounded-lg transition-colors duration-200 group/cart">
+                      <ShoppingCart size={16} className="inline-block " />
                     </button>
                   </div>
                 </div>

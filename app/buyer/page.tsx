@@ -1,4 +1,4 @@
-import ExploreAllProducts from '@/components/buyer/explore-all-products'
+import ExploreAllProducts from '@/components/buyer/brand/explore-all-products'
 import FeaturedBrands from '@/components/buyer/featured-brands'
 import FeaturedCollection from '@/components/buyer/featured-collection'
 import React from 'react'
