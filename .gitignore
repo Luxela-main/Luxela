@@ -77,6 +77,8 @@ web_modules/
 .next
 .next/
 out
+.next
+q
 
 # Nuxt.js build / generate output
 .nuxt
