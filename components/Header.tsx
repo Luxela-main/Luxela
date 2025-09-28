@@ -2,12 +2,15 @@ import React from "react";
 import Navbar from "./Navbar";
 import Image from "next/image";
 import Link from "next/link";
+import { ClientOnly } from "./client-only";
 
 export default function Header() {
   return (
     <>
       {/* navbar */}
-      <Navbar />
+      <ClientOnly>
+        <Navbar />
+      </ClientOnly>
 
       <header className="bg-[url('/images/hero-bg-1440x1066.png')] bg-cover bg-center bg-no-repeat h-screen 2xl:h-[1024px] mx-auto w-full relative">
         {/* Glare background image */}

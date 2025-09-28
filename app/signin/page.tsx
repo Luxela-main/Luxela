@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSignIn } from "../auth/index";
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
 import { useGoogleAuth } from "../auth/signinWithGoogle";
 import Link from "next/link";
-import { signInSchema, signInInitialValues } from "@/validation/schema";
+import { signinSchema, signInInitialValues } from "@/lib/utils/validation";
+import { signin } from '@/lib/utils/auth-helpers';
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,22 +14,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function SignInPage() {
-  const { signIn } = useSignIn();
   const { signInWithGoogle } = useGoogleAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const toast = useToast();
 
-  const handleSignIn = async (values: any) => {
-    const { email, password } = values;
+  const handleSignIn = async (data: any) => {
+     const { email, password } = data
+    setIsLoading(true);
+    setError(null);
 
     try {
-      await signIn(email, password);
+      await signin(data.email, data.password);
       toast.success("Login Successful.");
-      router.push("/");
-    } catch (error: any) {
-      toast.error(error.message || "Login failed");
+      router.push('/');
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Invalid email or password'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
   return (
@@ -62,7 +69,7 @@ export default function SignInPage() {
 
           <Formik
             initialValues={signInInitialValues}
-            validationSchema={signInSchema}
+            validationSchema={signinSchema}
             onSubmit={handleSignIn}>
             {({ values, errors, touched, setFieldValue, isSubmitting }) => (
               <Form className="space-y-4">

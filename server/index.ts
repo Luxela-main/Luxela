@@ -1,6 +1,5 @@
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import { createTRPCRouter } from './trpc';
-import { userRouter } from './routers/user';
 import { authRouter } from './routers/auth/auth';
 import { sellerRouter } from './routers/seller';
 import { listingRouter } from './routers/listing';
@@ -9,7 +8,6 @@ import { cartRouter } from './routers/cart';
 import { getBearerToken, verifyAccessToken } from './routers/auth/jwt';
 
 export const appRouter = createTRPCRouter({
-  user: userRouter,
   auth: authRouter,
   seller: sellerRouter,
   listing: listingRouter,
@@ -36,4 +34,4 @@ createHTTPServer({
   },
 }).listen(4000);
 
-console.log('tRPC server listening on http://localhost:4000');
+console.log('tRPC server listening on http://localhost:3000');

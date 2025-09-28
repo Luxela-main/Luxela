@@ -16,7 +16,7 @@ export type JwtPayload = {
 
 export function signAccessToken(payload: JwtPayload, expiresIn: string = '1h') {
   try {
-    return jwt.sign(payload, JWT_SECRET!, { expiresIn });
+    // return jwt.sign(payload, JWT_SECRET!, { expiresIn });
   } catch (err: any) {
     throw new Error('Failed to sign access token');
   }

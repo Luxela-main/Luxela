@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { signOut, getAuth } from "firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 import {
   User as UserIcon,
   LogOut,
@@ -31,15 +31,29 @@ const AccountPage = () => {
     }
   }, [user, loading, router]);
 
+
   const handleLogout = async () => {
-    const auth = getAuth();
+    // try {
+    //   await authService.signOut();
+  
+    //   // clear any localStorage token you set on sign-in
+    //   localStorage.removeItem("authToken");
+  
+    //   toast.success("Logged out successfully");
+    //   // router.push("/signin");
+    //   router.push("/");
+
+    // } catch (err: any) {
+    //   toast.error(err.message || "Logout failed");
+    // }
     try {
-      await signOut(auth);
-      toast.success("Logged out successfully");
-      router.push("/signin");
-    } catch (err: any) {
-      toast.error(err.message || "Logout failed");
-    }
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        toast.success("Logged out successfully");
+        router.push('/');
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
   };
 
   if (loading || !user) {

@@ -19,8 +19,8 @@ const supabase = createClient();
 type AuthError = string | null;
 
 class AuthService {
-  private baseUrl = "https://auth-backend-kx7l.onrender.com/api/auth";
-  private userBaseUrl = "https://auth-backend-kx7l.onrender.com/api/user";
+  private baseUrl = process.env.NEXT_AUTH_BASE_URL;
+  private userBaseUrl = process.env.NEXT_USER_BASE_URL;
 
   // async signUp(email: string, password: string): Promise<string> {
   //   try {

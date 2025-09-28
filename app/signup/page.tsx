@@ -6,51 +6,92 @@ import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
 import { useGoogleAuth } from "../auth/signinWithGoogle";
 import Link from "next/link";
-import { signUpSchema, signUpInitialValues } from "@/validation/schema";
+import { signupSchema, signUpInitialValues } from "@/lib/utils/validation";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DialogModal from "@/components/dialog";
-import { api } from "@/lib/trpc";
 
 export default function SignUpPage() {
-  const { signUp } = useSignUp();
-  const { signIn } = useSignIn();
   const { signInWithGoogle } = useGoogleAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const router = useRouter();
   const toast = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSignUp = async (values: any) => {
-    const { email, password, confirmPassword, agreeTerms } = values;
+  interface SignUpFormData {
+    email: string;
+    password: string;
+    confirmPassword: string;
+    agreeTerms: boolean;
+  }
+  
+
+  const handleSignUp = async (data: SignUpFormData) => {
+    setIsLoading(true);
+    setError(null);
+
+    const { email, password, confirmPassword, agreeTerms } = data;
+
+    if (!email) {
+      setIsLoading(false);
+      return toast.error("Email is required");
+    }
+
+    if (!password) {
+      setIsLoading(false);
+      return toast.error("Password is required");
+    }
 
     if (!agreeTerms) {
+      setIsLoading(false);
       return toast.warning("Please agree to the terms and conditions");
     }
 
     if (password !== confirmPassword) {
+      setIsLoading(false);
       return toast.error("Passwords do not match");
     }
 
     try {
-      await api.auth.requestOtp.mutate({ email });
-      toast.success("We sent a 6-digit code to your email");
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
-    } catch (error: any) {
-      if (
-        error.message?.toLowerCase().includes("already registered") ||
-        error.message?.toLowerCase().includes("already exists")
-      ) {
+      sessionStorage.setItem('verificationEmail', data.email);
+
+      await fetch('/api/resend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'verification',
+          email: data.email,
+          password: data.password,
+        }),
+      });
+       toast.success("We sent a 6-digit code to your email");
+      router.push(`/verify-email`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+          ? error
+          : "Signup failed";
+    
+      if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exists")) {
         toast.error(
           "This email is already registered. Please check your inbox (including spam) for a confirmation email, or try logging in or resetting your password."
         );
       } else {
-        toast.error(error.message || "Signup failed");
+        toast.error(message);
       }
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,7 +126,7 @@ export default function SignUpPage() {
 
             <Formik
               initialValues={signUpInitialValues}
-              validationSchema={signUpSchema}
+              validationSchema={signupSchema}
               onSubmit={handleSignUp}>
               {({ values, errors, touched, setFieldValue, isSubmitting }) => (
                 <Form className="space-y-4">
