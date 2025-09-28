@@ -340,7 +340,7 @@ export default function CollectionsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
-                className="bg-neutral-900 p-4 rounded-xl shadow hover:shadow-lg group max-w-[320px] h-[350px] flex flex-col justify-between duration-300 ease-in-out"
+                className="bg-neutral-900 p-4 rounded-xl shadow group max-w-[320px] h-[350px] flex flex-col justify-between hover:shadow-md hover:shadow-[#8451E1]/10 cursor-pointer"
               >
                 <Image
                   src={product.image}

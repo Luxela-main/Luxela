@@ -17,10 +17,11 @@ export default function WranglerCollectionPage() {
         <div className='w-fit flex items-center gap-2 my-10 text-sm text-[#858585]'>
           <Link href="/buyer/brands" className='hover:text-[#DCDCDC] capitalize'>Brands</Link>
           <ChevronRight size={16} />
-          <Link href="/buyer/brands/brand" className='hover:text-[#DCDCDC] capitalize'>Brands</Link>
+          <Link href="/buyer/brands/brand" className='hover:text-[#DCDCDC] capitalize'>Brand</Link>
           <ChevronRight size={16} />
           <span className='text-[#DCDCDC] capitalize'>Wrangler</span>
         </div>
+
         <div className="relative max-w-[1360px] h-[360px] mx-auto mb-8 rounded-[12px] ">
           <Image src="/brand-hero.jpg" width={1360} height={360} alt='brand-hero' className='w-full h-full rounded-[12px]' />
           <Image src="/brand-hero-image.jpg" width={148} height={148} alt='brand-hero' className='absolute -bottom-14 left-[50%] transform -translate-x-[50%] size-[148px] rounded-full' />
