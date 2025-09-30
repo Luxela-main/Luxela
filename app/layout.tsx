@@ -37,10 +37,12 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${spaceGrotesk.variable} scroll-smooth max-w-[1440px] overflow-x-hidden mx-auto`}>
+      lang="en">
       <body suppressHydrationWarning className={spaceGrotesk.className}>
-        <AuthProvider>{children}</AuthProvider>
+        <div className="max-w-[1440px] mx-auto">
+          <AuthProvider>{children}</AuthProvider>
+          <ToastContainer />
+        </div>
         <ToastContainer />
       </body>
     </html>

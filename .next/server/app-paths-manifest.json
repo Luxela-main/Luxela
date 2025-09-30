@@ -1,17 +1,26 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-<<<<<<< HEAD
   "/page": "app/page.js",
-  "/sellers/dashboard/page": "app/sellers/dashboard/page.js",
-  "/sellers/my-listings/page": "app/sellers/my-listings/page.js",
-  "/sellers/new-listing/page": "app/sellers/new-listing/page.js",
-  "/sellers/notifications/page": "app/sellers/notifications/page.js",
-  "/sellers/pending-orders/page": "app/sellers/pending-orders/page.js",
-  "/sellers/reports/page": "app/sellers/reports/page.js",
-  "/sellers/sales/page": "app/sellers/sales/page.js",
+  "/cart/page": "app/cart/page.js",
+  "/account/page": "app/account/page.js",
+  "/privacy-policy/page": "app/privacy-policy/page.js",
   "/signin/page": "app/signin/page.js",
-  "/signup/page": "app/signup/page.js"
-=======
-  "/page": "app/page.js"
->>>>>>> 74125e3eebe3b5a397a9c9902726e3637745a074
+  "/verify-email/page": "app/verify-email/page.js",
+  "/signup/page": "app/signup/page.js",
+  "/buyer/brands/brand/wrangler/item/page": "app/buyer/brands/brand/wrangler/item/page.js",
+  "/buyer/page": "app/buyer/page.js",
+  "/buyer/brands/brand/wrangler/page": "app/buyer/brands/brand/wrangler/page.js",
+  "/buyer/brands/page": "app/buyer/brands/page.js",
+  "/buyer/brands/brand/page": "app/buyer/brands/brand/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/sellers/notifications/page": "app/sellers/notifications/page.js",
+  "/sellers/my-listings/with-products/page": "app/sellers/my-listings/with-products/page.js",
+  "/sellers/dashboard/page": "app/sellers/dashboard/page.js",
+  "/sellers/pending-orders/page": "app/sellers/pending-orders/page.js",
+  "/sellers/my-listings/page": "app/sellers/my-listings/page.js",
+  "/sellers/settings/page": "app/sellers/settings/page.js",
+  "/sellers/reports/page": "app/sellers/reports/page.js",
+  "/sellers/new-listing/page": "app/sellers/new-listing/page.js",
+  "/sellers/sales/page": "app/sellers/sales/page.js",
+  "/sellers/support/page": "app/sellers/support/page.js"
 }
