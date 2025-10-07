@@ -28,8 +28,8 @@ export default function CartPaymentPage() {
 
   return (
     <div className="min-h-screen bg-black text-white p-6 space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-[#1a1a1a] p-6 rounded-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-[#1a1a1a] p-6 rounded-lg">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-start">
               Shipping address
@@ -66,17 +66,17 @@ export default function CartPaymentPage() {
           </div>
         </div>
 
-        <div>
+        <div className="lg:col-span-1">
           <OrderSummary />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-[#1a1a1a] p-6 rounded-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-[#1a1a1a] p-6 rounded-lg">
           <PaymentMethods />
         </div>
 
-        <div className="bg-[#1a1a1a] p-6 rounded-lg space-y-4 h-fit w-full max-w-md">
+        <div className="lg:col-span-1 bg-[#1a1a1a] p-6 rounded-lg space-y-4 h-fit">
           <div className="flex justify-between">
             <span className="text-gray-400">Subtotal</span>
             <span className="font-bold">NGN {subtotal.toLocaleString()}</span>

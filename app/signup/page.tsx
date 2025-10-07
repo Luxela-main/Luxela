@@ -6,7 +6,7 @@ import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
 import { useGoogleAuth } from "../auth/signinWithGoogle";
 import Link from "next/link";
-import { signUpSchema, signUpInitialValues } from "@/validation/schema";
+import { signUpSchema, signUpInitialValues } from "@/validation/auth/schema";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
