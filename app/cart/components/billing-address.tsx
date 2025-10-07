@@ -2,6 +2,7 @@ import React from "react";
 import { AdInput } from "@/components/input/TextInput";
 import { Formik, Form } from "formik";
 import { Button } from "@/components/ui/button";
+import { BillingAddressValidationSchema } from "@/validation/cart/schema";
 
 export const BillingAddressStep = () => {
   const handleSubmit = () => {};
@@ -20,7 +21,7 @@ export const BillingAddressStep = () => {
             postalCode: "",
             saveDetails: false,
           }}
-          validationSchema={{}}
+          validationSchema={BillingAddressValidationSchema}
           onSubmit={handleSubmit}>
           {({ values, setFieldValue, handleSubmit }) => (
             <Form onSubmit={handleSubmit} className="space-y-8">

@@ -1,4 +1,10 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/buyer/brands/page": "app/buyer/brands/page.js",
+  "/buyer/page": "app/buyer/page.js",
   "/cart/page": "app/cart/page.js",
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/privacy-policy/page": "app/privacy-policy/page.js",
+  "/signin/page": "app/signin/page.js",
+  "/signup/page": "app/signup/page.js"
 }

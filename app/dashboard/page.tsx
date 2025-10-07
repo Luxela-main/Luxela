@@ -1,12 +1,10 @@
-'use client'
+"use client";
 
-import React from 'react';
-import withAuth from '../hoc/withAuth';
+import React from "react";
+import withAuth from "../../functions/hoc/withAuth";
 
 function Dashboard() {
-  return (
-    <div>Dashboard</div>
-  );
+  return <div>Dashboard</div>;
 }
 
 // Wrap the Dashboard component with withAuth before exporting
