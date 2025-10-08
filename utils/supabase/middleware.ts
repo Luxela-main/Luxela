@@ -33,39 +33,23 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isNewPasswordPage = (request.nextUrl.pathname = '/new-password');
+  const isNewPasswordPage = (request.nextUrl.pathname === '/signup');
 
   if (
     user &&
-    request.nextUrl.pathname.startsWith('/signin') &&
+    request.nextUrl.pathname.startsWith('/signup') &&
     !isNewPasswordPage
   ) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-const publicPaths = ['/', '/signin', '/signup', ];
+    const publicRoutes = ['/', '/signup', '/signin', '/privacy-policy', 'verify-email'];
 
-const path = request.nextUrl.pathname;
-const isPublic = publicPaths.some((p) => path.startsWith(p));
 
-// If not logged in and route is NOT public → redirect
-if (!user && !isPublic) {
-  return NextResponse.redirect(new URL('/signin', request.url));
-}  
-        
-  // // protected routes
-  // if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-  //   return NextResponse.redirect(new URL('/signin', request.url));
-  // }
+  // protected routes
+  if (!user && !publicRoutes.includes(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL('/signup', request.url));
+  }
 
   return supabaseResponse;
 }
-
-
-//   // List of public routes that anyone can access
-//   const publicPaths = ['/', '/auth/login', '/auth/signup', '/about'];
-
-//   // Protect all other routes
-//   if (!user && !publicPaths.includes(request.nextUrl.pathname)) {
-//     return NextResponse.redirect(new URL('/auth/login', request.url));
-//   }

@@ -26,8 +26,47 @@ async function ensureCart(buyerId: string) {
   return created;
 }
 
+const CartOutput = z.object({
+  cart: z.object({
+    id: z.string().uuid(),
+    discountId: z.string().uuid().nullable().optional(),
+  }),
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      cartId: z.string().uuid(),
+      listingId: z.string().uuid(),
+      quantity: z.number().int(),
+      unitPriceCents: z.number().int(),
+      currency: z.string(),
+    })
+  ),
+  discount: z
+    .object({
+      id: z.string().uuid(),
+      code: z.string(),
+      percentOff: z.number().nullable().optional(),
+      amountOffCents: z.number().nullable().optional(),
+      active: z.boolean(),
+      expiresAt: z.date().nullable().optional(),
+    })
+    .nullable(),
+});
+
+
 export const cartRouter = createTRPCRouter({
-  getCart: protectedProcedure.query(async ({ ctx }) => {
+  getCart: protectedProcedure
+  .meta({
+  openapi: {
+    method: 'GET',
+    path: '/cart',
+    tags: ['Cart'],
+    summary: 'Get user cart',
+  },
+})
+    .output(CartOutput)
+
+  .query(async ({ ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
     try {
@@ -44,7 +83,26 @@ export const cartRouter = createTRPCRouter({
   }),
 
   addToCart: protectedProcedure
+  .meta({
+    openapi: {
+      method: 'POST',
+      path: '/cart/add',
+      tags: ['Cart'],
+      summary: 'Add an item to the user’s cart',
+      description: 'Adds a listing to the authenticated user’s cart or increases quantity if it already exists.',
+    },
+  })
     .input(z.object({ listingId: z.string().uuid(), quantity: z.number().int().positive().default(1) }))
+    .output(
+    z.object({
+      id: z.string().uuid(),
+      cartId: z.string().uuid(),
+      listingId: z.string().uuid(),
+      quantity: z.number().int(),
+      unitPriceCents: z.number().int(),
+      currency: z.string(),
+    }),
+  )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -88,7 +146,30 @@ export const cartRouter = createTRPCRouter({
     }),
 
   setItemQuantity: protectedProcedure
+   .meta({
+    openapi: {
+      method: 'PATCH',
+      path: '/cart/item',
+      tags: ['Cart'],
+      summary: 'Set or update the quantity of a specific cart item',
+      description:
+        'Updates the quantity of a specific item in the user’s cart. If the quantity is set to 0, the item is removed from the cart.',
+    },
+  })
     .input(z.object({ listingId: z.string().uuid(), quantity: z.number().int().nonnegative() }))
+  .output(
+    z.union([
+      z.object({
+        id: z.string().uuid(),
+        cartId: z.string().uuid(),
+        listingId: z.string().uuid(),
+        quantity: z.number().int(),
+        unitPriceCents: z.number().int(),
+        currency: z.string(),
+      }),
+      z.object({ success: z.literal(true) }),
+    ]),
+  )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -117,7 +198,21 @@ export const cartRouter = createTRPCRouter({
     }),
 
   removeItem: protectedProcedure
+  .meta({
+    openapi: {
+      method: 'DELETE',
+      path: '/cart/item',
+      tags: ['Cart'],
+      summary: 'Remove an item from the cart',
+      description: 'Removes a specific product listing from the user’s cart by its listing ID.',
+    },
+  })
     .input(z.object({ listingId: z.string().uuid() }))
+    .output(
+    z.object({
+      success: z.literal(true).describe('Indicates that the item was successfully removed'),
+    }),
+  )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -133,7 +228,23 @@ export const cartRouter = createTRPCRouter({
       }
     }),
 
-  clearCart: protectedProcedure.mutation(async ({ ctx }) => {
+  clearCart: protectedProcedure
+  .meta({
+    openapi: {
+      method: 'DELETE',
+      path: '/cart/clear',
+      tags: ['Cart'],
+      summary: 'Clear user cart',
+      description: 'Removes all items and any applied discounts from the authenticated user’s cart.',
+    },
+  })
+  
+  .output(
+    z.object({
+      success: z.literal(true).describe('Indicates that the cart was successfully cleared'),
+    }),
+  )
+  .mutation(async ({ ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
     try {
@@ -151,7 +262,25 @@ export const cartRouter = createTRPCRouter({
   }),
 
   applyDiscount: protectedProcedure
+    .meta({
+    openapi: {
+      method: 'POST',
+      path: '/cart/discount',
+      tags: ['Cart'],
+      summary: 'Apply discount code to user cart',
+      description: 'Applies a valid discount code to the authenticated user’s cart.',
+    },
+  })
     .input(z.object({ code: z.string().min(1) }))
+    
+  .output(
+    z.object({
+      id: z.string().uuid().describe('Cart ID'),
+      buyerId: z.string().uuid().describe('Buyer ID'),
+      discountId: z.string().uuid().nullable().describe('Applied discount ID'),
+      updatedAt: z.date().describe('Timestamp of cart update'),
+    })
+  )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -174,6 +303,16 @@ export const cartRouter = createTRPCRouter({
     }),
 
   checkout: protectedProcedure
+  .meta({
+    openapi: {
+      method: 'POST',
+      path: '/checkout',
+      tags: ['Cart'],
+      summary: 'Checkout and create orders',
+      description:
+        'Performs checkout for the authenticated buyer. Creates orders for all items in the user’s cart, applies discounts, updates stock quantities, and clears the cart after success.',
+    },
+  })
     .input(
       z.object({
         shipping: z
@@ -190,6 +329,35 @@ export const cartRouter = createTRPCRouter({
         paymentMethod: z.enum(['card', 'bank_transfer', 'paypal', 'stripe', 'flutterwave', 'crypto']),
       })
     )
+    .output(
+  z.object({
+    orders: z.array(
+      z.object({
+        id: z.string().uuid(),
+        sellerId: z.string().uuid(),
+        listingId: z.string().uuid(),
+        productTitle: z.string(),
+        productCategory: z.string(),
+        customerName: z.string(),
+        customerEmail: z.string().email(),
+        paymentMethod: z.enum([
+          'card',
+          'bank_transfer',
+          'paypal',
+          'stripe',
+          'flutterwave',
+          'crypto',
+        ]),
+        amountCents: z.number().int(),
+        currency: z.string(),
+      })
+    ),
+    subtotal: z.number().int(),
+    discountCents: z.number().int(),
+    total: z.number().int(),
+  })
+)
+
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });

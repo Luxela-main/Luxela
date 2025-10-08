@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSignIn, useSignUp } from "../auth/index";
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
-import { useGoogleAuth } from "../auth/signinWithGoogle";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { signupSchema, signUpInitialValues } from "@/lib/utils/validation";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
@@ -13,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DialogModal from "@/components/dialog";
+import { signInWithGoogle } from "@/lib/auth";
+
 
 export default function SignUpPage() {
-  const { signInWithGoogle } = useGoogleAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -23,6 +23,10 @@ export default function SignUpPage() {
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+ // const redirect = searchParams.get("redirect");
+  const priceId = searchParams.get("priceId");
+  const discountCode = searchParams.get("discountCode");
 
   interface SignUpFormData {
     email: string;
@@ -248,7 +252,8 @@ export default function SignUpPage() {
             {/* Google Sign-in */}
             <button
               className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-              onClick={signInWithGoogle}
+              // onClick={signInWithGoogle}
+              onClick={() => signInWithGoogle(priceId || "", discountCode || "", "/")}
               type="button">
               <img src="/google.svg" alt="Google" className="h-4 w-4" />
               Sign up with Google

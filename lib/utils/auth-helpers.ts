@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/client';
+import { createClient } from '../../utils/supabase/client';
 
 export async function verifyOtp(email: string, otp: string) {
   const supabase = createClient();

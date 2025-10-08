@@ -173,8 +173,8 @@ export const listings = pgTable('listings', {
   sellerId: uuid('seller_id').notNull().references(() => sellers.id),
   type: listingTypeEnum('type').notNull(),
   // Personal information (required)
-  title: varchar('title', { length: 255 }).notNull(), // product name
-  description: text('description'), // product description
+  title: varchar('title', { length: 255 }).notNull(), 
+  description: text('description'), 
   category: productCategoryEnum('category'),
   image: text('image'),
   priceCents: integer('price_cents'),

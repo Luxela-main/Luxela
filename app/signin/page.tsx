@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState} from "react";
 import { useToast } from "@/components/hooks/useToast";
-import { useRouter } from "next/navigation";
-import { useGoogleAuth } from "../auth/signinWithGoogle";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signinSchema, signInInitialValues } from "@/lib/utils/validation";
 import { signin } from '@/lib/utils/auth-helpers';
@@ -12,15 +11,19 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { signInWithGoogle } from "@/lib/auth";
+
 
 export default function SignInPage() {
-  const { signInWithGoogle } = useGoogleAuth();
   const [showPassword, setShowPassword] = useState(false);
-
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
+  const searchParams = useSearchParams();
+  const priceId = searchParams.get("priceId");
+  const discountCode = searchParams.get("discountCode");
+  
 
   const handleSignIn = async (data: any) => {
      const { email, password } = data
@@ -157,7 +160,9 @@ export default function SignInPage() {
           {/* Google Sign-in */}
           <button
             className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-            onClick={signInWithGoogle}
+            // onClick={signInWithGoogle}
+            onClick={() => signInWithGoogle(priceId || "", discountCode || "", "/")}
+            
             type="button">
             <img src="/google.svg" alt="Google" className="h-4 w-4" />
             Sign in with Google
@@ -173,5 +178,6 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+
   );
 }

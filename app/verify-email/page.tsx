@@ -55,12 +55,18 @@ export default function VerifyEmailPage() {
       return;
     }
 
-    const parsed = verifyOtpSchema.safeParse({ code });
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || "Invalid code");
-      return;
-    }
-  
+    // const parsed = verifyOtpSchema.safeParse({ code });
+    // if (!parsed.success) {
+    //   setError(parsed.error.issues[0]?.message || "Invalid code");
+    //   return;
+    // }
+  try {
+  await verifyOtpSchema.validate({ code });
+} catch (err: any) {
+  setError(err.message || "Invalid code");
+  return;
+}
+
 
     setIsLoading(true);
     setError(null);

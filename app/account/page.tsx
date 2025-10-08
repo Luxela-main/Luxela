@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "../../utils/supabase/client";
 import {
   User as UserIcon,
   LogOut,
@@ -33,19 +33,6 @@ const AccountPage = () => {
 
 
   const handleLogout = async () => {
-    // try {
-    //   await authService.signOut();
-  
-    //   // clear any localStorage token you set on sign-in
-    //   localStorage.removeItem("authToken");
-  
-    //   toast.success("Logged out successfully");
-    //   // router.push("/signin");
-    //   router.push("/");
-
-    // } catch (err: any) {
-    //   toast.error(err.message || "Logout failed");
-    // }
     try {
         const supabase = createClient();
         await supabase.auth.signOut();

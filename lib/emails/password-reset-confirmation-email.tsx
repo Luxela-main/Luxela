@@ -18,7 +18,7 @@ import {
   
   export const PasswordResetConfirmationEmail = ({
     userEmail,
-    loginUrl = 'http://localhost:3000/auth/login',
+    loginUrl = 'http://localhost:3000/signin',
   }: PasswordResetConfirmationEmailProps) => {
     return (
       <Html>
