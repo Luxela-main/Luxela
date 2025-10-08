@@ -1,9 +1,14 @@
+"use client"; // 👈 add this at the very top
+
+
 import type React from "react";
 import type { Metadata } from "next";
 import "./globals.css";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider } from "@/context/AuthContext";
+// import { useEffect } from "react";
+// import { createClient } from "../lib/supabase/client"; 
 
 import localFont from "next/font/local";
 
@@ -23,9 +28,8 @@ const spaceGrotesk = localFont({
   variable: "--font-space-grotesk",
 });
 
-// const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
+ const metadata: Metadata = {
   title: "LUXELA",
   description: "E-commerce platform for authentic fashion",
 };
@@ -35,6 +39,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  //Included for getting supabase token for testing authenticated user
+  //   useEffect(() => {
+  //   const getToken = async () => {
+  //         const supabase = createClient(); // 👈 call it here
+  //     const { data } = await supabase.auth.getSession();
+  //     console.log("Supabase access token:", data.session?.access_token);
+  //   };
+  //   getToken();
+  // }, []);
   return (
     <html
       lang="en">

@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { signOut, getAuth } from "firebase/auth";
+import { createClient } from "../../utils/supabase/client";
 import {
   User as UserIcon,
   LogOut,
@@ -31,15 +31,16 @@ const AccountPage = () => {
     }
   }, [user, loading, router]);
 
+
   const handleLogout = async () => {
-    const auth = getAuth();
     try {
-      await signOut(auth);
-      toast.success("Logged out successfully");
-      router.push("/signin");
-    } catch (err: any) {
-      toast.error(err.message || "Logout failed");
-    }
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        toast.success("Logged out successfully");
+        router.push('/');
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
   };
 
   if (loading || !user) {
@@ -50,32 +51,17 @@ const AccountPage = () => {
     );
   }
 
-  // Config for menu items
-  const menuItems = [
-    { label: "My Orders", icon: ShoppingBag, href: "/sellers/pending-orders" },
-    { label: "Sales", icon: Store, href: "/sellers/sales" },
-    { label: "My Listings", icon: List, href: "/sellers/my-listings" },
-    { label: "Reports", icon: FileText, href: "/sellers/reports" },
-    {
-      label: "Notifications",
-      icon: AlertCircle,
-      href: "/sellers/notifications",
-    },
-    { label: "Support", icon: HelpCircle, href: "/sellers/support" },
-    {
-      label: "Settings",
-      icon: Settings,
-      href: "/sellers/settings",
-      action: "Manage",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-black text-white py-12 px-6 md:px-20">
       <div className="max-w-3xl mx-auto bg-zinc-900 rounded-xl shadow-md p-8">
         {/* Header */}
         <div className="flex items-center space-x-4 mb-8">
-          <ArrowLeft className="h-8 w-8 cursor-pointer" onClick={router.back} />
+          <div>
+            <ArrowLeft
+              className="h-8 w-8 cursor-pointer"
+              onClick={router.back}
+            />
+          </div>
           <div className="h-16 w-16 rounded-full overflow-hidden border border-white/20">
             {user.photoURL ? (
               <Image
@@ -101,20 +87,76 @@ const AccountPage = () => {
 
         {/* Account Menu */}
         <div className="space-y-4">
-          {menuItems.map(({ label, icon: Icon, href, action }) => (
-            <button
-              key={label}
-              onClick={() => router.push(href)}
-              className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition cursor-pointer">
-              <div className="flex items-center space-x-2">
-                <Icon className="h-4 w-4" />
-                <span>{label}</span>
-              </div>
-              <span className="text-zinc-400 text-sm">{action || "View"}</span>
-            </button>
-          ))}
+          <button
+            onClick={() => router.push("/sellers/pending-orders")}
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            <div className="flex items-center space-x-2">
+              <ShoppingBag className="h-4 w-4" />
+              <span>My Orders</span>
+            </div>
+            <span className="text-zinc-400 text-sm">View</span>
+          </button>
 
-          {/* Sign Out */}
+          <button
+            onClick={() => router.push("/sellers/sales")}
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            <div className="flex items-center space-x-2">
+              <Store className="h-4 w-4" />
+              <span>Sales</span>
+            </div>
+            <span className="text-zinc-400 text-sm">View</span>
+          </button>
+
+          <button
+            onClick={() => router.push("/sellers/my-listings")}
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            <div className="flex items-center space-x-2">
+              <List className="h-4 w-4" />
+              <span>My Listings</span>
+            </div>
+            <span className="text-zinc-400 text-sm">View</span>
+          </button>
+
+          <button
+            onClick={() => router.push("/sellers/reports")}
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-4 w-4" />
+              <span>Reports</span>
+            </div>
+            <span className="text-zinc-400 text-sm">View</span>
+          </button>
+
+          <button
+            onClick={() => router.push("/sellers/notifications")}
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>Notifications</span>
+            </div>
+            <span className="text-zinc-400 text-sm">View</span>
+          </button>
+
+          <button
+            onClick={() => router.push("/sellers/support")}
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            <div className="flex items-center space-x-2">
+              <HelpCircle className="h-4 w-4" />
+              <span>Support</span>
+            </div>
+            <span className="text-zinc-400 text-sm">View</span>
+          </button>
+
+          <button
+            onClick={() => router.push("/sellers/settings")}
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </div>
+            <span className="text-zinc-400 text-sm">Manage</span>
+          </button>
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-between bg-red-600 hover:bg-red-700 rounded px-5 py-3 text-left transition text-white">

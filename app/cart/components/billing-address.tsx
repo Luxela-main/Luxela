@@ -2,7 +2,7 @@ import React from "react";
 import { AdInput } from "@/components/input/TextInput";
 import { Formik, Form } from "formik";
 import { Button } from "@/components/ui/button";
-import { BillingAddressValidationSchema } from "@/validation/cart/schema";
+import { BillingAddressValidationSchema } from "@/lib/utils/validation";
 
 export const BillingAddressStep = () => {
   const handleSubmit = () => {};

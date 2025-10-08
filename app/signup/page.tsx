@@ -1,81 +1,103 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAddUserData, useSignIn, useSignUp } from "../auth/index";
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
-import { useGoogleAuth } from "../auth/signinWithGoogle";
 import Link from "next/link";
-import { signUpSchema, signUpInitialValues } from "@/validation/auth/schema";
+import { useSearchParams } from "next/navigation";
+import { signupSchema, signUpInitialValues } from "@/lib/utils/validation";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DialogModal from "@/components/dialog";
+import { signInWithGoogle } from "@/lib/auth";
+
 
 export default function SignUpPage() {
-  const { signUp } = useSignUp();
-  const { signIn } = useSignIn();
-  const { addUserData } = useAddUserData();
-  const { signInWithGoogle } = useGoogleAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const router = useRouter();
   const toast = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+ // const redirect = searchParams.get("redirect");
+  const priceId = searchParams.get("priceId");
+  const discountCode = searchParams.get("discountCode");
 
-  const handleSignUp = async (values: any) => {
-    const { email, password, confirmPassword, agreeTerms } = values;
+  interface SignUpFormData {
+    email: string;
+    password: string;
+    confirmPassword: string;
+    agreeTerms: boolean;
+  }
+  
 
-    if (values.email) {
-      setDialogOpen(true);
+  const handleSignUp = async (data: SignUpFormData) => {
+    setIsLoading(true);
+    setError(null);
+
+    const { email, password, confirmPassword, agreeTerms } = data;
+
+    if (!email) {
+      setIsLoading(false);
+      return toast.error("Email is required");
+    }
+
+    if (!password) {
+      setIsLoading(false);
+      return toast.error("Password is required");
     }
 
     if (!agreeTerms) {
+      setIsLoading(false);
       return toast.warning("Please agree to the terms and conditions");
     }
 
     if (password !== confirmPassword) {
+      setIsLoading(false);
       return toast.error("Passwords do not match");
     }
 
     try {
-      await signUp(email, password);
-      const { uid, token } = await signIn(email, password);
-      await addUserData({ uid, email }, token);
+      sessionStorage.setItem('verificationEmail', data.email);
 
-      toast.success("Account created successfully!");
-      router.push("privacy-policy");
-    } catch (error: any) {
-      toast.error(error.message || "Signup failed");
+      await fetch('/api/resend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'verification',
+          email: data.email,
+          password: data.password,
+        }),
+      });
+       toast.success("We sent a 6-digit code to your email");
+      router.push(`/verify-email`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+          ? error
+          : "Signup failed";
+    
+      if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exists")) {
+        toast.error(
+          "This email is already registered. Please check your inbox (including spam) for a confirmation email, or try logging in or resetting your password."
+        );
+      } else {
+        toast.error(message);
+      }
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
-  // const handleSignUp = async (values: any) => {
-  //   const { email, password, confirmPassword, agreeTerms } = values;
-
-  //   if (!agreeTerms) {
-  //     return toast.warning("Please agree to the terms and conditions");
-  //   }
-
-  //   if (password !== confirmPassword) {
-  //     return toast.error("Passwords do not match");
-  //   }
-
-  //   try {
-  //     await signUp(email, password);
-  //     toast.success(
-  //       "Verification email sent! Please check your inbox, you may check your spam "
-  //     );
-  //     router.push("/verify-email");
-  //   } catch (error: any) {
-  //     if (error.message.includes("email-already-in-use")) {
-  //       setDialogOpen(true);
-  //     } else {
-  //       toast.error(error.message || "Signup failed");
-  //     }
-  //   }
-  // };
 
   return (
     <>
@@ -108,7 +130,7 @@ export default function SignUpPage() {
 
             <Formik
               initialValues={signUpInitialValues}
-              validationSchema={signUpSchema}
+              validationSchema={signupSchema}
               onSubmit={handleSignUp}>
               {({ values, errors, touched, setFieldValue, isSubmitting }) => (
                 <Form className="space-y-4">
@@ -230,7 +252,8 @@ export default function SignUpPage() {
             {/* Google Sign-in */}
             <button
               className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-              onClick={signInWithGoogle}
+              // onClick={signInWithGoogle}
+              onClick={() => signInWithGoogle(priceId || "", discountCode || "", "/")}
               type="button">
               <img src="/google.svg" alt="Google" className="h-4 w-4" />
               Sign up with Google

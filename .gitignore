@@ -67,8 +67,7 @@ web_modules/
 
 # dotenv environment variable files
 .env
-.env.*
-!.env.example
+.env.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -78,6 +77,8 @@ web_modules/
 .next
 .next/
 out
+.next
+q
 
 # Nuxt.js build / generate output
 .nuxt
@@ -138,3 +139,5 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+openapi.json
