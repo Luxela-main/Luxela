@@ -140,7 +140,6 @@ const ProfilePage = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        <AnimatePresence mode="wait">
           {activeTab === 'loyalty' && nftItems.map((item, index) => (
             <motion.div
               key={item.id}
@@ -204,7 +203,6 @@ const ProfilePage = () => {
               </motion.div>
             </motion.div>
           ))}
-        </AnimatePresence>
 
         {activeTab === 'purchase' && (
           <motion.div
