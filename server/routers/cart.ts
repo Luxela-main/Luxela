@@ -1,5 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { db } from '../db';
+import { notifications } from "../db/schema";
 import { buyers, buyerShipping, carts, cartItems, discounts, listings, orders, sellers } from '../db/schema';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -422,6 +423,15 @@ export const cartRouter = createTRPCRouter({
             currency: it.currency,
           })
           .returning();
+        await db.insert(notifications).values({
+          id: randomUUID(),
+          sellerId: sellerRow.id,
+          type: "purchase",
+          message: `New purchase: ${listingRow.title}`,
+          isRead: false,
+          isStarred: false,
+          createdAt: new Date(),
+          });
         createdOrders.push(order);
 
         // decrement stock if limited
