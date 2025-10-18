@@ -226,8 +226,7 @@ export const emailOtps = pgTable('email_otps', {
 
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey(),
-  sellerId: uuid('seller_id').references(() => sellers.id),
-  buyerId: uuid('buyer_id').references(() => buyers.id),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id),
   type: notificationTypeEnum('type').notNull(),
   message: text('message').notNull(),
   isRead: boolean('is_read').default(false).notNull(),
