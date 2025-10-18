@@ -9,6 +9,8 @@ import { sellerRouter } from './routers/seller';
 import { listingRouter } from './routers/listing';
 import { salesRouter } from './routers/sales';
 import { cartRouter } from './routers/cart';
+import { notificationRouter } from './routers/notification';
+import { reviewRouter } from './routers/review';
 import { createTRPCContext } from './trpc/context'; 
 
 export const appRouter = createTRPCRouter({
@@ -17,6 +19,8 @@ export const appRouter = createTRPCRouter({
   listing: listingRouter,
   sales: salesRouter,
   cart: cartRouter,
+  notification: notificationRouter,
+  review :reviewRouter
 });
 
 export type AppRouter = typeof appRouter;

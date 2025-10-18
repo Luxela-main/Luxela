@@ -35,6 +35,7 @@ export const orderStatusEnum = pgEnum('order_status', ['processing', 'shipped', 
 export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer', 'paypal', 'stripe', 'flutterwave', 'crypto']);
+export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder',]);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
@@ -222,3 +223,37 @@ export const emailOtps = pgTable('email_otps', {
   consumed: boolean('consumed').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey(),
+  sellerId: uuid('seller_id').references(() => sellers.id),
+  buyerId: uuid('buyer_id').references(() => buyers.id),
+  type: notificationTypeEnum('type').notNull(),
+  message: text('message').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  isStarred: boolean('is_starred').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+ 
+export const reviews = pgTable ('review', {
+  id: uuid("id").primaryKey().defaultRandom(),
+  buyerId: uuid("buyer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  listingId: uuid("listing_id").notNull().references(() => listings.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(), // 1–5 scale
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+});
+
+
+export const reviewRelations = relations(reviews, ({ one }) => ({
+  listing: one(listings, {
+    fields: [reviews.listingId],
+    references: [listings.id],
+  }),
+  buyer: one(users, {
+    fields: [reviews.buyerId],
+    references: [users.id],
+  }),
+}));
+
