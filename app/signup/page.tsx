@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,8 +14,7 @@ import { Label } from "@/components/ui/label";
 import DialogModal from "@/components/dialog";
 import { signInWithGoogle } from "@/lib/auth";
 
-
-export default function SignUpPage() {
+function SignUpContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -24,7 +23,6 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
- // const redirect = searchParams.get("redirect");
   const priceId = searchParams.get("priceId");
   const discountCode = searchParams.get("discountCode");
 
@@ -252,7 +250,6 @@ export default function SignUpPage() {
             {/* Google Sign-in */}
             <button
               className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-              // onClick={signInWithGoogle}
               onClick={() => signInWithGoogle(priceId || "", discountCode || "", "/")}
               type="button">
               <img src="/google.svg" alt="Google" className="h-4 w-4" />
@@ -270,7 +267,7 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      {/* OPen modal if account already exist */}
+      {/* Open modal if account already exist */}
       <DialogModal
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -286,5 +283,17 @@ export default function SignUpPage() {
         }
       />
     </>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <SignUpContent />
+    </Suspense>
   );
 }
