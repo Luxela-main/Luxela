@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState} from "react";
+import React, { useState, Suspense } from "react";
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -13,8 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInWithGoogle } from "@/lib/auth";
 
-
-export default function SignInPage() {
+function SignInContent() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +41,7 @@ export default function SignInPage() {
       setIsLoading(false);
     }
   };
+
   return (
     <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a]  text-white">
       {/* Left Side */}
@@ -160,9 +160,7 @@ export default function SignInPage() {
           {/* Google Sign-in */}
           <button
             className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-            // onClick={signInWithGoogle}
             onClick={() => signInWithGoogle(priceId || "", discountCode || "", "/")}
-            
             type="button">
             <img src="/google.svg" alt="Google" className="h-4 w-4" />
             Sign in with Google
@@ -178,6 +176,17 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  );
+}
 
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }
