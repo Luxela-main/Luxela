@@ -52,7 +52,6 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* Mobile menu button */}
         <button
           aria-label="Open menu"
           className="lg:hidden text-white p-2 rounded-md hover:bg-white/10 transition"
@@ -60,7 +59,6 @@ export default function Navbar() {
           <Menu className="h-6 w-6" />
         </button>
 
-        {/* Center - Logo */}
         <Link
           href="/"
           className="flex items-center w-[120px] sm:w-[150px] md:w-[200px] h-auto">
@@ -74,24 +72,20 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Right - Actions */}
         <div className="flex items-center space-x-3 sm:space-x-5">
-          {/* Sell link */}
           <Link
             href={user ? "/sellers/dashboard" : "/signin"}
             className="hidden sm:flex h-10 items-center text-sm hover:text-purple-500 transition px-4">
             Sell
           </Link>
 
-          {/* Shop now button */}
           <Link
-            href="#"
+            href="/cart"
             className="h-10 flex items-center space-x-2 border border-white/40 hover:border-purple-500 transition rounded-md px-4 text-sm">
             <span className="hidden sm:block">Shop now</span>
             <ShoppingCart className="h-4 w-4" />
           </Link>
 
-          {/* User account */}
           {user ? (
             <Link
               href="/account"

@@ -67,7 +67,7 @@ export function CartItem({
             <span className="w-8 text-center">{item.quantity}</span>
             <Button
               size="icon"
-              variant="outline"
+              variant="default"
               onClick={() => increment && increment(item.id)}>
               <Plus size={16} />
             </Button>

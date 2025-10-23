@@ -87,7 +87,7 @@ export default function CartSummaryForm({
               <Button
                 type="button"
                 onClick={onNextStep}
-                className="w-full bg-[#9b4dff] hover:bg-[#7d3de6] text-white font-medium rounded-lg py-3 transition-all">
+                className="w-full bg-[#9b4dff] hover:bg-primary text-white font-medium rounded-lg py-3 transition-all">
                 {buttonLabel}
               </Button>
             )}
