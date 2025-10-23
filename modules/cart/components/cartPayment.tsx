@@ -2,12 +2,28 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { initialCartItems } from "../data";
 import OrderSummary from "./order-summary";
 import PaymentMethods from "./payment-methods";
+import { useRouter } from "next/navigation";
 
-export default function CartPaymentPage() {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+interface CartPaymentPageProps {
+  cartItems: readonly {
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+  }[];
+  subtotal: number;
+  discount: number;
+}
+
+export default function CartPaymentPage({
+  cartItems,
+  subtotal,
+  discount,
+}: CartPaymentPageProps) {
+  const router = useRouter();
   const [billingInfo, setBillingInfo] = useState({
     name: "John Doe Daniels",
     email: "johndoedaniels@gmail.com",
@@ -18,11 +34,6 @@ export default function CartPaymentPage() {
     postal: "Nigeria",
   });
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const discount = 0;
   const shipping = 1;
   const total = subtotal - discount + shipping;
 
@@ -34,7 +45,7 @@ export default function CartPaymentPage() {
             <h3 className="text-lg font-semibold text-start">
               Shipping address
             </h3>
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+            <Button className="bg-purple-secondary hover:bg-primary text-white">
               Change
             </Button>
           </div>
@@ -67,7 +78,7 @@ export default function CartPaymentPage() {
         </div>
 
         <div>
-          <OrderSummary />
+          <OrderSummary cartItems={cartItems} />
         </div>
       </div>
 
@@ -95,7 +106,7 @@ export default function CartPaymentPage() {
               NGN {total.toLocaleString()}
             </span>
           </div>
-          <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+          <Button className="w-full bg-secondary hover:bg-primary text-white">
             Make Payment
           </Button>
         </div>

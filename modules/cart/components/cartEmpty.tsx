@@ -1,8 +1,10 @@
 import React from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const CartEmptyState = () => {
+  const router = useRouter();
   return (
     <div>
       <div className="max-h-screen h-auto bg-black text-white flex flex-col items-center justify-center px-4">
@@ -24,7 +26,9 @@ const CartEmptyState = () => {
             Go to the product page to add items to your cart
           </p>
 
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md">
+          <Button
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md"
+            onClick={() => router.push("/buyer")}>
             Add items to cart
           </Button>
         </div>
