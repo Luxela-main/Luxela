@@ -93,7 +93,7 @@ const PurchaseHistory = () => {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { type: 'spring', stiffness: 400, damping: 25 }
+      transition: { type: "spring" as const, stiffness: 400, damping: 25 }
     }
   };
 
@@ -120,7 +120,7 @@ const PurchaseHistory = () => {
               <motion.div
                 layoutId="purchaseTab"
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                transition={{ type: 'spring' as const, stiffness: 500, damping: 30 }}
               />
             )}
           </motion.button>
@@ -143,7 +143,7 @@ const PurchaseHistory = () => {
               <motion.div
                 layoutId="purchaseTab"
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                transition={{ type: 'spring' as const, stiffness: 500, damping: 30 }}
               />
             )}
           </motion.button>
