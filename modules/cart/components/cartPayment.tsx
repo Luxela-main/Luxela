@@ -4,26 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import OrderSummary from "./order-summary";
 import PaymentMethods from "./payment-methods";
-import { useRouter } from "next/navigation";
+import { useCartState } from "../context";
+import { useCheckout } from "../query";
 
-interface CartPaymentPageProps {
-  cartItems: readonly {
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-    image?: string;
-  }[];
-  subtotal: number;
-  discount: number;
-}
-
-export default function CartPaymentPage({
-  cartItems,
-  subtotal,
-  discount,
-}: CartPaymentPageProps) {
-  const router = useRouter();
+export default function CartPaymentPage() {
+  const { items, subtotal, discountAmount, total } = useCartState();
+  const checkoutMutation = useCheckout();
   const [billingInfo, setBillingInfo] = useState({
     name: "John Doe Daniels",
     email: "johndoedaniels@gmail.com",
@@ -34,8 +20,23 @@ export default function CartPaymentPage({
     postal: "Nigeria",
   });
 
-  const shipping = 1;
-  const total = subtotal - discount + shipping;
+  const shipping = 100;
+  const finalTotal = total + shipping;
+
+  const handleMakePayment = () => {
+    checkoutMutation.mutate({
+      shipping: {
+        fullName: billingInfo.name,
+        email: billingInfo.email,
+        phoneNumber: billingInfo.phone,
+        state: billingInfo.state,
+        city: billingInfo.city,
+        address: billingInfo.house,
+        postalCode: billingInfo.postal,
+      },
+      paymentMethod: "card",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-black text-white p-6 space-y-8">
@@ -78,7 +79,7 @@ export default function CartPaymentPage({
         </div>
 
         <div>
-          <OrderSummary cartItems={cartItems} />
+          <OrderSummary />
         </div>
       </div>
 
@@ -90,24 +91,33 @@ export default function CartPaymentPage({
         <div className="bg-[#1a1a1a] p-6 rounded-lg space-y-4 h-fit w-full max-w-md">
           <div className="flex justify-between">
             <span className="text-gray-400">Subtotal</span>
-            <span className="font-bold">NGN {subtotal.toLocaleString()}</span>
+            <span className="font-bold">
+              NGN {(subtotal / 100).toLocaleString()}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Discount</span>
-            <span className="font-bold">NGN {discount.toLocaleString()}</span>
+            <span className="font-bold">
+              -NGN {(discountAmount / 100).toLocaleString()}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Shipping fees</span>
-            <span className="font-bold">NGN {shipping.toLocaleString()}</span>
+            <span className="font-bold">
+              NGN {(shipping / 100).toLocaleString()}
+            </span>
           </div>
           <div className="flex justify-between text-lg">
             <span className="font-semibold">Total amount</span>
             <span className="font-bold text-white">
-              NGN {total.toLocaleString()}
+              NGN {(finalTotal / 100).toLocaleString()}
             </span>
           </div>
-          <Button className="w-full bg-secondary hover:bg-primary text-white">
-            Make Payment
+          <Button
+            className="w-full bg-secondary hover:bg-primary text-white"
+            onClick={handleMakePayment}
+            disabled={checkoutMutation.isPending}>
+            {checkoutMutation.isPending ? "Processing..." : "Make Payment"}
           </Button>
         </div>
       </div>

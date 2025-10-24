@@ -3,9 +3,21 @@ import { AdInput } from "@/components/input/TextInput";
 import { Formik, Form } from "formik";
 import { Button } from "@/components/ui/button";
 import { BillingAddressValidationSchema } from "@/lib/utils/validation";
+import { useCartState } from "../context";
 
-export const BillingAddressStep = () => {
-  const handleSubmit = () => {};
+interface BillingAddressStepProps {
+  onNext?: () => void;
+}
+
+export const BillingAddressStep = ({ onNext }: BillingAddressStepProps) => {
+  const { checkout } = useCartState();
+
+  const handleSubmit = (values: any) => {
+    console.log("Shipping details:", values);
+    if (onNext) {
+      onNext();
+    }
+  };
 
   return (
     <div className="text-center text-gray-400">
@@ -23,7 +35,7 @@ export const BillingAddressStep = () => {
           }}
           validationSchema={BillingAddressValidationSchema}
           onSubmit={handleSubmit}>
-          {({ values, setFieldValue, handleSubmit }) => (
+          {({ values, setFieldValue, handleSubmit, isValid, dirty }) => (
             <Form onSubmit={handleSubmit} className="space-y-8">
               <div>
                 <h2 className="text-lg font-semibold text-white mb-4">
@@ -107,7 +119,10 @@ export const BillingAddressStep = () => {
                 </label>
               </div>
               <div>
-                <Button className="bg-purple-500">
+                <Button
+                  type="submit"
+                  className="bg-purple-500"
+                  disabled={!isValid || !dirty}>
                   Confirm Shipping Address
                 </Button>
               </div>
@@ -126,7 +141,7 @@ export const BillingAddressStep = () => {
         <div>
           <p className="text-gray-300 leading-relaxed">
             At <span className="text-purple-500 font-medium">Luxela</span>, your
-            financial security comes first. Whether you’re paying with crypto or
+            financial security comes first. Whether you're paying with crypto or
             cards, every transaction is protected by industry-leading encryption
             and privacy standards.
           </p>

@@ -1,27 +1,16 @@
 "use client";
 
-interface OrderSummaryProps {
-  cartItems: readonly {
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-    image?: string;
-  }[];
-}
+import { useCartState } from "../context";
 
-export default function OrderSummary({ cartItems }: OrderSummaryProps) {
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+export default function OrderSummary() {
+  const { items, subtotal } = useCartState();
 
   return (
     <div className="bg-[#1a1a1a] p-6 rounded-lg">
       <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
 
       <div className="space-y-4">
-        {cartItems.map((item) => (
+        {items.map((item) => (
           <div
             key={item.id}
             className="flex items-center gap-4 pb-4 border-b border-gray-700">
@@ -36,16 +25,17 @@ export default function OrderSummary({ cartItems }: OrderSummaryProps) {
             )}
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-medium text-white truncate">
-                {item.name}
+                {item.name || `Product ${item.listingId.slice(0, 8)}`}
               </h4>
               <p className="text-xs text-gray-400 mt-1">Qty: {item.quantity}</p>
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-white">
-                NGN {(item.price * item.quantity).toLocaleString()}
+                NGN
+                {((item.unitPriceCents * item.quantity) / 100).toLocaleString()}
               </p>
               <p className="text-xs text-gray-400">
-                NGN {item.price.toLocaleString()} each
+                NGN {(item.unitPriceCents / 100).toLocaleString()} each
               </p>
             </div>
           </div>
@@ -56,7 +46,7 @@ export default function OrderSummary({ cartItems }: OrderSummaryProps) {
         <div className="flex justify-between items-center">
           <span className="text-gray-400">Subtotal</span>
           <span className="text-lg font-bold text-white">
-            NGN {subtotal.toLocaleString()}
+            NGN {(subtotal / 100).toLocaleString()}
           </span>
         </div>
       </div>

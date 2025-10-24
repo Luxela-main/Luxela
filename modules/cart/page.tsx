@@ -4,76 +4,97 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BillingAddressStep } from "./components/billing-address";
 import CartPaymentPage from "./components/cartPayment";
-import { initialCartItems, CartItemType } from "./data";
 import CartEmptyState from "./components/cartEmpty";
 import CartSummaryForm from "./components/cart-summary-form";
 import { CartItem } from "./components/cart-item";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCartState } from "./context";
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<CartItemType[]>(initialCartItems);
   const [activeTab, setActiveTab] = useState("cartReview");
+  const {
+    items,
+    isLoading,
+    subtotal,
+    total,
+    discountAmount,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    applyDiscount,
+  } = useCartState();
 
-  const handleIncrement = (id: number) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-      )
-    );
+  const handleIncrement = (listingId: string) => {
+    const item = items.find((item) => item.listingId === listingId);
+    if (item) {
+      updateQuantity(listingId, item.quantity + 1);
+    }
   };
 
-  const handleDecrement = (id: number) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      )
-    );
+  const handleDecrement = (listingId: string) => {
+    const item = items.find((item) => item.listingId === listingId);
+    if (item && item.quantity > 1) {
+      updateQuantity(listingId, item.quantity - 1);
+    } else if (item) {
+      removeItem(listingId);
+    }
   };
 
-  const handleRemoveItem = (id: number) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
+  const handleRemoveItem = (listingId: string) => {
+    removeItem(listingId);
   };
 
-  const handleClearCart = () => setCartItems([]);
+  const handleClearCart = () => {
+    clearCart();
+  };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const discount = 0;
-  const total = subtotal - discount;
+  const handleApplyDiscount = (code: string) => {
+    applyDiscount(code);
+  };
 
   const CartReviewStep = ({ onNext }: { onNext: () => void }) => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-200">Cart Items</h2>
-          <Button variant="ghost" size="sm" onClick={handleClearCart}>
-            Clear Cart
-          </Button>
+          {items.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={handleClearCart}>
+              Clear Cart
+            </Button>
+          )}
         </div>
-        {cartItems.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+            <p className="text-gray-400 mt-2">Loading cart...</p>
+          </div>
+        ) : items.length === 0 ? (
           <CartEmptyState />
         ) : (
-          cartItems.map((item) => (
+          items.map((item) => (
             <CartItem
               key={item.id}
-              item={item}
-              increment={handleIncrement}
-              decrement={handleDecrement}
-              removeItem={handleRemoveItem}
+              item={{
+                id: item.id,
+                name: item.name || `Product ${item.listingId.slice(0, 8)}`,
+                price: item.unitPriceCents / 100,
+                quantity: item.quantity,
+                image: item.image,
+              }}
+              increment={() => handleIncrement(item.listingId)}
+              decrement={() => handleDecrement(item.listingId)}
+              removeItem={() => handleRemoveItem(item.listingId)}
             />
           ))
         )}
       </div>
       <CartSummaryForm
-        subtotal={subtotal}
-        discount={discount}
-        total={total}
+        subtotal={subtotal / 100}
+        discount={discountAmount / 100}
+        total={total / 100}
         onNextStep={onNext}
-        onApplyDiscount={(code) => console.log("Apply discount:", code)}
+        onApplyDiscount={handleApplyDiscount}
+        disabled={items.length === 0}
       />
     </div>
   );
@@ -81,7 +102,6 @@ export default function CartPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="flex flex-col items-center justify-center min-h-screen py-10 px-4">
-        {/* Header */}
         <div className="text-center mb-10 space-y-2">
           <h1 className="text-3xl font-bold text-white">Checkout</h1>
           <p className="text-gray-400 text-sm md:text-base">
@@ -93,7 +113,6 @@ export default function CartPage() {
           value={activeTab}
           onValueChange={setActiveTab}
           className="w-full max-w-6xl mx-auto">
-          {/* Step Indicator */}
           <TabsList className="flex justify-center items-center gap-8 bg-transparent mb-8">
             {[
               { label: "Cart Review", value: "cartReview", number: 1 },
@@ -126,26 +145,20 @@ export default function CartPage() {
             ))}
           </TabsList>
 
-          {/* Step Content */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 md:p-8 shadow-lg">
             <TabsContent value="cartReview">
               <CartReviewStep onNext={() => setActiveTab("billingAddress")} />
             </TabsContent>
 
             <TabsContent value="billingAddress">
-              <BillingAddressStep />
+              <BillingAddressStep onNext={() => setActiveTab("payment")} />
             </TabsContent>
 
             <TabsContent value="payment">
-              <CartPaymentPage
-                cartItems={cartItems}
-                subtotal={subtotal}
-                discount={discount}
-              />
+              <CartPaymentPage />
             </TabsContent>
           </div>
 
-          {/* Footer Navigation */}
           <div className="flex justify-between items-center mt-6 text-xs text-gray-500">
             {activeTab !== "cartReview" && (
               <button
