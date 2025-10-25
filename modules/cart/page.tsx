@@ -138,9 +138,7 @@ export default function CartPage() {
                   }`}>
                   {step.label}
                 </span>
-                {index < 2 && (
-                  <div className="hidden md:block w-20 h-px bg-gray-700 mt-4"></div>
-                )}
+                <div className="hidden md:block w-20 h-px bg-gray-700 mt-4"></div>
               </div>
             ))}
           </TabsList>
