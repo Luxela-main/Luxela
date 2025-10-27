@@ -3,7 +3,7 @@ import React from 'react'
 
 export default function Brands() {
   return (
-    <section className='py-8'>
+    <section className=''>
       <main>
         <BrandCatalogGrid/>
       </main>

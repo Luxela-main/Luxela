@@ -58,7 +58,7 @@ export default function Footer() {
               Ready to share your fashion with the world? Join Luxela today to connect with a global audience, showcase your designs, and grow your brand.
             </p>
 
-            <Link href={"#"} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5' /></Link>
+            <Link href={"/signup"} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5' /></Link>
           </div>
 
           {/* newsletter */}

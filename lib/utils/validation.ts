@@ -18,6 +18,10 @@ export const signupSchema = yup.object().shape({
       "Password must contain at least one uppercase, one lowercase, and one number"
     )
     .required("Password is required"),
+  role: yup
+    .string()
+    .oneOf(["buyer", "seller"], "Please select a valid role")
+    .required("Role is required"),
   confirmPassword: yup
     .string()
     .oneOf([yup.ref("password")], "Passwords don't match")
@@ -54,6 +58,7 @@ export const signInInitialValues = {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "",
     agreeTerms: false,
   };
   

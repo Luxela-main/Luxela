@@ -1,8 +1,11 @@
+'use client'
+
 import BuyerFooter from '@/components/buyer/footer'
 import BuyerHeader from '@/components/buyer/header'
 import React from 'react'
 
 const BuyerPageLayout = ({ children }: { children: React.ReactNode }) => {
+  
   return (
     <main className='relative flex flex-col bg-[#0E0E0E] text-[#F2F2F2] min-h-screen'>
       <div className='sticky top-0 z-[100]'>

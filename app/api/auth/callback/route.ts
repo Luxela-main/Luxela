@@ -1,10 +1,12 @@
-import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/utils/supabase/server";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const encodedRedirectTo = requestUrl.searchParams.get("redirect") || "/app";
+  const encodedRedirectTo =
+    requestUrl.searchParams.get("redirect") || "/buyer/profile";
   const priceId = decodeURIComponent(
     requestUrl.searchParams.get("priceId") || ""
   );
@@ -13,23 +15,28 @@ export async function GET(request: Request) {
   );
   const redirectTo = decodeURIComponent(encodedRedirectTo);
 
+  // Create Supabase server client (your existing util)
   const supabase = await createClient();
 
   if (code) {
-    await supabase.auth.exchangeCodeForSession(code);
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log("User:", user);
+    // Exchange OAuth code for a session (sets cookies automatically)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
+    if (error) {
+      console.error("Error exchanging OAuth code:", error.message);
+      return NextResponse.redirect(
+        new URL("/signin?error=auth_failed", request.url)
+      );
+    }
 
-    // await getOrCreateUserAvatar(userData);
+    console.log("User authenticated:", data.user?.email);
   }
-  // Set session cookie
-  if (priceId && priceId !== "") {
-    // await createCheckoutSession({ priceId, discountCode });
-  } else {
-    return NextResponse.redirect(`${requestUrl.origin}${redirectTo}`);
+
+  // (Optional) handle special logic for checkout or discount
+  if (priceId) {
+    // e.g. await createCheckoutSession({ priceId, discountCode });
   }
 
-  // Successful authentication, redirect to the intended page
-  // Ensure we're using the correct origin
+  // Redirect after successful login
+  return NextResponse.redirect(new URL(redirectTo, request.url));
 }

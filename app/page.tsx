@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect } from "react";
+
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Partners from "@/components/Partners";
@@ -11,7 +15,7 @@ import CTA from "@/components/CTA";
 export default function LandingPage() {
   return (
     <main className="overflow-x-hidden">
-      {/* header */}
+      {/* Header */}
       <Header />
 
       {/* Partners Section */}

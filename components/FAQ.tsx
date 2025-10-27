@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FaqItemProps {
   question: string;
@@ -49,23 +50,26 @@ export default function FAQ() {
   };
 
   return (
-    <section id="how-to" className="z-10  py-20 px-4">
+    <section id="how-to" className="z-10 py-20 px-4 bg-black relative">
       <main className="container max-w-6xl mx-auto">
-        <div className="text-center max-w-[1041px] mx-auto">
-          <h2
-            className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] -tracking-[3%] font-bold"
-            data-aos="slide-right">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          viewport={{ once: true }}
+          className="text-center max-w-[1041px] mx-auto"
+        >
+          <h2 className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] -tracking-[3%] font-bold">
             Frequently Asked Questions
           </h2>
-          <p
-            className="text-sm md:text-lg text-[#BFBFBF] mt-5 mb-16"
-            data-aos="slide-left">
+          <p className="text-sm md:text-lg text-[#BFBFBF] mt-5 mb-16">
             Get answers to common questions about shopping and selling on
-            Luxela, the fashion marketplace built for creators and fashion
-            lovers.
+            Luxela — the fashion marketplace redefining style through Web3 and
+            digital ownership.
           </p>
-        </div>
-        <div className="grid gap-9">
+        </motion.div>
+
+        <div className="grid gap-6">
           {faqs.map((faq, index) => (
             <FaqItem
               key={index}
@@ -81,11 +85,6 @@ export default function FAQ() {
   );
 }
 
-interface FaqItemProps {
-  question: string;
-  answer: string;
-}
-
 interface FaqItemComponentProps {
   faq: FaqItemProps;
   index: number;
@@ -95,27 +94,40 @@ interface FaqItemComponentProps {
 
 function FaqItem({ faq, index, isOpen, onToggle }: FaqItemComponentProps) {
   return (
-    <div className="w-full">
+    <motion.div
+      initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
+      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      transition={{ duration: 0.7, delay: index * 0.1 }}
+      viewport={{ once: true }}
+      className="w-full"
+    >
       <div
-        data-aos={`${index / 2 === 0 ? "flip-down" : "flip-up"}`}
-        className="rounded-[16px] text-[#F6F6F6]  bg-gradient-to-t from-[#141414] to-[#2e2d2d] flex items-center py-4 cursor-pointer px-4"
-        onClick={() => onToggle(index)}>
-        <h3 className="font-medium text-sm md:text-base flex-1">
+        className="rounded-[16px] bg-gradient-to-t from-[#141414] to-[#2e2d2d] text-[#F6F6F6] flex items-center py-5 px-5 cursor-pointer border border-[#8451E1]/30 hover:border-[#8451E1]/50 transition-all duration-300"
+        onClick={() => onToggle(index)}
+      >
+        <h3 className="font-medium text-sm md:text-base flex-1 tracking-tight">
           {faq.question}
         </h3>
 
         <ChevronDown
-          className={`h-5 w-5 ml-auto transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`h-5 w-5 ml-auto text-[#BFBFBF] transition-transform duration-300 ${isOpen ? "rotate-180 text-[#8451E1]" : ""
+            }`}
         />
       </div>
 
-      {isOpen && (
-        <div className="p-4 text-[#BFBFBF] text-xs md:text-sm max-w-[1106px]">
-          <p>{faq.answer}</p>
-        </div>
-      )}
-    </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
+            className="px-5 pt-3 text-[#BFBFBF] text-xs md:text-sm overflow-hidden border-l border-[#8451E1]/30 ml-2"
+          >
+            <p>{faq.answer}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

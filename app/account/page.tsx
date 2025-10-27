@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
@@ -19,9 +19,22 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/hooks/useToast";
 import { Loader } from "@/components/loader/loader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const AccountPage = () => {
-  const { user, loading } = useAuth();
+  const [open, setOpen] = useState(false);
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
   const toast = useToast();
 
@@ -34,13 +47,13 @@ const AccountPage = () => {
 
   const handleLogout = async () => {
     try {
-        const supabase = createClient();
-        await supabase.auth.signOut();
-        toast.success("Logged out successfully");
-        router.push('/');
-      } catch (error) {
-        console.error('Error signing out:', error);
-      }
+      await logout();
+      toast.success("You have been successfully logged out.");
+    } catch (err) {
+      toast.error("Something went wrong while logging out.");
+    } finally {
+      setOpen(false);
+    }
   };
 
   if (loading || !user) {
@@ -50,6 +63,14 @@ const AccountPage = () => {
       </div>
     );
   }
+
+
+  const userPicture = user.user_metadata?.avatar_url || "/assets/image 38.png";
+  const username =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split("@")[0] ||
+    "User";
 
   return (
     <div className="min-h-screen bg-black text-white py-12 px-6 md:px-20">
@@ -63,9 +84,9 @@ const AccountPage = () => {
             />
           </div>
           <div className="h-16 w-16 rounded-full overflow-hidden border border-white/20">
-            {user.photoURL ? (
+            {userPicture ? (
               <Image
-                src={user.photoURL}
+                src={userPicture}
                 alt="Profile"
                 width={64}
                 height={64}
@@ -79,7 +100,7 @@ const AccountPage = () => {
           </div>
           <div>
             <h2 className="text-xl font-semibold">
-              {user.displayName || user.email}
+              {username}
             </h2>
             <p className="text-sm text-zinc-400">{user.email}</p>
           </div>
@@ -157,14 +178,36 @@ const AccountPage = () => {
             <span className="text-zinc-400 text-sm">Manage</span>
           </button>
 
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-between bg-red-600 hover:bg-red-700 rounded px-5 py-3 text-left transition text-white">
-            <div className="flex items-center space-x-2">
-              <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
-            </div>
-          </button>
+          <AlertDialog open={open} onOpenChange={setOpen}>
+            <AlertDialogOverlay />
+            <AlertDialogTrigger asChild>
+              <button
+                className="w-full flex items-center justify-between bg-red-600 hover:bg-red-700 rounded px-5 py-3 text-left transition text-white"
+              >
+                Log out
+              </button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent className="bg-[#0E0E0E] border border-[#2B2B2B] text-white">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-400">
+                  Are you sure you want to log out of your account?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-[#141414] text-white border border-[#2B2B2B] hover:bg-[#1a1a1a]">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Log out
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

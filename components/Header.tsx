@@ -49,23 +49,20 @@ export default function Header() {
               <span className="text-[#8451E1]">Global Reach</span>
               <br /> A New Era of E-commerce
             </h1>
-            <p className="text-sm md:text-base text-[#BFBFBF] my-5 max-w-2xl mx-auto">
-              An e-commerce platform where you can buy and sell authentic
-              fashion products easily. Pay with local currencies or digital
-              assets, and experience seamless, affordable fashion like never
-              before.
+            <p className="text-sm md:text-base text-[#BFBFBF] my-5 max-w-3xl mx-auto">
+              Buy, sell and pay for authentic fashion products easily using your local or digital currency
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-[338px] mx-auto">
               <a
-                href="/cart"
+                href="/signin"
                 className="cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] p-0.5 transition-transform hover:scale-105 active:scale-95">
                 <div className="rounded-md w-full h-12 flex items-center justify-center font-medium">
                   <span>Shop Now</span>
                 </div>
               </a>
               <a
-                href="/sellers/dashboard"
+                href="/signin"
                 className="cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] p-0.5 transition-transform hover:scale-105 active:scale-95">
                 <div className="rounded-md w-full h-12 bg-[#0E0E0E] flex items-center justify-center font-medium">
                   <span>Sell Now</span>

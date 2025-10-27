@@ -7,12 +7,20 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signupSchema, signUpInitialValues } from "@/lib/utils/validation";
 import { Formik, Form, Field, ErrorMessage } from "formik";
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DialogModal from "@/components/dialog";
 import { signInWithGoogle } from "@/lib/auth";
+
+interface SignUpFormData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: string;
+  agreeTerms: boolean;
+}
 
 function SignUpContent() {
   const [showPassword, setShowPassword] = useState(false);
@@ -26,76 +34,57 @@ function SignUpContent() {
   const priceId = searchParams.get("priceId");
   const discountCode = searchParams.get("discountCode");
 
-  interface SignUpFormData {
-    email: string;
-    password: string;
-    confirmPassword: string;
-    agreeTerms: boolean;
-  }
-  
-
   const handleSignUp = async (data: SignUpFormData) => {
     setIsLoading(true);
     setError(null);
 
-    const { email, password, confirmPassword, agreeTerms } = data;
-
-    if (!email) {
-      setIsLoading(false);
-      return toast.error("Email is required");
-    }
-
-    if (!password) {
-      setIsLoading(false);
-      return toast.error("Password is required");
-    }
-
-    if (!agreeTerms) {
-      setIsLoading(false);
-      return toast.warning("Please agree to the terms and conditions");
-    }
-
-    if (password !== confirmPassword) {
-      setIsLoading(false);
-      return toast.error("Passwords do not match");
-    }
+    const { email, password, confirmPassword, role, agreeTerms } = data;
 
     try {
-      sessionStorage.setItem('verificationEmail', data.email);
-
-      await fetch('/api/resend', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const res = await fetch(`https://luxela-3s8u.onrender.com/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: 'verification',
-          email: data.email,
-          password: data.password,
+          email,
+          password,
+          confirmPassword,
+          role,
         }),
       });
-       toast.success("We sent a 6-digit code to your email");
-      router.push(`/verify-email`);
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result?.error || "Signup failed");
+      }
+
+      toast.success("Signup successful! We sent a 6-digit code to your email.");
+      router.push("/verify-email");
     } catch (error: unknown) {
       const message =
         error instanceof Error
           ? error.message
           : typeof error === "string"
-          ? error
-          : "Signup failed";
-    
-      if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exists")) {
+            ? error
+            : "Signup failed";
+
+      if (
+        message.toLowerCase().includes("already registered") ||
+        message.toLowerCase().includes("already exists")
+      ) {
         toast.error(
           "This email is already registered. Please check your inbox (including spam) for a confirmation email, or try logging in or resetting your password."
         );
       } else {
         toast.error(message);
       }
+
       setError(message);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <>
@@ -129,7 +118,8 @@ function SignUpContent() {
             <Formik
               initialValues={signUpInitialValues}
               validationSchema={signupSchema}
-              onSubmit={handleSignUp}>
+              onSubmit={handleSignUp}
+            >
               {({ values, errors, touched, setFieldValue, isSubmitting }) => (
                 <Form className="space-y-4">
                   {/* Email */}
@@ -141,11 +131,8 @@ function SignUpContent() {
                       name="email"
                       type="email"
                       placeholder="Enter your email"
-                      className={`pl-10 ${
-                        errors.email && touched.email
-                          ? "border-destructive"
-                          : ""
-                      }`}
+                      className={`pl-10 ${errors.email && touched.email ? "border-destructive" : ""
+                        }`}
                     />
                   </div>
                   <ErrorMessage
@@ -163,23 +150,17 @@ function SignUpContent() {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      className={`pl-10 pr-10 ${
-                        errors.password && touched.password
-                          ? "border-destructive"
-                          : ""
-                      }`}
+                      className={`pl-10 pr-10 ${errors.password && touched.password ? "border-destructive" : ""
+                        }`}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
                   <ErrorMessage
@@ -206,15 +187,36 @@ function SignUpContent() {
                     className="text-sm text-destructive"
                   />
 
+                  {/* 👇 Role Selection */}
+                  <Label htmlFor="role">I am a</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                    <Field
+                      as="select"
+                      name="role"
+                      className={`w-full mt-1 rounded-md border border-input px-10 py-2 text-sm ring-offset-background placeholder:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${errors.role && touched.role ? "border-destructive" : ""
+                        }`}
+                    >
+                      <option value="" className="!text-black" disabled>
+                        Select role
+                      </option>
+                      <option value="buyer" className="text-black">Buyer</option>
+                      <option value="seller" className="text-black">Seller</option>
+                    </Field>
+                  </div>
+                  <ErrorMessage
+                    name="role"
+                    component="div"
+                    className="text-sm text-destructive mt-1"
+                  />
+
                   {/* Agree to Terms */}
                   <div className="flex items-start text-sm">
                     <input
                       type="checkbox"
                       className="mr-2 mt-1 accent-purple-600"
                       checked={values.agreeTerms}
-                      onChange={(e) =>
-                        setFieldValue("agreeTerms", e.target.checked)
-                      }
+                      onChange={(e) => setFieldValue("agreeTerms", e.target.checked)}
                     />
                     <label>
                       I agree to all{" "}
@@ -233,12 +235,14 @@ function SignUpContent() {
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-purple-600 to-purple-400 hover:from-purple-700 hover:to-purple-500"
-                    disabled={isSubmitting}>
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? "Signing Up..." : "Sign up"}
                   </Button>
                 </Form>
               )}
             </Formik>
+
 
             {/* Or divider */}
             <div className="flex items-center my-4">
