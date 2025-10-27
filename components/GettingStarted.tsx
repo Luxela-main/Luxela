@@ -42,6 +42,7 @@ const gettingStarted: GettingStarted[] = [
 
 export default function GettingStarted() {
   return (
+<<<<<<< HEAD
     <section id="getting-started" className="py-20 px-4 bg-black">
       <main className="max-w-6xl mx-auto">
         {/* Section Header */}
@@ -64,9 +65,33 @@ export default function GettingStarted() {
 
         {/* Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-9 items-stretch">
+=======
+    <section
+      id="getting-started"
+      className="py-12 md:py-20 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-6xl mx-auto">
+        <div className="text-center max-w-[1041px] mx-auto mb-8 sm:mb-12 lg:mb-16">
+          <h2
+            className="text-[#F9F9F9] leading-[120%] text-xl sm:text-2xl md:text-[2rem] -tracking-[3%] font-bold"
+            data-aos="slide-right">
+            Getting Started with Luxela
+          </h2>
+          <p
+            className="text-[#BFBFBF] mt-4 sm:mt-5 text-sm sm:text-base md:text-lg max-w-[900px] mx-auto leading-relaxed"
+            data-aos="fade-up">
+            Join Luxela, the fashion marketplace where fashion creators and
+            fashion lovers come together. Sign up, connect with passionate
+            designers and be part of a global community that celebrates
+            authenticity and creativity in fashion.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-9">
+>>>>>>> 1fe315a3957820117c309504e2a48311af9fb691
           {gettingStarted.map((started, index) => (
             <motion.div
               key={index}
+<<<<<<< HEAD
               initial={{ opacity: 0, y: 60 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: index * 0.2, ease: "easeOut" }}
@@ -74,11 +99,18 @@ export default function GettingStarted() {
               className="flex flex-col justify-between rounded-[12px] bg-[#1A1A1A] overflow-hidden text-center border border-[#8451E1]/20 hover:border-[#8451E1]/40 transition-all duration-300"
             >
               <div className="w-full">
+=======
+              className="flex flex-col rounded-[12px] bg-[#1A1A1A] overflow-hidden hover:transform hover:scale-105 transition-transform duration-300"
+              data-aos={index % 2 === 0 ? "fade-up" : "fade-down"}
+              data-aos-delay={index * 100}>
+              <div className="relative w-full aspect-[432/349] overflow-hidden">
+>>>>>>> 1fe315a3957820117c309504e2a48311af9fb691
                 <Image
                   width={432}
                   height={349}
                   src={started.image}
                   alt={started.title}
+<<<<<<< HEAD
                   className="w-[432px] h-[349px] object-cover"
                 />
               </div>
@@ -88,6 +120,16 @@ export default function GettingStarted() {
                   {started.title}
                 </h3>
                 <p className="text-sm text-[#BFBFBF]">
+=======
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              <div className="p-5 sm:p-6 flex-1 flex flex-col">
+                <h3 className="mb-3 text-base sm:text-lg lg:text-xl text-[#F6F6F6] font-semibold leading-tight">
+                  {started.title}
+                </h3>
+                <p className="text-sm sm:text-base text-[#BFBFBF] leading-relaxed">
+>>>>>>> 1fe315a3957820117c309504e2a48311af9fb691
                   {started.description}
                 </p>
                 {started.href && (

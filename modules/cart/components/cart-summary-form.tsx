@@ -14,6 +14,7 @@ interface CartSummaryFormProps {
   onApplyDiscount?: (code: string) => void;
   showDiscountInput?: boolean;
   className?: string;
+  disabled?: boolean;
 }
 
 export default function CartSummaryForm({
@@ -25,6 +26,7 @@ export default function CartSummaryForm({
   onApplyDiscount,
   showDiscountInput = true,
   className = "",
+  disabled = false,
 }: CartSummaryFormProps) {
   return (
     <div
@@ -32,9 +34,11 @@ export default function CartSummaryForm({
       <Formik
         initialValues={{ discountCode: "" }}
         onSubmit={(values) => {
-          if (onApplyDiscount) onApplyDiscount(values.discountCode);
+          if (onApplyDiscount && values.discountCode.trim()) {
+            onApplyDiscount(values.discountCode.trim());
+          }
         }}>
-        {({ handleSubmit, values }) => (
+        {({ handleSubmit, values, isSubmitting }) => (
           <Form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <h2 className="text-lg font-semibold text-white mb-2">Summary</h2>
@@ -47,7 +51,7 @@ export default function CartSummaryForm({
               <div className="flex justify-between text-sm text-gray-400">
                 <span>Discount</span>
                 <span className="font-medium text-gray-200">
-                  {helper.toCurrency(discount)}
+                  -{helper.toCurrency(discount)}
                 </span>
               </div>
             </div>
@@ -67,8 +71,9 @@ export default function CartSummaryForm({
                   <Button
                     type="submit"
                     variant="outline"
+                    disabled={!values.discountCode.trim() || isSubmitting}
                     className="border border-[#444] text-gray-200 hover:bg-[#2e2e2e] rounded-lg px-4 !py-4">
-                    Apply
+                    {isSubmitting ? "Applying..." : "Apply"}
                   </Button>
                 </div>
               </div>
@@ -87,7 +92,8 @@ export default function CartSummaryForm({
               <Button
                 type="button"
                 onClick={onNextStep}
-                className="w-full bg-[#9b4dff] hover:bg-primary text-white font-medium rounded-lg py-3 transition-all">
+                disabled={disabled}
+                className="w-full bg-[#9b4dff] hover:bg-primary text-white font-medium rounded-lg py-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                 {buttonLabel}
               </Button>
             )}

@@ -6,6 +6,15 @@ import { randomUUID } from "crypto";
 import { eq, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
+const reviewSchema = z.object({
+  id: z.string().uuid(),
+  listingId: z.string().uuid(),
+  buyerId: z.string().uuid(),
+  rating: z.number(),
+  comment: z.string().nullable().optional(),
+  createdAt: z.date(),
+});
+
 export const reviewRouter = createTRPCRouter({
   createReview: protectedProcedure
     .meta({
@@ -23,6 +32,7 @@ export const reviewRouter = createTRPCRouter({
         comment: z.string().optional(),
       })
     )
+    .output(reviewSchema)
     .mutation(async ({ ctx, input }) => {
       const buyerId = ctx.user?.id;
       if (!buyerId)
@@ -30,6 +40,7 @@ export const reviewRouter = createTRPCRouter({
           code: "UNAUTHORIZED",
           message: "User not authenticated",
         });
+
       const [newReview] = await db
         .insert(reviews)
         .values({
@@ -37,7 +48,8 @@ export const reviewRouter = createTRPCRouter({
           listingId: input.listingId,
           buyerId,
           rating: input.rating,
-          comment: input.comment,
+          comment: input.comment ?? null,
+          createdAt: new Date(),
         })
         .returning();
 
@@ -71,6 +83,7 @@ export const reviewRouter = createTRPCRouter({
       },
     })
     .input(z.object({ listingId: z.string().uuid() }))
+    .output(z.array(reviewSchema))
     .query(async ({ input }) => {
       const rows = await db
         .select()

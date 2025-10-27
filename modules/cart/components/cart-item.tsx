@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Minus, Plus, Trash2, Pencil } from "lucide-react";
 
 export interface CartItemData {
-  id: number;
+  id: string;
   name: string;
   price: number;
   quantity: number;
@@ -14,10 +14,10 @@ export interface CartItemData {
 
 export interface CartItemProps {
   item: CartItemData;
-  increment?: (id: number) => void;
-  decrement?: (id: number) => void;
-  removeItem?: (id: number) => void;
-  onEdit?: (id: number) => void;
+  increment?: (id: string) => void;
+  decrement?: (id: string) => void;
+  removeItem?: (id: string) => void;
+  onEdit?: (id: string) => void;
   editable?: boolean;
   showQuantityControls?: boolean;
   currency?: string;
