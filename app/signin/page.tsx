@@ -22,15 +22,20 @@ function SignInContent() {
   const searchParams = useSearchParams();
   const priceId = searchParams.get("priceId");
   const discountCode = searchParams.get("discountCode");
-  
+
 
   const handleSignIn = async (data: any) => {
-     const { email, password } = data
+    const { email, password } = data
     setIsLoading(true);
     setError(null);
 
     try {
-      await signin(data.email, data.password);
+      const { data, error } = await signin(email, password);
+      if (error) throw error;
+      else console.log("Sign-in successful:", data);
+
+
+      console.log("Sign-in successful:", data);
       toast.success("Login Successful.");
       router.push('/');
     } catch (error) {
@@ -85,9 +90,8 @@ function SignInContent() {
                     name="email"
                     type="email"
                     placeholder="Enter your email"
-                    className={`pl-10 ${
-                      errors.email && touched.email ? "border-destructive" : ""
-                    }`}
+                    className={`pl-10 ${errors.email && touched.email ? "border-destructive" : ""
+                      }`}
                   />
                 </div>
                 <ErrorMessage
@@ -105,11 +109,10 @@ function SignInContent() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
-                    className={`pl-10 pr-10 ${
-                      errors.password && touched.password
-                        ? "border-destructive"
-                        : ""
-                    }`}
+                    className={`pl-10 pr-10 ${errors.password && touched.password
+                      ? "border-destructive"
+                      : ""
+                      }`}
                   />
                   <Button
                     type="button"
@@ -142,7 +145,7 @@ function SignInContent() {
                 {/* Submit */}
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-400 hover:from-purple-700 hover:to-purple-500"
+                  className="w-full bg-gradient-to-b from-purple-600 to-purple-400 hover:from-purple-700 hover:to-purple-500"
                   disabled={isSubmitting}>
                   {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>

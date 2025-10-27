@@ -3,32 +3,36 @@ import React from "react";
 
 export default function CTA() {
   return (
-    <section id="how-to" className="relative py-20 px-4">
-      <main className="container max-w-6xl mx-auto">
+    <section id="join-luxela" className="relative py-24 px-4 overflow-hidden">
+      <main className="layout mx-auto">
         <div
-          className="text-center max-w-[1320px] bg-[#1A1A1A] mx-auto py-20 px-6 lg:px-32"
-          data-aos="flip-up">
+          className="text-center max-w-[1320px] mx-auto py-20 px-6 lg:px-32 rounded-[20px] border border-[#8451E1]/20 shadow-[0_0_40px_-10px_#8451E1]/20 backdrop-blur-md transition-all duration-700 hover:border-[#8451E1]/40 hover:shadow-[0_0_10px_-10px_#8451E1]/40"
+        >
           <h2
-            className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] -tracking-[3%] font-bold"
-            data-aos="slide-up">
+            className="text-[#F9F9F9] text-3xl md:text-[2.5rem] font-bold tracking-tight leading-[120%]
+            animate-fade-slide-up"
+          >
             Embrace the Future of Fashion
           </h2>
+
           <p
-            className="text-sm md:text-lg text-[#BFBFBF] mt-5 mb-16"
-            data-aos="slide-down">
-            Ready to discover fashion in a new way? Join Luxela today to explore
-            exclusive styles, support your favorite designers, and connect with
-            a global community.
+            className="text-[#BFBFBF] text-base md:text-lg mt-5 mb-14 max-w-2xl mx-auto
+            animate-fade-slide-up [animation-delay:200ms]"
+          >
+            Step into the world where digital meets couture. Discover authentic,
+            verified luxury pieces and support visionary designers shaping the
+            decentralized fashion movement.
           </p>
-          {/* cta */}
+
           <Link
-            href="#"
-            className="cursor-pointer w-full max-w-[230px] mx-auto flex items-center justify-center mt-6 h-[42px] bg-gradient-to-r from-[#9872DD] via-[#8451E1] to-[#5C2EAF] transition text-white rounded-[10px] px-6"
-            data-aos="fade-up">
-            Shop now
+            href="/signup"
+            className="relative inline-flex items-center justify-center px-8 h-[48px] text-white font-medium rounded-[10px] bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] shadow-[0_0_25px_#8451E1]/30 transition-all duration-500 hover:shadow-[0_0_10px_#8451E1]/50 hover:-translate-y-[0.5px] animate-fade-slide-up [animation-delay:400ms]"
+          >
+            Shop Now
           </Link>
         </div>
       </main>
+
     </section>
   );
 }
