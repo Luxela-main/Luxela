@@ -119,6 +119,10 @@ body {
   @apply bg-[#0E0E0E] text-[#f1f1f1] scroll-smooth min-w-full;
 }
 
+.layout {
+  @apply max-w-[1200px] px-2 md:px-5
+}
+
 /* Add this to your existing global.css */
 .sticky {
   position: -webkit-sticky;

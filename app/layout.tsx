@@ -94,7 +94,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <div className="max-w-[1440px] mx-auto">
+        <div className="">
           <ClientProviders>{children}</ClientProviders>
         </div>
       </body>

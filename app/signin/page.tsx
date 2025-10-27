@@ -145,7 +145,7 @@ function SignInContent() {
                 {/* Submit */}
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-400 hover:from-purple-700 hover:to-purple-500"
+                  className="w-full bg-gradient-to-b from-purple-600 to-purple-400 hover:from-purple-700 hover:to-purple-500"
                   disabled={isSubmitting}>
                   {isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>

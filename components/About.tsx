@@ -7,7 +7,7 @@ import React from "react";
 export default function About() {
   return (
     <section id="about" className="z-10 py-20 px-4">
-      <div className="container max-w-6xl mx-auto">
+      <div className="container layout mx-auto">
         {/* Heading + Paragraph */}
         <div className="text-center max-w-[1041px] mx-auto">
           <motion.h2
@@ -41,11 +41,11 @@ export default function About() {
           whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
           transition={{ duration: 0.9, ease: "easeOut" }}
           viewport={{ once: true, amount: 0.4 }}
-          className="max-w-[1240px] mx-auto"
+          className="w-full flex justify-center"
         >
           <Image
             src="/images/about-1240x802.png"
-            width={1240}
+            width={1440}
             height={802}
             alt="Luxela."
             className="rounded-2xl shadow-lg"
