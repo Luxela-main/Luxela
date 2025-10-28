@@ -59,7 +59,7 @@ function SignUpContent() {
 
       if (result.success) {
         setUserEmail(values.email);
-        setDialogOpen(true); // Show verification dialog
+        setDialogOpen(true); 
         toast.success(result.message || "Signup successful! Check your email.");
       }
     } catch (err: any) {
