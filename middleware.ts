@@ -1,19 +1,23 @@
-import { updateSession } from "@/utils/supabase/middleware";
-import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+export function middleware(req: NextRequest) {
+  const token = req.cookies.get("sb-access-token");
+
+  const protectedRoutes = ["/dashboard", "/seller", "/admin", "/buyer"];
+
+  const isProtected = protectedRoutes.some((path) =>
+    req.nextUrl.pathname.startsWith(path)
+  );
+
+  if (!token && isProtected) {
+    const loginUrl = new URL("/login", req.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - auth/callback (authentication callback)
-     */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/dashboard/:path*", "/seller/:path*", "/admin/:path*", "/buyer/:path*"],
 };
