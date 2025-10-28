@@ -1,97 +1,80 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, startTransition } from "react";
 import { useToast } from "@/components/hooks/useToast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { signupSchema, signUpInitialValues } from "@/lib/utils/validation";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import DialogModal from "@/components/dialog";
 import { signInWithGoogle } from "@/lib/auth";
-
-interface SignUpFormData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  role: string;
-  agreeTerms: boolean;
-}
+import { signupAction, resendVerificationAction } from "../actions/auth";
+import { EmailVerificationDialog } from "@/components/email-verification-dialog";
 
 function SignUpContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [isResending, setIsResending] = useState(false);
 
   const router = useRouter();
   const toast = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const priceId = searchParams.get("priceId");
   const discountCode = searchParams.get("discountCode");
 
-  const handleSignUp = async (data: SignUpFormData) => {
-    setIsLoading(true);
-    setError(null);
-
-    const { email, password, confirmPassword, role, agreeTerms } = data;
-
+  /**
+   * 🔹 Resend verification email
+   */
+  const handleResendVerification = async () => {
+    setIsResending(true);
     try {
-      const res = await fetch(`https://luxela-3s8u.onrender.com/api/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          confirmPassword,
-          role,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result?.error || "Signup failed");
+      const result = await resendVerificationAction(userEmail);
+      if (result.success) {
+        toast.success(result.message);
       }
-
-      toast.success("Signup successful! We sent a 6-digit code to your email.");
-      router.push("/verify-email");
-    } catch (error: unknown) {
+    } catch (err: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : typeof error === "string"
-            ? error
-            : "Signup failed";
-
-      if (
-        message.toLowerCase().includes("already registered") ||
-        message.toLowerCase().includes("already exists")
-      ) {
-        toast.error(
-          "This email is already registered. Please check your inbox (including spam) for a confirmation email, or try logging in or resetting your password."
-        );
-      } else {
-        toast.error(message);
-      }
-
-      setError(message);
+        err instanceof Error
+          ? err.message
+          : "Failed to resend verification email.";
+      toast.error(message);
     } finally {
-      setIsLoading(false);
+      setIsResending(false);
     }
   };
 
+  /**
+   * 🔹 Handle signup submission
+   */
+  const handleSignup = async (
+    values: { email: string; password: string; role: string },
+    { setSubmitting }: any
+  ) => {
+    try {
+      const result = await signupAction(values.email, values.password, values.role);
+
+      if (result.success) {
+        setUserEmail(values.email);
+        setDialogOpen(true); // Show verification dialog
+        toast.success(result.message || "Signup successful! Check your email.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Signup failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
-      <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a]  text-white">
-        {/* Left Side */}
+      <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
+        {/* Left side */}
         <div className="relative md:flex items-center justify-center p-10 hidden">
-          <div className="absolute inset-0 bg-[url('/images/auth.png')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl"></div>
+          <div className="absolute inset-0 bg-[url('/images/auth.png')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
           <div className="relative z-10 max-w-md p-10 rounded-2xl border border-purple-500 backdrop-blur-md bg-black/30">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
             <h2 className="text-3xl font-semibold mb-4">
@@ -106,7 +89,7 @@ function SignUpContent() {
           </div>
         </div>
 
-        {/* Right Side */}
+        {/* Right side */}
         <div className="flex items-center justify-center p-8">
           <div className="w-full max-w-sm">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
@@ -118,105 +101,125 @@ function SignUpContent() {
             <Formik
               initialValues={signUpInitialValues}
               validationSchema={signupSchema}
-              onSubmit={handleSignUp}
+              onSubmit={handleSignup}
             >
               {({ values, errors, touched, setFieldValue, isSubmitting }) => (
                 <Form className="space-y-4">
                   {/* Email */}
-                  <Label>Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                    <Field
-                      as={Input}
+                  <div>
+                    <Label>Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                      <Field
+                        as={Input}
+                        name="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        className={`pl-10 ${errors.email && touched.email ? "border-destructive" : ""
+                          }`}
+                      />
+                    </div>
+                    <ErrorMessage
                       name="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      className={`pl-10 ${errors.email && touched.email ? "border-destructive" : ""
-                        }`}
+                      component="div"
+                      className="text-sm text-destructive mt-1"
                     />
                   </div>
-                  <ErrorMessage
-                    name="email"
-                    component="div"
-                    className="text-sm text-destructive"
-                  />
 
                   {/* Password */}
-                  <Label>Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                    <Field
-                      as={Input}
+                  <div>
+                    <Label>Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                      <Field
+                        as={Input}
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        className={`pl-10 pr-10 ${errors.password && touched.password
+                            ? "border-destructive"
+                            : ""
+                          }`}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <ErrorMessage
                       name="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      className={`pl-10 pr-10 ${errors.password && touched.password ? "border-destructive" : ""
-                        }`}
+                      component="div"
+                      className="text-sm text-destructive mt-1"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
                   </div>
-                  <ErrorMessage
-                    name="password"
-                    component="div"
-                    className="text-sm text-destructive"
-                  />
 
                   {/* Confirm Password */}
-                  <Label>Confirm Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                    <Field
-                      as={Input}
+                  <div>
+                    <Label>Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                      <Field
+                        as={Input}
+                        name="confirmPassword"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        className={`pl-10 pr-10 ${errors.confirmPassword && touched.confirmPassword
+                            ? "border-destructive"
+                            : ""
+                          }`}
+                      />
+                    </div>
+                    <ErrorMessage
                       name="confirmPassword"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
-                      className="pl-10 pr-10"
+                      component="div"
+                      className="text-sm text-destructive mt-1"
                     />
                   </div>
-                  <ErrorMessage
-                    name="confirmPassword"
-                    component="div"
-                    className="text-sm text-destructive"
-                  />
 
-                  {/* 👇 Role Selection */}
-                  <Label htmlFor="role">I am a</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                    <Field
-                      as="select"
+                  {/* Role */}
+                  <div>
+                    <Label htmlFor="role">I am a</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                      <Field
+                        as="select"
+                        name="role"
+                        className={`w-full mt-1 rounded-md border border-input px-10 py-2 text-sm ring-offset-background placeholder:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${errors.role && touched.role ? "border-destructive" : ""
+                          }`}
+                      >
+                        <option value="" disabled className="!text-black">
+                          Select role
+                        </option>
+                        <option value="buyer" className="text-black">
+                          Buyer
+                        </option>
+                        <option value="seller" className="text-black">
+                          Seller
+                        </option>
+                      </Field>
+                    </div>
+                    <ErrorMessage
                       name="role"
-                      className={`w-full mt-1 rounded-md border border-input px-10 py-2 text-sm ring-offset-background placeholder:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${errors.role && touched.role ? "border-destructive" : ""
-                        }`}
-                    >
-                      <option value="" className="!text-black" disabled>
-                        Select role
-                      </option>
-                      <option value="buyer" className="text-black">Buyer</option>
-                      <option value="seller" className="text-black">Seller</option>
-                    </Field>
+                      component="div"
+                      className="text-sm text-destructive mt-1"
+                    />
                   </div>
-                  <ErrorMessage
-                    name="role"
-                    component="div"
-                    className="text-sm text-destructive mt-1"
-                  />
 
-                  {/* Agree to Terms */}
+                  {/* Terms */}
                   <div className="flex items-start text-sm">
-                    <input
+                    <Field
                       type="checkbox"
+                      name="agreeTerms"
                       className="mr-2 mt-1 accent-purple-600"
-                      checked={values.agreeTerms}
-                      onChange={(e) => setFieldValue("agreeTerms", e.target.checked)}
                     />
                     <label>
                       I agree to all{" "}
@@ -234,7 +237,7 @@ function SignUpContent() {
                   {/* Submit */}
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-purple-600 to-purple-400 hover:from-purple-700 hover:to-purple-500"
+                    className="w-full bg-gradient-to-b from-purple-600 to-purple-400 via-purple-500 hover:from-purple-700 hover:to-purple-500"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Signing Up..." : "Sign up"}
@@ -243,24 +246,26 @@ function SignUpContent() {
               )}
             </Formik>
 
-
-            {/* Or divider */}
+            {/* Divider */}
             <div className="flex items-center my-4">
-              <div className="flex-grow border-t border-zinc-700"></div>
+              <div className="flex-grow border-t border-zinc-700" />
               <span className="px-2 text-zinc-500 text-sm">Or</span>
-              <div className="flex-grow border-t border-zinc-700"></div>
+              <div className="flex-grow border-t border-zinc-700" />
             </div>
 
-            {/* Google Sign-in */}
+            {/* Google sign in */}
             <button
               className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-              onClick={() => signInWithGoogle(priceId || "", discountCode || "", "/")}
-              type="button">
+              onClick={() =>
+                signInWithGoogle(priceId || "", discountCode || "", "/")
+              }
+              type="button"
+            >
               <img src="/google.svg" alt="Google" className="h-4 w-4" />
               Sign up with Google
             </button>
 
-            {/* Already have account */}
+            {/* Already have an account */}
             <p className="text-center text-zinc-500 text-sm mt-4">
               Already have an account?{" "}
               <Link href="/signin" className="text-purple-400 underline">
@@ -271,20 +276,13 @@ function SignUpContent() {
         </div>
       </div>
 
-      {/* Open modal if account already exist */}
-      <DialogModal
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        title="Account already exists"
-        description="Go to login and enter your account details to login"
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => router.push("/signin")}>Login</Button>
-          </>
-        }
+      {/* 🔹 Email Verification Dialog */}
+      <EmailVerificationDialog
+        dialogOpen={dialogOpen}
+        setDialogOpen={setDialogOpen}
+        userEmail={userEmail}
+        handleResendVerification={handleResendVerification}
+        isResending={isResending}
       />
     </>
   );
@@ -292,11 +290,13 @@ function SignUpContent() {
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
-        <div className="text-white">Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
+          <div className="text-white">Loading...</div>
+        </div>
+      }
+    >
       <SignUpContent />
     </Suspense>
   );
