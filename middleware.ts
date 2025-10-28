@@ -1,24 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-
   const token = req.cookies.get("sb-access-token");
 
-  const protectedPaths = ["/dashboard", "/admin", "/seller", "/buyer"];
+  const protectedRoutes = ["/dashboard", "/seller", "/admin", "/buyer"];
 
-  const isProtected = protectedPaths.some((path) =>
+  const isProtected = protectedRoutes.some((path) =>
     req.nextUrl.pathname.startsWith(path)
   );
-  
-  if (isProtected && !token) {
-    const signinUrl = new URL("/signin", req.url);
-    signinUrl.searchParams.set("from", req.nextUrl.pathname);
-    return NextResponse.redirect(signinUrl);
+
+  if (!token && isProtected) {
+    const loginUrl = new URL("/login", req.url);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/seller/:path*", "/buyer/:path*"],
+  matcher: ["/dashboard/:path*", "/seller/:path*", "/admin/:path*", "/buyer/:path*"],
 };
