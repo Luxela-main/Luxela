@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,7 +12,7 @@ export async function updateSession(request: NextRequest) {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           );
         },
       },
@@ -25,7 +25,6 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Public routes (accessible without login)
   const publicRoutes = [
     "/",
     "/signup",
@@ -33,7 +32,6 @@ export async function updateSession(request: NextRequest) {
     "/privacy-policy",
     "/verify-email",
   ];
-
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );
@@ -41,14 +39,35 @@ export async function updateSession(request: NextRequest) {
     pathname
   );
 
-  // Redirect logged-in users from homepage, signup, or signin → dashboard 
-  // TODO: (check user role and redirect)
+  const role = user?.user_metadata?.role || user?.app_metadata?.role;
+
+  // Redirect logged-in users from homepage, signup, or signin to their dashboard
   if (
     user &&
     !isAlwaysAllowed &&
     ["/", "/signup", "/signin"].includes(pathname)
   ) {
-    return NextResponse.redirect(new URL("/buyer/profile", request.url));
+    const dashboardUrl =
+      role === "seller" ? "/seller/dashboard" : "/buyer/profile";
+    return NextResponse.redirect(new URL(dashboardUrl, request.url));
+  }
+
+  // Role-based route protection
+  if (user && !isAlwaysAllowed) {
+    const isBuyerRoute = pathname.startsWith("/buyer");
+    const isSellerRoute = pathname.startsWith("/seller");
+
+    if (role === "seller" && isBuyerRoute) {
+      return NextResponse.redirect(new URL("/seller/dashboard", request.url));
+    }
+
+    if (role === "buyer" && isSellerRoute) {
+      return NextResponse.redirect(new URL("/buyer/profile", request.url));
+    }
+
+    if (!role && (isBuyerRoute || isSellerRoute)) {
+      return NextResponse.redirect(new URL("/buyer/profile", request.url));
+    }
   }
 
   // Redirect unauthenticated users trying to access protected routes
@@ -56,5 +75,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 
-  return supabaseResponse;
+  return response;
 }
