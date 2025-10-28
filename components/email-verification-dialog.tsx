@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogOverlay
-} from "../ui/dialog";
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Mail, CheckCircle } from "lucide-react";
 
