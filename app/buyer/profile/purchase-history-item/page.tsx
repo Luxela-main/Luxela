@@ -33,7 +33,7 @@ const timeline = [
 
 export default function PurchaseHistoryItem() {
   return (
-    <section className="px-6 py-10">
+    <section className=" py-10">
       <div className='w-fit flex items-center gap-2 mb-10 text-sm text-[#858585]'>
         <Link href="/buyer/profile" className='hover:text-[#DCDCDC] capitalize'>Home</Link>
         <ChevronRight size={16} />

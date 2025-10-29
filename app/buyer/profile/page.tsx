@@ -35,7 +35,7 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen text-white font-sans py-10">
       {/* Header */}
-      <header className="flex flex-col gap-10 md:flex-row items-start justify-between px-8 ">
+      <header className="flex flex-col gap-10 md:flex-row items-start justify-between px-2 ">
         <motion.div
           className="flex items-center gap-4"
           initial={{ opacity: 0, x: -20 }}
@@ -110,8 +110,8 @@ const ProfilePage = () => {
       </header>
 
       {/* Tabs */}
-      <div className="px-8 mt-12">
-        <div className="flex gap-8">
+      <div className="px-2 mt-12">
+        <div className="flex justify-between md:gap-8 md:justify-start">
           <motion.button
             onClick={() => setActiveTab('loyalty')}
             className="relative pb-4 text-base font-semibold cursor-pointer"
@@ -154,7 +154,7 @@ const ProfilePage = () => {
 
       {/* NFT Grid */}
       <motion.div
-        className="px-8 mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="px-2 mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}

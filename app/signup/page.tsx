@@ -10,9 +10,9 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signInWithGoogle } from "@/lib/auth";
 import { signupAction, resendVerificationAction } from "../actions/auth";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
+import GoogleSignInButton from "@/components/auth/google";
 
 function SignUpContent() {
   const [showPassword, setShowPassword] = useState(false);
@@ -59,8 +59,8 @@ function SignUpContent() {
 
       if (result.success) {
         setUserEmail(values.email);
-        setDialogOpen(true); // Show verification dialog
-        toast.success(result.message || "Signup successful! Check your email.");
+        setDialogOpen(true);
+        // toast.success(result.message || "Signup successful! Check your email.");
       }
     } catch (err: any) {
       toast.error(err.message || "Signup failed. Please try again.");
@@ -107,7 +107,7 @@ function SignUpContent() {
                 <Form className="space-y-4">
                   {/* Email */}
                   <div>
-                    <Label>Email</Label>
+                    <Label htmlFor="email" className="mb-1">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -128,7 +128,7 @@ function SignUpContent() {
 
                   {/* Password */}
                   <div>
-                    <Label>Password</Label>
+                    <Label htmlFor="password" className="mb-1">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -137,8 +137,8 @@ function SignUpContent() {
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
                         className={`pl-10 pr-10 ${errors.password && touched.password
-                            ? "border-destructive"
-                            : ""
+                          ? "border-destructive"
+                          : ""
                           }`}
                       />
                       <Button
@@ -164,7 +164,7 @@ function SignUpContent() {
 
                   {/* Confirm Password */}
                   <div>
-                    <Label>Confirm Password</Label>
+                    <Label htmlFor="confirmPassword" className="mb-1">Confirm Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -173,8 +173,8 @@ function SignUpContent() {
                         type={showPassword ? "text" : "password"}
                         placeholder="Confirm your password"
                         className={`pl-10 pr-10 ${errors.confirmPassword && touched.confirmPassword
-                            ? "border-destructive"
-                            : ""
+                          ? "border-destructive"
+                          : ""
                           }`}
                       />
                     </div>
@@ -215,18 +215,19 @@ function SignUpContent() {
                   </div>
 
                   {/* Terms */}
-                  <div className="flex items-start text-sm">
+                  <div className="flex items-center text-sm">
                     <Field
                       type="checkbox"
+                      id="agreeTerms"
                       name="agreeTerms"
-                      className="mr-2 mt-1 accent-purple-600"
+                      className="mr-2 accent-purple-600"
                     />
-                    <label>
+                    <Label htmlFor='agreeTerms'>
                       I agree to all{" "}
                       <a href="/terms" className="text-purple-400 underline">
                         Terms and Conditions
                       </a>
-                    </label>
+                    </Label>
                   </div>
                   <ErrorMessage
                     name="agreeTerms"
@@ -254,16 +255,7 @@ function SignUpContent() {
             </div>
 
             {/* Google sign in */}
-            <button
-              className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-              onClick={() =>
-                signInWithGoogle(priceId || "", discountCode || "", "/")
-              }
-              type="button"
-            >
-              <img src="/google.svg" alt="Google" className="h-4 w-4" />
-              Sign up with Google
-            </button>
+            <GoogleSignInButton />
 
             {/* Already have an account */}
             <p className="text-center text-zinc-500 text-sm mt-4">
