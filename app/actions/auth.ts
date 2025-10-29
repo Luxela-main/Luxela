@@ -1,6 +1,6 @@
 "use server";
 
-import { createServerClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 function mapAuthError(error: any): Error {
   if (!error?.message) return new Error("An unknown error occurred.");
@@ -30,7 +30,7 @@ export async function signupAction(
   password: string,
   role: string
 ) {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -38,7 +38,7 @@ export async function signupAction(
       password,
       options: {
         data: { role }, 
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=signup`,
       },
     });
 
@@ -58,7 +58,7 @@ export async function signupAction(
  * Sign in user
  */
 export async function signinAction(email: string, password: string) {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -68,7 +68,15 @@ export async function signinAction(email: string, password: string) {
 
     if (error) throw error;
 
-    return { success: true, data };
+    // Check if user has a role
+    const role =
+      data.user?.user_metadata?.role || data.user?.app_metadata?.role;
+
+    return {
+      success: true,
+      data,
+      needsRole: !role, // Flag to indicate if role selection is needed
+    };
   } catch (err) {
     throw mapAuthError(err);
   }
@@ -78,7 +86,7 @@ export async function signinAction(email: string, password: string) {
  * Resend verification email
  */
 export async function resendVerificationAction(email: string) {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   try {
     const { error } = await supabase.auth.resend({
@@ -104,7 +112,7 @@ export async function resendVerificationAction(email: string) {
  * Sign out user
  */
 export async function signoutAction() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   try {
     const { error } = await supabase.auth.signOut();

@@ -6,7 +6,7 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -31,41 +31,46 @@ export async function updateSession(request: NextRequest) {
     "/signin",
     "/privacy-policy",
     "/verify-email",
+    "/select-role", 
   ];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );
-  const isAlwaysAllowed = ["/privacy-policy", "/verify-email"].includes(
-    pathname
-  );
+  const isAlwaysAllowed = [
+    "/privacy-policy",
+    "/verify-email",
+    "/select-role",
+  ].includes(pathname);
 
   const role = user?.user_metadata?.role || user?.app_metadata?.role;
 
-  // Redirect logged-in users from homepage, signup, or signin to their dashboard
+  // Redirect users without role to role selection (except on public routes)
+  if (user && !role && !isAlwaysAllowed && !publicRoutes.includes(pathname)) {
+    return NextResponse.redirect(new URL("/select-role", request.url));
+  }
+
+  // Redirect logged-in users with role from homepage, signup, or signin to their dashboard
   if (
     user &&
+    role &&
     !isAlwaysAllowed &&
     ["/", "/signup", "/signin"].includes(pathname)
   ) {
     const dashboardUrl =
-      role === "seller" ? "/seller/dashboard" : "/buyer/profile";
+      role === "seller" ? "/sellers/dashboard" : "/buyer/profile";
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 
   // Role-based route protection
-  if (user && !isAlwaysAllowed) {
+  if (user && role && !isAlwaysAllowed) {
     const isBuyerRoute = pathname.startsWith("/buyer");
-    const isSellerRoute = pathname.startsWith("/seller");
+    const isSellerRoute = pathname.startsWith("/sellers");
 
     if (role === "seller" && isBuyerRoute) {
-      return NextResponse.redirect(new URL("/seller/dashboard", request.url));
+      return NextResponse.redirect(new URL("/sellers/dashboard", request.url));
     }
 
     if (role === "buyer" && isSellerRoute) {
-      return NextResponse.redirect(new URL("/buyer/profile", request.url));
-    }
-
-    if (!role && (isBuyerRoute || isSellerRoute)) {
       return NextResponse.redirect(new URL("/buyer/profile", request.url));
     }
   }

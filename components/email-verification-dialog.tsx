@@ -40,7 +40,7 @@ export function EmailVerificationDialog({
           </DialogTitle>
           <DialogDescription className="text-center">
             We've sent a verification link to:
-            <span className="font-semibold text-foreground mt-2">{userEmail}</span>
+            <u className="font-semibold text-foreground mt-2"> {userEmail}</u>
           </DialogDescription>
         </DialogHeader>
 
@@ -51,7 +51,7 @@ export function EmailVerificationDialog({
           </div>
           <div className="flex items-start gap-3 text-sm text-muted-foreground">
             <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-            <p>The link will expire in 24 hours</p>
+            <p>The link will expire in <strong>1 hour</strong></p>
           </div>
           <div className="flex items-start gap-3 text-sm text-muted-foreground">
             <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
@@ -59,14 +59,14 @@ export function EmailVerificationDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-col gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
             onClick={handleResendVerification}
             disabled={isResending}
             variant="outline"
             className="w-full"
           >
-            {isResending ? "Resending..." : "Resend verification email"}
+            {isResending ? "Resending..." : "Resend email"}
           </Button>
           <Button
             onClick={() => setDialogOpen(false)}

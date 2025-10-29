@@ -10,9 +10,9 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signInWithGoogle } from "@/lib/auth";
 import { resendVerificationAction, signinAction } from "../actions/auth";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
+import GoogleSignInButton from "@/components/auth/google";
 
 function SignInContent() {
   const [showPassword, setShowPassword] = useState(false);
@@ -23,8 +23,6 @@ function SignInContent() {
   const router = useRouter();
   const toast = useToast();
   const searchParams = useSearchParams();
-  const priceId = searchParams.get("priceId");
-  const discountCode = searchParams.get("discountCode");
 
   const handleSignIn = async (values: { email: string; password: string }, { setSubmitting }: any) => {
     try {
@@ -85,7 +83,7 @@ function SignInContent() {
                 <Form className="space-y-4">
                   {/* Email */}
                   <div>
-                    <Label>Email</Label>
+                    <Label htmlFor="email" className="mb-1">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -108,7 +106,7 @@ function SignInContent() {
 
                   {/* Password */}
                   <div>
-                    <Label>Password</Label>
+                    <Label htmlFor="password" className="mb-1">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -147,10 +145,10 @@ function SignInContent() {
                     <div className="flex items-center">
                       <input
                         type="checkbox"
-                        id="remember"
+                        id="rememberMe"
                         className="mr-2 accent-purple-600"
                       />
-                      <label htmlFor="remember">Remember me</label>
+                      <Label htmlFor="rememberMe">Remember me</Label>
                     </div>
                     <Link
                       href="/forgot-password"
@@ -180,16 +178,7 @@ function SignInContent() {
             </div>
 
             {/* Google Sign-in */}
-            <button
-              className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm"
-              onClick={() =>
-                signInWithGoogle(priceId || "", discountCode || "", "/")
-              }
-              type="button"
-            >
-              <img src="/google.svg" alt="Google" className="h-4 w-4" />
-              Sign in with Google
-            </button>
+            <GoogleSignInButton />
 
             {/* Not a registered user */}
             <p className="text-center text-zinc-500 text-sm mt-4">
