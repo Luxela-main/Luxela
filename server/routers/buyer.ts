@@ -12,12 +12,17 @@ import { and, eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient | null {
+  if (supabase) return supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  supabase = createClient(url, key);
+  return supabase;
+}
 
 // Rate limiting store (use Redis in production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -329,7 +334,12 @@ export const buyerRouter = createTRPCRouter({
         const timestamp = Date.now();
         const uniqueFileName = `${userId}/pfp/${timestamp}_${input.fileName}`;
 
-        const { data, error } = await supabase.storage
+        const sb = getSupabase();
+        if (!sb) {
+          throw new Error("Supabase storage is not configured on the server");
+        }
+
+        const { data, error } = await sb.storage
           .from("profile-pictures")
           .upload(uniqueFileName, buffer, {
             contentType: input.fileType,
@@ -340,7 +350,7 @@ export const buyerRouter = createTRPCRouter({
           throw new Error(`Upload failed: ${error.message}`);
         }
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = sb.storage
           .from("profile-pictures")
           .getPublicUrl(data.path);
 

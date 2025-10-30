@@ -1,11 +1,19 @@
 // server/trpc/context.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Context } from '../trpc';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient | null {
+  if (supabase) return supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.warn('Supabase env missing; auth context will treat requests as unauthenticated');
+    return null;
+  }
+  supabase = createClient(url, key);
+  return supabase;
+}
 
 function getBearerToken(header?: string) {
   if (!header) return null;
@@ -14,13 +22,12 @@ function getBearerToken(header?: string) {
 }
 
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }): Promise<Context> {
-      console.log("Authorization header:", req?.headers?.authorization);
-
   const token = getBearerToken(req?.headers?.authorization);
   let user = null;
 
-  if (token) {
-    const { data, error } = await supabase.auth.getUser(token);
+  const sb = getSupabase();
+  if (token && sb) {
+    const { data, error } = await sb.auth.getUser(token);
     if (!error && data.user) {
       user = {
         id: data.user.id,
@@ -28,11 +35,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }):
         name: data.user.user_metadata?.full_name,
         role: data.user.user_metadata?.role,
       };
-    } else {
-      console.error("Auth error:", error);
     }
-  } else {
-    console.log("No bearer token found in headers");
   }
 
   return { req, res, user, session: null };

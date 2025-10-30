@@ -1,18 +1,11 @@
 "use client";
 
-import { createClient } from "@/utils/supabase/client";
+const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_BASE_URL || "https://luxela-3s8u.onrender.com";
 
 export default function GoogleSignInButton() {
-  const supabase = createClient();
-
   const handleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-      },
-    });
-    if (error) console.error(error);
+    const redirect = `${window.location.origin}/auth/callback`;
+    window.location.href = `${AUTH_BASE_URL}/api/auth/google?redirect=${encodeURIComponent(redirect)}`;
   };
 
   return (
