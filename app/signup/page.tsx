@@ -14,6 +14,7 @@ import { useSignup, useResendVerification } from "@/lib/hooks";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
 import GoogleSignInButton from "@/components/auth/google";
 
+
 function SignUpContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
