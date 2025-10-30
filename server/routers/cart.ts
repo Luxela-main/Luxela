@@ -1,7 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { db } from '../db';
-import { notifications } from "../db/schema";
-import { buyers, buyerShipping, carts, cartItems, discounts, listings, orders, sellers } from '../db/schema';
+import { buyers, buyerAccountDetails, buyerBillingAddress, carts, cartItems, discounts, listings, orders, sellers } from '../db/schema';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
@@ -54,56 +53,54 @@ const CartOutput = z.object({
     .nullable(),
 });
 
-
 export const cartRouter = createTRPCRouter({
   getCart: protectedProcedure
-  .meta({
-  openapi: {
-    method: 'GET',
-    path: '/cart',
-    tags: ['Cart'],
-    summary: 'Get user cart',
-  },
-})
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/cart',
+        tags: ['Cart'],
+        summary: 'Get user cart',
+      },
+    })
     .output(CartOutput)
-
-  .query(async ({ ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
-    try {
-      const buyer = await ensureBuyer(userId);
-      const cart = await ensureCart(buyer.id);
-      const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cart.id));
-      const discountRow = cart.discountId
-        ? (await db.select().from(discounts).where(eq(discounts.id, cart.discountId)))[0]
-        : null;
-      return { cart, items, discount: discountRow || null };
-    } catch (err: any) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Failed to load cart' });
-    }
-  }),
+    .query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      try {
+        const buyer = await ensureBuyer(userId);
+        const cart = await ensureCart(buyer.id);
+        const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cart.id));
+        const discountRow = cart.discountId
+          ? (await db.select().from(discounts).where(eq(discounts.id, cart.discountId)))[0]
+          : null;
+        return { cart, items, discount: discountRow || null };
+      } catch (err: any) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Failed to load cart' });
+      }
+    }),
 
   addToCart: protectedProcedure
-  .meta({
-    openapi: {
-      method: 'POST',
-      path: '/cart/add',
-      tags: ['Cart'],
-      summary: 'Add an item to the user’s cart',
-      description: 'Adds a listing to the authenticated user’s cart or increases quantity if it already exists.',
-    },
-  })
+    .meta({
+      openapi: {
+        method: 'POST',
+        path: '/cart/add',
+        tags: ['Cart'],
+        summary: 'Add an item to the user cart',
+        description: 'Adds a listing to the authenticated user cart or increases quantity if it already exists.',
+      },
+    })
     .input(z.object({ listingId: z.string().uuid(), quantity: z.number().int().positive().default(1) }))
     .output(
-    z.object({
-      id: z.string().uuid(),
-      cartId: z.string().uuid(),
-      listingId: z.string().uuid(),
-      quantity: z.number().int(),
-      unitPriceCents: z.number().int(),
-      currency: z.string(),
-    }),
-  )
+      z.object({
+        id: z.string().uuid(),
+        cartId: z.string().uuid(),
+        listingId: z.string().uuid(),
+        quantity: z.number().int(),
+        unitPriceCents: z.number().int(),
+        currency: z.string(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -147,30 +144,30 @@ export const cartRouter = createTRPCRouter({
     }),
 
   setItemQuantity: protectedProcedure
-   .meta({
-    openapi: {
-      method: 'PATCH',
-      path: '/cart/item',
-      tags: ['Cart'],
-      summary: 'Set or update the quantity of a specific cart item',
-      description:
-        'Updates the quantity of a specific item in the user’s cart. If the quantity is set to 0, the item is removed from the cart.',
-    },
-  })
+    .meta({
+      openapi: {
+        method: 'PATCH',
+        path: '/cart/item',
+        tags: ['Cart'],
+        summary: 'Set or update the quantity of a specific cart item',
+        description:
+          'Updates the quantity of a specific item in the user cart. If the quantity is set to 0, the item is removed from the cart.',
+      },
+    })
     .input(z.object({ listingId: z.string().uuid(), quantity: z.number().int().nonnegative() }))
-  .output(
-    z.union([
-      z.object({
-        id: z.string().uuid(),
-        cartId: z.string().uuid(),
-        listingId: z.string().uuid(),
-        quantity: z.number().int(),
-        unitPriceCents: z.number().int(),
-        currency: z.string(),
-      }),
-      z.object({ success: z.literal(true) }),
-    ]),
-  )
+    .output(
+      z.union([
+        z.object({
+          id: z.string().uuid(),
+          cartId: z.string().uuid(),
+          listingId: z.string().uuid(),
+          quantity: z.number().int(),
+          unitPriceCents: z.number().int(),
+          currency: z.string(),
+        }),
+        z.object({ success: z.literal(true) }),
+      ])
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -199,21 +196,21 @@ export const cartRouter = createTRPCRouter({
     }),
 
   removeItem: protectedProcedure
-  .meta({
-    openapi: {
-      method: 'DELETE',
-      path: '/cart/item',
-      tags: ['Cart'],
-      summary: 'Remove an item from the cart',
-      description: 'Removes a specific product listing from the user’s cart by its listing ID.',
-    },
-  })
+    .meta({
+      openapi: {
+        method: 'DELETE',
+        path: '/cart/item',
+        tags: ['Cart'],
+        summary: 'Remove an item from the cart',
+        description: 'Removes a specific product listing from the user cart by its listing ID.',
+      },
+    })
     .input(z.object({ listingId: z.string().uuid() }))
     .output(
-    z.object({
-      success: z.literal(true).describe('Indicates that the item was successfully removed'),
-    }),
-  )
+      z.object({
+        success: z.literal(true).describe('Indicates that the item was successfully removed'),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -230,58 +227,56 @@ export const cartRouter = createTRPCRouter({
     }),
 
   clearCart: protectedProcedure
-  .meta({
-    openapi: {
-      method: 'DELETE',
-      path: '/cart/clear',
-      tags: ['Cart'],
-      summary: 'Clear user cart',
-      description: 'Removes all items and any applied discounts from the authenticated user’s cart.',
-    },
-  })
-  
-  .output(
-    z.object({
-      success: z.literal(true).describe('Indicates that the cart was successfully cleared'),
+    .meta({
+      openapi: {
+        method: 'DELETE',
+        path: '/cart/clear',
+        tags: ['Cart'],
+        summary: 'Clear user cart',
+        description: 'Removes all items and any applied discounts from the authenticated user cart.',
+      },
+    })
+    .output(
+      z.object({
+        success: z.literal(true).describe('Indicates that the cart was successfully cleared'),
+      })
+    )
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      try {
+        const buyer = await ensureBuyer(userId);
+        const cart = await ensureCart(buyer.id);
+        await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
+        await db
+          .update(carts)
+          .set({ discountId: null as any, updatedAt: new Date() })
+          .where(eq(carts.id, cart.id));
+        return { success: true };
+      } catch (err: any) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Failed to clear cart' });
+      }
     }),
-  )
-  .mutation(async ({ ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
-    try {
-      const buyer = await ensureBuyer(userId);
-      const cart = await ensureCart(buyer.id);
-      await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
-      await db
-        .update(carts)
-        .set({ discountId: null as any, updatedAt: new Date() })
-        .where(eq(carts.id, cart.id));
-      return { success: true };
-    } catch (err: any) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Failed to clear cart' });
-    }
-  }),
 
   applyDiscount: protectedProcedure
     .meta({
-    openapi: {
-      method: 'POST',
-      path: '/cart/discount',
-      tags: ['Cart'],
-      summary: 'Apply discount code to user cart',
-      description: 'Applies a valid discount code to the authenticated user’s cart.',
-    },
-  })
-    .input(z.object({ code: z.string().min(1) }))
-    
-  .output(
-    z.object({
-      id: z.string().uuid().describe('Cart ID'),
-      buyerId: z.string().uuid().describe('Buyer ID'),
-      discountId: z.string().uuid().nullable().describe('Applied discount ID'),
-      updatedAt: z.date().describe('Timestamp of cart update'),
+      openapi: {
+        method: 'POST',
+        path: '/cart/discount',
+        tags: ['Cart'],
+        summary: 'Apply discount code to user cart',
+        description: 'Applies a valid discount code to the authenticated user cart.',
+      },
     })
-  )
+    .input(z.object({ code: z.string().min(1) }))
+    .output(
+      z.object({
+        id: z.string().uuid().describe('Cart ID'),
+        buyerId: z.string().uuid().describe('Buyer ID'),
+        discountId: z.string().uuid().nullable().describe('Applied discount ID'),
+        updatedAt: z.date().describe('Timestamp of cart update'),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -304,149 +299,147 @@ export const cartRouter = createTRPCRouter({
     }),
 
   checkout: protectedProcedure
-  .meta({
-    openapi: {
-      method: 'POST',
-      path: '/checkout',
-      tags: ['Cart'],
-      summary: 'Checkout and create orders',
-      description:
-        'Performs checkout for the authenticated buyer. Creates orders for all items in the user’s cart, applies discounts, updates stock quantities, and clears the cart after success.',
-    },
-  })
+    .meta({
+      openapi: {
+        method: 'POST',
+        path: '/checkout',
+        tags: ['Cart'],
+        summary: 'Checkout and create orders',
+        description:
+          'Performs checkout for the authenticated buyer. Creates orders for all items in the user cart, applies discounts, updates stock quantities, and clears the cart after success. Uses buyer account details and billing address for shipping information.',
+      },
+    })
     .input(
       z.object({
-        shipping: z
-          .object({
-            fullName: z.string().min(1),
-            email: z.string().email(),
-            phoneNumber: z.string().min(3),
-            state: z.string().min(1),
-            city: z.string().min(1),
-            address: z.string().min(1),
-            postalCode: z.string().min(1),
-          })
-          .optional(),
         paymentMethod: z.enum(['card', 'bank_transfer', 'paypal', 'stripe', 'flutterwave', 'crypto']),
       })
     )
     .output(
-  z.object({
-    orders: z.array(
       z.object({
-        id: z.string().uuid(),
-        sellerId: z.string().uuid(),
-        listingId: z.string().uuid(),
-        productTitle: z.string(),
-        productCategory: z.string(),
-        customerName: z.string(),
-        customerEmail: z.string().email(),
-        paymentMethod: z.enum([
-          'card',
-          'bank_transfer',
-          'paypal',
-          'stripe',
-          'flutterwave',
-          'crypto',
-        ]),
-        amountCents: z.number().int(),
-        currency: z.string(),
+        orders: z.array(
+          z.object({
+            id: z.string().uuid(),
+            sellerId: z.string().uuid(),
+            listingId: z.string().uuid(),
+            productTitle: z.string(),
+            productCategory: z.string(),
+            customerName: z.string(),
+            customerEmail: z.string().email(),
+            paymentMethod: z.enum([
+              'card',
+              'bank_transfer',
+              'paypal',
+              'stripe',
+              'flutterwave',
+              'crypto',
+            ]),
+            amountCents: z.number().int(),
+            currency: z.string(),
+          })
+        ),
+        subtotal: z.number().int(),
+        discountCents: z.number().int(),
+        total: z.number().int(),
       })
-    ),
-    subtotal: z.number().int(),
-    discountCents: z.number().int(),
-    total: z.number().int(),
-  })
-)
-
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
-      const buyer = await ensureBuyer(userId);
-      const cart = await ensureCart(buyer.id);
-      const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cart.id));
-      if (items.length === 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cart is empty' });
 
-      // Shipping: use provided or default existing
-      let ship = (await db.select().from(buyerShipping).where(and(eq(buyerShipping.buyerId, buyer.id), eq(buyerShipping.isDefault, true))))[0];
-      if (input.shipping) {
-        if (ship) {
-          await db
-            .update(buyerShipping)
-            .set({ ...input.shipping })
-            .where(eq(buyerShipping.id, ship.id));
-        } else {
-          const [createdShip] = await db
-            .insert(buyerShipping)
-            .values({ id: randomUUID(), buyerId: buyer.id, isDefault: true, ...input.shipping })
+      try {
+        const buyer = await ensureBuyer(userId);
+        const cart = await ensureCart(buyer.id);
+        const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cart.id));
+
+        if (items.length === 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cart is empty' });
+
+        // Get buyer account details and billing address
+        const accountDetails = await db
+          .select()
+          .from(buyerAccountDetails)
+          .where(eq(buyerAccountDetails.buyerId, buyer.id))
+          .then((r) => r[0]);
+
+        const billingAddress = await db
+          .select()
+          .from(buyerBillingAddress)
+          .where(
+            and(
+              eq(buyerBillingAddress.buyerId, buyer.id),
+              eq(buyerBillingAddress.isDefault, true)
+            )
+          )
+          .then((r) => r[0]);
+
+        if (!accountDetails) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Account details required for checkout' });
+        if (!billingAddress) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Billing address required for checkout' });
+
+        // Build complete shipping address
+        const shippingAddress = `${billingAddress.houseAddress}, ${billingAddress.city}, ${accountDetails.state}, ${accountDetails.country} ${billingAddress.postalCode}`;
+
+        // Calculate totals
+        let subtotal = 0;
+        for (const it of items) subtotal += it.unitPriceCents * it.quantity;
+
+        let discountCents = 0;
+        if (cart.discountId) {
+          const discountRow = await db.select().from(discounts).where(eq(discounts.id, cart.discountId)).then((r) => r[0]);
+          if (discountRow && discountRow.active && (!discountRow.expiresAt || new Date(discountRow.expiresAt) > new Date())) {
+            if (discountRow.percentOff) discountCents = Math.floor((subtotal * discountRow.percentOff) / 100);
+            if (discountRow.amountOffCents) discountCents += discountRow.amountOffCents;
+          }
+        }
+
+        const total = Math.max(0, subtotal - discountCents);
+
+        // Create orders per item
+        const createdOrders = [] as any[];
+        for (const it of items) {
+          const listingRow = await db.select().from(listings).where(eq(listings.id, it.listingId)).then((r) => r[0]);
+          if (!listingRow) continue;
+
+          const sellerRow = await db.select().from(sellers).where(eq(sellers.id, listingRow.sellerId)).then((r) => r[0]);
+          if (!sellerRow) continue;
+
+          const orderId = randomUUID();
+          const [order] = await db
+            .insert(orders)
+            .values({
+              id: orderId,
+              buyerId: buyer.id,
+              sellerId: sellerRow.id,
+              listingId: listingRow.id,
+              productTitle: listingRow.title,
+              productImage: listingRow.image,
+              productCategory: listingRow.category!,
+              customerName: accountDetails.fullName,
+              customerEmail: accountDetails.email,
+              paymentMethod: input.paymentMethod,
+              amountCents: it.unitPriceCents * it.quantity,
+              currency: it.currency,
+              shippingAddress: shippingAddress,
+            })
             .returning();
-          ship = createdShip;
+
+          createdOrders.push(order);
+
+          // Decrement stock if limited
+          if (listingRow.supplyCapacity === 'limited' && listingRow.quantityAvailable != null) {
+            await db
+              .update(listings)
+              .set({ quantityAvailable: Math.max(0, (listingRow.quantityAvailable || 0) - it.quantity) })
+              .where(eq(listings.id, listingRow.id));
+          }
         }
-      } else if (!ship) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Shipping information required' });
+
+        // Clear cart
+        await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
+        await db.update(carts).set({ discountId: null as any, updatedAt: new Date() }).where(eq(carts.id, cart.id));
+
+        return { orders: createdOrders, subtotal, discountCents, total };
+      } catch (err: any) {
+        console.error('Checkout error:', err);
+        throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Checkout failed' });
       }
-
-      // Totals
-      let subtotal = 0;
-      for (const it of items) subtotal += it.unitPriceCents * it.quantity;
-      let discountCents = 0;
-      let discountRow = null as any;
-      if (cart.discountId) {
-        discountRow = (await db.select().from(discounts).where(eq(discounts.id, cart.discountId)))[0];
-        if (discountRow && discountRow.active && (!discountRow.expiresAt || new Date(discountRow.expiresAt) > new Date())) {
-          if (discountRow.percentOff) discountCents = Math.floor((subtotal * discountRow.percentOff) / 100);
-          if (discountRow.amountOffCents) discountCents += discountRow.amountOffCents;
-        }
-      }
-      const total = Math.max(0, subtotal - discountCents);
-
-      // Create orders per item
-      const createdOrders = [] as any[];
-      for (const it of items) {
-        const listingRow = (await db.select().from(listings).where(eq(listings.id, it.listingId)))[0];
-        if (!listingRow) continue;
-        const sellerRow = (await db.select().from(sellers).where(eq(sellers.id, listingRow.sellerId)))[0];
-        if (!sellerRow) continue;
-        const orderId = randomUUID();
-        const [order] = await db
-          .insert(orders)
-          .values({
-            id: orderId,
-            sellerId: sellerRow.id,
-            listingId: listingRow.id,
-            productTitle: listingRow.title,
-            productCategory: listingRow.category!,
-            customerName: ship!.fullName,
-            customerEmail: ship!.email,
-            paymentMethod: input.paymentMethod,
-            amountCents: it.unitPriceCents * it.quantity, // per item line total
-            currency: it.currency,
-          })
-          .returning();
-        await db.insert(notifications).values({
-          id: randomUUID(),
-          sellerId: sellerRow.id,
-          type: "purchase",
-          message: `New purchase: ${listingRow.title}`,
-          isRead: false,
-          isStarred: false,
-          createdAt: new Date(),
-          });
-        createdOrders.push(order);
-
-        // decrement stock if limited
-        if (listingRow.supplyCapacity === 'limited' && listingRow.quantityAvailable != null) {
-          await db
-            .update(listings)
-            .set({ quantityAvailable: Math.max(0, (listingRow.quantityAvailable || 0) - it.quantity) })
-            .where(eq(listings.id, listingRow.id));
-        }
-      }
-
-      // Clear cart
-      await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
-      await db.update(carts).set({ discountId: null as any, updatedAt: new Date() }).where(eq(carts.id, cart.id));
-
-      return { orders: createdOrders, subtotal, discountCents, total };
     }),
 });

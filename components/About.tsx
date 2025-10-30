@@ -1,38 +1,56 @@
 "use client";
 
 import Image from "next/image";
+import { motion } from "framer-motion";
 import React from "react";
-import useAos from "./hooks/useAos";
 
 export default function About() {
-  useAos();
   return (
-    <section id="about" className="z-10  py-20 px-4">
-      <div className="container max-w-6xl mx-auto">
+    <section id="about" className="z-10 py-20 px-4">
+      <div className="container layout mx-auto">
+        {/* Heading + Paragraph */}
         <div className="text-center max-w-[1041px] mx-auto">
-          <h2
-            className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] -trackin-[3%] font-bold"
-            data-aos="slide-right">
+          <motion.h2
+            initial={{ opacity: 0, x: -80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            viewport={{ once: true, amount: 0.5 }}
+            className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] tracking-[-0.03em] font-bold"
+          >
             About Luxela
-          </h2>
-          <p
-            className="text-sm md:text-lg text-[#BFBFBF] mt-5 mb-16"
-            data-aos="slide-left">
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            viewport={{ once: true, amount: 0.5 }}
+            className="text-sm md:text-lg lg:w-[80%] mx-auto text-[#BFBFBF] mt-5 mb-16"
+          >
             Luxela is a fashion marketplace where buyers connect directly with
             designers and shop exclusive collections. Enjoy seamless payments
             with fiat or digital assets, low fees, and a secure,
             community-driven experience. We empower small creators with global
-            access and offer a trusted space for discovering authentic style. 
-          </p>
+            access and offer a trusted space for discovering authentic style.
+          </motion.p>
         </div>
-        <div className="max-w-[1240px] mx-auto" data-aos="flip-right">
+
+        {/* Image */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, rotateY: 30 }}
+          whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
+          viewport={{ once: true, amount: 0.4 }}
+          className="w-full flex justify-center"
+        >
           <Image
-            src={"/images/about-1240x802.png"}
-            width={1240}
+            src="/images/about-1240x802.png"
+            width={1440}
             height={802}
             alt="Luxela."
+            className="rounded-2xl shadow-lg"
           />
-        </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -58,7 +58,7 @@ export default function Footer() {
               Ready to share your fashion with the world? Join Luxela today to connect with a global audience, showcase your designs, and grow your brand.
             </p>
 
-            <Link href={"#"} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5' /></Link>
+            <Link href={"/signup"} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5' /></Link>
           </div>
 
           {/* newsletter */}
@@ -71,7 +71,7 @@ export default function Footer() {
                 className="w-full pr-[120px] h-[42px] rounded-[10px] border border-[#2F2F2F] focused:ring-0 focus-visible:ring-0 bg-[#2B2B2B] text-[#ACACAC] text-sm "
               />
               <Button
-                className="absolute top-0 right-0 h-[42px] px-6 text-white bg-gradient-to-r from-[#9872DD] via-[#8451E1] to-[#5C2EAF] rounded-[10px] transition"
+                className="absolute top-0 right-0 h-[42px] px-6 text-white bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] rounded-[10px] transition"
               >
                 Subscribe
               </Button>
@@ -99,7 +99,7 @@ export default function Footer() {
           <div className='my-10'>
             <Image src='/images/LUXELA-1185x242.svg' width={1185} height={242} alt={'Luxela'} />
           </div>
-          <p className="text-gray-500 text-sm mb-4 md:mb-0 text-center">© 2025 Luxela. All rights reserved.</p>
+          <p className="text-gray-500 text-sm mb-4 md:mb-0 text-center">© {new Date().getFullYear()} Luxela. All rights reserved.</p>
         </div>
       </div>
     </footer>

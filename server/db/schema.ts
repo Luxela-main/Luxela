@@ -34,8 +34,11 @@ export const shippingOptionEnum = pgEnum('shipping_option', ['local', 'internati
 export const orderStatusEnum = pgEnum('order_status', ['processing', 'shipped', 'delivered', 'canceled', 'returned']);
 export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
-export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer', 'paypal', 'stripe', 'flutterwave', 'crypto']);
+export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto' ]);
 export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder',]);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','successful', 'failed','refunded',]);
+export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterwave','stripe','paypal']);
+
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
@@ -198,22 +201,22 @@ export const listings = pgTable('listings', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const orders = pgTable('orders', {
-  id: uuid('id').primaryKey(), // orderId
-  sellerId: uuid('seller_id').notNull().references(() => sellers.id),
-  listingId: uuid('listing_id').notNull().references(() => listings.id),
-  productTitle: varchar('product_title', { length: 255 }).notNull(),
-  productCategory: productCategoryEnum('product_category').notNull(),
-  customerName: varchar('customer_name', { length: 255 }).notNull(),
-  customerEmail: varchar('customer_email', { length: 255 }).notNull(),
-  orderDate: timestamp('order_date').defaultNow().notNull(),
-  paymentMethod: paymentMethodEnum('payment_method').notNull(),
-  amountCents: integer('amount_cents').notNull(),
-  currency: varchar('currency', { length: 16 }).notNull(),
-  payoutStatus: payoutStatusEnum('payout_status').default('in_escrow').notNull(),
-  deliveryStatus: deliveryStatusEnum('delivery_status').default('not_shipped').notNull(),
-  orderStatus: orderStatusEnum('order_status').default('processing').notNull(),
-});
+// export const orders = pgTable('orders', {
+//   id: uuid('id').primaryKey(), // orderId
+//   sellerId: uuid('seller_id').notNull().references(() => sellers.id),
+//   listingId: uuid('listing_id').notNull().references(() => listings.id),
+//   productTitle: varchar('product_title', { length: 255 }).notNull(),
+//   productCategory: productCategoryEnum('product_category').notNull(),
+//   customerName: varchar('customer_name', { length: 255 }).notNull(),
+//   customerEmail: varchar('customer_email', { length: 255 }).notNull(),
+//   orderDate: timestamp('order_date').defaultNow().notNull(),
+//   paymentMethod: paymentMethodEnum('payment_method').notNull(),
+//   amountCents: integer('amount_cents').notNull(),
+//   currency: varchar('currency', { length: 16 }).notNull(),
+//   payoutStatus: payoutStatusEnum('payout_status').default('in_escrow').notNull(),
+//   deliveryStatus: deliveryStatusEnum('delivery_status').default('not_shipped').notNull(),
+//   orderStatus: orderStatusEnum('order_status').default('processing').notNull(),
+// });
 
 export const emailOtps = pgTable('email_otps', {
   id: uuid('id').primaryKey(),
@@ -256,3 +259,94 @@ export const reviewRelations = relations(reviews, ({ one }) => ({
   }),
 }));
 
+export const payments =  pgTable ('payments',{
+  id: uuid('id').primaryKey().defaultRandom(),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  listingId: uuid("listing_id").notNull().references(() => listings.id, { onDelete: "cascade" }),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  amountCents: integer('amount_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+  paymentMethod: paymentMethodEnum('payment_method').notNull(), 
+  provider: paymentProviderEnum('provider').notNull(), 
+  status: paymentStatusEnum('status').default('pending').notNull(),
+  transactionRef: varchar('transaction_ref', { length: 255 }).notNull().unique(),
+  gatewayResponse: text('gateway_response'), //  JSON response
+  isRefunded: boolean('is_refunded').default(false).notNull(),
+  refundedAt: timestamp('refunded_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+// Add these to your existing schema.ts file
+
+export const buyerAccountDetails = pgTable('buyer_account_details', {
+  id: uuid('id').primaryKey(),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id),
+  username: varchar('username', { length: 100 }).notNull().unique(),
+  fullName: varchar('full_name', { length: 255 }).notNull(),
+  dateOfBirth: timestamp('date_of_birth'), // optional
+  phoneNumber: varchar('phone_number', { length: 50 }), // optional
+  email: varchar('email', { length: 255 }).notNull(),
+  country: varchar('country', { length: 100 }).notNull(),
+  state: varchar('state', { length: 100 }).notNull(),
+  profilePicture: text('profile_picture'), // URL to uploaded image
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const buyerBillingAddress = pgTable('buyer_billing_address', {
+  id: uuid('id').primaryKey(),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id),
+  houseAddress: text('house_address').notNull(),
+  city: varchar('city', { length: 255 }).notNull(),
+  postalCode: varchar('postal_code', { length: 32 }).notNull(),
+  isDefault: boolean('is_default').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const buyerFavorites = pgTable('buyer_favorites', {
+  id: uuid('id').primaryKey(),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id),
+  listingId: uuid('listing_id').notNull().references(() => listings.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Update the orders table to include tracking info
+export const orders = pgTable('orders', {
+  id: uuid('id').primaryKey(),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id),
+  listingId: uuid('listing_id').notNull().references(() => listings.id),
+  productTitle: varchar('product_title', { length: 255 }).notNull(),
+  productImage: text('product_image'), // Add this for history
+  productCategory: productCategoryEnum('product_category').notNull(),
+  customerName: varchar('customer_name', { length: 255 }).notNull(),
+  customerEmail: varchar('customer_email', { length: 255 }).notNull(),
+  orderDate: timestamp('order_date').defaultNow().notNull(),
+  paymentMethod: paymentMethodEnum('payment_method').notNull(),
+  amountCents: integer('amount_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+  payoutStatus: payoutStatusEnum('payout_status').default('in_escrow').notNull(),
+  deliveryStatus: deliveryStatusEnum('delivery_status').default('not_shipped').notNull(),
+  orderStatus: orderStatusEnum('order_status').default('processing').notNull(),
+  // Shipping tracking info
+  shippingAddress: text('shipping_address'),
+  trackingNumber: varchar('tracking_number', { length: 255 }),
+  estimatedArrival: timestamp('estimated_arrival'),
+  deliveredDate: timestamp('delivered_date'),
+  recipientEmail: varchar('recipient_email', { length: 255 }),
+});
+
+// Add relations
+export const buyerAccountDetailsRelations = relations(buyerAccountDetails, ({ one }) => ({
+  buyer: one(buyers, { fields: [buyerAccountDetails.buyerId], references: [buyers.id] }),
+}));
+
+export const buyerBillingAddressRelations = relations(buyerBillingAddress, ({ one }) => ({
+  buyer: one(buyers, { fields: [buyerBillingAddress.buyerId], references: [buyers.id] }),
+}));
+
+export const buyerFavoritesRelations = relations(buyerFavorites, ({ one }) => ({
+  buyer: one(buyers, { fields: [buyerFavorites.buyerId], references: [buyers.id] }),
+  listing: one(listings, { fields: [buyerFavorites.listingId], references: [listings.id] }),
+}));

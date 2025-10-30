@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/Dialog";
+} from "@/components/ui/dialog";
 
 interface DialogModalProps {
   open: boolean;

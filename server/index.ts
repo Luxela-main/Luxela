@@ -13,6 +13,11 @@ import { salesRouter } from './routers/sales';
 import { cartRouter } from './routers/cart';
 import { notificationRouter } from './routers/notification';
 import { reviewRouter } from './routers/review';
+import { paymentRouter } from './routers/payment';
+import {buyerRouter} from './routers/buyer';
+console.log('Buyer router imported:', buyerRouter); 
+console.log('Buyer router keys:', Object.keys(buyerRouter._def.procedures)); 
+
 import { createTRPCContext } from './trpc/context'; 
 
 export const appRouter = createTRPCRouter({
@@ -22,7 +27,10 @@ export const appRouter = createTRPCRouter({
   sales: salesRouter,
   cart: cartRouter,
   notification: notificationRouter,
-  review :reviewRouter
+  review :reviewRouter,
+  payment :paymentRouter,
+  buyer: buyerRouter,
+
 });
 
 export type AppRouter = typeof appRouter;

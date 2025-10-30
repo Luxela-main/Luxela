@@ -13,7 +13,7 @@ const PurchaseHistory = () => {
       name: 'Black Denim Jeans',
       type: 'Jeans #301',
       status: 'Delivered',
-      price: 'Received for Delivery $3.50',
+      price: 'Received $3.50',
       priceColor: 'text-yellow-500'
     },
     {
@@ -21,7 +21,7 @@ const PurchaseHistory = () => {
       name: 'Slim Fit Jeans',
       type: 'Jeans #204',
       status: 'Shipped',
-      price: 'Shipped for Delivery $6.50',
+      price: 'Shipped $6.50',
       priceColor: 'text-purple-400'
     },
     {
@@ -47,7 +47,7 @@ const PurchaseHistory = () => {
       name: 'Blue Denim Jacket',
       type: 'Denim #009',
       status: 'Cancelled',
-      price: 'Order Cancelled - $8.99 Refunded',
+      price: 'Cancelled - $8.99 Refunded',
       priceColor: 'text-red-400'
     },
     {
@@ -98,9 +98,9 @@ const PurchaseHistory = () => {
   };
 
   return (
-    <div className="w-full text-white p-6">
+    <div className="w-full text-white">
       {/* Header Tabs */}
-      <div className="flex items-center justify-between my-6 pb-6 border-b border-gray-800">
+      <div className="md:flex items-center md:justify-between my-6 pb-6 border-b border-gray-800">
         <div className="flex gap-8">
           <motion.button
             onClick={() => setActiveTab('shipped')}
@@ -151,7 +151,7 @@ const PurchaseHistory = () => {
 
         {/* Search Input */}
         <motion.div
-          className="relative"
+          className="relative max-w-64 w-full mt-5 md:mt-0"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
@@ -161,7 +161,7 @@ const PurchaseHistory = () => {
             placeholder="Search order or order number"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border border-gray-800 rounded-md px-4 py-2 pl-10 text-sm text-gray-400 placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-colors w-64"
+            className="bg-transparent border border-gray-800 rounded-md px-4 py-2 pl-10 text-sm text-gray-400 placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-colors w-full"
           />
           <svg
             className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-600"
@@ -184,7 +184,7 @@ const PurchaseHistory = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-2 gap-6"
+        className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
         {filteredOrders.length > 0 ? (
           filteredOrders.map((order, index) => (
