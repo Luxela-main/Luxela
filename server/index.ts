@@ -11,6 +11,7 @@ import { salesRouter } from './routers/sales';
 import { cartRouter } from './routers/cart';
 import { notificationRouter } from './routers/notification';
 import { reviewRouter } from './routers/review';
+import { paymentRouter } from './routers/payment';
 import {buyerRouter} from './routers/buyer';
 console.log('Buyer router imported:', buyerRouter); 
 console.log('Buyer router keys:', Object.keys(buyerRouter._def.procedures)); 
@@ -25,6 +26,7 @@ export const appRouter = createTRPCRouter({
   cart: cartRouter,
   notification: notificationRouter,
   review :reviewRouter,
+  payment :paymentRouter,
   buyer: buyerRouter,
 
 });
