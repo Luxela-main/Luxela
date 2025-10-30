@@ -3,40 +3,51 @@
 import { useState } from "react"
 import { Bell, Search, Star, Trash } from "lucide-react"
 import SearchBar from "@/components/search-bar"
-import { notificationsData } from "@/lib/data"
+import { useNotifications, useMarkAllNotificationsAsRead, useToggleNotificationStar } from "@/modules/sellers"
+import { LoadingState } from "@/components/sellers/LoadingState"
+import { ErrorState } from "@/components/sellers/ErrorState"
 
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState("All")
-  const [notifications, setNotifications] = useState(notificationsData)
   const [search, setSearch] = useState("");
 
+  // TanStack Query hooks
+  const { 
+    data: notifications = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useNotifications();
+  
+  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
+  const toggleStarMutation = useToggleNotificationStar();
+
+  // Show loading state
+  if (isLoading) {
+    return <LoadingState message="Loading notifications..." />;
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <ErrorState 
+        message="Failed to load notifications. Please try again."
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
   const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((notification) => ({
-        ...notification,
-        read: true,
-      })),
-    )
+    markAllAsReadMutation.mutate();
   }
 
-  const deleteAll = () => {
-    setNotifications([])
+  const toggleStar = (id: string) => {
+    toggleStarMutation.mutate(id);
   }
 
-  const toggleStar = (id: number) => {
-    setNotifications(
-      notifications.map((notification) =>
-        notification.id === id ? { ...notification, starred: !notification.starred } : notification,
-      ),
-    )
-  }
-
-  const deleteNotification = (id: number) => {
-    setNotifications(notifications.filter((notification) => notification.id !== id))
-  }
-
-  const filteredNotifications =
-    activeTab === "All" ? notifications : notifications.filter((notification) => notification.starred)
+  const filteredNotifications = activeTab === "All" 
+    ? notifications 
+    : notifications.filter((notification) => notification.isStarred);
 
   return (
     <div className="p-6">
@@ -64,7 +75,7 @@ export default function Notifications() {
             >
               <span>All</span>
               <span className="ml-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {notifications.filter((n) => !n.read).length}
+                {notifications.filter((n) => !n.isRead).length}
               </span>
             </button>
             <button
@@ -73,7 +84,7 @@ export default function Notifications() {
             >
               <span>Starred</span>
               <span className="ml-1 bg-gray-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {notifications.filter((n) => n.starred).length}
+                {notifications.filter((n) => n.isStarred).length}
               </span>
             </button>
           </div>
@@ -97,7 +108,7 @@ export default function Notifications() {
                 />
               </svg>
             </button>
-            <button className="flex items-center text-red-500 hover:text-red-400" onClick={deleteAll}>
+            <button className="flex items-center text-red-500 hover:text-red-400" onClick={() => {}}>
               <span>Delete all</span>
               <Trash className="h-4 w-4 ml-2" />
             </button>
@@ -109,26 +120,22 @@ export default function Notifications() {
             <div key={notification.id} className="flex items-center p-4 border-b border-[#333] hover:bg-[#222]">
               <div className="flex items-center w-full">
                 <div
-                  className={`w-2 h-2 rounded-full mr-3 ${notification.read ? "bg-transparent" : "bg-blue-500"}`}
+                  className={`w-2 h-2 rounded-full mr-3 ${notification.isRead ? "bg-transparent" : "bg-blue-500"}`}
                 ></div>
                 <input
                   type="checkbox"
                   className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
                 />
                 <button
-                  className={`mr-3 ${notification.starred ? "text-yellow-500" : "text-gray-500"}`}
+                  className={`mr-3 ${notification.isStarred ? "text-yellow-500" : "text-gray-500"}`}
                   onClick={() => toggleStar(notification.id)}
                 >
                   <Star className="h-4 w-4" />
                 </button>
-                <span className={`${notification.read ? "text-gray-400" : "text-white"}`}>{notification.message}</span>
-                <span className="ml-auto text-sm text-gray-500">{notification.time}</span>
-                <button
-                  className="ml-4 text-red-500 hover:text-red-400"
-                  onClick={() => deleteNotification(notification.id)}
-                >
-                  <Trash className="h-4 w-4" />
-                </button>
+                <span className={`${notification.isRead ? "text-gray-400" : "text-white"}`}>{notification.message}</span>
+                <span className="ml-auto text-sm text-gray-500">
+                  {new Date(notification.createdAt).toLocaleDateString()}
+                </span>
               </div>
             </div>
           ))

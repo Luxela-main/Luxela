@@ -1,6 +1,11 @@
 import type React from "react";
 import type { Metadata } from "next";
 import "./globals.css";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { AuthProvider } from "@/context/AuthContext";
+import { QueryProvider } from "@/lib/providers";
+
 import localFont from "next/font/local";
 import ClientProviders from "./ClientProviders";
 import { spaceGrotesk } from "@/public/fonts";
@@ -82,20 +87,20 @@ const jsonLd = {
   ],
 };
 
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
       <body suppressHydrationWarning className={spaceGrotesk.className}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-        <div className="">
-          <ClientProviders>{children}</ClientProviders>
+        <div className=" mx-auto">
+          <QueryProvider>
+            <AuthProvider>{children}</AuthProvider>
+            <ToastContainer />
+          </QueryProvider>
         </div>
       </body>
     </html>

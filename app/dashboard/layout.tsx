@@ -1,19 +1,25 @@
-import { cookies } from "next/headers"
+import BuyerFooter from "@/components/buyer/footer"
+import { Header } from "@/components/dashboard/header"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import type React from "react"
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import AppSidebar from "@/components/app-sidebar"
 
-export default async function Layout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies()
-  const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
+interface LayoutProps {
+  children: React.ReactNode
+}
 
+export default async function Layout({ children }: LayoutProps) {
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar />
-      <main className="flex-1">
-        <SidebarTrigger variant={'ghost'} />
-        {children}
-      </main>
-    </SidebarProvider>
+    <div className="min-h-screen flex flex-col bg-[#0e0e0e]">
+      <Header />
+
+      <div className="flex flex-1">
+        <Sidebar />
+
+        <main className="flex-1 p-8">{children}</main>
+      </div>
+
+      <BuyerFooter />
+    </div>
   )
 }
