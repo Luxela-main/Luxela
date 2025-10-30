@@ -10,7 +10,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signupAction, resendVerificationAction } from "../actions/auth";
+import { useSignup, useResendVerification } from "@/lib/hooks";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
 import GoogleSignInButton from "@/components/auth/google";
 
@@ -26,15 +26,18 @@ function SignUpContent() {
   const priceId = searchParams.get("priceId");
   const discountCode = searchParams.get("discountCode");
 
+  const signupMutation = useSignup();
+  const resendMutation = useResendVerification();
+
   /**
    * 🔹 Resend verification email
    */
   const handleResendVerification = async () => {
     setIsResending(true);
     try {
-      const result = await resendVerificationAction(userEmail);
+      const result = await resendMutation.mutateAsync(userEmail);
       if (result.success) {
-        toast.success(result.message);
+        toast.success(result.message || "Verification email resent successfully.");
       }
     } catch (err: unknown) {
       const message =
@@ -55,12 +58,11 @@ function SignUpContent() {
     { setSubmitting }: any
   ) => {
     try {
-      const result = await signupAction(values.email, values.password, values.role);
+      const result = await signupMutation.mutateAsync(values);
 
       if (result.success) {
         setUserEmail(values.email);
         setDialogOpen(true);
-        // toast.success(result.message || "Signup successful! Check your email.");
       }
     } catch (err: any) {
       toast.error(err.message || "Signup failed. Please try again.");
@@ -239,9 +241,9 @@ function SignUpContent() {
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-b from-purple-600 to-purple-400 via-purple-500 hover:from-purple-700 hover:to-purple-500"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || signupMutation.isPending}
                   >
-                    {isSubmitting ? "Signing Up..." : "Sign up"}
+                    {isSubmitting || signupMutation.isPending ? "Signing Up..." : "Sign up"}
                   </Button>
                 </Form>
               )}

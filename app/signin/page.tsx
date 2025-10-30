@@ -10,7 +10,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { resendVerificationAction, signinAction } from "../actions/auth";
+import { useSignin, useResendVerification } from "@/lib/hooks";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
 import GoogleSignInButton from "@/components/auth/google";
 
@@ -24,9 +24,12 @@ function SignInContent() {
   const toast = useToast();
   const searchParams = useSearchParams();
 
+  const signinMutation = useSignin();
+  const resendMutation = useResendVerification();
+
   const handleSignIn = async (values: { email: string; password: string }, { setSubmitting }: any) => {
     try {
-      const result = await signinAction(values.email, values.password);
+      const result = await signinMutation.mutateAsync(values);
 
       if (result.success) {
         toast.success("Welcome back!");
@@ -162,9 +165,9 @@ function SignInContent() {
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-b from-purple-600 to-purple-400 via-purple-500 hover:from-purple-700 hover:to-purple-500"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || signinMutation.isPending}
                   >
-                    {isSubmitting ? "Signing In..." : "Sign In"}
+                    {isSubmitting || signinMutation.isPending ? "Signing In..." : "Sign In"}
                   </Button>
                 </Form>
               )}
@@ -198,7 +201,7 @@ function SignInContent() {
         handleResendVerification={async () => {
           setIsResending(true);
           try {
-            await resendVerificationAction(unverifiedEmail);
+            await resendMutation.mutateAsync(unverifiedEmail);
             toast.success("Verification email resent! Please check your inbox.");
             setDialogOpen(false);
           } catch (error: any) {
