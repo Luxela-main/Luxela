@@ -4,7 +4,8 @@ import { OrderTabs } from "@/components/dashboard/order-tabs"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
-export default function ReturnedOrderPage({ params }: { params: { orderId: string } }) {
+export default async function ReturnedOrderPage({ params }: { params: Promise<{ orderId: string }> }) {
+  const { orderId } = await params;
   return (
     <div>
       <Breadcrumb
@@ -32,7 +33,7 @@ export default function ReturnedOrderPage({ params }: { params: { orderId: strin
             <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
               <div>
                 <div className="text-[#7e7e7e] mb-1">Order ID:</div>
-                <div className="text-white font-medium">{params.orderId}</div>
+                <div className="text-white font-medium">{orderId}</div>
               </div>
               <div>
                 <div className="text-[#7e7e7e] mb-1">No of items:</div>
