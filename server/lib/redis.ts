@@ -11,7 +11,7 @@ if (!REDIS_URL) {
 console.log(`Initializing Redis: ${REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"}`);
 
 export const redis = new Redis(REDIS_URL, {
-  tls: REDIS_URL.startsWith("rediss://") ? {} : undefined, // Enables SSL for Upstash
+  tls: REDIS_URL.startsWith("rediss://") ? {} : undefined,
   retryStrategy(times) {
     const delay = Math.min(times * 200, 2000);
     console.warn(`Redis reconnect attempt #${times}, retrying in ${delay}ms`);
