@@ -313,7 +313,7 @@ export const buyerFavorites = pgTable('buyer_favorites', {
 
 // Update the orders table to include tracking info
 export const orders = pgTable('orders', {
-  id: uuid('id').primaryKey(),
+  id:uuid("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id),
   listingId: uuid('listing_id').notNull().references(() => listings.id),
