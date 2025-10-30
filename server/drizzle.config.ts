@@ -3,11 +3,13 @@ import "dotenv/config";
 
 export default defineConfig({
   schema: "./db/schema.ts",
-  out: "./drizzle",
-  driver: "pg",
+  out: "./drizzle", 
+  driver: "pg", 
   dbCredentials: {
     connectionString: process.env.DATABASE_URL!,
   },
-  } satisfies Config;
-);
+  verbose: true,
+  strict: true,  
+});
 
+  
