@@ -57,7 +57,7 @@ interface RateLimitConfig {
 }
 
 export async function checkRateLimit(
-  key: string,
+  _key: string,
   config: RateLimitConfig
 ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
   const now = Date.now();
@@ -94,9 +94,9 @@ interface CacheOptions {
 }
 
 export async function getCached<T>(
-  key: string,
+  _key: string,
   fetchFn: () => Promise<T>,
-  options: CacheOptions = {}
+  _options: CacheOptions = {}
 ): Promise<T> {
   const ttl = options.ttl ?? 300;
   const cacheKey = `cache:${key}`;

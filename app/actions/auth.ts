@@ -1,10 +1,10 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
+const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_BASE_URL || "https://luxela-3s8u.onrender.com";
 
 function mapAuthError(error: any): Error {
   if (!error?.message) return new Error("An unknown error occurred.");
-  const msg = error.message.toLowerCase();
+  const msg = String(error.message || "").toLowerCase();
 
   if (msg.includes("invalid login credentials"))
     return new Error("Incorrect email or password.");
@@ -19,106 +19,96 @@ function mapAuthError(error: any): Error {
   if (msg.includes("expired"))
     return new Error("Your verification link has expired. Please try again.");
 
-  return new Error(error.message);
+  return new Error(error.message || "Authentication error");
 }
 
 /**
- * Sign up user (with email confirmation)
+ * Sign up user (delegated to backend)
  */
 export async function signupAction(
   email: string,
   password: string,
   role: string
 ) {
-  const supabase = await createClient();
-
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { role }, 
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=signup`,
-      },
+    const res = await fetch(`${AUTH_BASE_URL}/api/auth/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, role }),
+      credentials: "include",
     });
-
-    if (error) throw error;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Sign up failed");
 
     return {
       success: true,
       data,
-      message: "Please check your email to confirm your account.",
+      message: data?.message || "Please check your email to confirm your account.",
     };
-  } catch (err) {
+  } catch (err: any) {
     throw mapAuthError(err);
   }
 }
 
 /**
- * Sign in user
+ * Sign in user (delegated to backend)
  */
 export async function signinAction(email: string, password: string) {
-  const supabase = await createClient();
-
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const res = await fetch(`${AUTH_BASE_URL}/api/auth/signin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      credentials: "include",
     });
-
-    if (error) throw error;
-
-    // Check if user has a role
-    const role =
-      data.user?.user_metadata?.role || data.user?.app_metadata?.role;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Invalid email or password");
 
     return {
       success: true,
       data,
-      needsRole: !role, // Flag to indicate if role selection is needed
+      needsRole: false,
     };
-  } catch (err) {
+  } catch (err: any) {
     throw mapAuthError(err);
   }
 }
 
 /**
- * Resend verification email
+ * Resend verification email (delegated to backend)
  */
 export async function resendVerificationAction(email: string) {
-  const supabase = await createClient();
-
   try {
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-      },
+    const res = await fetch(`${AUTH_BASE_URL}/api/auth/resend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      credentials: "include",
     });
-
-    if (error) throw error;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Failed to resend email");
 
     return {
       success: true,
-      message: "Verification email resent successfully.",
+      message: data?.message || "Verification email resent successfully.",
     };
-  } catch (err) {
+  } catch (err: any) {
     throw mapAuthError(err);
   }
 }
 
 /**
- * Sign out user
+ * Sign out (delegated to backend if needed)
  */
 export async function signoutAction() {
-  const supabase = await createClient();
-
   try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    // If the backend exposes a signout endpoint
+    await fetch(`${AUTH_BASE_URL}/api/auth/signout`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {});
     return { success: true };
-  } catch (err) {
+  } catch (err: any) {
     throw mapAuthError(err);
   }
 }

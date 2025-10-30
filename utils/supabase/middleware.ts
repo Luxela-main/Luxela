@@ -31,37 +31,22 @@ export async function updateSession(request: NextRequest) {
     "/signin",
     "/privacy-policy",
     "/verify-email",
-    "/select-role", 
-  ];
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-  const isAlwaysAllowed = [
-    "/privacy-policy",
-    "/verify-email",
     "/select-role",
-  ].includes(pathname);
+  ];
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+  const isAlwaysAllowed = ["/privacy-policy", "/verify-email", "/select-role"].includes(pathname);
 
   const role = user?.user_metadata?.role || user?.app_metadata?.role;
 
-  // Redirect users without role to role selection (except on public routes)
   if (user && !role && !isAlwaysAllowed && !publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/select-role", request.url));
   }
 
-  // Redirect logged-in users with role from homepage, signup, or signin to their dashboard
-  if (
-    user &&
-    role &&
-    !isAlwaysAllowed &&
-    ["/", "/signup", "/signin"].includes(pathname)
-  ) {
-    const dashboardUrl =
-      role === "seller" ? "/sellers/dashboard" : "/buyer/profile";
+  if (user && role && !isAlwaysAllowed && ["/", "/signup", "/signin"].includes(pathname)) {
+    const dashboardUrl = role === "seller" ? "/sellers/dashboard" : "/buyer/profile";
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   }
 
-  // Role-based route protection
   if (user && role && !isAlwaysAllowed) {
     const isBuyerRoute = pathname.startsWith("/buyer");
     const isSellerRoute = pathname.startsWith("/sellers");
@@ -75,7 +60,6 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Redirect unauthenticated users trying to access protected routes
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
