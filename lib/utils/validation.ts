@@ -2,7 +2,10 @@ import * as yup from "yup";
 
 export const signinSchema = yup.object().shape({
   email: yup.string().email("Please enter a valid email address").required(),
-  password: yup.string().min(8, "Password must be at least 8 characters").required(),
+  password: yup
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .required(),
 });
 
 export const signupSchema = yup.object().shape({
@@ -18,6 +21,10 @@ export const signupSchema = yup.object().shape({
       "Password must contain at least one uppercase, one lowercase, and one number"
     )
     .required("Password is required"),
+  role: yup
+    .string()
+    .oneOf(["buyer", "seller"], "Please select a valid role")
+    .required("Role is required"),
   confirmPassword: yup
     .string()
     .oneOf([yup.ref("password")], "Passwords don't match")
@@ -39,36 +46,45 @@ export const newPasswordSchema = yup.object().shape({
   password: yup
     .string()
     .min(8, "Password must be at least 8 characters")
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase, one lowercase, and one number")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase, one lowercase, and one number"
+    )
     .required(),
-  confirmPassword: yup.string().oneOf([yup.ref("password")], "Passwords don't match").required(),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref("password")], "Passwords don't match")
+    .required(),
 });
-  
+
 export const signInInitialValues = {
-    email: "",
-    password: "",
-    agreeTerms: false,
-  };
-  
-  export const signUpInitialValues = {
-    email: "",
-    password: "",
-    confirmPassword: "",
-    agreeTerms: false,
-  };
-  
+  email: "",
+  password: "",
+  agreeTerms: false,
+};
+
+export const signUpInitialValues = {
+  email: "",
+  password: "",
+  confirmPassword: "",
+  role: "",
+  agreeTerms: false,
+};
 
 export const BillingAddressValidationSchema = yup.object().shape({
-  fullName: yup.string()
+  fullName: yup
+    .string()
     .min(3, "Full name must be at least 3 characters")
     .max(50, "Full name cannot exceed 50 characters")
     .required("Full name is required"),
 
-  email: yup.string()
+  email: yup
+    .string()
     .email("Please enter a valid email address")
     .required("Email is required"),
 
-  phone: yup.string()
+  phone: yup
+    .string()
     .matches(/^\+?\d{7,15}$/, "Please enter a valid phone number")
     .required("Phone number is required"),
 
@@ -76,11 +92,13 @@ export const BillingAddressValidationSchema = yup.object().shape({
 
   city: yup.string().required("City is required"),
 
-  address: yup.string()
+  address: yup
+    .string()
     .min(10, "Address must be at least 10 characters")
     .required("Address is required"),
 
-  postalCode: yup.string()
+  postalCode: yup
+    .string()
     .matches(/^\d{4,10}$/, "Please enter a valid postal code")
     .required("Postal code is required"),
 

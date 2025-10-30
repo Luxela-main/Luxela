@@ -9,28 +9,12 @@ export default function Header() {
         <Navbar />
       </ClientOnly>
 
-      <header className="bg-gradient-to-b from-gray-900 to-black bg-cover bg-center bg-no-repeat min-h-screen 2xl:min-h-[1024px] mx-auto w-full relative overflow-hidden">
+      <header className="bg-gradient-to-b from-gray-900 to-red bg-cover bg-center bg-no-repeat mx-auto w-full relative overflow-hidden">
         <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-gradient-radial from-purple-500/20 via-purple-700/10 to-transparent h-[760px] w-full max-w-[1321px] pointer-events-none blur-3xl"></div>
 
         <div className="absolute inset-0 bg-[#0E0E0E] opacity-35 z-5"></div>
 
         <div className="z-10 absolute top-0 right-0 w-[200px] h-[200px] lg:w-[400px] lg:h-[400px] bg-gradient-to-bl from-purple-500/30 to-transparent rounded-full blur-3xl"></div>
-
-        <div className="z-10 absolute bottom-10 left-1/2 transform -translate-x-1/2 opacity-50">
-          <svg
-            width="40"
-            height="20"
-            viewBox="0 0 40 20"
-            fill="none"
-            className="animate-bounce">
-            <path
-              d="M5 5L20 15L35 5"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
 
         <div className="relative flex flex-col pt-32 lg:pt-40 items-center justify-center px-4">
           <div className="relative w-[194px] h-12">
@@ -43,38 +27,50 @@ export default function Header() {
             </div>
           </div>
 
-          <div className="text-center w-full max-w-[793px] px-4 lg:px-0 mt-6 z-20">
-            <h1 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-[120%]">
+          {/* ---Text--- */}
+          <div className="text-center max-w-full lg:max-w-[793px] lg:px-0 mt-6 z-20">
+            <h1 className="text-white text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-[120%]">
               Authentic Fashion,{" "}
               <span className="text-[#8451E1]">Global Reach</span>
               <br /> A New Era of E-commerce
             </h1>
-            <p className="text-sm md:text-base text-[#BFBFBF] my-5 max-w-2xl mx-auto">
-              An e-commerce platform where you can buy and sell authentic
-              fashion products easily. Pay with local currencies or digital
-              assets, and experience seamless, affordable fashion like never
-              before.
+            <p className="text-sm md:text-base text-[#BFBFBF] my-5 max-w-3xl mx-auto">
+              Buy, sell and pay for authentic fashion products easily using your local or digital currency
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-[338px] mx-auto">
               <a
-                href="/cart"
+                href="/signin"
                 className="cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] p-0.5 transition-transform hover:scale-105 active:scale-95">
                 <div className="rounded-md w-full h-12 flex items-center justify-center font-medium">
                   <span>Shop Now</span>
                 </div>
               </a>
               <a
-                href="/sellers/dashboard"
+                href="/signin"
                 className="cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] p-0.5 transition-transform hover:scale-105 active:scale-95">
                 <div className="rounded-md w-full h-12 bg-[#0E0E0E] flex items-center justify-center font-medium">
                   <span>Sell Now</span>
                 </div>
               </a>
             </div>
+            <div className="animate-bounce ease-in-out z-10 flex justify-self-center mt-10 opacity-50">
+              <svg
+                width="40"
+                height="20"
+                viewBox="0 0 40 20"
+                fill="none">
+                <path
+                  d="M5 5L20 15L35 5"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
           </div>
 
-          <div className="z-10 mt-10 lg:mt-16 w-full max-w-[1440px] mx-auto px-4 lg:px-8">
+          <div className="z-10 mb-20 mt-10 lg:mt-16 w-full layout mx-auto px-4 lg:px-8">
             <div className="hidden lg:grid grid-cols-5 gap-4 xl:gap-8 relative">
               <div className="rounded-2xl border border-[#8451E1] overflow-hidden shadow-lg shadow-purple-500/20 transform -translate-y-8">
                 <img

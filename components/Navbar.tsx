@@ -35,8 +35,9 @@ export default function Navbar() {
     <nav
       className={`z-50 transition-all duration-300 ${
         sticky
-          ? "sticky top-0 left-0 right-0 bg-[#0A0A0A]/80 backdrop-blur-md shadow-md"
-          : "relative bg-transparent"
+          ? "fixed top-0 left-0 right-0 bg-[#0A0A0A]/80 backdrop-blur-md shadow-md"
+          : "absolute top-0 left-0 right-0 bg-transparent"
+
       }`}>
       <div className="container mx-auto px-4 lg:px-10 py-4 flex justify-between items-center">
         {/* Left - Nav items (desktop only) */}
@@ -90,9 +91,9 @@ export default function Navbar() {
             <Link
               href="/account"
               className="h-10 w-10 rounded-full overflow-hidden border border-white/30 hover:border-purple-500 transition">
-              {user.photoURL ? (
+              {user.user_metadata?.avatar_url ? (
                 <Image
-                  src={user.photoURL}
+                  src={user.user_metadata?.avatar_url}
                   alt="Profile"
                   width={40}
                   height={40}
@@ -106,7 +107,7 @@ export default function Navbar() {
             </Link>
           ) : (
             <Link
-              href="/signup"
+                href="/signin"
               className="flex items-center text-sm hover:text-purple-500 transition">
               <User size={22} />
               <span className="ml-2 hidden sm:inline">Account</span>

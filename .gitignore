@@ -141,3 +141,24 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 openapi.json
+
+ #Ignore all compiled JavaScript files
+*.js
+*.js.map
+
+
+# Testing
+tests/
+__tests__/
+coverage/
+
+*.d.ts.map
+env.d.ts
+env.js
+
+lib/*.d.ts
+lib/*.d.ts.map
+
+env.js
+*.env.js
+
