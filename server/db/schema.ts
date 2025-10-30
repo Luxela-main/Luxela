@@ -34,8 +34,11 @@ export const shippingOptionEnum = pgEnum('shipping_option', ['local', 'internati
 export const orderStatusEnum = pgEnum('order_status', ['processing', 'shipped', 'delivered', 'canceled', 'returned']);
 export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
-export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer', 'paypal', 'stripe', 'flutterwave', 'crypto']);
+export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto' ]);
 export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder',]);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','successful', 'failed','refunded',]);
+export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterwave','stripe','paypal']);
+
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
@@ -256,6 +259,23 @@ export const reviewRelations = relations(reviews, ({ one }) => ({
   }),
 }));
 
+export const payments =  pgTable ('payments',{
+  id: uuid('id').primaryKey().defaultRandom(),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  listingId: uuid("listing_id").notNull().references(() => listings.id, { onDelete: "cascade" }),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  amountCents: integer('amount_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+  paymentMethod: paymentMethodEnum('payment_method').notNull(), 
+  provider: paymentProviderEnum('provider').notNull(), 
+  status: paymentStatusEnum('status').default('pending').notNull(),
+  transactionRef: varchar('transaction_ref', { length: 255 }).notNull().unique(),
+  gatewayResponse: text('gateway_response'), //  JSON response
+  isRefunded: boolean('is_refunded').default(false).notNull(),
+  refundedAt: timestamp('refunded_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 // Add these to your existing schema.ts file
 
 export const buyerAccountDetails = pgTable('buyer_account_details', {
@@ -293,7 +313,7 @@ export const buyerFavorites = pgTable('buyer_favorites', {
 
 // Update the orders table to include tracking info
 export const orders = pgTable('orders', {
-  id: uuid('id').primaryKey(),
+  id:uuid("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id),
   listingId: uuid('listing_id').notNull().references(() => listings.id),

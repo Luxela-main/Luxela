@@ -3,17 +3,59 @@
 import { useState } from "react";
 import { Filter, MoreVertical, X } from "lucide-react";
 import SearchBar from "@/components/search-bar";
-import { salesData, orderDetail } from "@/lib/data";
 import { Button } from "@/components/ui/button";
+import { useSales } from "@/modules/sellers";
+import { LoadingState } from "@/components/sellers/LoadingState";
+import { ErrorState } from "@/components/sellers/ErrorState";
 
 export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
 
+  // TanStack Query hook for sales data
+  const { 
+    data: salesData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useSales(activeTab === "All" ? undefined : activeTab.toLowerCase());
+
+  // Show loading state
+  if (isLoading) {
+    return <LoadingState message="Loading sales data..." />;
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <ErrorState 
+        message="Failed to load sales data. Please try again."
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
+  // Fallback to empty array if no data
+  const sales = salesData || [];
+
   const handleOrderClick = (orderId: string) => {
     setSelectedOrder(orderId);
   };
+
+  // Mock order detail for the selected order
+  const orderDetail = selectedOrder ? {
+    id: selectedOrder,
+    customer: "John Doe",
+    product: "Sample Product",
+    quantity: 1,
+    orderDate: new Date().toLocaleDateString(),
+    amount: "₦50,000",
+    paymentMethod: "Credit Card",
+    paymentStatus: "Paid",
+    shippingAddress: "123 Main St, Lagos, Nigeria",
+    estimatedDelivery: "2-3 business days"
+  } : null;
 
   const closeOrderDetail = () => {
     setSelectedOrder(null);
@@ -104,7 +146,7 @@ export default function Sales() {
           <div>Action</div>
         </div>
 
-        {salesData.map((order, index) => (
+        {sales.map((order, index) => (
           <div key={index} className="border-b border-[#333]">
             <div className="grid grid-cols-9 gap-4 p-4 items-center">
               <div className="flex items-center">
@@ -112,49 +154,49 @@ export default function Sales() {
                   type="checkbox"
                   className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
                 />
-                <span>ID: {order.id}</span>
+                <span>ID: {order.orderId}</span>
               </div>
               <div>{order.product}</div>
               <div>{order.customer}</div>
-              <div>{order.orderDate}</div>
+              <div>{new Date(order.orderDate).toLocaleDateString()}</div>
               <div>{order.paymentMethod}</div>
-              <div>{order.amount}</div>
+              <div>₦{((order.amountCents || 0) / 100).toLocaleString()}</div>
               <div>
                 <span
                   className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    order.payoutStatus === "Paid"
+                    order.payoutStatus === "paid"
                       ? "bg-green-100 text-green-800"
-                      : order.payoutStatus === "Processing"
+                      : order.payoutStatus === "processing"
                       ? "bg-yellow-100 text-yellow-800"
                       : "bg-red-100 text-red-800"
                   }`}>
                   <span
                     className={`w-1.5 h-1.5 rounded-full mr-1 ${
-                      order.payoutStatus === "Paid"
+                      order.payoutStatus === "paid"
                         ? "bg-green-600"
-                        : order.payoutStatus === "Processing"
+                        : order.payoutStatus === "processing"
                         ? "bg-yellow-600"
                         : "bg-red-600"
                     }`}></span>
-                  {order.payoutStatus}
+                  {order.payoutStatus === "paid" ? "Paid" : order.payoutStatus === "processing" ? "Processing" : "In Escrow"}
                 </span>
               </div>
               <div>
                 <span
                   className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    order.deliveryStatus === "Delivered"
+                    order.deliveryStatus === "delivered"
                       ? "bg-green-100 text-green-800"
-                      : order.deliveryStatus === "In transit"
+                      : order.deliveryStatus === "in_transit"
                       ? "bg-blue-100 text-blue-800"
                       : "bg-red-100 text-red-800"
                   }`}>
-                  {order.deliveryStatus}
+                  {order.deliveryStatus === "delivered" ? "Delivered" : order.deliveryStatus === "in_transit" ? "In Transit" : "Not Shipped"}
                 </span>
               </div>
               <div>
                 <button
                   className="text-gray-400 hover:text-white"
-                  onClick={() => handleOrderClick(order.id)}>
+                  onClick={() => handleOrderClick(order.orderId)}>
                   <MoreVertical className="h-5 w-5" />
                 </button>
               </div>
@@ -185,7 +227,7 @@ export default function Sales() {
         </div>
       </div>
 
-      {selectedOrder && (
+        {selectedOrder && orderDetail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#1a1a1a] rounded-lg w-full max-w-2xl">
             <div className="p-6">

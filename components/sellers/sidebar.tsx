@@ -24,14 +24,14 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="w-[220px] min-h-screen bg-[#121212] border-r border-[#222] flex flex-col">
+    <div className="w-[272px] min-h-screen bg-[#121212] border-r border-[#222] flex flex-col">
       <div className="p-6">
-        <Link href="/sellers/dashboard" className="flex items-center">
+        <Link href="/sellers/dashboard" className="flex mx-auto justify-center items-center">
           <Image src={Logo} alt="LUXELA" width={147.99} height={24.15} className="mr-2" />
         </Link>
       </div>
 
-      <nav className="flex-1 px-4 py-2">
+      <nav className="flex-1 px-4 py-2 mt-[106.49px]">
         <ul className="space-y-1">
           <li>
             <Link

@@ -6,13 +6,43 @@ import withAuth from "@/functions/hoc/withAuth";
 import { useState } from "react";
 import { Wallet, ShoppingBag, Package, RefreshCcw, Shirt } from "lucide-react";
 import SearchBar from "@/components/search-bar";
-import { dashboardData } from "@/lib/data";
 import { Button } from "@/components/ui/button";
+import { useDashboardData } from "@/modules/sellers";
+import { LoadingState } from "@/components/sellers/LoadingState";
+import { ErrorState } from "@/components/sellers/ErrorState";
 
 function Dashboard() {
   const [timeframe, setTimeframe] = useState("Month");
   const [visitorTimeframe, setVisitorTimeframe] = useState("Month");
   const [search, setSearch] = useState("");
+
+  // TanStack Query hook for dashboard data
+  const { 
+    data: dashboardData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useDashboardData();
+
+  // Show loading state
+  if (isLoading) {
+    return <LoadingState message="Loading dashboard data..." />;
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <ErrorState 
+        message="Failed to load dashboard data. Please try again."
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
+  // Fallback to empty data if no data is available
+  if (!dashboardData) {
+    return <LoadingState message="No data available..." />;
+  }
 
   return (
     <div className="p-6">
