@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+export const redis = new Redis(process.env.REDIS_URL || 'redis://127.00.1:6379', {
   retryStrategy(times) {
     const delay = Math.min(times * 50, 2000);
     return delay;
