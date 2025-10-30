@@ -6,7 +6,7 @@ import React from "react";
 
 export default function About() {
   return (
-    <section id="about" className="z-10 py-20 px-4">
+    <section id="about" className="z-10 py-20 px-4 mt-20">
       <div className="container layout mx-auto">
         {/* Heading + Paragraph */}
         <div className="text-center max-w-[1041px] mx-auto">

@@ -5,9 +5,6 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { QueryProvider } from "@/lib/providers";
-
-import localFont from "next/font/local";
-import ClientProviders from "./ClientProviders";
 import { spaceGrotesk } from "@/public/fonts";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
@@ -61,10 +58,10 @@ const jsonLd = {
     {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
-      "name": "LUXELA",
-      "url": SITE_URL,
-      "logo": `${SITE_URL}/logo.png`,
-      "sameAs": [
+      name: "LUXELA",
+      url: SITE_URL,
+      logo: `${SITE_URL}/logo.png`,
+      sameAs: [
         "https://www.facebook.com/yourpage",
         "https://www.instagram.com/yourprofile",
         "https://x.com/LuxelaPlace",
@@ -73,20 +70,19 @@ const jsonLd = {
     {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,
-      "url": SITE_URL,
-      "name": "LUXELA",
-      "publisher": {
+      url: SITE_URL,
+      name: "LUXELA",
+      publisher: {
         "@id": `${SITE_URL}/#organization`,
       },
-      "potentialAction": {
+      potentialAction: {
         "@type": "SearchAction",
-        "target": `${SITE_URL}/search?q={search_term_string}`,
+        target: `${SITE_URL}/search?q={search_term_string}`,
         "query-input": "required name=search_term_string",
       },
     },
   ],
 };
-
 
 export default function RootLayout({
   children,

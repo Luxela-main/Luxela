@@ -34,7 +34,7 @@ export const shippingOptionEnum = pgEnum('shipping_option', ['local', 'internati
 export const orderStatusEnum = pgEnum('order_status', ['processing', 'shipped', 'delivered', 'canceled', 'returned']);
 export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
-export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto' ]);
+export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto' ,  "paypal","stripe","flutterwave", "tsara"]);
 export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder',]);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','successful', 'failed','refunded',]);
 export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterwave','stripe','paypal']);
@@ -313,7 +313,7 @@ export const buyerFavorites = pgTable('buyer_favorites', {
 
 // Update the orders table to include tracking info
 export const orders = pgTable('orders', {
-  id: uuid('id').primaryKey(),
+  id:uuid("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id),
   listingId: uuid('listing_id').notNull().references(() => listings.id),
