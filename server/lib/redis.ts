@@ -1,36 +1,37 @@
 import { Redis } from "ioredis";
 
 // --- REDIS INITIALIZATION ---
-const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+const REDIS_URL = process.env.REDIS_URL;
+
+if (!REDIS_URL) {
+  console.error("Missing REDIS_URL in environment variables!");
+  process.exit(1);
+}
+
+console.log(`Initializing Redis: ${REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"}`);
 
 export const redis = new Redis(REDIS_URL, {
+  tls: REDIS_URL.startsWith("rediss://") ? {} : undefined,
   retryStrategy(times) {
-    return Math.min(times * 50, 2000);
+    const delay = Math.min(times * 200, 2000);
+    console.warn(`Redis reconnect attempt #${times}, retrying in ${delay}ms`);
+    return delay;
   },
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: false,
-  connectTimeout: 10000,
+  maxRetriesPerRequest: 5,
+  enableReadyCheck: true,
+  connectTimeout: 15000,
+  lazyConnect: false,
 });
 
+redis.on("connect", () => console.log("Redis connecting..."));
+redis.on("ready", () => console.log("Redis connected successfully"));
+redis.on("close", () => console.warn("Redis connection closed"));
+redis.on("reconnecting", () => console.log("Redis reconnecting..."));
 redis.on("error", (err) => {
-  console.error("Redis Client Error:", err.message);
-});
-
-redis.on("connect", () => {
-  console.log("Redis connecting...");
-});
-
-redis.on("ready", () => {
-  console.log("Redis connected successfully");
-  console.log(`Connected to: ${process.env.REDIS_URL ? "Redis Cloud" : "Local Redis"}`);
-});
-
-redis.on("close", () => {
-  console.log("Redis connection closed");
-});
-
-redis.on("reconnecting", () => {
-  console.log("Redis reconnecting...");
+  console.error("Redis connection error:", err.message);
+  if (err.message.includes("ECONNREFUSED") || err.message.includes("ENOTFOUND")) {
+    console.error("Check if your REDIS_URL is correct and accessible.");
+  }
 });
 
 // --- GRACEFUL SHUTDOWN ---

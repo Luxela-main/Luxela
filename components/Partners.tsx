@@ -14,6 +14,7 @@ const partners: Partner[] = [
   { name: "Solana Foundation", image: "/images/solana-foundation-432x71.svg" },
   { name: "Solana", image: "/images/solana-sol-logo-horizontal 1-283x70.svg" },
   { name: "Superteam", image: "/images/superteam.svg" },
+  { name: "S", image: "/images/s.svg" },
 ];
 
 export default function Partners() {
@@ -37,7 +38,7 @@ export default function Partners() {
           {duplicatedPartners.map((partner, index) => (
             <div
               key={index}
-              className="flex-shrink-0 flex items-center justify-center w-[100px] h-[50px] mx-8"
+              className="flex-shrink-0 flex items-center justify-center w-[150px] h-[100px] mx-8"
             >
               <Image
                 width={150}

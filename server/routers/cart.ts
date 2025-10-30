@@ -311,7 +311,7 @@ export const cartRouter = createTRPCRouter({
     })
     .input(
       z.object({
-        paymentMethod: z.enum(['card', 'bank_transfer', 'paypal', 'stripe', 'flutterwave', 'crypto']),
+        paymentMethod: z.enum(['card', 'bank_transfer', 'crypto']),
       })
     )
     .output(
