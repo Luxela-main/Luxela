@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { CreditCard, Wallet } from "lucide-react";
+import { BackpackIcon, CreditCard, Wallet } from "lucide-react";
+import {
+  VisaIcon,
+  MastercardIcon,
+  OpayIcon,
+  PhantomIcon,
+  SolflareIcon,
+  WalletConnectIcon,
+} from "./assets/svgs";
 
 type PaymentOption = "card" | "wallet" | null;
 
@@ -28,9 +36,9 @@ const PaymentMethods: React.FC = () => {
           <span className="text-sm">Add a new card</span>
         </div>
         <div className="flex items-center gap-3 mt-1">
-          <img src="/visa.svg" alt="VISA" className="h-6" />
-          <img src="/mastercard.svg" alt="MasterCard" className="h-6" />
-          <img src="/opay.svg" alt="Opay Checkout" className="h-6" />
+          <VisaIcon />
+          <MastercardIcon />
+          <OpayIcon />
         </div>
       </div>
 
@@ -53,15 +61,15 @@ const PaymentMethods: React.FC = () => {
         </div>
         <div className="flex flex-wrap gap-2 mt-2">
           {[
-            { name: "Phantom", icon: "/phantom.svg" },
-            { name: "Solflare", icon: "/solflare.svg" },
-            { name: "Backpack", icon: "/backpack.svg" },
-            { name: "Wallet Connect", icon: "/walletconnect.svg" },
+            { name: "Phantom", icon: PhantomIcon },
+            { name: "Solflare", icon: SolflareIcon },
+            { name: "Backpack", icon: BackpackIcon },
+            { name: "Wallet Connect", icon: WalletConnectIcon },
           ].map((wallet) => (
             <button
               key={wallet.name}
               className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 px-3 py-2 rounded-md text-xs transition">
-              <img src={wallet.icon} alt={wallet.name} className="h-4" />
+              <wallet.icon />
               {wallet.name}
             </button>
           ))}
@@ -69,7 +77,7 @@ const PaymentMethods: React.FC = () => {
       </div>
 
       <p className="text-xs text-neutral-400 mt-5">
-        <span className="text-yellow-500 mr-1">?</span>I don’t have a wallet{" "}
+        <span className="text-yellow-500 mr-1">⚠</span>I don't have a wallet{" "}
         <a href="#" className="text-purple-400 hover:underline ml-1">
           click here
         </a>
