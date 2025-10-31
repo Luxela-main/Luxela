@@ -43,7 +43,7 @@ export default function Header() {
               <br /> A New Era of E-commerce
             </h1>
             <p className="text-sm md:text-base text-[#BFBFBF] my-5 max-w-3xl mx-auto">
-              Buy, sell and pay for authentic fashion products easily using your local or digital currency
+              Powering fashion sales with flexible payments
             </p>
 
             <div className='grid grid-cols-2 gap-5 w-full h-12 max-w-[338px] mx-auto'>
