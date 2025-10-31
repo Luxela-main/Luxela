@@ -8,8 +8,7 @@
     "test:coverage": "vitest --coverage",
     "dev": "ts-node index.ts",
     "db:generate": "drizzle-kit generate:pg",
-    "build": "next build",
-    "prebuild": "drizzle-kit generate:pg"
+    "build": "drizzle-kit generate:pg && next build"
     "start": "node dist/index.js",
     "generate:openapi": "ts-node openapi/generate-doc.ts",
     "serve:docs": "ts-node openapi/server.ts"
