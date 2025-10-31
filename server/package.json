@@ -8,9 +8,12 @@
     "test:coverage": "vitest --coverage",
     "dev": "ts-node index.ts",
     "db:generate": "drizzle-kit generate:pg",
+    "dev": "next dev",
     "build": "pnpm run build:server && next build",
     "build:server": "tsc -p server/tsconfig.json",
-    "start": "node server/dist/index.js"
+    "start": "node server/dist/index.js",
+    "lint": "next lint",
+    "swagger:server": "ts-node server/openapi/server.ts",
     "generate:openapi": "ts-node openapi/generate-doc.ts",
     "serve:docs": "ts-node openapi/server.ts"
   },
