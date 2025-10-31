@@ -8,7 +8,11 @@ if (!REDIS_URL) {
   process.exit(1);
 }
 
-console.log(`Initializing Redis: ${REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"}`);
+console.log(
+  `Initializing Redis: ${
+    REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"
+  }`
+);
 
 export const redis = new Redis(REDIS_URL, {
   tls: REDIS_URL.startsWith("rediss://") ? {} : undefined,
@@ -57,7 +61,7 @@ interface RateLimitConfig {
 }
 
 export async function checkRateLimit(
-  _key: string,
+  key: string,
   config: RateLimitConfig
 ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
   const now = Date.now();
@@ -94,9 +98,9 @@ interface CacheOptions {
 }
 
 export async function getCached<T>(
-  _key: string,
+  key: string,
   fetchFn: () => Promise<T>,
-  _options: CacheOptions = {}
+  options: CacheOptions = {}
 ): Promise<T> {
   const ttl = options.ttl ?? 300;
   const cacheKey = `cache:${key}`;
