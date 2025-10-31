@@ -11,8 +11,8 @@
     "swagger:server": "ts-node server/openapi/server.ts"
   },
    "engines": {
-    "node": "20.11.0",
-    "pnpm": "9.0.0"
+    "node": "20.10.0",
+    "pnpm": "10.20.0"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
