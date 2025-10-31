@@ -1,8 +1,6 @@
 import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
-  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
-
   return {
     name: "LUXELA — Authentic Fashion",
     short_name: "LUXELA",
@@ -17,20 +15,19 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     icons: [
       {
-        src: `${SITE_URL}/icons/icon-192x192.png`,
+        src: "/favicon.ico",
+        sizes: "48x48",
+        type: "image/x-icon",
+      },
+      {
+        src: "/images/logo.png",
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: `${SITE_URL}/icons/icon-512x512.png`,
+        src: "/images/logo.png",
         sizes: "512x512",
         type: "image/png",
-      },
-      {
-        src: `${SITE_URL}/icons/maskable-icon.png`,
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
       },
     ],
   };

@@ -8,7 +8,11 @@ if (!REDIS_URL) {
   process.exit(1);
 }
 
-console.log(`Initializing Redis: ${REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"}`);
+console.log(
+  `Initializing Redis: ${
+    REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"
+  }`
+);
 
 export const redis = new Redis(REDIS_URL, {
   tls: REDIS_URL.startsWith("rediss://") ? {} : undefined,
