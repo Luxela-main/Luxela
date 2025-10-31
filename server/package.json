@@ -45,4 +45,8 @@
     "@types/swagger-ui-express": "^4.1.8",
     "drizzle-kit": "^0.31.6"
   }
+   "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  }
 }
