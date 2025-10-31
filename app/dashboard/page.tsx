@@ -10,7 +10,9 @@ function Dashboard() {
   return (
     <div>
       {/* Breadcrumb */}
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "My Account" }]} />
+      <Breadcrumb
+        items={[{ label: "Home", href: "/" }, { label: "My Account" }]}
+      />
 
       {/* Page Title */}
       <h1 className="text-white text-2xl font-semibold mb-8">
@@ -27,4 +29,4 @@ function Dashboard() {
 }
 
 // Wrap the Dashboard component with withAuth before exporting
-export default withAuth(Dashboard);
+export default Dashboard;

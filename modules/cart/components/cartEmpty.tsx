@@ -27,7 +27,7 @@ const CartEmptyState = () => {
           </p>
 
           <Button
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 mb-2 rounded-md"
             onClick={() => router.push("/buyer")}>
             Add items to cart
           </Button>

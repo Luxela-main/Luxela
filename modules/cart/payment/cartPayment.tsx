@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import OrderSummary from "./order-summary";
+import OrderSummary from "../components/order-summary";
 import PaymentMethods from "./payment-methods";
 import { useCartState } from "../context";
 import { useCheckout } from "../query";

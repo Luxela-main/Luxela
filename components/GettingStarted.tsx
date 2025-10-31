@@ -20,7 +20,7 @@ const gettingStarted: GettingStarted[] = [
       "Ready to go global? Join as an independent brand and get discovered by fashion lovers around the world.",
     image: "/images/gs1-432x349.png",
     cta: "Join as Seller",
-    href: "/signup/seller",
+    href: "/sellers/dashboard",
   },
   {
     title: "Sign Up as a Buyer",
@@ -50,8 +50,7 @@ export default function GettingStarted() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true }}
-          className="text-center max-w-[1041px] mx-auto"
-        >
+          className="text-center max-w-[1041px] mx-auto">
           <h2 className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] tracking-[-0.03em] font-bold">
             Getting Started with Luxela
           </h2>
@@ -69,10 +68,13 @@ export default function GettingStarted() {
               key={index}
               initial={{ opacity: 0, y: 60 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: index * 0.2, ease: "easeOut" }}
+              transition={{
+                duration: 0.8,
+                delay: index * 0.2,
+                ease: "easeOut",
+              }}
               viewport={{ once: true, amount: 0.3 }}
-              className="flex flex-col justify-between rounded-[12px] bg-[#1A1A1A] overflow-hidden text-center border border-[#8451E1]/20 hover:border-[#8451E1]/40 transition-all duration-300 w-full sm:w-[calc(50%-1.125rem)] lg:w-[calc(33.333%-1.125rem)]"
-            >
+              className="flex flex-col justify-between rounded-[12px] bg-[#1A1A1A] overflow-hidden text-center border border-[#8451E1]/20 hover:border-[#8451E1]/40 transition-all duration-300 w-full sm:w-[calc(50%-1.125rem)] lg:w-[calc(33.333%-1.125rem)]">
               {/* Image */}
               <div className="max-w-[432px]">
                 <Image
@@ -93,8 +95,7 @@ export default function GettingStarted() {
                 {started.href && (
                   <Link
                     href={started.href}
-                    className="mt-auto inline-flex items-center justify-center w-full h-[42px] bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white font-medium rounded-[6px] hover:shadow-[0_0_20px_#8451E1]/30 transition"
-                  >
+                    className="mt-auto inline-flex items-center justify-center w-full h-[42px] bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white font-medium rounded-[6px] hover:shadow-[0_0_20px_#8451E1]/30 transition">
                     {started.cta}
                   </Link>
                 )}
@@ -102,7 +103,6 @@ export default function GettingStarted() {
             </motion.div>
           ))}
         </div>
-
       </main>
     </section>
   );

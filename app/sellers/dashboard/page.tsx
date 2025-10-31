@@ -17,12 +17,7 @@ function Dashboard() {
   const [search, setSearch] = useState("");
 
   // TanStack Query hook for dashboard data
-  const { 
-    data: dashboardData, 
-    isLoading, 
-    error, 
-    refetch 
-  } = useDashboardData();
+  const { data: dashboardData, isLoading, error, refetch } = useDashboardData();
 
   // Show loading state
   if (isLoading) {
@@ -32,7 +27,7 @@ function Dashboard() {
   // Show error state
   if (error) {
     return (
-      <ErrorState 
+      <ErrorState
         message="Failed to load dashboard data. Please try again."
         onRetry={() => refetch()}
       />
@@ -247,10 +242,10 @@ function Dashboard() {
                     index === 0
                       ? "bg-blue-500"
                       : index === 1
-                      ? "bg-[#B8A179]"
-                      : index === 2
-                      ? "bg-gray-400"
-                      : "bg-pink-200"
+                        ? "bg-[#B8A179]"
+                        : index === 2
+                          ? "bg-gray-400"
+                          : "bg-pink-200"
                   }`}></div>
                 <span className="text-sm text-gray-400">
                   {item.source} <span className="ml-1">{item.percentage}%</span>
@@ -309,16 +304,16 @@ function Dashboard() {
                     product.status === "In stock"
                       ? "bg-green-100 text-green-800"
                       : product.status === "Low stock"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-800"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
                   }`}>
                   <span
                     className={`w-1.5 h-1.5 rounded-full mr-1 ${
                       product.status === "In stock"
                         ? "bg-green-600"
                         : product.status === "Low stock"
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
+                          ? "bg-yellow-600"
+                          : "bg-red-600"
                     }`}></span>
                   {product.status}
                 </span>
@@ -381,8 +376,8 @@ function StatCard({
     changeType === "positive"
       ? "text-green-500"
       : changeType === "negative"
-      ? "text-red-500"
-      : "text-green-500";
+        ? "text-red-500"
+        : "text-green-500";
 
   return (
     <div className="bg-[#1a1a1a] rounded-lg p-4">
@@ -401,4 +396,5 @@ function StatCard({
   );
 }
 
-export default withAuth(Dashboard);
+// export default withAuth(Dashboard);
+export default Dashboard;

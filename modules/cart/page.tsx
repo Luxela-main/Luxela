@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BillingAddressStep } from "./components/billing-address";
-import CartPaymentPage from "./components/cartPayment";
+import CartPaymentPage from "./payment/cartPayment";
 import CartEmptyState from "./components/cartEmpty";
 import CartSummaryForm from "./components/cart-summary-form";
 import { CartItem } from "./components/cart-item";
