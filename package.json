@@ -5,8 +5,9 @@
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "drizzle-kit generate:pg && next build",
-    "start": "next start",
+    "build": "pnpm run build:server && next build",
+    "build:server": "tsc -p server/tsconfig.json",
+    "start": "node server/dist/index.js"
     "lint": "next lint",
     "swagger:server": "ts-node server/openapi/server.ts"
   },
