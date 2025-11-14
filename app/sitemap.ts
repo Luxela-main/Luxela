@@ -1,38 +1,33 @@
 import { MetadataRoute } from "next";
+import { db } from "@/server/db";
+import { listings } from "@/server/db/schema";
+
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
 
-  let products: { slug: string; updatedAt: string }[] = [];
+  let listingItems: { id: string; updatedAt: Date }[] = [];
 
   try {
-    const res = await fetch(`${SITE_URL}/api/products`, {
-      next: { revalidate: 3600 },
-    });
+    const rows = await db
+      .select({
+        id: listings.id,
+        updatedAt: listings.updatedAt,
+      })
+      .from(listings);
 
-    if (res.ok) {
-      const text = await res.text();
-
-      try {
-        const data = JSON.parse(text);
-        if (Array.isArray(data)) {
-          products = data;
-        } else {
-          console.warn("Unexpected API response format:", data);
-        }
-      } catch (err) {
-        console.error("Failed to parse JSON from /api/products:", err);
-      }
-    } else {
-      console.error("Failed to fetch products:", res.status, res.statusText);
-    }
+    listingItems = rows.map((item) => ({
+      id: item.id,
+      updatedAt: new Date(item.updatedAt),
+    }));
   } catch (error) {
-    console.error("Error fetching /api/products:", error);
+    console.error("Error querying listings for sitemap:", error);
   }
 
-  const productUrls = products.map((product) => ({
-    url: `${SITE_URL}/product/${product.slug}`,
-    lastModified: new Date(product.updatedAt),
+  const listingUrls = listingItems.map((product) => ({
+    url: `${SITE_URL}/product/${product.id}`,
+    lastModified: product.updatedAt,
     changeFrequency: "weekly" as const,
     priority: 0.8,
   }));
@@ -44,6 +39,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
-    ...productUrls,
+    ...listingUrls,
   ];
 }
