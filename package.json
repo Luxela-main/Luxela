@@ -13,7 +13,7 @@
     "swagger:server": "ts-node server/openapi/server.ts"
   },
   "engines": {
-    "node": "25.1.0",
+    "node": "22.x",
     "pnpm": "10.20.0",
     "npm": "11.6.2"
   },
@@ -39,6 +39,7 @@
     "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@trpc/server": "^11.7.1",
+    "@vercel/analytics": "^1.5.0",
     "antd": "^5.27.4",
     "aos": "^2.3.4",
     "axios": "^1.9.0",

@@ -4,20 +4,24 @@ import { createClient } from "@/utils/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* Map Supabase Error Messages */
-function mapAuthError(error: any): Error {
-  if (!error?.message) return new Error("Unknown error occurred");
+function mapAuthError(error: any): string {
+  if (!error?.message) return "Unknown error occurred.";
+
   const msg = String(error.message).toLowerCase();
 
   if (msg.includes("invalid login credentials"))
-    return new Error("Incorrect email or password.");
-  if (msg.includes("email not confirmed"))
-    return new Error("Email not verified. Please check your inbox.");
-  if (msg.includes("user already registered"))
-    return new Error("Email already registered. Please sign in instead.");
-  if (msg.includes("weak password"))
-    return new Error("Password too weak. Use a stronger one.");
+    return "Incorrect email or password.";
 
-  return new Error(error.message || "Authentication error");
+  if (msg.includes("email not confirmed"))
+    return "Email not verified. Please check your inbox.";
+
+  if (msg.includes("user already registered"))
+    return "Email already registered. Please sign in instead.";
+
+  if (msg.includes("weak password"))
+    return "Password too weak. Use a stronger one.";
+
+  return error.message || "Authentication error.";
 }
 
 /*  Upsert user into `users` table */
@@ -52,7 +56,9 @@ export async function signupAction(
       options: { data: { role }, emailRedirectTo: redirectUrl },
     });
 
-    if (error) throw error;
+    if (error)
+      return { success: false, error: mapAuthError(error) };
+
     if (data.user) await insertUserToDB(supabase, data.user);
 
     return {
@@ -60,7 +66,7 @@ export async function signupAction(
       message: "Signup successful. Check your email for verification.",
     };
   } catch (err: any) {
-    throw mapAuthError(err);
+    return { success: false, error: mapAuthError(err) };
   }
 }
 
@@ -74,12 +80,14 @@ export async function verifySignupToken(token_hash: string) {
       token_hash,
     });
 
-    if (error) throw error;
+    if (error)
+      return { success: false, error: mapAuthError(error) };
+
     if (data.user) await insertUserToDB(supabase, data.user);
 
     return { success: true, session: data.session };
   } catch (err: any) {
-    throw mapAuthError(err);
+    return { success: false, error: mapAuthError(err) };
   }
 }
 
@@ -93,12 +101,14 @@ export async function signinAction(email: string, password: string) {
       password,
     });
 
-    if (error) throw error;
+    if (error)
+      return { success: false, error: mapAuthError(error) };
+
     if (data.user) await insertUserToDB(supabase, data.user);
 
     return { success: true, session: data.session, user: data.user };
   } catch (err: any) {
-    throw mapAuthError(err);
+    return { success: false, error: mapAuthError(err) };
   }
 }
 
@@ -113,10 +123,12 @@ export async function signinWithGoogleAction() {
       options: { redirectTo: redirectUrl },
     });
 
-    if (error) throw error;
+    if (error)
+      return { success: false, error: mapAuthError(error) };
+
     return { success: true, url: data.url };
   } catch (err: any) {
-    throw mapAuthError(err);
+    return { success: false, error: mapAuthError(err) };
   }
 }
 
@@ -132,10 +144,15 @@ export async function resendVerificationAction(email: string) {
       options: { emailRedirectTo: redirectUrl },
     });
 
-    if (error) throw error;
-    return { success: true, message: "Verification email resent successfully." };
+    if (error)
+      return { success: false, error: mapAuthError(error) };
+
+    return {
+      success: true,
+      message: "Verification email resent successfully.",
+    };
   } catch (err: any) {
-    throw mapAuthError(err);
+    return { success: false, error: mapAuthError(err) };
   }
 }
 
@@ -144,9 +161,12 @@ export async function signoutAction() {
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+
+    if (error)
+      return { success: false, error: mapAuthError(error) };
+
     return { success: true };
   } catch (err: any) {
-    throw mapAuthError(err);
+    return { success: false, error: mapAuthError(err) };
   }
 }

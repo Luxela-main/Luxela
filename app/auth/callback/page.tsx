@@ -15,7 +15,7 @@ function AuthCallbackHandler() {
   const toast = useToast();
 
   useEffect(() => {
-    const isDev = process.env.NODE_ENV !== "production";
+    const isDev = process.env.NODE_ENV === "development";
 
     const parseFragmentToken = (): string | null => {
       if (typeof window === "undefined") return null;
