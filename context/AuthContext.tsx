@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 type AuthContextType = {
   user: any | null;
@@ -17,6 +18,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const supabase = createClient();
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -46,6 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       await supabase.auth.signOut();
+      router.push('/')
       setUser(null);
     } catch (e) {
       console.error("Logout error", e);
