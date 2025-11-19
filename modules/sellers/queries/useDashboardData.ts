@@ -45,7 +45,7 @@ export interface TopSellingProduct {
   category: string;
   price: string;
   quantitySold: number;
-  status: 'In stock' | 'Low stock' | 'Sold out';
+  status: "In stock" | "Low stock" | "Sold out";
 }
 
 export interface DashboardData {

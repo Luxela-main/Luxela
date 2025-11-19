@@ -1,26 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { sellersKeys } from './queryKeys';
-import { toastSvc } from '@/services/toast';
-
-export interface Sale {
-  orderId: string;
-  product: string;
-  customer: string;
-  orderDate: Date;
-  paymentMethod: string;
-  amountCents: number;
-  currency: string;
-  payoutStatus: 'in_escrow' | 'processing' | 'paid';
-  deliveryStatus: 'not_shipped' | 'in_transit' | 'delivered';
-  orderStatus: 'processing' | 'shipped' | 'delivered' | 'canceled' | 'returned';
-}
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { sellersKeys } from "./queryKeys";
+import { toastSvc } from "@/services/toast";
+import { Sale } from "../model";
 
 export const useSales = (status?: string) => {
   return useQuery<Sale[]>({
     queryKey: sellersKeys.sales(status),
     queryFn: async () => {
-      const params = status ? `?status=${encodeURIComponent(status)}` : '';
+      const params = status ? `?status=${encodeURIComponent(status)}` : "";
       const response = await api.get(`/sales${params}`);
       return response.data;
     },
@@ -41,15 +29,21 @@ export const useSaleById = (orderId: string) => {
 
 export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
+    mutationFn: async ({
+      orderId,
+      status,
+    }: {
+      orderId: string;
+      status: string;
+    }) => {
       const response = await api.put(`/sales/${orderId}/status`, { status });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.sales() });
-      toastSvc.success('Order status updated successfully');
+      toastSvc.success("Order status updated successfully");
     },
     onError: (error) => {
       toastSvc.apiError(error);
