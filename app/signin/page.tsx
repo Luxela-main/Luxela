@@ -74,7 +74,7 @@ function SignInContent() {
       <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
         {/* Left Side */}
         <div className="relative md:flex items-center justify-center p-10 hidden">
-          <div className="absolute inset-0 bg-[url('/images/auth.png')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
+          <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
           <div className="relative z-10 max-w-md p-10 rounded-2xl border border-purple-500 backdrop-blur-md bg-black/30">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
             <h2 className="text-3xl font-semibold mb-4">

@@ -5,24 +5,34 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import PurchaseHistory from '@/components/buyer/profile/purchase-history';
 import { useAuth } from '@/context/AuthContext';
+import { trpc } from '@/lib/trpc';
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('loyalty');
   const { user } = useAuth();
 
+  // Fetch data from backend
+  const { data: accountData, isLoading: accountLoading } = trpc.buyer.getAccountDetails.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  // Fetch order statistics
+  const { data: orderStats, isLoading: statsLoading } = trpc.buyer.getOrderStats.useQuery(undefined, {
+    enabled: !!user,
+  });
 
   if (!user) return null;
 
-  const username =
-    user.user_metadata?.full_name ||
-    user.user_metadata?.name ||
-    user.email?.split('@')[0] ||
-    'User';
+  if (accountLoading || statsLoading) {
+    return (
+      <div className="min-h-screen text-white font-sans py-10 flex items-center justify-center">
+        <div className="text-gray-400">Loading profile...</div>
+      </div>
+    );
+  }
 
-  const userPicture =
-    user.user_metadata?.avatar_url ||
-    "/assets/image 38.png";
-
+  const username = accountData?.username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+  const userPicture = accountData?.profilePicture || user.user_metadata?.avatar_url || "/assets/image 38.png";
   const userSince = (user.created_at) ? new Date(user.created_at).getFullYear() : '2023';
 
 

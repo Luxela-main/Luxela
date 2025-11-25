@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
+import { trpc, getTRPCClient } from "@/lib/trpc";
 import "react-toastify/dist/ReactToastify.css";
 
 // Dynamically import ToastContainer to prevent SSR issues
@@ -20,22 +21,10 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000, 
+        staleTime: 60 * 1000,
       },
     },
   });
-}
-
-let browserQueryClient: QueryClient | undefined = undefined;
-
-function getQueryClient() {
-  if (typeof window === "undefined") {
-    return makeQueryClient();
-  }
-  if (!browserQueryClient) {
-    browserQueryClient = makeQueryClient();
-  }
-  return browserQueryClient;
 }
 
 export default function ClientProviders({
@@ -43,22 +32,25 @@ export default function ClientProviders({
 }: {
   children: React.ReactNode;
 }) {
-  const queryClient = getQueryClient();
+  const [queryClient] = useState(() => makeQueryClient());
+  const [trpcClient] = useState(() => getTRPCClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        {children}
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          pauseOnHover
-          theme="colored"
-        />
-      </AuthProvider>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          {children}
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+            theme="colored"
+          />
+        </AuthProvider>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
