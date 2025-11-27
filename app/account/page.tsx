@@ -170,7 +170,7 @@ const AccountPage = () => {
             <span className="text-zinc-400 text-sm">View</span>
           </button>
 
-          <button
+          {/* <button
             onClick={() => router.push("/sellers/settings")}
             className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
             <div className="flex items-center space-x-2">
@@ -178,7 +178,7 @@ const AccountPage = () => {
               <span>Settings</span>
             </div>
             <span className="text-zinc-400 text-sm">Manage</span>
-          </button>
+          </button> */}
 
           <AlertDialog open={open} onOpenChange={setOpen}>
             <AlertDialogOverlay />

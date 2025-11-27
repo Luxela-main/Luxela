@@ -126,20 +126,11 @@ const BuyerHeader = () => {
                 <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
                   Track Order
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
-                  Track Order
-                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-[#2B2B2B]" />
                 <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
                   Return and Refund
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
-                  Return and Refund
-                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-[#2B2B2B]" />
-                <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
-                  Help Centre
-                </DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
                   Help Centre
                 </DropdownMenuItem>
@@ -152,7 +143,7 @@ const BuyerHeader = () => {
                 <AlertDialogTrigger asChild>
                   <DropdownMenuItem
                     onSelect={(e) => e.preventDefault()}
-                    className="cursor-pointer text-red-400"
+                    className="cursor-pointer text-red-400 hover:bg-red-600! hover:text-white!"
                   >
                     Log out
                   </DropdownMenuItem>

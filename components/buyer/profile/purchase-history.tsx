@@ -1,83 +1,45 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { trpc } from '@/lib/trpc';
 
 const PurchaseHistory = () => {
   const [activeTab, setActiveTab] = useState<'shipped' | 'cancelled'>('shipped');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const orders = [
-    // ✅ Shipped / Delivered
-    {
-      id: 1,
-      name: 'Black Denim Jeans',
-      type: 'Jeans #301',
-      status: 'Delivered',
-      price: 'Received $3.50',
-      priceColor: 'text-yellow-500'
-    },
-    {
-      id: 2,
-      name: 'Slim Fit Jeans',
-      type: 'Jeans #204',
-      status: 'Shipped',
-      price: 'Shipped $6.50',
-      priceColor: 'text-purple-400'
-    },
-    {
-      id: 3,
-      name: 'Blue Jean Jacket',
-      type: 'Denim #090',
-      status: 'Delivered',
-      price: 'Received $6.49',
-      priceColor: 'text-green-400'
-    },
-    {
-      id: 4,
-      name: 'Casual Jeans',
-      type: 'Jeans #115',
-      status: 'Delivered',
-      price: 'Delivered $9.49',
-      priceColor: 'text-green-400'
-    },
+  // Fetch orders from backend based on active tab
+  const { data: ordersData, isLoading } = trpc.buyer.getPurchaseHistory.useQuery({
+    status: activeTab === 'shipped' ? 'ongoing' : 'canceled',
+    page: 1,
+    limit: 50,
+  });
 
-    // ✅ Cancelled / Returned
-    {
-      id: 11,
-      name: 'Blue Denim Jacket',
-      type: 'Denim #009',
-      status: 'Cancelled',
-      price: 'Cancelled - $8.99 Refunded',
-      priceColor: 'text-red-400'
-    },
-    {
-      id: 12,
-      name: 'White Hoodie',
-      type: 'Hoodie #221',
-      status: 'Returned',
-      price: 'Returned - Awaiting Refund',
-      priceColor: 'text-orange-400'
-    }
-  ];
+  // Transform backend data to match component structure
+  const orders = ordersData?.data.map((order) => ({
+    id: order.orderId,
+    name: order.productTitle,
+    type: order.productCategory,
+    status: order.deliveryStatus === 'delivered' ? 'Delivered' :
+            order.deliveryStatus === 'in_transit' ? 'Shipped' :
+            order.orderStatus === 'canceled' ? 'Cancelled' : 'Processing',
+    price: `${order.currency} ${(order.priceCents / 100).toFixed(2)}`,
+    priceColor: order.deliveryStatus === 'delivered' ? 'text-green-400' :
+                 order.deliveryStatus === 'in_transit' ? 'text-purple-400' :
+                 order.orderStatus === 'canceled' ? 'text-red-400' : 'text-yellow-500',
+    image: order.productImage,
+  })) || [];
 
-  // ✅ Filter based on tab + search query
+  // ✅ Filter based on search query
   const filteredOrders = orders.filter((order) => {
-    // match current tab
-    const matchTab =
-      activeTab === 'shipped'
-        ? ['Delivered', 'Shipped'].includes(order.status)
-        : ['Cancelled', 'Returned'].includes(order.status);
-
-    // match search query (case-insensitive)
     const q = searchQuery.toLowerCase();
     const matchSearch =
       order.name.toLowerCase().includes(q) ||
       order.type.toLowerCase().includes(q) ||
       order.status.toLowerCase().includes(q) ||
-      order.id.toString().includes(q) ||
+      order.id.toLowerCase().includes(q) ||
       order.price.toLowerCase().includes(q);
 
-    return matchTab && matchSearch;
+    return matchSearch;
   });
 
   const containerVariants = {
@@ -179,14 +141,21 @@ const PurchaseHistory = () => {
         </motion.div>
       </div>
 
-      {/* Orders Grid */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
-      >
-        {filteredOrders.length > 0 ? (
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="text-center py-16 text-gray-400">
+          Loading orders...
+        </div>
+      ) : (
+        <>
+          {/* Orders Grid */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {filteredOrders.length > 0 ? (
           filteredOrders.map((order, index) => (
             <motion.div
               key={order.id}
@@ -245,10 +214,12 @@ const PurchaseHistory = () => {
             animate={{ opacity: 1 }}
             className="col-span-2 text-center py-16 text-gray-500"
           >
-            No orders found matching “{searchQuery}”
+            {searchQuery ? `No orders found matching "${searchQuery}"` : 'No orders yet'}
           </motion.div>
         )}
-      </motion.div>
+          </motion.div>
+        </>
+      )}
     </div>
   );
 };
