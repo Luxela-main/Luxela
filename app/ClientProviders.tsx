@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
-import { trpc, getTRPCClient } from "@/lib/trpc";
+import { trpc } from "./_trpc/client";
+import { httpBatchLink } from "@trpc/client";
 import "react-toastify/dist/ReactToastify.css";
 
 // Dynamically import ToastContainer to prevent SSR issues
@@ -16,7 +17,7 @@ const ToastContainer = dynamic(
   { ssr: false }
 );
 
-// Function to create a fresh query client
+// Create a fresh query client
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -27,13 +28,42 @@ function makeQueryClient() {
   });
 }
 
+let browserQueryClient: QueryClient | undefined = undefined;
+
+function getQueryClient() {
+  if (typeof window === "undefined") return makeQueryClient();
+  if (!browserQueryClient) browserQueryClient = makeQueryClient();
+  return browserQueryClient;
+}
+
 export default function ClientProviders({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [queryClient] = useState(() => makeQueryClient());
-  const [trpcClient] = useState(() => getTRPCClient());
+  const queryClient = getQueryClient();
+
+  // ---- FIXED tRPC CLIENT ----
+  const trpcClient = trpc.createClient({
+    links: [
+      httpBatchLink({
+        url: `${process.env.NEXT_PUBLIC_API_URL}/trpc`,
+        fetch(url, options) {
+          return fetch(url, {
+            ...options,
+            headers: {
+              ...options?.headers,
+              Authorization: `Bearer ${
+                typeof window !== "undefined"
+                  ? localStorage.getItem("sb-token") ?? ""
+                  : ""
+              }`,
+            },
+          });
+        },
+      }),
+    ],
+  });
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

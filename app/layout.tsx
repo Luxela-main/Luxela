@@ -1,4 +1,4 @@
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
 import type React from "react";
 import type { Metadata } from "next";
 import "./globals.css";
@@ -6,6 +6,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { QueryProvider } from "@/lib/providers";
 import { spaceGrotesk } from "@/public/fonts";
 import ClientToast from "@/components/ClientToast";
+import ClientProviders from "./ClientProviders";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
 
@@ -92,13 +93,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body suppressHydrationWarning className={spaceGrotesk.className}>
-        <div className=" mx-auto">
-          <QueryProvider>
-            <AuthProvider>
-              {children}
-              <ClientToast />
-            </AuthProvider>
-          </QueryProvider>
+        <div className="mx-auto">
+          <ClientProviders>
+            <QueryProvider>
+              <AuthProvider>
+                {children}
+                <ClientToast />
+              </AuthProvider>
+            </QueryProvider>
+          </ClientProviders>
         </div>
       </body>
     </html>
