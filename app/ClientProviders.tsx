@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
-import { trpc } from "./_trpc/client";
+import { trpc } from "@/app/_trpc/client";
 import { httpBatchLink } from "@trpc/client";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -17,33 +17,35 @@ const ToastContainer = dynamic(
   { ssr: false }
 );
 
-// Create a fresh query client
-function makeQueryClient() {
+// Create a fresh QueryClient
+function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,
+        retry: false,
       },
     },
   });
 }
 
-let browserQueryClient: QueryClient | undefined = undefined;
+// Singleton QueryClient in browser
+let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient() {
-  if (typeof window === "undefined") return makeQueryClient();
-  if (!browserQueryClient) browserQueryClient = makeQueryClient();
+  if (typeof window === "undefined") return createQueryClient();
+  if (!browserQueryClient) browserQueryClient = createQueryClient();
   return browserQueryClient;
 }
 
-export default function ClientProviders({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+interface ClientProvidersProps {
+  children: ReactNode;
+}
+
+export default function ClientProviders({ children }: ClientProvidersProps) {
   const queryClient = getQueryClient();
 
-  // ---- FIXED tRPC CLIENT ----
+  // Setup TRPC client
   const trpcClient = trpc.createClient({
     links: [
       httpBatchLink({
@@ -70,13 +72,17 @@ export default function ClientProviders({
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           {children}
+
+          {/* Single ToastContainer */}
           <ToastContainer
             position="top-right"
-            autoClose={3000}
+            autoClose={3000}      // default 3s
             hideProgressBar={false}
             newestOnTop
             closeOnClick
-            pauseOnHover
+            pauseOnHover={false}   // ensure autoClose works
+            pauseOnFocusLoss={false}
+            draggable
             theme="colored"
           />
         </AuthProvider>

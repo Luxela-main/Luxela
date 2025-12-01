@@ -54,7 +54,7 @@
     "typescript": "^5.6.3"
   },
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "pnpm": "10.20.0",
     "npm": "11.6.2"
   }
