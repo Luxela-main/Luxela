@@ -1,95 +1,75 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { sellersKeys } from './queryKeys';
-import { toastSvc } from '@/services/toast';
-
-export interface Listing {
-  id: string;
-  sellerId: string;
-  type: 'single' | 'collection';
-  title: string;
-  description: string | null;
-  category: string | null;
-  image: string | null;
-  priceCents: number | null;
-  currency: string | null;
-  sizesJson: string | null;
-  supplyCapacity: string | null;
-  quantityAvailable: number | null;
-  limitedEditionBadge: string | null;
-  releaseDuration: string | null;
-  materialComposition: string | null;
-  colorsAvailable: string | null;
-  additionalTargetAudience: string | null;
-  shippingOption: string | null;
-  etaDomestic: string | null;
-  etaInternational: string | null;
-  itemsJson: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { useQueryClient } from "@tanstack/react-query";
+import { toastSvc } from "@/services/toast";
+import { sellersKeys } from "./queryKeys";
+import { trpc } from "@/lib/trpc";
 
 export const useMyListings = () => {
-  return useQuery<Listing[]>({
-    queryKey: sellersKeys.listings(),
-    queryFn: async () => {
-      const response = await api.get('/listings/me');
-      return response.data;
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+  return (trpc.listing as any).getMyListings.useQuery(undefined, {
+    staleTime: 120000,
   });
 };
 
-export const useCreateListing = () => {
+export const useCreateSingleListing = () => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (listingData: Partial<Listing>) => {
-      const response = await api.post('/listings/create', listingData);
-      return response.data;
-    },
+
+  return (trpc.listing as any).createSingle.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sellersKeys.listings() });
-      toastSvc.success('Listing created successfully');
+      queryClient.invalidateQueries({
+        queryKey: sellersKeys.listings(),
+      });
+      toastSvc.success("Listing created successfully");
     },
-    onError: (error) => {
-      toastSvc.apiError(error);
-    },
+    onError: (error: any) => toastSvc.apiError(error),
   });
 };
 
+export const useCreateCollectionListing = () => {
+  const queryClient = useQueryClient();
+
+  return (trpc.listing as any).createCollection.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: sellersKeys.listings(),
+      });
+      toastSvc.success("Collection created successfully");
+    },
+    onError: (error: any) => toastSvc.apiError(error),
+  });
+};
+
+// TODO: add Update listing from the server
 export const useUpdateListing = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, ...listingData }: Partial<Listing> & { id: string }) => {
-      const response = await api.put(`/listings/${id}`, listingData);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sellersKeys.listings() });
-      toastSvc.success('Listing updated successfully');
-    },
-    onError: (error) => {
-      toastSvc.apiError(error);
-    },
-  });
+  console.warn("⚠️ updateListing mutation is not supported by backend");
+  return {
+    mutate: () =>
+      toastSvc.error("Update listing is not implemented on the backend"),
+  };
 };
 
 export const useDeleteListing = () => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.delete(`/listings/${id}`);
-      return response.data;
-    },
+
+  return (trpc.listing as any).deleteListing.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sellersKeys.listings() });
-      toastSvc.success('Listing deleted successfully');
+      queryClient.invalidateQueries({
+        queryKey: sellersKeys.listings(),
+      });
+      toastSvc.success("Listing deleted successfully");
     },
-    onError: (error) => {
-      toastSvc.apiError(error);
+    onError: (error: any) => toastSvc.apiError(error),
+  });
+};
+
+export const useRestockListing = () => {
+  const queryClient = useQueryClient();
+
+  return (trpc.listing as any).restockListing.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: sellersKeys.listings(),
+      });
+      toastSvc.success("Listing restocked successfully");
     },
+    onError: (error: any) => toastSvc.apiError(error),
   });
 };

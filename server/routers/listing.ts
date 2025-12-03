@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/trpc';
+import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
 import { db } from "../db";
 import { listings, sellers } from "../db/schema";
 import { and, eq } from "drizzle-orm";
@@ -336,7 +336,7 @@ export const listingRouter = createTRPCRouter({
             priceCents: r.priceCents,
             currency: r.currency,
             stock:
-              r.supplyCapacity === "no_max" ? null : (r.quantityAvailable ?? 0),
+              r.supplyCapacity === "no_max" ? null : r.quantityAvailable ?? 0,
             status: computeStockStatus(
               r.supplyCapacity as any,
               r.quantityAvailable ?? null

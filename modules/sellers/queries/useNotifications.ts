@@ -1,66 +1,41 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { sellersKeys } from './queryKeys';
-
-export interface Notification {
-  id: string;
-  sellerId: string;
-  type: 'purchase' | 'review' | 'comment' | 'reminder';
-  message: string;
-  isRead: boolean;
-  isStarred: boolean;
-  createdAt: Date;
-}
+import { trpc } from "@/lib/trpc";
 
 export const useNotifications = () => {
-  return useQuery<Notification[]>({
-    queryKey: sellersKeys.notifications(),
-    queryFn: async () => {
-      const response = await api.get('/notifications');
-      return response.data;
-    },
-    staleTime: 30 * 1000, // 30 seconds
+  return (trpc.notification as any).getAll.useQuery(undefined, {
+    staleTime: 30 * 1000,
   });
 };
 
 export const useMarkNotificationAsRead = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.put(`/notifications/${id}/read`);
-      return response.data;
-    },
+  const utils = trpc.useUtils();
+
+  return (trpc.notification as any).markAsRead.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sellersKeys.notifications() });
+      (utils.notification as any).getAll.invalidate();
     },
   });
 };
 
 export const useMarkAllNotificationsAsRead = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async () => {
-      const response = await api.put('/notifications/read-all');
-      return response.data;
-    },
+  const utils = trpc.useUtils();
+
+  return (trpc.notification as any).markAllAsRead.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sellersKeys.notifications() });
+      (utils.notification as any).getAll.invalidate();
     },
   });
 };
 
 export const useToggleNotificationStar = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await api.put(`/notifications/${id}/star`);
-      return response.data;
-    },
+  const utils = trpc.useUtils();
+
+  return (trpc.notification as any).toggleStar.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: sellersKeys.notifications() });
+      (utils.notification as any).getAll.invalidate();
     },
   });
+};
+
+export const useStarredNotifications = () => {
+  return (trpc.notification as any).getStarred.useQuery();
 };

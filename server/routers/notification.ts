@@ -1,7 +1,11 @@
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/trpc';
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "../trpc/trpc";
 import { db } from "../db";
 import { notifications, sellers } from "../db/schema";
-import { eq, and  } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
@@ -21,7 +25,6 @@ async function ensureSeller(userId: string) {
 
   return seller[0];
 }
-
 
 const NotificationOutput = z.object({
   id: z.string().uuid(),
@@ -47,7 +50,10 @@ export const notificationRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       const userId = ctx.user?.id;
       if (!userId)
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "User not logged in" });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not logged in",
+        });
 
       const seller = await ensureSeller(userId);
 
@@ -60,44 +66,47 @@ export const notificationRouter = createTRPCRouter({
     }),
 
   getStarred: protectedProcedure
-  .meta({
-    openapi: {
-      method: "GET",
-      path: "/notifications/starred",
-      tags: ["Notifications"],
-      summary: "Get all starred notifications for the current seller",
-    },
-  })
-  .output(z.array(NotificationOutput))
-  .query(async ({ ctx }) => {
-    const userId = ctx.user?.id;
-    if (!userId)
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "User not logged in" });
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/notifications/starred",
+        tags: ["Notifications"],
+        summary: "Get all starred notifications for the current seller",
+      },
+    })
+    .output(z.array(NotificationOutput))
+    .query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not logged in",
+        });
 
-    const seller = await db
-      .select()
-      .from(sellers)
-      .where(eq(sellers.userId, userId));
+      const seller = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.userId, userId));
 
-    if (!seller[0]) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "You are not registered as a seller",
-      });
-    }
+      if (!seller[0]) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not registered as a seller",
+        });
+      }
 
-    const starred = await db
-      .select()
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.sellerId, seller[0].id),
-          eq(notifications.isStarred, true)
-        )
-      );
+      const starred = await db
+        .select()
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.sellerId, seller[0].id),
+            eq(notifications.isStarred, true)
+          )
+        );
 
-    return starred;
-  }),
+      return starred;
+    }),
 
   markAsRead: protectedProcedure
     .meta({
@@ -119,34 +128,68 @@ export const notificationRouter = createTRPCRouter({
       return { success: true };
     }),
 
- toggleStar: protectedProcedure
-  .meta({
-    openapi: {
-      method: "PATCH",
-      path: "/notifications/star",
-      tags: ["Notifications"],
-      summary: "Toggle star on a notification",
-    },
-  })
-  .input(z.object({ notificationId: z.string().uuid() }))
-  .output(z.object({ success: z.literal(true) }))
-  .mutation(async ({ input }) => {
-    const [existing] = await db
-      .select({ isStarred: notifications.isStarred })
-      .from(notifications)
-      .where(eq(notifications.id, input.notificationId));
+  markAllAsRead: protectedProcedure
+    .meta({
+      openapi: {
+        method: "PATCH",
+        path: "/notifications/read-all",
+        tags: ["Notifications"],
+        summary: "Mark all notifications as read for the current seller",
+      },
+    })
+    .output(z.object({ success: z.literal(true) }))
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not logged in",
+        });
 
-    if (!existing) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Notification not found" });
-    }
+      const seller = await ensureSeller(userId);
 
-    await db
-      .update(notifications)
-      .set({ isStarred: !existing.isStarred })
-      .where(eq(notifications.id, input.notificationId));
+      await db
+        .update(notifications)
+        .set({ isRead: true })
+        .where(
+          and(
+            eq(notifications.sellerId, seller.id),
+            eq(notifications.isRead, false)
+          )
+        );
 
-    return { success: true };
-  }),
+      return { success: true };
+    }),
 
+  toggleStar: protectedProcedure
+    .meta({
+      openapi: {
+        method: "PATCH",
+        path: "/notifications/star",
+        tags: ["Notifications"],
+        summary: "Toggle star on a notification",
+      },
+    })
+    .input(z.object({ notificationId: z.string().uuid() }))
+    .output(z.object({ success: z.literal(true) }))
+    .mutation(async ({ input }) => {
+      const [existing] = await db
+        .select({ isStarred: notifications.isStarred })
+        .from(notifications)
+        .where(eq(notifications.id, input.notificationId));
 
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Notification not found",
+        });
+      }
+
+      await db
+        .update(notifications)
+        .set({ isStarred: !existing.isStarred })
+        .where(eq(notifications.id, input.notificationId));
+
+      return { success: true };
+    }),
 });

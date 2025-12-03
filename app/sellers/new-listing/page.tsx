@@ -1,71 +1,70 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Tab, ListingForm, ProductData } from '@/types';
-import { TabsNav } from './TabsNav';
-import { SuccessPage } from './SuccessPage';
-import ProductInfoForm from './ProductInfoForm';
-import AdditionalInfoForm from './AdditionalInfoForm';
-import Preview from './Preview';
+import React, { useState } from "react";
+import { Tab, ListingForm, ProductData } from "@/types";
+import { TabsNav } from "./TabsNav";
+import ProductInfoForm from "./ProductInfoForm";
+import AdditionalInfoForm from "./AdditionalInfoForm";
+import Preview from "./Preview";
 
 const NewListing: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('Product Information');
+  const [activeTab, setActiveTab] = useState<Tab>("Product Information");
   const [formData, setFormData] = useState<ListingForm>({
     images: [],
     product: {
-      price: '',
-      name: '',
-      type: '',
-      description: '',
-      sizes: '',
-      releaseDate: '',
-      supplyText: '',
-      supplyCount: '',
-      badge: '',
-      durationText: '',
-      durationTime: '',
-      material: '',
-      colors: '',
-      audience: '',
-      shipping: '',
-      shippingEstimate: '',
+      price: "",
+      name: "",
+      type: "",
+      description: "",
+      sizes: "",
+      releaseDate: "",
+      supplyText: "",
+      supplyCount: "",
+      badge: "",
+      durationText: "",
+      durationTime: "",
+      material: "",
+      colors: "",
+      audience: "",
+      shipping: "",
+      shippingEstimate: "",
     },
   });
 
   const handleProductChange = (product: ProductData) => {
-    setFormData(prev => ({ ...prev, product }));
+    setFormData((prev) => ({ ...prev, product }));
   };
 
   const handleImagesChange = (images: File[]) => {
-    setFormData(prev => ({ ...prev, images }));
+    setFormData((prev) => ({ ...prev, images }));
   };
 
   const handleSubmit = () => {
-    console.log('Submitting form data:', formData);
+    console.log("Submitting form data:", formData);
     // API call
   };
 
   const handleReset = () => {
-    setActiveTab('Product Information');
+    setActiveTab("Product Information");
     setFormData({
       images: [],
       product: {
-        price: '',
-        name: '',
-        type: '',
-        description: '',
-        sizes: '',
-        releaseDate: '',
-        supplyText: '',
-        supplyCount: '',
-        badge: '',
-        durationText: '',
-        durationTime: '',
-        material: '',
-        colors: '',
-        audience: '',
-        shipping: '',
-        shippingEstimate: '',
+        price: "",
+        name: "",
+        type: "",
+        description: "",
+        sizes: "",
+        releaseDate: "",
+        supplyText: "",
+        supplyCount: "",
+        badge: "",
+        durationText: "",
+        durationTime: "",
+        material: "",
+        colors: "",
+        audience: "",
+        shipping: "",
+        shippingEstimate: "",
       },
     });
   };
@@ -81,7 +80,7 @@ const NewListing: React.FC = () => {
 
       <TabsNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {activeTab === 'Product Information' && (
+      {activeTab === "Product Information" && (
         <ProductInfoForm
           product={formData.product}
           onProductChange={handleProductChange}
@@ -91,7 +90,7 @@ const NewListing: React.FC = () => {
         />
       )}
 
-      {activeTab === 'Additional Information' && (
+      {activeTab === "Additional Information" && (
         <AdditionalInfoForm
           product={formData.product}
           onProductChange={handleProductChange}
@@ -101,9 +100,13 @@ const NewListing: React.FC = () => {
         />
       )}
 
-      {activeTab === 'Preview' && <Preview formData={formData} handleReset={handleReset} handleSubmit={handleSubmit} />}
-
-      
+      {activeTab === "Preview" && (
+        <Preview
+          formData={formData}
+          handleReset={handleReset}
+          handleSubmit={handleSubmit}
+        />
+      )}
     </div>
   );
 };
