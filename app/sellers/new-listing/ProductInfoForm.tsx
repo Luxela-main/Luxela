@@ -1,16 +1,21 @@
-import React from 'react';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { ProductData } from '@/types';
-import ImageUpload from './image-upload';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { useFormik } from "formik";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ProductData } from "@/types";
+import ImageUpload from "./image-upload";
+import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
+import { productInfoValidationSchema } from "../validations/productInfoSchema";
 
 interface ProductInfoFormProps {
   product: ProductData;
   onProductChange: (product: ProductData) => void;
   images: File[];
   onImagesChange: (images: File[]) => void;
-  setActiveTab: (tab: 'Product Information' | 'Additional Information' | 'Preview') => void;
+  setActiveTab: (
+    tab: "Product Information" | "Additional Information" | "Preview"
+  ) => void;
 }
 
 const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
@@ -18,191 +23,339 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
   onProductChange,
   images,
   onImagesChange,
-  setActiveTab
+  setActiveTab,
 }) => {
-  const handleInputChange = (field: keyof ProductData, value: string) => {
-    onProductChange({ ...product, [field]: value });
+  const formik = useFormik({
+    initialValues: product,
+    validationSchema: productInfoValidationSchema,
+    enableReinitialize: true,
+    onSubmit: (values) => {
+      onProductChange(values);
+      setActiveTab("Additional Information");
+    },
+  });
+
+  const handleFieldChange = (field: keyof ProductData, value: string) => {
+    formik.setFieldValue(field, value);
+    onProductChange({ ...formik.values, [field]: value });
+  };
+
+  const ErrorMessage = ({ name }: { name: string }) => {
+    const error = formik.errors[name as keyof typeof formik.errors];
+    const touched = formik.touched[name as keyof typeof formik.touched];
+
+    return error && touched ? (
+      <div className="flex items-center gap-1 text-red-500 text-xs mt-1">
+        <AlertCircle className="w-3 h-3" />
+        <span>{error}</span>
+      </div>
+    ) : null;
   };
 
   return (
-    <div className="grid grid-cols-12 gap-8">
-      <ImageUpload images={images} onImagesChange={onImagesChange} />
+    <form onSubmit={formik.handleSubmit}>
+      <div className="grid grid-cols-12 gap-8">
+        <div className="col-span-5 space-y-6">
+          <ImageUpload images={images} onImagesChange={onImagesChange} />
 
-      <div className="col-span-7">
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm mb-2">Price</label>
-            <Input
-              value={product.price}
-              onChange={(e) => handleInputChange('price', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="₦4,500.00"
-            />
+          <div className="bg-[#0f0f0f] p-6 rounded-lg border border-[#333]">
+            <h3 className="text-lg font-semibold mb-4 text-purple-400">
+              Availability & Release
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm mb-2 font-medium">
+                  Release date
+                </label>
+                <Input
+                  value={formik.values.releaseDate}
+                  onChange={(e) =>
+                    handleFieldChange("releaseDate", e.target.value)
+                  }
+                  className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                  type="date"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 font-medium">
+                  Supply count
+                </label>
+                <Input
+                  name="supplyCount"
+                  value={formik.values.supplyCount}
+                  onChange={(e) =>
+                    handleFieldChange("supplyCount", e.target.value)
+                  }
+                  onBlur={formik.handleBlur}
+                  className={`bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
+                    formik.errors.supplyCount && formik.touched.supplyCount
+                      ? "border-red-500"
+                      : ""
+                  }`}
+                  placeholder="40"
+                  type="number"
+                />
+                <ErrorMessage name="supplyCount" />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 font-medium">
+                  Supply text
+                </label>
+                <Input
+                  value={formik.values.supplyText}
+                  onChange={(e) =>
+                    handleFieldChange("supplyText", e.target.value)
+                  }
+                  className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                  placeholder="Limited supply"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 font-medium">
+                  Limited edition badge
+                </label>
+                <Input
+                  value={formik.values.badge}
+                  onChange={(e) => handleFieldChange("badge", e.target.value)}
+                  className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                  placeholder="Show badge"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 font-medium">
+                  Duration text
+                </label>
+                <Input
+                  value={formik.values.durationText}
+                  onChange={(e) =>
+                    handleFieldChange("durationText", e.target.value)
+                  }
+                  className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                  placeholder="Limited time"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 font-medium">
+                  Duration time
+                </label>
+                <Input
+                  value={formik.values.durationTime}
+                  onChange={(e) =>
+                    handleFieldChange("durationTime", e.target.value)
+                  }
+                  className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                  placeholder="30 Days, 20 Hours"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm mb-2">Product name</label>
-            <Input
-              value={product.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Name of Product"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Product type</label>
-            <Input
-              value={product.type}
-              onChange={(e) => handleInputChange('type', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Clothing"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Product description</label>
-            <Textarea
-              value={product.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 min-h-[120px]"
-              placeholder="Product description..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Sizes available</label>
-            <Input
-              value={product.sizes}
-              onChange={(e) => handleInputChange('sizes', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="S, M, L, XL"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Release date</label>
-            <Input
-              value={product.releaseDate}
-              onChange={(e) => handleInputChange('releaseDate', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              type="date"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Supply text</label>
-            <Input
-              value={product.supplyText}
-              onChange={(e) => handleInputChange('supplyText', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Limited supply"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Supply count</label>
-            <Input
-              value={product.supplyCount}
-              onChange={(e) => handleInputChange('supplyCount', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="40"
-              type="number"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Show limited edition badge?</label>
-            <Input
-              value={product.badge}
-              onChange={(e) => handleInputChange('badge', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Show badge"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Release duration text</label>
-            <Input
-              value={product.durationText}
-              onChange={(e) => handleInputChange('durationText', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Limited time"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Release duration time</label>
-            <Input
-              value={product.durationTime}
-              onChange={(e) => handleInputChange('durationTime', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="30 Days, 20 Hours"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Material/Composition</label>
-            <Input
-              value={product.material}
-              onChange={(e) => handleInputChange('material', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Cotton, Polyester"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Colour options</label>
-            <Input
-              value={product.colors}
-              onChange={(e) => handleInputChange('colors', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Yellow, Black, Magenta"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Target audience</label>
-            <Input
-              value={product.audience}
-              onChange={(e) => handleInputChange('audience', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Unisex"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Shipping options</label>
-            <Input
-              value={product.shipping}
-              onChange={(e) => handleInputChange('shipping', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="Domestic and international shipping"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2">Estimated shipping time</label>
-            <Input
-              value={product.shippingEstimate}
-              onChange={(e) => handleInputChange('shippingEstimate', e.target.value)}
-              className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
-              placeholder="2 Days within country, 10 Days international"
-            />
-          </div>
         </div>
-        <div className="flex justify-end mt-8 space-x-4">
 
-          <Button
-            onClick={() => setActiveTab("Additional Information")}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            Next
-          </Button>
+        <div className="col-span-7">
+          <div className="space-y-6">
+            <div className="bg-[#0f0f0f] p-6 rounded-lg border border-[#333]">
+              <h3 className="text-lg font-semibold mb-4 text-purple-400">
+                Basic Information
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Product name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="name"
+                    value={formik.values.name}
+                    onChange={(e) => handleFieldChange("name", e.target.value)}
+                    onBlur={formik.handleBlur}
+                    className={`bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
+                      formik.errors.name && formik.touched.name
+                        ? "border-red-500"
+                        : ""
+                    }`}
+                    placeholder="Name of Product"
+                  />
+                  <ErrorMessage name="name" />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Price <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="price"
+                    value={formik.values.price}
+                    onChange={(e) => handleFieldChange("price", e.target.value)}
+                    onBlur={formik.handleBlur}
+                    className={`bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
+                      formik.errors.price && formik.touched.price
+                        ? "border-red-500"
+                        : ""
+                    }`}
+                    placeholder="₦4,500.00"
+                  />
+                  <ErrorMessage name="price" />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm mb-2 font-medium">
+                  Product type <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  name="type"
+                  value={formik.values.type}
+                  onChange={(e) => handleFieldChange("type", e.target.value)}
+                  onBlur={formik.handleBlur}
+                  className={`bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
+                    formik.errors.type && formik.touched.type
+                      ? "border-red-500"
+                      : ""
+                  }`}
+                  placeholder="Clothing"
+                />
+                <ErrorMessage name="type" />
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm mb-2 font-medium">
+                  Product description <span className="text-red-500">*</span>
+                </label>
+                <Textarea
+                  name="description"
+                  value={formik.values.description}
+                  onChange={(e) =>
+                    handleFieldChange("description", e.target.value)
+                  }
+                  onBlur={formik.handleBlur}
+                  className={`bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 min-h-[120px] ${
+                    formik.errors.description && formik.touched.description
+                      ? "border-red-500"
+                      : ""
+                  }`}
+                  placeholder="Product description..."
+                />
+                <ErrorMessage name="description" />
+              </div>
+            </div>
+
+            <div className="bg-[#0f0f0f] p-6 rounded-lg border border-[#333]">
+              <h3 className="text-lg font-semibold mb-4 text-purple-400">
+                Product Details
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Sizes available
+                  </label>
+                  <Input
+                    value={formik.values.sizes}
+                    onChange={(e) => handleFieldChange("sizes", e.target.value)}
+                    className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                    placeholder="S, M, L, XL"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Colour options
+                  </label>
+                  <Input
+                    value={formik.values.colors}
+                    onChange={(e) =>
+                      handleFieldChange("colors", e.target.value)
+                    }
+                    className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                    placeholder="Yellow, Black, Magenta"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Material/Composition
+                  </label>
+                  <Input
+                    value={formik.values.material}
+                    onChange={(e) =>
+                      handleFieldChange("material", e.target.value)
+                    }
+                    className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                    placeholder="Cotton, Polyester"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Target audience
+                  </label>
+                  <Input
+                    value={formik.values.audience}
+                    onChange={(e) =>
+                      handleFieldChange("audience", e.target.value)
+                    }
+                    className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                    placeholder="Unisex"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#0f0f0f] p-6 rounded-lg border border-[#333]">
+              <h3 className="text-lg font-semibold mb-4 text-purple-400">
+                Shipping Information
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Shipping options
+                  </label>
+                  <Input
+                    value={formik.values.shipping}
+                    onChange={(e) =>
+                      handleFieldChange("shipping", e.target.value)
+                    }
+                    className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                    placeholder="Domestic and international shipping"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 font-medium">
+                    Estimated shipping time
+                  </label>
+                  <Input
+                    value={formik.values.shippingEstimate}
+                    onChange={(e) =>
+                      handleFieldChange("shippingEstimate", e.target.value)
+                    }
+                    className="bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                    placeholder="2 Days within country, 10 Days international"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-8">
+            <Button
+              type="submit"
+              className="bg-purple-600 hover:bg-purple-700 px-8">
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </form>
   );
-  };
+};
 
 export default ProductInfoForm;
