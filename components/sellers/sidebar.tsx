@@ -46,7 +46,7 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 px-4 py-2 mt-[106px]">
+      <nav className="flex-1 px-4 py-2 mt-5">
         <ul className="space-y-1">
           <li>
             <Link

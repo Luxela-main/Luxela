@@ -3,13 +3,11 @@ import path from "path";
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 import express from "express";
-import * as trpcExpress from "@trpc/server/adapters/express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { createTRPCContext } from "./trpc/context";
-import { createTRPCRouter } from "./trpc/trpc";  
-
+import { createTRPCRouter } from "./trpc/trpc";
 
 // Routers
 import { sellerRouter } from "./routers/seller";

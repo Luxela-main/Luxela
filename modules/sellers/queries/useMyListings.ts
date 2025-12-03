@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 export const useMyListings = () => {
   return (trpc.listing as any).getMyListings.useQuery(undefined, {
     staleTime: 120000,
+    retry: false,
   });
 };
 
