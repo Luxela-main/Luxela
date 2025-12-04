@@ -5,7 +5,7 @@ import React from 'react'
 
 const Homepage = () => {
   return (
-    <section className='py-8'>
+    <section className='py-8 layout'>
       <FeaturedBrands />
       <FeaturedCollection />
       <ExploreAllProducts />
