@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
 import { trpc } from "@/app/_trpc/client";
 import { httpBatchLink } from "@trpc/client";
+import { createClient } from "@/utils/supabase/client";
 import "react-toastify/dist/ReactToastify.css";
 
 // Dynamically import ToastContainer to prevent SSR issues
@@ -50,18 +51,13 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     links: [
       httpBatchLink({
         url: `${process.env.NEXT_PUBLIC_API_URL}/trpc`,
-        fetch(url, options) {
-          return fetch(url, {
-            ...options,
-            headers: {
-              ...options?.headers,
-              Authorization: `Bearer ${
-                typeof window !== "undefined"
-                  ? localStorage.getItem("sb-token") ?? ""
-                  : ""
-              }`,
-            },
-          });
+        async headers() {
+          const supabase = createClient();
+          const { data: { session } } = await supabase.auth.getSession();
+
+          return {
+            authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
+          };
         },
       }),
     ],

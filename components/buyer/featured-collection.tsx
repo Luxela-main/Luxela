@@ -114,7 +114,7 @@ const FeaturedCollection = () => {
 
   return (
     <div className="mt-16">
-      <section className="px-6">
+      <section className="">
         {/* Header */}
         <div className="md:flex items-center md:justify-between mb-8">
           <div>
@@ -163,13 +163,13 @@ const FeaturedCollection = () => {
         <div className="relative">
           <div
             ref={carouselRef}
-            className="flex overflow-x-auto gap-4 md:gap-6 scrollbar-hide snap-x snap-mandatory py-6"
+            className="flex items-center justify-center overflow-x-auto md:flex-wrap gap-4 md:gap-6 scrollbar-hide snap-x snap-mandatory py-6"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {COLLECTIONS.map((col, index) => (
               <div
                 key={col.id}
-                className="w-[85%] sm:w-[70%] md:w-[320px] lg:w-[360px] snap-start group"
+                className="w-[85%] sm:w-[70%] md:w-[300px] snap-start group"
                 onMouseEnter={() => setHoveredId(col.id)}
                 onMouseLeave={() => setHoveredId(null)}
               >

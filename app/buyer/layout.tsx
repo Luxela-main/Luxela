@@ -11,7 +11,7 @@ const BuyerPageLayout = ({ children }: { children: React.ReactNode }) => {
       <div className='sticky top-0 z-[100]'>
         <BuyerHeader />
       </div>
-      <div className='flex-1 relative z-10 layout'>
+      <div className='flex-1 relative z-10'>
         {children}
       </div>
       <BuyerFooter />
