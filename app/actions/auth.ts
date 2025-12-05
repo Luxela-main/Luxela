@@ -136,7 +136,7 @@ export async function signinWithGoogleAction() {
 export async function resendVerificationAction(email: string) {
   try {
     const supabase = await createClient();
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=signup`;
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
 
     const { error } = await supabase.auth.resend({
       type: "signup",

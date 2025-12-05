@@ -15,7 +15,8 @@ function AuthCallbackHandler() {
   const toast = useToast();
 
   useEffect(() => {
-    const isDev = process.env.NODE_ENV === "development";
+    const env = process.env.NODE_ENV?.trim().toLowerCase() || "development";
+    const isDev = env === "development";
 
     const parseFragmentToken = (): string | null => {
       if (typeof window === "undefined") return null;
@@ -70,7 +71,7 @@ function AuthCallbackHandler() {
         if (code) {
           const { data } = await supabase.auth.exchangeCodeForSession(code);
           if (code || !data?.session) {
-            if (isDev) toast.success("Signup successful!");
+            if (isDev) toast.success("Signin successful!");
             router.replace("/");
             return;
           }
