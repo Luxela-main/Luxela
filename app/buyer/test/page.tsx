@@ -193,7 +193,7 @@ export default function TRPCTestPage() {
               <p className="text-red-700">You need to be logged in to test these endpoints.</p>
               <p className="text-sm text-gray-600">Please sign in first, then return to this page.</p>
               <a
-                href="/auth/login"
+                href="/signin"
                 className="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
               >
                 Go to Login
