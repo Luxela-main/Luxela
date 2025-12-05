@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/trpc';
+import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
 import { db } from "../db";
 import { orders, sellers } from "../db/schema";
 import { and, eq } from "drizzle-orm";
@@ -17,7 +17,7 @@ const OrderFilterEnum = z.enum([
 export const salesRouter = createTRPCRouter({
   getAllSales: protectedProcedure
     .meta({ openapi: { method: "GET", path: "/sales" } })
-    .input(z.object({ status: OrderFilterEnum }).optional())
+    .input(z.object({ status: OrderFilterEnum.optional() }))
     .output(
       z.array(
         z.object({

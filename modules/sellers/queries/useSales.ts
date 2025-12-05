@@ -1,16 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
 import { sellersKeys } from "./queryKeys";
 import { toastSvc } from "@/services/toast";
-import { Sale } from "../model";
+import { Sale } from "../model/sales";
+import { getTRPCClient } from "@/lib/trpc";
 
 export const useSales = (status?: string) => {
   return useQuery<Sale[]>({
     queryKey: sellersKeys.sales(status),
     queryFn: async () => {
-      const params = status ? `?status=${encodeURIComponent(status)}` : "";
-      const response = await api.get(`/sales${params}`);
-      return response.data;
+      const client: any = getTRPCClient();
+      return await client.sales.getAllSales.query(status ? { status } : {});
     },
     staleTime: 1 * 60 * 1000, // 1 minute
   });
@@ -20,8 +19,8 @@ export const useSaleById = (orderId: string) => {
   return useQuery<Sale>({
     queryKey: [...sellersKeys.sales(), orderId],
     queryFn: async () => {
-      const response = await api.get(`/sales/${orderId}`);
-      return response.data;
+      const client: any = getTRPCClient();
+      return await client.sales.getSaleById.query({ orderId });
     },
     enabled: !!orderId,
   });
@@ -33,19 +32,28 @@ export const useUpdateOrderStatus = () => {
   return useMutation({
     mutationFn: async ({
       orderId,
-      status,
+      payoutStatus,
+      deliveryStatus,
+      orderStatus,
     }: {
       orderId: string;
-      status: string;
+      payoutStatus?: string;
+      deliveryStatus?: string;
+      orderStatus?: string;
     }) => {
-      const response = await api.put(`/sales/${orderId}/status`, { status });
-      return response.data;
+      const client: any = getTRPCClient();
+      return await client.sales.updateSale.mutate({
+        orderId,
+        payoutStatus,
+        deliveryStatus,
+        orderStatus,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.sales() });
       toastSvc.success("Order status updated successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toastSvc.apiError(error);
     },
   });
