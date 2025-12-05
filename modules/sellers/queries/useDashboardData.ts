@@ -1,24 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { getTRPCClient } from "@/lib/trpc";
 import { sellersKeys } from "./queryKeys";
-import { generateRevenueReport } from "./functions/generateRevenue";
-import { generateTopSellingProducts } from "./functions/generateTSP";
-import { DashboardData } from "../model";
-import { calculateStats } from "./functions/calculatestat";
+import { DashboardData } from "../model/dashboard";
+import { generateRevenueReport } from "../function/generateRevenue";
+import { generateTopSellingProducts } from "../function/generateTSP";
+import { calculateStats } from "../function/generateRevStat";
 
 export const useDashboardData = () => {
   return useQuery<DashboardData>({
     queryKey: sellersKeys.dashboard(),
     queryFn: async () => {
-      const [salesResponse, listingsResponse] = await Promise.all([
-        api.get("/sales"),
-        api.get("/listings/me"),
+      const client = getTRPCClient();
+
+      const [sales, listings] = await Promise.all([
+        (client as any).sales.getAllSales.query(),
+        (client as any).listing.getMyListings.query(),
       ]);
 
-      const sales = salesResponse.data || [];
-      const listings = listingsResponse.data || [];
-
-      const stats = calculateStats(sales, listings);
+      const stats = calculateStats(sales || [], listings || []);
       const revenueReport = generateRevenueReport(sales);
       const topSellingProducts = generateTopSellingProducts(listings, sales);
 

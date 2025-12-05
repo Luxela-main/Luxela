@@ -1,20 +1,13 @@
 "use client";
 
-import {
-  LayoutGrid,
-  PlusCircle,
-  ShoppingCart,
-  BarChart3,
-  Bell,
-  Clock,
-  FileText,
-  Headphones,
-  Settings,
-} from "lucide-react";
+import { LayoutGrid, PlusCircle, ShoppingCart, BarChart3 } from "lucide-react";
+import { Bell, Clock, FileText, Headphones, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Logo from "../../public/luxela.svg";
+import Logo from "@/public/luxela.svg";
+import { getCurrentUser } from "@/lib/utils/getCurrentUser";
+import { useState, useEffect } from "react";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -23,8 +16,22 @@ export default function Sidebar() {
     return pathname === path;
   };
 
+  const [user, setUser] = useState<{
+    fullName: string;
+    role: string;
+    avatarUrl: string;
+  } | null>(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      const data = await getCurrentUser();
+      setUser(data);
+    }
+    fetchUser();
+  }, []);
+
   return (
-    <div className="w-[272px] min-h-screen bg-[#121212] border-r border-[#222] flex flex-col">
+    <div className="w-[272px] min-h-screen bg-[#121212] border-r border-[#222] flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto">
       <div className="p-6">
         <Link
           href="/sellers/dashboard"
@@ -39,7 +46,7 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 px-4 py-2">
+      <nav className="flex-1 px-4 py-2 mt-5">
         <ul className="space-y-1">
           <li>
             <Link
@@ -154,37 +161,21 @@ export default function Sidebar() {
           </li>
         </ul>
 
-        <div className="mt-6 flex items-center gap-3 px-3 py-2 border-t border-[#222] pt-4">
-          <div className="relative">
+        {user && (
+          <div className="mt-6 flex items-center gap-3 px-3 py-2 border-t border-[#222] pt-4">
             <Image
-              src="/placeholder.svg?height=36&width=36"
+              src={user.avatarUrl}
               alt="User"
               width={36}
               height={36}
               className="rounded-full"
             />
+            <div>
+              <p className="text-sm font-medium">{user.fullName}</p>
+              <p className="text-xs text-gray-400">{user.role}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium">MomManor Daniel</p>
-            <p className="text-xs text-gray-400">Seller</p>
-          </div>
-          <button className="ml-auto">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M6 9L12 15L18 9"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
