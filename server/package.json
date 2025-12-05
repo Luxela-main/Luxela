@@ -5,7 +5,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "dev": "concurrently \"npm run dev:next\" \"npm run dev:server\"",
+    "dev": "concurrently -n NEXT,SERVER,DB -c cyan,green,magenta \"npm run dev:next\" \"npm run dev:server\" \"npx ts-node server/check-db.ts\"",
     "dev:next": "next dev",
     "dev:server": "ts-node server/index.ts",
     "db:generate": "drizzle-kit generate:pg",
@@ -54,7 +54,7 @@
     "typescript": "^5.6.3"
   },
   "engines": {
-    "node": "25.1.0",
+    "node": "24.x",
     "pnpm": "10.20.0",
     "npm": "11.6.2"
   }

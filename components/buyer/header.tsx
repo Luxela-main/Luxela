@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Bell, ChevronDown, Search, ShoppingCart } from "lucide-react";
 import Image from "next/image";
@@ -32,6 +32,13 @@ const NAVLINKS = [
   { name: "Brands", href: "/buyer/brands" },
   { name: "Collections", href: "/buyer/collections" },
 ];
+
+const USER_DROPDOWN = [
+  { name: "Track Order", href: "/buyer/track-order" },
+  { name: "Return and Refund", href: "/buyer/return-refund" },
+  { name: "Profile", href: "/buyer/profile" },
+  { name: "Help Centre", href: "/buyer/help-centre" },
+]
 
 
 const BuyerHeader = () => {
@@ -123,19 +130,18 @@ const BuyerHeader = () => {
               className="w-56 z-[101] bg-[#0E0E0E] border border-[#2B2B2B]"
             >
               <DropdownMenuGroup>
-                <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
-                  Track Order
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-[#2B2B2B]" />
-                <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
-                  Return and Refund
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-[#2B2B2B]" />
-                <DropdownMenuItem className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in">
-                  Help Centre
-                </DropdownMenuItem>
+                {USER_DROPDOWN.map((item) => (
+                  <React.Fragment key={item.name}>
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in"
+                    >
+                      <Link href={item.href}>{item.name}</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[#2B2B2B]" />
+                  </React.Fragment>
+                ))}
               </DropdownMenuGroup>
-              <DropdownMenuSeparator className="bg-[#2B2B2B]" />
 
               {/* Logout Confirmation */}
               <AlertDialog open={open} onOpenChange={setOpen}>

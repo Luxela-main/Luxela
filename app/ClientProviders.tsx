@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
-import { trpc, getTRPCClient } from "@/lib/trpc";
+import { trpc } from "@/app/_trpc/client";
+import { httpBatchLink } from "@trpc/client";
+import { createClient } from "@/utils/supabase/client";
 import "react-toastify/dist/ReactToastify.css";
 
 // Dynamically import ToastContainer to prevent SSR issues
@@ -16,37 +18,67 @@ const ToastContainer = dynamic(
   { ssr: false }
 );
 
-// Function to create a fresh query client
-function makeQueryClient() {
+// Create a fresh QueryClient
+function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,
+        retry: false,
       },
     },
   });
 }
 
-export default function ClientProviders({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [queryClient] = useState(() => makeQueryClient());
-  const [trpcClient] = useState(() => getTRPCClient());
+// Singleton QueryClient in browser
+let browserQueryClient: QueryClient | undefined;
+
+function getQueryClient() {
+  if (typeof window === "undefined") return createQueryClient();
+  if (!browserQueryClient) browserQueryClient = createQueryClient();
+  return browserQueryClient;
+}
+
+interface ClientProvidersProps {
+  children: ReactNode;
+}
+
+export default function ClientProviders({ children }: ClientProvidersProps) {
+  const queryClient = getQueryClient();
+
+  // Setup TRPC client
+  const trpcClient = trpc.createClient({
+    links: [
+      httpBatchLink({
+        url: `${process.env.NEXT_PUBLIC_API_URL}/trpc`,
+        async headers() {
+          const supabase = createClient();
+          const { data: { session } } = await supabase.auth.getSession();
+
+          return {
+            authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
+          };
+        },
+      }),
+    ],
+  });
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           {children}
+
+          {/* Single ToastContainer */}
           <ToastContainer
             position="top-right"
-            autoClose={3000}
+            autoClose={3000}      // default 3s
             hideProgressBar={false}
             newestOnTop
             closeOnClick
-            pauseOnHover
+            pauseOnHover={false}   // ensure autoClose works
+            pauseOnFocusLoss={false}
+            draggable
             theme="colored"
           />
         </AuthProvider>

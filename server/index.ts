@@ -19,6 +19,9 @@ import { reviewRouter } from "./routers/review";
 import { paymentRouter } from "./routers/payment";
 import { buyerRouter } from "./routers/buyer";
 
+// DB initializer
+import { keepAlive as initDB } from "./check-db";
+
 export const appRouter = createTRPCRouter({
   seller: sellerRouter,
   listing: listingRouter,
@@ -34,14 +37,11 @@ export type AppRouter = typeof appRouter;
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(express.json());
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:54321",
-      "https://theluxela.com",
-    ],
+    origin: ["http://localhost:3000", "http://localhost:5000", "https://theluxela.com"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -60,6 +60,7 @@ app.get("/", (_req, res) => res.send("Luxela API (Supabase Edition) running"));
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  await initDB();
 });

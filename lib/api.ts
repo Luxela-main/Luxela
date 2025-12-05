@@ -15,7 +15,6 @@ const getBaseURL = () => {
 
   const siteURL =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.RENDER_URL ||
     "http://localhost:3000";
 
   return siteURL.startsWith("http")
