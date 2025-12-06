@@ -34,8 +34,7 @@ export default function MyListings() {
       );
     }
 
-    // Filter listings based on search
-    const filteredListings = listings?.filter(listing => 
+    const filteredListings = listings?.filter((listing: any) => 
       listing.title.toLowerCase().includes(search.toLowerCase()) ||
       listing.category?.toLowerCase().includes(search.toLowerCase())
     ) || [];
@@ -94,7 +93,7 @@ export default function MyListings() {
             description="once you start add products, your products will show up here."
           />
         ) : (
-          filteredListings.map((listing, index) => (
+          filteredListings.map((listing: any, index: number) => (
             <div key={listing.id} className="border-b border-[#333]">
               <div className="grid grid-cols-6 gap-4 p-4 items-center">
                 <div className="flex items-center">
