@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getTRPCClient } from "@/lib/trpc";
+import { vanillaTrpc } from "@/lib/trpc";
 import { sellersKeys } from "./queryKeys";
 import { DashboardData } from "../model/dashboard";
 import { generateRevenueReport } from "../function/generateRevenue";
@@ -10,11 +10,11 @@ export const useDashboardData = () => {
   return useQuery<DashboardData>({
     queryKey: sellersKeys.dashboard(),
     queryFn: async () => {
-      const client = getTRPCClient();
+      const client = vanillaTrpc;
 
       const [sales, listings] = await Promise.all([
-        (client as any).sales.getAllSales.query(),
-        (client as any).listing.getMyListings.query(),
+        (client.sales as any).getAllSales.query(),
+        (client.listing as any).getMyListings.query(),
       ]);
 
       const stats = calculateStats(sales || [], listings || []);
