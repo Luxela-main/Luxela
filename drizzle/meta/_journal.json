@@ -36,6 +36,13 @@
       "when": 1762119494828,
       "tag": "0004_whole_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765035755176,
+      "tag": "0005_short_serpent_society",
+      "breakpoints": true
     }
   ]
 }
