@@ -11,14 +11,7 @@ import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import {
-  checkRateLimit,
-  getCached,
-  deleteCache,
-  // invalidateCache,
-  CacheKeys,
-  // RateLimits,
-} from "../lib/redis";
+import { checkRateLimit, getCached, deleteCache, CacheKeys } from "../lib/redis";
 import { getOrCreateSeller } from "./utils";
 
 
@@ -141,6 +134,10 @@ export const sellerRouter = createTRPCRouter({
           "voters_card",
           "national_id",
         ]),
+        bio: z.string().optional(),
+        storeDescription: z.string().optional(),
+        storeLogo: z.string().optional(),
+        storeBanner: z.string().optional(),
       })
     )
     .output(
