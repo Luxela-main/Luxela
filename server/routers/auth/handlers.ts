@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../../db/client";
 import { users } from '@/server/db/schema';
 import bcrypt from "bcryptjs";
-import { nanoid } from 'nanoid';
+import { nanoid } from 'nanoid'
 import { sql } from 'drizzle-orm';
 
 export async function signupHandler(req: Request, res: Response) {

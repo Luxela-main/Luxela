@@ -19,44 +19,8 @@ import {
   CacheKeys,
   // RateLimits,
 } from "../lib/redis";
+import { getOrCreateSeller } from "./utils";
 
-async function getOrCreateSeller(userId: string) {
-  try {
-    // Check if seller exists
-    const existingSeller = await db
-      .select()
-      .from(sellers)
-      .where(eq(sellers.userId, userId));
-
-    if (existingSeller.length > 0) {
-      return existingSeller[0];
-    }
-
-    // Create new seller
-    const sellerId = randomUUID();
-    await db.insert(sellers).values({
-      id: sellerId,
-      userId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    // Fetch newly created seller
-    const newSeller = await db
-      .select()
-      .from(sellers)
-      .where(eq(sellers.id, sellerId));
-
-    if (!newSeller[0]) {
-      throw new Error("Failed to create seller record");
-    }
-
-    return newSeller[0];
-  } catch (err: any) {
-    console.error("Error in getOrCreateSeller:", err);
-    throw new Error(`getOrCreateSeller failed: ${err?.message || err}`);
-  }
-}
 
 export const sellerRouter = createTRPCRouter({
   getProfile: protectedProcedure
@@ -225,12 +189,10 @@ export const sellerRouter = createTRPCRouter({
         } else {
           // Create new
           await db.insert(sellerBusiness).values({
+            ...input,
             id: randomUUID(),
             sellerId: seller.id,
-            ...input,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+          } as any);
         }
 
         // Invalidate cache
@@ -321,12 +283,10 @@ export const sellerRouter = createTRPCRouter({
             .where(eq(sellerShipping.sellerId, seller.id));
         } else {
           await db.insert(sellerShipping).values({
+            ...input,
             id: randomUUID(),
             sellerId: seller.id,
-            ...input,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+          } as any);
         }
 
         // Invalidate cache
@@ -420,12 +380,10 @@ export const sellerRouter = createTRPCRouter({
             .where(eq(sellerPayment.sellerId, seller.id));
         } else {
           await db.insert(sellerPayment).values({
+            ...input,
             id: randomUUID(),
             sellerId: seller.id,
-            ...input,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+          } as any);
         }
 
         // Invalidate cache
@@ -514,12 +472,10 @@ export const sellerRouter = createTRPCRouter({
             .where(eq(sellerAdditional.sellerId, seller.id));
         } else {
           await db.insert(sellerAdditional).values({
+            ...input,
             id: randomUUID(),
             sellerId: seller.id,
-            ...input,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
+          } as any);
         }
 
         // Invalidate cache
