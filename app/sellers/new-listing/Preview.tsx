@@ -8,12 +8,14 @@ interface PreviewProps {
   formData: ListingForm;
   handleSubmit: () => void;
   handleReset: () => void;
+  isSubmitting?: boolean;
 }
 
 const Preview: React.FC<PreviewProps> = ({
   formData,
   handleReset,
   handleSubmit,
+  isSubmitting = false,
 }) => {
   const { product, images } = formData;
   const [showSuccess, setShowSuccess] = useState(false);
@@ -132,8 +134,10 @@ const Preview: React.FC<PreviewProps> = ({
             </Button>
             <Button
               onClick={submitHandler}
-              className="bg-purple-600 hover:bg-purple-700">
-              Submit Listing
+              disabled={isSubmitting}
+              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? "Submitting..." : "Submit Listing"}
             </Button>
           </div>
         </div>

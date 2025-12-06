@@ -7,26 +7,24 @@ import { Button } from "@/components/ui/button";
 import { useSales } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ErrorState } from "@/components/sellers/ErrorState";
+import { getStatusFromTab } from "@/constants";
 
 export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
 
-  // TanStack Query hook for sales data
   const { 
     data: salesData, 
     isLoading, 
     error, 
     refetch 
-  } = useSales(activeTab === "All" ? undefined : activeTab.toLowerCase());
+  } = useSales(getStatusFromTab(activeTab));
 
-  // Show loading state
   if (isLoading) {
     return <LoadingState message="Loading sales data..." />;
   }
 
-  // Show error state
   if (error) {
     return (
       <ErrorState 
@@ -36,14 +34,12 @@ export default function Sales() {
     );
   }
 
-  // Fallback to empty array if no data
   const sales = salesData || [];
 
   const handleOrderClick = (orderId: string) => {
     setSelectedOrder(orderId);
   };
 
-  // Mock order detail for the selected order
   const orderDetail = selectedOrder ? {
     id: selectedOrder,
     customer: "John Doe",
@@ -63,7 +59,7 @@ export default function Sales() {
 
   const tabs = [
     "All",
-    "Not shipped",
+    "Processing",
     "Shipped",
     "In transit",
     "Delivered",

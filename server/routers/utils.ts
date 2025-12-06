@@ -30,8 +30,6 @@ export async function getOrCreateSeller(userId: string) {
     await db.insert(sellers).values({
       id: sellerId,
       userId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
 
     // Fetch newly created seller
