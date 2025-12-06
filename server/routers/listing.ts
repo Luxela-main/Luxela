@@ -5,6 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
+import { getOrCreateSeller } from "./utils";
+
 
 const SizesEnum = z.enum(["S", "M", "L", "XL", "XXL", "XXXL"]);
 const SupplyCapacityEnum = z.enum(["no_max", "limited"]);
@@ -107,16 +109,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        const seller = await getOrCreateSeller(userId);
 
         // if limited supply, quantity must be provided and > 0
         if (
@@ -197,16 +190,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        const seller = await getOrCreateSeller(userId);
 
         const [created] = await db
           .insert(listings)
@@ -244,16 +228,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        const seller = await getOrCreateSeller(userId);
 
         const rows = await db
           .select()
@@ -297,16 +272,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        const seller = await getOrCreateSeller(userId);
 
         const rows = await db
           .select({
@@ -368,16 +334,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        const seller = await getOrCreateSeller(userId);
 
         const owned = await db
           .select()
@@ -423,16 +380,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        const seller = await getOrCreateSeller(userId);
 
         const owned = await db
           .select()

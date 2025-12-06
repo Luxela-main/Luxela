@@ -89,6 +89,17 @@ const helper = {
 
     return parseFloat(formattedAmt);
   },
+   mapDaysToEtaEnum: (days?: string, minutes?: string): any => {
+    const dayNum = parseInt(days || "0");
+    const minNum = parseInt(minutes || "0");
+    const totalHours = dayNum * 24 + Math.ceil(minNum / 60);
+    
+    if (totalHours <= 48) return "48hrs";
+    if (totalHours <= 72) return "72hrs";
+    if (totalHours <= 120) return "5_working_days"; // ~5 days
+    
+    return "1week";
+  },
 };
 
 export default helper;

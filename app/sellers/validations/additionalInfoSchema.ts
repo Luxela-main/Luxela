@@ -4,8 +4,8 @@ export const additionalInformationsValidationSchema = Yup.object({
   materialComposition: Yup.string().min(
     2,
     "Material must be at least 2 characters"
-  ),
-  colorsAvailable: Yup.string().min(2, "Please enter at least one color"),
+  ).required("Material is required"),
+  colorsAvailable: Yup.string().min(2, "Please enter at least one color").required("Colors are required"),
   targetAudience: Yup.string().oneOf(
     ["male", "female", "unisex"],
     "Please select a target audience"

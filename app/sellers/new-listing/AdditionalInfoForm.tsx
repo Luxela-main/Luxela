@@ -17,6 +17,7 @@ interface AdditionalInfoFormProps {
   setActiveTab: (
     tab: "Product Information" | "Additional Information" | "Preview"
   ) => void;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
@@ -25,6 +26,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
   images,
   onImagesChange,
   setActiveTab,
+  onValidationChange,
 }) => {
   const formik = useFormik({
     initialValues: {
@@ -44,6 +46,12 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
       setActiveTab("Preview");
     },
   });
+
+  // Notify parent of validation state changes
+  React.useEffect(() => {
+    const isValid = formik.isValid && formik.dirty;
+    onValidationChange?.(isValid);
+  }, [formik.isValid, formik.dirty, onValidationChange]);
 
   const handleFieldChange = (field: keyof ProductData, value: string) => {
     formik.setFieldValue(field, value);
@@ -77,7 +85,6 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
 
       <div className="col-span-7">
         <div className="space-y-6">
-          {/* Product Specifications */}
           <div className="bg-[#0f0f0f] p-6 rounded-lg border border-[#333]">
             <h3 className="text-lg font-semibold mb-4 text-purple-400">
               Product Specifications
@@ -130,7 +137,6 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             </div>
           </div>
 
-          {/* Target Audience */}
           <div className="bg-[#0f0f0f] p-6 rounded-lg border border-[#333]">
             <h3 className="text-lg font-semibold mb-4 text-purple-400">
               Target Audience
@@ -155,7 +161,6 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             <ErrorMessage name="targetAudience" />
           </div>
 
-          {/* Shipping Information */}
           <div className="bg-[#0f0f0f] p-6 rounded-lg border border-[#333]">
             <h3 className="text-lg font-semibold mb-4 text-purple-400">
               Shipping Information
@@ -200,7 +205,6 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
                   Estimated shipping time
                 </label>
 
-                {/* Domestic Shipping */}
                 <div className="mb-6 bg-[#1a1a1a] p-4 rounded-lg">
                   <p className="text-sm text-purple-400 mb-3 font-medium">
                     Within country
@@ -247,7 +251,6 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
                   </div>
                 </div>
 
-                {/* International Shipping */}
                 <div className="bg-[#1a1a1a] p-4 rounded-lg">
                   <p className="text-sm text-purple-400 mb-3 font-medium">
                     International

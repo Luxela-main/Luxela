@@ -122,6 +122,10 @@ export const sellerBusiness = pgTable('seller_business', {
   socialMedia: text('social_media'),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   idType: idTypeEnum('id_type').notNull(),
+  bio: text('bio'),
+  storeDescription: text('store_description'),
+  storeLogo: text('store_logo'),
+  storeBanner: text('store_banner'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

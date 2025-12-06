@@ -16,6 +16,7 @@ interface ProductInfoFormProps {
   setActiveTab: (
     tab: "Product Information" | "Additional Information" | "Preview"
   ) => void;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
@@ -24,6 +25,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
   images,
   onImagesChange,
   setActiveTab,
+  onValidationChange,
 }) => {
   const formik = useFormik({
     initialValues: product,
@@ -34,6 +36,12 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
       setActiveTab("Additional Information");
     },
   });
+
+  // Notify parent of validation state changes
+  React.useEffect(() => {
+    const isValid = formik.isValid && formik.dirty;
+    onValidationChange?.(isValid);
+  }, [formik.isValid, formik.dirty, onValidationChange]);
 
   const handleFieldChange = (field: keyof ProductData, value: string) => {
     formik.setFieldValue(field, value);
@@ -209,18 +217,26 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
                 <label className="block text-sm mb-2 font-medium">
                   Product type <span className="text-red-500">*</span>
                 </label>
-                <Input
+                <select
                   name="type"
                   value={formik.values.type}
                   onChange={(e) => handleFieldChange("type", e.target.value)}
                   onBlur={formik.handleBlur}
-                  className={`bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
+                  className={`w-full bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 rounded-md px-3 py-2 text-white ${
                     formik.errors.type && formik.touched.type
                       ? "border-red-500"
                       : ""
                   }`}
-                  placeholder="Clothing"
-                />
+                >
+                  <option value="">Select a category</option>
+                  <option value="men_clothing">Men's Clothing</option>
+                  <option value="women_clothing">Women's Clothing</option>
+                  <option value="men_shoes">Men's Shoes</option>
+                  <option value="women_shoes">Women's Shoes</option>
+                  <option value="accessories">Accessories</option>
+                  <option value="merch">Merchandise</option>
+                  <option value="others">Others</option>
+                </select>
                 <ErrorMessage name="type" />
               </div>
 

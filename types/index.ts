@@ -26,9 +26,21 @@ export type ProductData = {
   internationalMinutes?: string;
 };
 
+export type CollectionItem = {
+  title: string;
+  priceCents: number;
+  currency: string;
+};
+
 export type ListingForm = {
+  listingType: "single" | "collection";
   images: File[];
   product: ProductData;
+  // Collection-specific fields
+  collectionTitle?: string;
+  collectionDescription?: string;
+  collectionItems?: CollectionItem[];
 };
 
 export type Tab = "Product Information" | "Additional Information" | "Preview";
+
