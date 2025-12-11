@@ -5,7 +5,7 @@ dotenv.config();
 
 export default defineConfig({
   out: "./drizzle",
-  dialect: "postgresql",
+  dialect: "postgresql", 
   schema: "./server/db/schema.ts",
 
   driver: "pglite",
