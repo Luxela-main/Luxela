@@ -25,7 +25,7 @@ export default function CTA() {
           </p>
 
           <Link
-            href="/signup"
+            href="/buyer"
             className="relative inline-flex items-center justify-center px-8 h-[48px] text-white font-medium rounded-[10px] bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] shadow-[0_0_25px_#8451E1]/30 transition-all duration-500 hover:shadow-[0_0_10px_#8451E1]/50 hover:-translate-y-[0.5px] animate-fade-slide-up [animation-delay:400ms]"
           >
             Shop Now

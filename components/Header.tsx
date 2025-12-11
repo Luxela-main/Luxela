@@ -47,7 +47,7 @@ export default function Header() {
             </p>
 
             <div className='grid grid-cols-2 gap-5 w-full h-12 max-w-[338px] mx-auto'>
-              <Link href={'/signin'} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] p-0.5">
+              <Link href={'/buyer'} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] p-0.5">
                 <div className='rounded-md w-full h-full flex items-center justify-center '>
                   <span>Shop Now</span>
                 </div>
