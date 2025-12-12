@@ -20,7 +20,7 @@ const gettingStarted: GettingStarted[] = [
       "Ready to go global? Join as an independent brand and get discovered by fashion lovers around the world.",
     image: "/images/gs1-432x349.png",
     cta: "Join as Seller",
-    href: "/signup/seller",
+    href: "/signup",
   },
   {
     title: "Sign Up as a Buyer",
@@ -28,7 +28,7 @@ const gettingStarted: GettingStarted[] = [
       "Love fashion? Create an account to discover unique styles and enjoy secure, borderless transactions with exclusive perks on every purchase.",
     image: "/images/gs2-432x349.png",
     cta: "Join as Buyer",
-    href: "/buyer",
+    href: "/signup",
   },
   {
     title: "Explore the Marketplace",
@@ -36,7 +36,7 @@ const gettingStarted: GettingStarted[] = [
       "Browse unique, verified pieces from your favorite local brands and discover one-of-a-kind fashion that connects you to creators around the world.",
     image: "/images/gs3-432x349.png",
     cta: "Start Exploring",
-    // href: "/marketplace",
+    href: "/buyer",
   },
 ];
 
