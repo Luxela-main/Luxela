@@ -54,3 +54,5 @@ export async function keepAlive() {
 }
 
 keepAlive();
+// Keep Node process alive forever
+process.stdin.resume();
