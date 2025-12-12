@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "packageManager": "pnpm@10.20.0",
   "scripts": {
-    "dev": "concurrently \"npm run dev:next\" \"npm run dev:server\" \"pnpm ts-node server/check-db.ts\"",
+    "dev": "concurrently -n NEXT,SERVER,DB -c cyan,green,magenta \"pnpm run dev:next\" \"pnpm run dev:server\" \"ts-node server/check-db.ts\"",
     "dev:next": "next dev",
     "dev:server": "ts-node server/index.ts",
     "build": "pnpm run build:server && next build",
@@ -123,7 +123,7 @@
     "baseline-browser-mapping": "^2.8.32",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.8",
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.1",
     "nodemon": "^3.1.11",
     "pnpm": "^10.24.0",
     "postcss": "^8.5.6",

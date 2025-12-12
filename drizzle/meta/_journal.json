@@ -43,6 +43,13 @@
       "when": 1765035755176,
       "tag": "0005_short_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1765477883230,
+      "tag": "20251211183122_brainy_magdalene",
+      "breakpoints": true
     }
   ]
 }
