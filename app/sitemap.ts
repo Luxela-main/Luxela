@@ -1,36 +1,47 @@
-//import { MetadataRoute } from "next";
-//import { db } from "@/server/db";
-//import { listings } from "@/server/db/schema";
+import { NextResponse } from "next/server";
+import { db } from "@/server/db";
+import { listings } from "@/server/db/schema";
 
-export const dynamic = "force-dynamic";
+export const GET = async () => {
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
 
-import { fetchAllProducts, fetchAllCategories, fetchAllBlogs } from "@/lib/data/sitemap";
-
-export default async function sitemap() {
-  const base = "https://theluxela.com";
-
-  const products = (await fetchAllProducts()).map((p: any) => ({
-    url: `${base}/product/${p.slug}`,
-    lastModified: p.updatedAt || new Date(),
-  }));
-
-  const categories = (await fetchAllCategories()).map((c: any) => ({
-    url: `${base}/category/${c.slug}`,
-    lastModified: new Date(),
-  }));
-
-  const blogs = (await fetchAllBlogs()).map((b: any) => ({
-    url: `${base}/blog/${b.slug}`,
-    lastModified: b.updatedAt || new Date(),
-  }));
-
-  return [
-    {
-      url: base,
-      lastModified: new Date(),
-    },
-    ...products,
-    ...categories,
-    ...blogs,
+  // Static pages
+  const staticUrls = [
+    `${SITE_URL}/`,
+    `${SITE_URL}/buyer/brands`,
+    `${SITE_URL}/buyer/collections`,
+    `${SITE_URL}/#about`,
   ];
-}
+
+  // Dynamic product pages
+  let productUrls: string[] = [];
+  try {
+    const rows = await db.select({ id: listings.id }).from(listings);
+    productUrls = rows.map((p) => `${SITE_URL}/buyer/product/${p.id}`);
+  } catch (err) {
+    console.error("Error fetching products for sitemap.xml:", err);
+  }
+
+  const allUrls = [...staticUrls, ...productUrls];
+
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${allUrls
+    .map(
+      (url) => `
+    <url>
+      <loc>${url}</loc>
+      <changefreq>weekly</changefreq>
+      <priority>0.8</priority>
+    </url>
+  `
+    )
+    .join("")}
+</urlset>`;
+
+  return new NextResponse(sitemapXml, {
+    headers: {
+      "Content-Type": "application/xml",
+    },
+  });
+};

@@ -1,9 +1,11 @@
 export const SITE = {
   name: "Luxela Fashion",
-  url: "https://luxela.com",
+  url: "https://theluxela.com",
   description:
     "Luxela Fashion offers premium, trendy, and affordable fashion pieces across Africa with fast delivery, flexible payment options, and premium quality.",
   defaultImage: "/luxela-banner.jpg",
+  locale: "en_US",   
+  twitter: "@LuxelaPlace",
   keywords: [
     "luxury fashion",
     "quality clothing",
