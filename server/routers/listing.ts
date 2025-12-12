@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { getOrCreateSeller } from "./utils";
+import { getSeller } from "./utils";
 
 
 const SizesEnum = z.enum(["S", "M", "L", "XL", "XXL", "XXXL"]);
@@ -109,7 +109,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         // if limited supply, quantity must be provided and > 0
         if (
@@ -190,7 +190,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const [created] = await db
           .insert(listings)
@@ -228,7 +228,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const rows = await db
           .select()
@@ -272,7 +272,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const rows = await db
           .select({
@@ -334,7 +334,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const owned = await db
           .select()
@@ -380,7 +380,7 @@ export const listingRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const owned = await db
           .select()
