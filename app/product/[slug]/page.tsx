@@ -8,7 +8,7 @@ async function getProduct(slug: string) {
     slug,
     price: 15000,
     inStock: true,
-    images: ["https://luxela.com/demo.jpg"],
+    images: ["https://theluxela.com/demo.jpg"],
     shortDescription: "A stylish and trendy outfit available at Luxela.",
     sku: "LX-12345",
   };

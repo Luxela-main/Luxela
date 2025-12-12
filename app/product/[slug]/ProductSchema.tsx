@@ -14,7 +14,7 @@ export function ProductSchema({ product }: { product: any }) {
       priceCurrency: "NGN",
       price: product.price,
       availability: product.inStock ? "InStock" : "OutOfStock",
-      url: `https://luxela.com/product/${product.slug}`,
+      url: `https://theluxela.com/product/${product.slug}`,
     },
   };
 
