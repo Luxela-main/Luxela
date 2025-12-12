@@ -7,6 +7,6 @@ export default function robots() {
         disallow: ["/cart", "/checkout", "/profile", "/admin"],
       },
     ],
-    sitemap: "https://luxela.com/sitemap.xml",
+    sitemap: "https://theluxela.com/sitemap.xml",
   };
 }

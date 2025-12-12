@@ -1,4 +1,3 @@
-// Adjust these imports based on your DB setup
 import { db } from "@/server/db"; 
 import { products, categories, blogs } from "@/server/db/schema";
 

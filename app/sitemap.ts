@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 import { fetchAllProducts, fetchAllCategories, fetchAllBlogs } from "@/lib/data/sitemap";
 
 export default async function sitemap() {
-  const base = "https://luxela.com";
+  const base = "https://theluxela.com";
 
   const products = (await fetchAllProducts()).map((p: any) => ({
     url: `${base}/product/${p.slug}`,
