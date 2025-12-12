@@ -411,7 +411,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
   const [sortBy, setSortBy] = useState("Sort by Price (Low to High)")
   const [showSortDropdown, setShowSortDropdown] = useState(false)
   const [visibleProducts, setVisibleProducts] = useState<number[]>([])
-  const [visibleCount, setVisibleCount] = useState(4)
+  const [visibleCount, setVisibleCount] = useState(12)
 
   // Update products when brandSlug changes
   useEffect(() => {
@@ -419,7 +419,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
       ? PRODUCTS.filter(product => product.brandSlug === brandSlug)
       : PRODUCTS
     setProducts(filtered)
-    setVisibleCount(4) // Reset visible count when brand changes
+    setVisibleCount(12) // Reset visible count when brand changes
   }, [brandSlug])
 
   // Animate products on load
