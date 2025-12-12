@@ -1,44 +1,36 @@
-import { MetadataRoute } from "next";
-import { db } from "@/server/db";
-import { listings } from "@/server/db/schema";
+//import { MetadataRoute } from "next";
+//import { db } from "@/server/db";
+//import { listings } from "@/server/db/schema";
 
 export const dynamic = "force-dynamic";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
+import { fetchAllProducts, fetchAllCategories, fetchAllBlogs } from "@/lib/data/sitemap";
 
-  let listingItems: { id: string; updatedAt: Date }[] = [];
+export default async function sitemap() {
+  const base = "https://luxela.com";
 
-  try {
-    const rows = await db
-      .select({
-        id: listings.id,
-        updatedAt: listings.updatedAt,
-      })
-      .from(listings);
+  const products = (await fetchAllProducts()).map((p: any) => ({
+    url: `${base}/product/${p.slug}`,
+    lastModified: p.updatedAt || new Date(),
+  }));
 
-    listingItems = rows.map((item) => ({
-      id: item.id,
-      updatedAt: new Date(item.updatedAt),
-    }));
-  } catch (error) {
-    console.error("Error querying listings for sitemap:", error);
-  }
+  const categories = (await fetchAllCategories()).map((c: any) => ({
+    url: `${base}/category/${c.slug}`,
+    lastModified: new Date(),
+  }));
 
-  const listingUrls = listingItems.map((product) => ({
-    url: `${SITE_URL}/product/${product.id}`,
-    lastModified: product.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
+  const blogs = (await fetchAllBlogs()).map((b: any) => ({
+    url: `${base}/blog/${b.slug}`,
+    lastModified: b.updatedAt || new Date(),
   }));
 
   return [
     {
-      url: SITE_URL,
+      url: base,
       lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
     },
-    ...listingUrls,
+    ...products,
+    ...categories,
+    ...blogs,
   ];
 }
