@@ -5,13 +5,50 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { spaceGrotesk } from "@/public/fonts";
 import ClientProviders from "./ClientProviders";
+import { SITE } from "@/lib/seo/config";
+import type { Metadata } from "next";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "";
+
+// Default metadata for all pages
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com"),
+  title: SITE.name,
+  description: SITE.description,
+  keywords: SITE.keywords,
+  alternates: {
+    canonical: SITE.url,
+  },
+  openGraph: {
+    title: SITE.name,
+    description: SITE.description,
+    url: SITE.url,
+    siteName: SITE.name,
+    locale: SITE.locale,
+    type: "website",
+    images: [
+      {
+        url: SITE.defaultImage,
+        width: 1200,
+        height: 630,
+        alt: SITE.name,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE.name,
+    description: SITE.description,
+    creator: SITE.twitter,
+    images: [SITE.defaultImage],
+  },
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Google Analytics */}
         {GA_ID && (
           <>
             <Script
