@@ -21,12 +21,12 @@ export const metadata: Metadata = {
   ),
 
   title: {
-    default: "Luxela Fashion",
-    template: "%s | Luxela",
+    default: "Luxela Fashion – African Trendy Clothing Store",
+    template: "%s | Luxela Fashion",
   },
 
   description:
-    "Trendy, premium, and affordable African fashion with fast delivery, flexible payments, and quality craftsmanship.",
+    "Shop trendy and affordable African fashion for men and women. Premium clothing, fast delivery, and flexible payments across Africa.",
 
   keywords: SITE.keywords,
 
@@ -35,9 +35,9 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: "Luxela Fashion",
+    title: "Luxela Fashion – African Trendy Clothing Store",
     description:
-      "Trendy, premium, and affordable African fashion with fast delivery and flexible payment options.",
+      "Shop trendy and affordable African fashion for men and women. Premium clothing, fast delivery, and flexible payments across Africa.",
     url: SITE.url,
     siteName: "Luxela Fashion",
     locale: SITE.locale,
@@ -47,16 +47,15 @@ export const metadata: Metadata = {
         url: SITE.defaultImage,
         width: 1200,
         height: 630,
-        alt: "Luxela Fashion – African Fashion Marketplace",
+        alt: "Luxela Fashion – African Trendy Clothing Store",
       },
     ],
   },
 
   twitter: {
-    card: "summary_large_image",
-    title: "Luxela Fashion",
+    card: "Luxela Fashion – African Trendy Clothing Store",
     description:
-      "Trendy, premium, and affordable African fashion with fast delivery and flexible payment options.",
+      "Shop trendy and affordable African fashion for men and women. Premium clothing, fast delivery, and flexible payments across Africa.",
     creator: SITE.twitter,
     images: [SITE.defaultImage],
   },
