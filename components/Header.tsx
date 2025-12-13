@@ -3,8 +3,11 @@ import { ClientOnly } from "./client-only";
 import Navbar from './Navbar'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useAuth } from "@/context/AuthContext";
 
 export default function Header() {
+    const { user } = useAuth();
+  
   return (
     <>
       <ClientOnly>
@@ -52,7 +55,9 @@ export default function Header() {
                   <span>Shop Now</span>
                 </div>
               </Link>
-              <Link href={'/signin'} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] p-0.5">
+              <Link
+            href={user ? "/sellers/dashboard" : "/signin"}
+              className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] p-0.5">
                 <div className='rounded-md w-full h-full bg-[#0E0E0E] flex items-center justify-center '>
                   <span>Sell</span>
                 </div>

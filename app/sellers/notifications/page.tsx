@@ -55,13 +55,15 @@ export default function Notifications() {
 
   return (
     <div className="p-6">
+      <div className="mb-6">
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
+          <SearchBar search={search} setSearch={setSearch} />
+        </div>
+      </div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Notification</h1>
           <p className="text-gray-400 mt-1">See all notification</p>
-        </div>
-        <div className="w-80">
-          <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>
 
@@ -77,7 +79,8 @@ export default function Notifications() {
               className={`flex items-center ${
                 activeTab === "All" ? "text-white" : "text-gray-400"
               }`}
-              onClick={() => setActiveTab("All")}>
+              onClick={() => setActiveTab("All")}
+            >
               <span>All</span>
               <span className="ml-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {notifications.filter((n: any) => !n.isRead).length}
@@ -87,7 +90,8 @@ export default function Notifications() {
               className={`flex items-center ${
                 activeTab === "Starred" ? "text-white" : "text-gray-400"
               }`}
-              onClick={() => setActiveTab("Starred")}>
+              onClick={() => setActiveTab("Starred")}
+            >
               <span>Starred</span>
               <span className="ml-1 bg-gray-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {notifications.filter((n: any) => n.isStarred).length}
@@ -97,7 +101,8 @@ export default function Notifications() {
           <div className="flex space-x-4">
             <button
               className="flex items-center text-gray-400 hover:text-white"
-              onClick={markAllAsRead}>
+              onClick={markAllAsRead}
+            >
               <span>Mark all as read</span>
               <svg
                 width="20"
@@ -105,7 +110,8 @@ export default function Notifications() {
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="ml-2">
+                className="ml-2"
+              >
                 <path
                   d="M20 6L9 17L4 12"
                   stroke="currentColor"
@@ -117,7 +123,8 @@ export default function Notifications() {
             </button>
             <button
               className="flex items-center text-red-500 hover:text-red-400"
-              onClick={() => {}}>
+              onClick={() => {}}
+            >
               <span>Delete all</span>
               <Trash className="h-4 w-4 ml-2" />
             </button>
@@ -128,12 +135,14 @@ export default function Notifications() {
           filteredNotifications.map((notification: any) => (
             <div
               key={notification.id}
-              className="flex items-center p-4 border-b border-[#333] hover:bg-[#222]">
+              className="flex items-center p-4 border-b border-[#333] hover:bg-[#222]"
+            >
               <div className="flex items-center w-full">
                 <div
                   className={`w-2 h-2 rounded-full mr-3 ${
                     notification.isRead ? "bg-transparent" : "bg-blue-500"
-                  }`}></div>
+                  }`}
+                ></div>
                 <input
                   type="checkbox"
                   className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
@@ -142,13 +151,15 @@ export default function Notifications() {
                   className={`mr-3 ${
                     notification.isStarred ? "text-yellow-500" : "text-gray-500"
                   }`}
-                  onClick={() => toggleStar(notification.id)}>
+                  onClick={() => toggleStar(notification.id)}
+                >
                   <Star className="h-4 w-4" />
                 </button>
                 <span
                   className={`${
                     notification.isRead ? "text-gray-400" : "text-white"
-                  }`}>
+                  }`}
+                >
                   {notification.message}
                 </span>
                 <span className="ml-auto text-sm text-gray-500">

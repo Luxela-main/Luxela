@@ -76,9 +76,12 @@ function SignInContent() {
         <div className="relative md:flex items-center justify-center p-10 hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
           <div className="relative z-10 max-w-md p-10 rounded-2xl border border-purple-500 backdrop-blur-md bg-black/30">
-            <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
+            <Link href={"/"}>
+              <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
+            </Link>
             <h2 className="text-3xl font-semibold mb-4">
-              Embrace The Future of <span className="text-purple-500">Fashion</span>
+              Embrace The Future of{" "}
+              <span className="text-purple-500">Fashion</span>
             </h2>
             <p className="text-zinc-300 text-sm leading-relaxed">
               We're reimagining what it means to shop and sell fashion globally.
@@ -91,7 +94,9 @@ function SignInContent() {
         {/* Right Side */}
         <div className="flex items-center justify-center p-8">
           <div className="w-full max-w-sm">
-            <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
+            <Link href={"/"}>
+              <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
+            </Link>
             <h2 className="text-2xl font-semibold">Welcome back</h2>
             <p className="text-sm text-zinc-400 mb-6">
               Enter your email and password to access your account
@@ -106,7 +111,9 @@ function SignInContent() {
                 <Form className="space-y-4">
                   {/* Email */}
                   <div>
-                    <Label htmlFor="email" className="mb-1">Email</Label>
+                    <Label htmlFor="email" className="mb-1">
+                      Email
+                    </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -117,12 +124,18 @@ function SignInContent() {
                         className={`pl-10 ${errors.email && touched.email ? "border-destructive" : ""}`}
                       />
                     </div>
-                    <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
+                    <ErrorMessage
+                      name="email"
+                      component="div"
+                      className="text-sm text-destructive mt-1"
+                    />
                   </div>
 
                   {/* Password */}
                   <div>
-                    <Label htmlFor="password" className="mb-1">Password</Label>
+                    <Label htmlFor="password" className="mb-1">
+                      Password
+                    </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -139,19 +152,36 @@ function SignInContent() {
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
-                    <ErrorMessage name="password" component="div" className="text-sm text-destructive mt-1" />
+                    <ErrorMessage
+                      name="password"
+                      component="div"
+                      className="text-sm text-destructive mt-1"
+                    />
                   </div>
 
                   {/* Remember & Forgot */}
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center">
-                      <input type="checkbox" id="rememberMe" className="mr-2 accent-purple-600" />
+                      <input
+                        type="checkbox"
+                        id="rememberMe"
+                        className="mr-2 accent-purple-600"
+                      />
                       <Label htmlFor="rememberMe">Remember me</Label>
                     </div>
-                    <Link href="/forgot-password" className="text-purple-400 hover:underline">Forgot password?</Link>
+                    <Link
+                      href="/forgot-password"
+                      className="text-purple-400 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
                   </div>
 
                   {/* Submit */}
@@ -200,7 +230,13 @@ function SignInContent() {
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]"><div className="text-white">Loading...</div></div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen bg-[#1a1a1a]">
+          <div className="text-white">Loading...</div>
+        </div>
+      }
+    >
       <SignInContent />
     </Suspense>
   );

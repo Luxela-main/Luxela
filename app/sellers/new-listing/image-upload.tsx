@@ -6,6 +6,8 @@ interface ImageUploadProps {
   onImagesChange: (images: File[]) => void;
 }
 
+
+""
 const ImageUpload: React.FC<ImageUploadProps> = ({ images, onImagesChange }) => {
   const handleMainUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

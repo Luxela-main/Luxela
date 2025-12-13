@@ -59,7 +59,11 @@ function SignUpContent() {
       const { email, password, role } = values;
 
       // Call server-side signup action
-      await authActions.signupAction(email, password, role as "buyer" | "seller");
+      await authActions.signupAction(
+        email,
+        password,
+        role as "buyer" | "seller"
+      );
 
       setUserEmail(email);
       setDialogOpen(true);
@@ -91,9 +95,12 @@ function SignUpContent() {
         <div className="relative md:flex items-center justify-center p-10 hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
           <div className="relative z-10 max-w-md p-10 rounded-2xl border border-purple-500 backdrop-blur-md bg-black/30">
-            <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
+            <Link href={"/"}>
+              <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
+            </Link>
             <h2 className="text-3xl font-semibold mb-4">
-              Embrace The Future of <span className="text-purple-500">Fashion</span>
+              Embrace The Future of{" "}
+              <span className="text-purple-500">Fashion</span>
             </h2>
             <p className="text-zinc-300 text-sm leading-relaxed">
               We're reimagining what it means to shop and sell fashion globally.
@@ -106,7 +113,9 @@ function SignUpContent() {
         {/* Right side */}
         <div className="flex items-center justify-center p-8">
           <div className="w-full max-w-sm">
-            <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
+            <Link href={"/"}>
+              <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
+            </Link>
             <h2 className="text-2xl font-semibold">Create your account</h2>
             <p className="text-sm text-zinc-400 mb-6">
               Enter your email and password to create your account
@@ -127,7 +136,9 @@ function SignUpContent() {
                 <Form className="space-y-4">
                   {/* Email */}
                   <div>
-                    <Label htmlFor="email" className="mb-1">Email</Label>
+                    <Label htmlFor="email" className="mb-1">
+                      Email
+                    </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -138,12 +149,18 @@ function SignUpContent() {
                         className={`pl-10 ${errors.email && touched.email ? "border-destructive" : ""}`}
                       />
                     </div>
-                    <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
+                    <ErrorMessage
+                      name="email"
+                      component="div"
+                      className="text-sm text-destructive mt-1"
+                    />
                   </div>
 
                   {/* Password */}
                   <div>
-                    <Label htmlFor="password" className="mb-1">Password</Label>
+                    <Label htmlFor="password" className="mb-1">
+                      Password
+                    </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -160,15 +177,25 @@ function SignUpContent() {
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
-                    <ErrorMessage name="password" component="div" className="text-sm text-destructive mt-1" />
+                    <ErrorMessage
+                      name="password"
+                      component="div"
+                      className="text-sm text-destructive mt-1"
+                    />
                   </div>
 
                   {/* Confirm Password */}
                   <div>
-                    <Label htmlFor="confirmPassword" className="mb-1">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword" className="mb-1">
+                      Confirm Password
+                    </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                       <Field
@@ -179,7 +206,11 @@ function SignUpContent() {
                         className={`pl-10 pr-10 ${errors.confirmPassword && touched.confirmPassword ? "border-destructive" : ""}`}
                       />
                     </div>
-                    <ErrorMessage name="confirmPassword" component="div" className="text-sm text-destructive mt-1" />
+                    <ErrorMessage
+                      name="confirmPassword"
+                      component="div"
+                      className="text-sm text-destructive mt-1"
+                    />
                   </div>
 
                   {/* Role */}
@@ -192,12 +223,18 @@ function SignUpContent() {
                         name="role"
                         className={`w-full mt-1 rounded-md border border-input px-10 py-2 text-sm ${errors.role && touched.role ? "border-destructive" : ""}`}
                       >
-                        <option value="" disabled>Select role</option>
+                        <option value="" disabled>
+                          Select role
+                        </option>
                         <option value="buyer">Buyer</option>
                         <option value="seller">Seller</option>
                       </Field>
                     </div>
-                    <ErrorMessage name="role" component="div" className="text-sm text-destructive mt-1" />
+                    <ErrorMessage
+                      name="role"
+                      component="div"
+                      className="text-sm text-destructive mt-1"
+                    />
                   </div>
 
                   {/* Terms */}
@@ -210,10 +247,16 @@ function SignUpContent() {
                     />
                     <Label htmlFor="agreeTerms">
                       I agree to all{" "}
-                      <a href="/terms" className="text-purple-400 underline">Terms and Conditions</a>
+                      <a href="/terms" className="text-purple-400 underline">
+                        Terms and Conditions
+                      </a>
                     </Label>
                   </div>
-                  <ErrorMessage name="agreeTerms" component="div" className="text-sm text-destructive" />
+                  <ErrorMessage
+                    name="agreeTerms"
+                    component="div"
+                    className="text-sm text-destructive"
+                  />
 
                   {/* Submit */}
                   <Button
@@ -260,7 +303,13 @@ function SignUpContent() {
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          Loading...
+        </div>
+      }
+    >
       <SignUpContent />
     </Suspense>
   );

@@ -194,9 +194,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: "About Us", route: "#about" },
-  { name: "Featured Brands", route: "#brands" },
-  { name: "How To?", route: "#how-to" },
+  { name: "About Us", route: "/" },
+  { name: "Featured Brands", route: "/buyer/brands" },
+  { name: "How To?", route: "/" },
 ];
 
 export default function client() {

@@ -24,12 +24,17 @@ const validationSchema = Yup.object({
 });
 
 export function ProfileSettings({ initialData }: ProfileSettingsProps) {
-  const [firstName, ...lastNameParts] = (initialData?.business?.fullName || "").split(" ");
+  const [firstName, ...lastNameParts] = (
+    initialData?.business?.fullName || ""
+  ).split(" ");
   const lastName = lastNameParts.join(" ");
+  const [images, setImages] = useState<File[]>([]);
 
   const utils = trpc.useUtils();
-  
-  const updateProfileMutation = (trpc.seller as any).updateSellerBusiness.useMutation({
+
+  const updateProfileMutation = (
+    trpc.seller as any
+  ).updateSellerBusiness.useMutation({
     onSuccess: () => {
       toastSvc.success("Profile updated successfully");
       (utils.seller as any).getProfile.invalidate();
@@ -58,7 +63,8 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
         // Preserve other required fields that are not in this form but required by backend
         brandName: initialData?.business?.brandName || "My Store", // Fallback if missing
         businessType: initialData?.business?.businessType || "individual",
-        businessAddress: initialData?.business?.businessAddress || "Not provided",
+        businessAddress:
+          initialData?.business?.businessAddress || "Not provided",
         country: initialData?.business?.country || "Nigeria",
         idType: initialData?.business?.idType || "national_id",
       });
@@ -77,7 +83,8 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
           <div>
             <Button
               variant="outline"
-              className="bg-[#222] border-[#333] hover:bg-[#333] hover:text-white mb-2">
+              className="bg-[#222] border-[#333] hover:bg-[#333] hover:text-white mb-2"
+            >
               Upload Photo
             </Button>
             <p className="text-xs text-gray-400">
@@ -86,6 +93,58 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
           </div>
         </div>
       </div>
+      {/* 
+    <div className="mb-6">
+  <div className="flex items-center mb-6">
+    <div className="w-20 h-20 bg-[#222] rounded-full mr-6 flex items-center justify-center overflow-hidden">
+      {images.length > 0 ? (
+        <img 
+          src={URL.createObjectURL(images[0])} 
+          alt="Profile" 
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <User className="h-10 w-10 text-gray-400" />
+      )}
+    </div>
+    <div>
+      <label htmlFor="profile-upload">
+        <Button
+          type="button"
+          variant="outline"
+          className="bg-[#222] border-[#333] hover:bg-[#333] hover:text-white mb-2 cursor-pointer"
+          onClick={() => document.getElementById('profile-upload')?.click()}
+        >
+          Upload Photo
+        </Button>
+      </label>
+      <input
+        id="profile-upload"
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files || []);
+          if (files.length > 0) {
+            setImages([files[0]]); // Only take first image for profile
+          }
+        }}
+      />
+      <p className="text-xs text-gray-400">
+        Recommended: 200x200px, Max 5MB
+      </p>
+      {images.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setImages([])}
+          className="text-xs text-red-400 hover:text-red-300 mt-1"
+        >
+          Remove photo
+        </button>
+      )}
+    </div>
+  </div>
+</div> */}
 
       <form onSubmit={formik.handleSubmit} className="space-y-6">
         <div className="grid grid-cols-2 gap-6">
@@ -97,11 +156,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-                formik.touched.firstName && formik.errors.firstName ? "border-red-500" : ""
+                formik.touched.firstName && formik.errors.firstName
+                  ? "border-red-500"
+                  : ""
               }`}
             />
             {formik.touched.firstName && formik.errors.firstName && (
-              <div className="text-red-500 text-xs mt-1">{formik.errors.firstName as string}</div>
+              <div className="text-red-500 text-xs mt-1">
+                {formik.errors.firstName as string}
+              </div>
             )}
           </div>
           <div>
@@ -112,11 +175,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-                formik.touched.lastName && formik.errors.lastName ? "border-red-500" : ""
+                formik.touched.lastName && formik.errors.lastName
+                  ? "border-red-500"
+                  : ""
               }`}
             />
             {formik.touched.lastName && formik.errors.lastName && (
-              <div className="text-red-500 text-xs mt-1">{formik.errors.lastName as string}</div>
+              <div className="text-red-500 text-xs mt-1">
+                {formik.errors.lastName as string}
+              </div>
             )}
           </div>
         </div>
@@ -129,11 +196,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
             className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-              formik.touched.email && formik.errors.email ? "border-red-500" : ""
+              formik.touched.email && formik.errors.email
+                ? "border-red-500"
+                : ""
             }`}
           />
           {formik.touched.email && formik.errors.email && (
-            <div className="text-red-500 text-xs mt-1">{formik.errors.email as string}</div>
+            <div className="text-red-500 text-xs mt-1">
+              {formik.errors.email as string}
+            </div>
           )}
         </div>
 
@@ -145,11 +216,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
             className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-              formik.touched.phone && formik.errors.phone ? "border-red-500" : ""
+              formik.touched.phone && formik.errors.phone
+                ? "border-red-500"
+                : ""
             }`}
           />
           {formik.touched.phone && formik.errors.phone && (
-            <div className="text-red-500 text-xs mt-1">{formik.errors.phone as string}</div>
+            <div className="text-red-500 text-xs mt-1">
+              {formik.errors.phone as string}
+            </div>
           )}
         </div>
 
@@ -166,8 +241,8 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
         </div>
 
         <div className="flex justify-end">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="bg-purple-600 hover:bg-purple-700"
             disabled={updateProfileMutation.isPending || !formik.isValid}
           >

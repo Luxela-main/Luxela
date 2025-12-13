@@ -10,14 +10,18 @@ export default function PendingOrders() {
 
   return (
     <div className="p-6">
+
+       <div className="mb-6">
+              <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
+                <SearchBar search={search} setSearch={setSearch} />
+              </div>
+            </div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Pending Orders</h1>
           <p className="text-gray-400 mt-1">View and manage all your pending orders in one place.</p>
         </div>
-        <div className="w-80">
-          <SearchBar search={search} setSearch={setSearch}/>
-        </div>
+    
       </div>
 
       <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
