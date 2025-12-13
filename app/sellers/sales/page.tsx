@@ -14,25 +14,25 @@ export default function Sales() {
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
 
-  const { 
-    data: salesData, 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data: salesData,
+    isLoading,
+    error,
+    refetch,
   } = useSales(getStatusFromTab(activeTab));
 
   if (isLoading) {
     return <LoadingState message="Loading sales data..." />;
   }
 
-  if (error) {
-    return (
-      <ErrorState 
-        message="Failed to load sales data. Please try again."
-        onRetry={() => refetch()}
-      />
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <ErrorState
+  //       message="Failed to load sales data. Please try again."
+  //       onRetry={() => refetch()}
+  //     />
+  //   );
+  // }
 
   const sales = salesData || [];
 
@@ -40,18 +40,20 @@ export default function Sales() {
     setSelectedOrder(orderId);
   };
 
-  const orderDetail = selectedOrder ? {
-    id: selectedOrder,
-    customer: "John Doe",
-    product: "Sample Product",
-    quantity: 1,
-    orderDate: new Date().toLocaleDateString(),
-    amount: "₦50,000",
-    paymentMethod: "Credit Card",
-    paymentStatus: "Paid",
-    shippingAddress: "123 Main St, Lagos, Nigeria",
-    estimatedDelivery: "2-3 business days"
-  } : null;
+  const orderDetail = selectedOrder
+    ? {
+        id: selectedOrder,
+        customer: "John Doe",
+        product: "Sample Product",
+        quantity: 1,
+        orderDate: new Date().toLocaleDateString(),
+        amount: "₦50,000",
+        paymentMethod: "Credit Card",
+        paymentStatus: "Paid",
+        shippingAddress: "123 Main St, Lagos, Nigeria",
+        estimatedDelivery: "2-3 business days",
+      }
+    : null;
 
   const closeOrderDetail = () => {
     setSelectedOrder(null);
@@ -68,38 +70,27 @@ export default function Sales() {
   ];
 
   return (
-    <div className="p-6 relative">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Sales</h1>
-          <p className="text-gray-400 mt-1">View and manage all your sales</p>
-        </div>
-        <div className="w-80">
+    <div className="p-6 relative max-w-full overflow-x-auto">
+      <div>
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>
 
-      <div className="flex justify-between mb-6">
-        <div className="flex space-x-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              className={`px-4 py-2 ${
-                activeTab === tab
-                  ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white"
-                  : "text-gray-400"
-              }`}
-              onClick={() => setActiveTab(tab)}>
-              {tab}
-            </button>
-          ))}
+      <div className="flex items-center justify-between mb-6">
+        <div className="max-lg:mt-8">
+          <h1 className="text-2xl font-semibold">Sales</h1>
+          <p className="text-gray-400 mt-1">View and manage all your sales</p>
         </div>
-        <div className="flex space-x-2">
-          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center">
+      </div>
+
+      <div className="relative">
+        <div className="absolute lg:right-0 flex space-x-2 text-sm flex-wrap md:flex-nowrap">
+          <button className="bg-[#1a1a1a] text-sm border border-[#333] text-white px-4 py- rounded-md flex items-center">
             <Filter className="h-4 w-4 mr-2" />
             <span>Filter</span>
           </button>
-          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center">
+          <button className="bg-[#1a1a1a] border text-sm border-[#333] text-white px-4 py-2 rounded-md flex items-center">
             <span>Sort by date</span>
             <svg
               width="20"
@@ -107,7 +98,8 @@ export default function Sales() {
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="ml-2">
+              className="ml-2"
+            >
               <path
                 d="M6 9L12 15L18 9"
                 stroke="currentColor"
@@ -117,13 +109,31 @@ export default function Sales() {
               />
             </svg>
           </button>
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+          <button className="bg-purple-600 text-sm text-white px-4 py-2 rounded-md">
             Export
           </button>
         </div>
       </div>
 
-      <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
+      <div className="flex justify-between mb-6 mt-20 overflow-x-auto">
+        <div className="flex space-x-2 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              className={`px-4 py-2 ${
+                activeTab === tab
+                  ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white"
+                  : "text-gray-400"
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
         <div className="grid grid-cols-9 gap-4 p-4 border-b border-[#333] text-gray-400 text-sm">
           <div className="flex items-center">
             <input
@@ -163,18 +173,24 @@ export default function Sales() {
                     order.payoutStatus === "paid"
                       ? "bg-green-100 text-green-800"
                       : order.payoutStatus === "processing"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-800"
-                  }`}>
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                  }`}
+                >
                   <span
                     className={`w-1.5 h-1.5 rounded-full mr-1 ${
                       order.payoutStatus === "paid"
                         ? "bg-green-600"
                         : order.payoutStatus === "processing"
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                    }`}></span>
-                  {order.payoutStatus === "paid" ? "Paid" : order.payoutStatus === "processing" ? "Processing" : "In Escrow"}
+                          ? "bg-yellow-600"
+                          : "bg-red-600"
+                    }`}
+                  ></span>
+                  {order.payoutStatus === "paid"
+                    ? "Paid"
+                    : order.payoutStatus === "processing"
+                      ? "Processing"
+                      : "In Escrow"}
                 </span>
               </div>
               <div>
@@ -183,22 +199,131 @@ export default function Sales() {
                     order.deliveryStatus === "delivered"
                       ? "bg-green-100 text-green-800"
                       : order.deliveryStatus === "in_transit"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-red-100 text-red-800"
-                  }`}>
-                  {order.deliveryStatus === "delivered" ? "Delivered" : order.deliveryStatus === "in_transit" ? "In Transit" : "Not Shipped"}
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {order.deliveryStatus === "delivered"
+                    ? "Delivered"
+                    : order.deliveryStatus === "in_transit"
+                      ? "In Transit"
+                      : "Not Shipped"}
                 </span>
               </div>
               <div>
                 <button
                   className="text-gray-400 hover:text-white"
-                  onClick={() => handleOrderClick(order.orderId)}>
+                  onClick={() => handleOrderClick(order.orderId)}
+                >
                   <MoreVertical className="h-5 w-5" />
                 </button>
               </div>
             </div>
           </div>
         ))}
+      </div> */}
+
+      <div className="bg-[#1a1a1a] rounded-lg overflow-x-auto">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] overflow-x-auto">
+            <thead>
+              <tr className="border-b font-light border-[#333] text-gray-400 text-sm">
+                <th className="p-4 text-left">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="font-light">Order ID</span>
+                  </div>
+                </th>
+                <th className="p-4 text-left font-light">Product</th>
+                <th className="p-4 text-left font-light">Customer</th>
+                <th className="p-4 text-left font-light">Order Date</th>
+                <th className="p-4 text-left font-light">Payment Method</th>
+                <th className="p-4 text-left font-light">Amount</th>
+                <th className="p-4 text-left font-light">Payout status</th>
+                <th className="p-4 text-left font-light">Delivery status</th>
+                <th className="p-4 text-left font-light">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sales.map((order, index) => (
+                <tr key={index} className="border-b border-[#333]">
+                  <td className="p-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span>ID: {order.orderId}</span>
+                    </div>
+                  </td>
+                  <td className="p-4">{order.product}</td>
+                  <td className="p-4">{order.customer}</td>
+                  <td className="p-4">
+                    {new Date(order.orderDate).toLocaleDateString()}
+                  </td>
+                  <td className="p-4">{order.paymentMethod}</td>
+                  <td className="p-4">
+                    ₦{((order.amountCents || 0) / 100).toLocaleString()}
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        order.payoutStatus === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : order.payoutStatus === "processing"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                          order.payoutStatus === "paid"
+                            ? "bg-green-600"
+                            : order.payoutStatus === "processing"
+                              ? "bg-yellow-600"
+                              : "bg-red-600"
+                        }`}
+                      ></span>
+                      {order.payoutStatus === "paid"
+                        ? "Paid"
+                        : order.payoutStatus === "processing"
+                          ? "Processing"
+                          : "In Escrow"}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        order.deliveryStatus === "delivered"
+                          ? "bg-green-100 text-green-800"
+                          : order.deliveryStatus === "in_transit"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {order.deliveryStatus === "delivered"
+                        ? "Delivered"
+                        : order.deliveryStatus === "in_transit"
+                          ? "In Transit"
+                          : "Not Shipped"}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <button
+                      className="text-gray-400 hover:text-white"
+                      onClick={() => handleOrderClick(order.orderId)}
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="flex justify-between items-center mt-6 text-sm">
@@ -223,7 +348,7 @@ export default function Sales() {
         </div>
       </div>
 
-        {selectedOrder && orderDetail && (
+      {selectedOrder && orderDetail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#1a1a1a] rounded-lg w-full max-w-2xl">
             <div className="p-6">
@@ -234,7 +359,8 @@ export default function Sales() {
                 </div>
                 <button
                   onClick={closeOrderDetail}
-                  className="text-gray-400 hover:text-white">
+                  className="text-gray-400 hover:text-white"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -312,7 +438,8 @@ export default function Sales() {
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="mr-2 text-gray-400">
+                        className="mr-2 text-gray-400"
+                      >
                         <rect
                           x="3"
                           y="4"
@@ -360,7 +487,8 @@ export default function Sales() {
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="text-gray-400">
+                        className="text-gray-400"
+                      >
                         <path
                           d="M6 9L12 15L18 9"
                           stroke="currentColor"
