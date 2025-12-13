@@ -8,20 +8,25 @@ import ClientProviders from "./ClientProviders";
 import { SITE } from "@/lib/seo/config";
 import type { Metadata } from "next";
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "";
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "";
 
+/**
+ * Global SEO metadata (applies to ALL pages)
+ * Google-safe title length
+ * No duplicate manual <meta> tags
+ */
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com"
   ),
 
   title: {
-    default:
-      "Luxela Fashion | Trendy African Fashion, Premium Clothing & Online Store",
-    template: "%s | Luxela Fashion",
+    default: "Luxela Fashion",
+    template: "%s | Luxela",
   },
 
-  description: SITE.description,
+  description:
+    "Trendy, premium, and affordable African fashion with fast delivery, flexible payments, and quality craftsmanship.",
 
   keywords: SITE.keywords,
 
@@ -30,11 +35,11 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title:
-      "Luxela Fashion | Trendy African Fashion, Premium Clothing & Online Store",
-    description: SITE.description,
+    title: "Luxela Fashion",
+    description:
+      "Trendy, premium, and affordable African fashion with fast delivery and flexible payment options.",
     url: SITE.url,
-    siteName: SITE.name,
+    siteName: "Luxela Fashion",
     locale: SITE.locale,
     type: "website",
     images: [
@@ -42,16 +47,16 @@ export const metadata: Metadata = {
         url: SITE.defaultImage,
         width: 1200,
         height: 630,
-        alt: SITE.name,
+        alt: "Luxela Fashion – African Fashion Marketplace",
       },
     ],
   },
 
   twitter: {
     card: "summary_large_image",
-    title:
-      "Luxela Fashion | Trendy African Fashion, Premium Clothing & Online Store",
-    description: SITE.description,
+    title: "Luxela Fashion",
+    description:
+      "Trendy, premium, and affordable African fashion with fast delivery and flexible payment options.",
     creator: SITE.twitter,
     images: [SITE.defaultImage],
   },
@@ -65,6 +70,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Google Analytics (GA4) */}
         {GA_ID && (
           <>
             <Script
