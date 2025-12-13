@@ -10,17 +10,28 @@ import type { Metadata } from "next";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "";
 
-// Default metadata for all pages
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com"),
-  title: SITE.name,
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com"
+  ),
+
+  title: {
+    default:
+      "Luxela Fashion | Trendy African Fashion, Premium Clothing & Online Store",
+    template: "%s | Luxela Fashion",
+  },
+
   description: SITE.description,
+
   keywords: SITE.keywords,
+
   alternates: {
     canonical: SITE.url,
   },
+
   openGraph: {
-    title: SITE.name,
+    title:
+      "Luxela Fashion | Trendy African Fashion, Premium Clothing & Online Store",
     description: SITE.description,
     url: SITE.url,
     siteName: SITE.name,
@@ -35,20 +46,25 @@ export const metadata: Metadata = {
       },
     ],
   },
+
   twitter: {
     card: "summary_large_image",
-    title: SITE.name,
+    title:
+      "Luxela Fashion | Trendy African Fashion, Premium Clothing & Online Store",
     description: SITE.description,
     creator: SITE.twitter,
     images: [SITE.defaultImage],
   },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <html lang="en">
       <head>
-        {/* Google Analytics */}
         {GA_ID && (
           <>
             <Script
@@ -63,13 +79,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   window.dataLayer = window.dataLayer || [];
                   function gtag(){dataLayer.push(arguments);}
                   gtag('js', new Date());
-                  gtag('config', '${GA_ID}', { page_path: window.location.pathname });
+                  gtag('config', '${GA_ID}', {
+                    page_path: window.location.pathname,
+                  });
                 `,
               }}
             />
           </>
         )}
       </head>
+
       <body suppressHydrationWarning className={spaceGrotesk.className}>
         <ClientProviders>{children}</ClientProviders>
         <Analytics />
