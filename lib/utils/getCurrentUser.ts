@@ -14,8 +14,8 @@ export async function getCurrentUser() {
   return {
     id: user.id,
     email: user.email,
-    fullName: user.user_metadata?.full_name || "Unknown User",
+    fullName: user.user_metadata?.full_name || "",
     role: user.user_metadata?.role || "buyer",
-    avatarUrl: user.user_metadata?.avatar_url || "/placeholder.svg",
+    avatarUrl: user.user_metadata?.avatar_url || "/avatar.svg",
   };
 }

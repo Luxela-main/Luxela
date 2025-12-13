@@ -15,10 +15,34 @@ import { usePathname } from "next/navigation";
 import Logo from "@/public/luxela.svg";
 import { getCurrentUser } from "@/lib/utils/getCurrentUser";
 import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+
+
+import { useToast } from "@/components/hooks/useToast";
+import { Loader } from "@/components/loader/loader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const toast = useToast();
+    const [open, setOpen] = useState(false);
+    const { logout } = useAuth();
+  
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -27,6 +51,8 @@ export default function Sidebar() {
   const [user, setUser] = useState<{
     fullName: string;
     role: string;
+    email: string | undefined;
+
     avatarUrl: string;
   } | null>(null);
 
@@ -38,26 +64,39 @@ export default function Sidebar() {
     fetchUser();
   }, []);
 
+
+    const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("You have been successfully logged out.");
+    } catch (err) {
+      toast.error("Something went wrong while logging out.");
+    } finally {
+      setOpen(false);
+    }
+  };
+
+
   return (
     <>
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg "
+        className="lg:hidden fixed top-4 left-4 ml-4 md:ml-6 z-50 p-2 rounded-lg shadow-lg "
       >
-        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        {isMobileMenuOpen ? <X size={24} className ="relative right-6" /> : <Menu size={24} />}
       </button>
 
       {/* Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       <div
-        className={`fixed md:static inset-y-0 left-0 bg-[#121212] border-r border-[#222] z-40 w-64 flex flex-col transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+        className={`fixed lg:static inset-y-0 left-0 overflow-y-auto bg-[#121212] border-r border-[#222] z-40 w-64 flex flex-col transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
         <div className="p-6">
           <Link
@@ -78,6 +117,9 @@ export default function Sidebar() {
           <ul className="space-y-1">
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/dashboard"
                 className={`flex items-center gap-3 px-3 py-2 rounded-md ${
                   isActive("/sellers/dashboard")
@@ -91,6 +133,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/new-listing"
                 className={`flex items-center gap-3 px-3 py-2 rounded-md ${
                   isActive("/sellers/new-listing")
@@ -104,6 +149,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/my-listings"
                 className={`flex items-center gap-3 px-3 py-2 rounded-md ${
                   isActive("/sellers/my-listings")
@@ -117,6 +165,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/sales"
                 className={`flex items-center gap-3 px-3 py-2 rounded-md ${
                   isActive("/sellers/sales")
@@ -130,6 +181,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/notifications"
                 className={`flex items-center gap-3 px-3 py-2 rounded-md ${
                   isActive("/sellers/notifications")
@@ -146,6 +200,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/pending-orders"
                 className={`flex items-center gap-3 px-3 py-2 rounded-md ${
                   isActive("/sellers/pending-orders")
@@ -162,6 +219,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/reports"
                 className={`flex items-center gap-3 px-3 py-2 rounded-md ${
                   isActive("/sellers/reports")
@@ -180,6 +240,9 @@ export default function Sidebar() {
           <ul className="space-y-1">
             <li>
               <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/support"
                 className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#1e1e1e]"
               >
@@ -189,6 +252,9 @@ export default function Sidebar() {
             </li>
             <li>
               <Link
+               onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                 href="/sellers/settings"
                 className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#1e1e1e]"
               >
@@ -198,22 +264,89 @@ export default function Sidebar() {
             </li>
           </ul>
 
+
           {user && (
-            <div className="mt-6 flex items-center gap-3 px-3 py-2 border-t border-[#222] pt-4">
-              <Image
-                src={user.avatarUrl}
-                alt="User"
-                width={36}
-                height={36}
-                className="rounded-full"
-              />
-              <div>
-                <p className="text-sm font-medium">{user.fullName}</p>
-                <p className="text-xs text-gray-400">{user.role}</p>
-              </div>
+            <div className="relative mt-10 border-t border-[#222]">
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="w-full flex items-center bg-stone-800/40 rounded-sm px-2 justify-between gap-3 py-2 hover:bg-stone-800/80 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={user.avatarUrl}
+                    alt="User"
+                    width={30}
+                    height={30}
+                    className="rounded-sm"
+                  />
+                  <div className="text-left">
+                    <p className="text-sm capitalize truncate max-w-28 font-medium text-white">
+                      {user.email}
+                    </p>
+                    <p className="text-xs capitalize text-gray-500">{user.role}</p>
+                  </div>
+                </div>
+                <ChevronDown
+                fill="#8451E1"
+                  size={20}
+                  className={`text-purple-700 transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isUserMenuOpen && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 mx-2 bg-black rounded-lg shadow-lg border border-purple-700/30 overflow-hidden">
+                  <Link
+                    href="sellers/profile"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="block px-4 py-3 text-sm text-gray-300 hover:bg-stone-700/30 transition-colors"
+                  >
+                    View Profile
+                  </Link>
+                 
+              
+
+                     <AlertDialog open={open} onOpenChange={setOpen}>
+                    <AlertDialogOverlay />
+                    <AlertDialogTrigger asChild>
+                      <button
+                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-stone-700/30 transition-colors border-t border-gray-700"
+                      >
+                        Log out
+                      </button>
+                    </AlertDialogTrigger>
+        
+                    <AlertDialogContent className="bg-[#0E0E0E] border border-[#2B2B2B] text-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-400">
+                          Are you sure you want to log out of your account?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-[#141414] text-white border border-[#2B2B2B] hover:bg-[#1a1a1a]">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleLogout}
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                        >
+                          Log out
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
             </div>
           )}
         </div>
+
+
+      
       </div>
     </>
   );
