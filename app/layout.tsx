@@ -53,7 +53,8 @@ export const metadata: Metadata = {
   },
 
   twitter: {
-    card: "Luxela Fashion – African Trendy Clothing Store",
+    card: "summary_large_image",
+    title: "Luxela Fashion – African Trendy Clothing Store",
     description:
       "Shop trendy and affordable African fashion for men and women. Premium clothing, fast delivery, and flexible payments across Africa.",
     creator: SITE.twitter,
