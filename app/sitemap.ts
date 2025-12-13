@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { MetadataRoute } from "next";
 import { db } from "@/server/db";
 import { listings } from "@/server/db/schema";
 
-export const GET = async () => {
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
+
+  let listingItems: { id: string; updatedAt: Date }[] = [];
 
   // Static pages
   const staticUrls = [
@@ -24,24 +28,11 @@ export const GET = async () => {
 
   const allUrls = [...staticUrls, ...productUrls];
 
-  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${allUrls
-    .map(
-      (url) => `
-    <url>
-      <loc>${url}</loc>
-      <changefreq>weekly</changefreq>
-      <priority>0.8</priority>
-    </url>
-  `
-    )
-    .join("")}
-</urlset>`;
+const sitemap: MetadataRoute.Sitemap = allUrls.map((url) => ({
+  url,
+  changeFrequency: "weekly",
+  priority: 0.8,
+}));
 
-  return new NextResponse(sitemapXml, {
-    headers: {
-      "Content-Type": "application/xml",
-    },
-  });
+return sitemap;
 };
