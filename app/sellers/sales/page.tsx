@@ -25,14 +25,14 @@ export default function Sales() {
     return <LoadingState message="Loading sales data..." />;
   }
 
-  // if (error) {
-  //   return (
-  //     <ErrorState
-  //       message="Failed to load sales data. Please try again."
-  //       onRetry={() => refetch()}
-  //     />
-  //   );
-  // }
+  if (error) {
+    return (
+      <ErrorState
+        message="Failed to load sales data. Please try again."
+        onRetry={() => refetch()}
+      />
+    );
+  }
 
   const sales = salesData || [];
 

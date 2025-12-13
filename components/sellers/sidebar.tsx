@@ -266,7 +266,7 @@ export default function Sidebar() {
 
 
           {user && (
-            <div className="relative mt-10 border-t border-[#222]">
+            <div className="relative mt-10">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="w-full flex items-center bg-stone-800/40 rounded-sm px-2 justify-between gap-3 py-2 hover:bg-stone-800/80 transition-colors"
@@ -296,24 +296,11 @@ export default function Sidebar() {
               {/* Dropdown Menu */}
               {isUserMenuOpen && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 mx-2 bg-black rounded-lg shadow-lg border border-purple-700/30 overflow-hidden">
-                  <Link
-                    href="sellers/profile"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="block px-4 py-3 text-sm text-gray-300 hover:bg-stone-700/30 transition-colors"
-                  >
-                    View Profile
-                  </Link>
-                 
-              
-
                      <AlertDialog open={open} onOpenChange={setOpen}>
                     <AlertDialogOverlay />
                     <AlertDialogTrigger asChild>
                       <button
-                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-stone-700/30 transition-colors border-t border-gray-700"
+                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-stone-700/30 transition-colors border-gray-700"
                       >
                         Log out
                       </button>
