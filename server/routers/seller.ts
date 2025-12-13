@@ -12,10 +12,61 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { checkRateLimit, getCached, deleteCache, CacheKeys } from "../lib/redis";
-import { getOrCreateSeller } from "./utils";
+import { getSeller } from "./utils";
 
 
 export const sellerRouter = createTRPCRouter({
+  createSellerProfile: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: "/seller/profile/create",
+        tags: ["Seller"],
+        summary: "Create seller profile",
+        description: "Create a new seller profile for the authenticated user.",
+      },
+    })
+    .input(z.void())
+    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const existingSeller = await db
+          .select()
+          .from(sellers)
+          .where(eq(sellers.userId, userId));
+
+        if (existingSeller.length > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Seller profile already exists",
+          });
+        }
+
+        await db.insert(sellers).values({
+          id: randomUUID(),
+          userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        return { success: true, message: "Seller profile created successfully" };
+      } catch (err: any) {
+        console.error("Error creating seller profile:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to create seller profile",
+        });
+      }
+    }),
+
   getProfile: protectedProcedure
     .meta({
       openapi: {
@@ -57,7 +108,7 @@ export const sellerRouter = createTRPCRouter({
           CacheKeys.sellerProfile(userId),
           async () => {
             // Get or create seller automatically
-            const seller = await getOrCreateSeller(userId);
+            const seller = await getSeller(userId);
 
             const [business, shipping, payment, additional] = await Promise.all([
               db
@@ -170,7 +221,7 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const existing = await db
           .select()
@@ -266,7 +317,7 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const existing = await db
           .select()
@@ -363,7 +414,7 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const existing = await db
           .select()
@@ -455,7 +506,7 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getOrCreateSeller(userId);
+        const seller = await getSeller(userId);
 
         const existing = await db
           .select()

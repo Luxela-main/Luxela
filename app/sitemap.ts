@@ -9,36 +9,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let listingItems: { id: string; updatedAt: Date }[] = [];
 
-  try {
-    const rows = await db
-      .select({
-        id: listings.id,
-        updatedAt: listings.updatedAt,
-      })
-      .from(listings);
+  // Static pages
+  const staticUrls = [
+    `${SITE_URL}/`,
+    `${SITE_URL}/buyer/brands`,
+    `${SITE_URL}/buyer/collections`,
+    `${SITE_URL}/#about`,
+  ];
 
-    listingItems = rows.map((item) => ({
-      id: item.id,
-      updatedAt: new Date(item.updatedAt),
-    }));
-  } catch (error) {
-    console.error("Error querying listings for sitemap:", error);
+  // Dynamic product pages
+  let productUrls: string[] = [];
+  try {
+    const rows = await db.select({ id: listings.id }).from(listings);
+    productUrls = rows.map((p) => `${SITE_URL}/buyer/product/${p.id}`);
+  } catch (err) {
+    console.error("Error fetching products for sitemap.xml:", err);
   }
 
-  const listingUrls = listingItems.map((product) => ({
-    url: `${SITE_URL}/product/${product.id}`,
-    lastModified: product.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+  const allUrls = [...staticUrls, ...productUrls];
 
-  return [
-    {
-      url: SITE_URL,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    ...listingUrls,
-  ];
-}
+const sitemap: MetadataRoute.Sitemap = allUrls.map((url) => ({
+  url,
+  changeFrequency: "weekly",
+  priority: 0.8,
+}));
+
+return sitemap;
+};

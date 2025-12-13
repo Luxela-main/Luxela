@@ -1,14 +1,12 @@
-import { MetadataRoute } from "next";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
-
-export default function robots(): MetadataRoute.Robots {
+export default function robots() {
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: "/admin/",
-    },
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/cart", "/checkout", "/profile", "/admin"],
+      },
+    ],
+    sitemap: "https://luxela.com/sitemap.xml",
   };
 }

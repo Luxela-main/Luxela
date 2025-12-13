@@ -311,6 +311,34 @@ export const reviews = pgTable('review', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+
+// --------------------------- PRODUCTS FOR SEO ---------------------------
+
+export const products = pgTable("products", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  price: text("price"),
+  updatedAt: timestamp("updated_at"),
+});
+
+// --------------------------- CATEGORIES FOR SEO ---------------------------
+
+export const categories = pgTable("categories", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+});
+
+// --------------------------- BLOGS FOR SEO ---------------------------
+
+export const blogs = pgTable("blogs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  updatedAt: timestamp("updated_at"),
+});
+
 // --------------------------- RELATIONS ---------------------------
 export const sellersRelations = relations(sellers, ({ one, many }) => ({
   business: one(sellerBusiness, { fields: [sellers.id], references: [sellerBusiness.sellerId] }),

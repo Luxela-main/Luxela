@@ -19,6 +19,7 @@ export const sql = postgres(connectionString, {
 
 const RETRIES = 10;
 const DELAY = 2000;
+const PING_INTERVAL = 30_000;
 
 async function waitForDB() {
   for (let attempt = 1; attempt <= RETRIES; attempt++) {
@@ -40,17 +41,25 @@ async function waitForDB() {
   }
 }
 
-// Keep the connection alive
-export async function keepAlive() {
-  await waitForDB();
-
-  console.log("🔄 Starting keep-alive pings every 30 seconds...");
-  setInterval(() => {
-    sql`SELECT 1`.catch(err => {
+// Function to ping DB every interval
+function startKeepAlive() {
+  console.log(`🔄 Starting keep-alive pings every ${PING_INTERVAL / 1000}s...`);
+  setInterval(async () => {
+    try {
+      await sql`SELECT 1`;
+      console.log(`💓 DB ping successful at ${new Date().toLocaleTimeString()}`);
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("❌ Lost DB connection:", message);
-    });
-  }, 30_000);
+      console.error(`❌ Lost DB connection at ${new Date().toLocaleTimeString()}:`, message);
+    }
+  }, PING_INTERVAL);
 }
 
-keepAlive();
+(async function main() {
+  await waitForDB();
+  startKeepAlive();
+})();
+
+export function keepAlive() {
+  startKeepAlive();
+}

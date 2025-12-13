@@ -74,42 +74,106 @@ function validateFile(base64Data: string, fileType: string): { valid: boolean; e
   return { valid: true };
 }
 
-async function getOrCreateBuyer(userId: string) {
+async function getBuyer(userId: string) {
   try {
     const existingBuyer = await db
       .select()
       .from(buyers)
       .where(eq(buyers.userId, userId));
 
-    if (existingBuyer.length > 0) {
-      return existingBuyer[0];
+    if (existingBuyer.length === 0) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Buyer profile not found. Please create a profile first.",
+      });
     }
 
-    const buyerId = randomUUID();
-    await db.insert(buyers).values({
-      id: buyerId,
-      userId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    const newBuyer = await db
-      .select()
-      .from(buyers)
-      .where(eq(buyers.id, buyerId));
-
-    if (!newBuyer[0]) {
-      throw new Error("Failed to create buyer record");
-    }
-
-    return newBuyer[0];
+    return existingBuyer[0];
   } catch (err: any) {
-    console.error("Error in getOrCreateBuyer:", err);
-    throw new Error(`getOrCreateBuyer failed: ${err?.message || err}`);
+    console.error("Error in getBuyer:", err);
+    if (err instanceof TRPCError) {
+      throw err;
+    }
+    throw new Error(`getBuyer failed: ${err?.message || err}`);
   }
 }
 
 export const buyerRouter = createTRPCRouter({
+  createBuyerProfile: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: "/buyer/profile",
+        tags: ["Buyer - Account"],
+        summary: "Create buyer profile",
+        description: "Create a new buyer profile and account details",
+      },
+    })
+    .input(
+      z.object({
+        username: z.string().min(3).max(100),
+        fullName: z.string().min(1),
+        dateOfBirth: z.date().optional(),
+        phoneNumber: z.string().optional(),
+        country: z.string(),
+        state: z.string(),
+      })
+    )
+    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const existingBuyer = await db
+          .select()
+          .from(buyers)
+          .where(eq(buyers.userId, userId));
+
+        if (existingBuyer.length > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Buyer profile already exists",
+          });
+        }
+
+        const buyerId = randomUUID();
+        await db.insert(buyers).values({
+          id: buyerId,
+          userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        await db.insert(buyerAccountDetails).values({
+          id: randomUUID(),
+          buyerId: buyerId,
+          username: input.username,
+          fullName: input.fullName,
+          email: ctx.user?.email || "",
+          country: input.country,
+          state: input.state,
+          dateOfBirth: input.dateOfBirth || null,
+          phoneNumber: input.phoneNumber || null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        return { success: true, message: "Buyer profile created successfully" };
+      } catch (err: any) {
+        console.error("Error creating buyer profile:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to create buyer profile",
+        });
+      }
+    }),
+
   // ============ ACCOUNT DETAILS ============
 
   getAccountDetails: protectedProcedure
@@ -155,7 +219,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const [accountDetails, billingAddress] = await Promise.all([
           db
@@ -242,7 +306,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const existing = await db
           .select()
@@ -328,7 +392,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const buffer = Buffer.from(input.base64Data, "base64");
         const timestamp = Date.now();
@@ -410,7 +474,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
         const offset = (input.page - 1) * input.limit;
 
         const [addresses, totalResult] = await Promise.all([
@@ -483,7 +547,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
         const addressId = randomUUID();
 
         await db.transaction(async (tx) => {
@@ -542,7 +606,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const address = await db
           .select()
@@ -609,7 +673,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const address = await db
           .select()
@@ -683,7 +747,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
         const offset = (input.page - 1) * input.limit;
 
         const [favorites, totalResult] = await Promise.all([
@@ -753,7 +817,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const existing = await db
           .select()
@@ -808,7 +872,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const favorite = await db
           .select()
@@ -857,7 +921,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const favorite = await db
           .select()
@@ -929,7 +993,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
         const offset = (input.page - 1) * input.limit;
 
         const status = input?.status ?? "all";
@@ -1031,7 +1095,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         const order = await db
           .select()
@@ -1116,7 +1180,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
         const offset = (input.page - 1) * input.limit;
 
         const [results, totalResult] = await Promise.all([
@@ -1205,7 +1269,7 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getOrCreateBuyer(userId);
+        const buyer = await getBuyer(userId);
 
         // Fetch all orders for the buyer
         const allOrders = await db
