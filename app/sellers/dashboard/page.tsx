@@ -26,8 +26,8 @@ function Dashboard() {
   // }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="pt-16 px-6 md:pt-0">
+      <div className="flex lg:items-center flex-col max-lg:gap-4 lg:flex-row justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-gray-400 mt-1">
