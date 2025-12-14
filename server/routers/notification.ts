@@ -1,14 +1,12 @@
 import {
   createTRPCRouter,
   protectedProcedure,
-  publicProcedure,
 } from "../trpc/trpc";
 import { db } from "../db";
 import { notifications, sellers } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { randomUUID } from "crypto";
 
 async function ensureSeller(userId: string) {
   const seller = await db
@@ -119,11 +117,24 @@ export const notificationRouter = createTRPCRouter({
     })
     .input(z.object({ notificationId: z.string().uuid() }))
     .output(z.object({ success: z.literal(true) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not logged in",
+        });
+      const seller = await ensureSeller(userId);
+
       await db
         .update(notifications)
         .set({ isRead: true })
-        .where(eq(notifications.id, input.notificationId));
+        .where(
+          and(
+            eq(notifications.id, input.notificationId),
+            eq(notifications.sellerId, seller.id)
+          )
+        );
 
       return { success: true };
     }),
@@ -172,11 +183,24 @@ export const notificationRouter = createTRPCRouter({
     })
     .input(z.object({ notificationId: z.string().uuid() }))
     .output(z.object({ success: z.literal(true) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not logged in",
+        });
+      const seller = await ensureSeller(userId);
+
       const [existing] = await db
         .select({ isStarred: notifications.isStarred })
         .from(notifications)
-        .where(eq(notifications.id, input.notificationId));
+        .where(
+          and(
+            eq(notifications.id, input.notificationId),
+            eq(notifications.sellerId, seller.id)
+          )
+        );
 
       if (!existing) {
         throw new TRPCError({
