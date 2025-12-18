@@ -3,7 +3,7 @@ import { db } from "../../db/client";
 import { users } from "@/server/db/schema";
 import { createClient } from "@supabase/supabase-js";
 import { eq } from "drizzle-orm";
-import { supabaseAdmin } from "@/server/utils/admin";
+import { supabaseAdmin } from "@/server/utils/supabase/admin";
 
 const supabaseAuth = createClient(
   process.env.SUPABASE_URL!,
