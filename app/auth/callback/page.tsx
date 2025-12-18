@@ -14,8 +14,8 @@ function AuthCallbackHandler() {
   const isDev = process.env.NODE_ENV === "development";
 
   const getUserFromSession = (session: any) => session?.user ?? null;
-  const getRoleFromUser = (user: any): "buyer" | "seller" =>
-    user?.user_metadata?.role === "seller" ? "seller" : "buyer";
+  const getRoleFromUser = (user: any): "buyer" | "seller" | null =>
+    user?.user_metadata?.role || null;
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -32,7 +32,11 @@ function AuthCallbackHandler() {
             const user = getUserFromSession(data.session);
             const role = getRoleFromUser(user);
             if (isDev) toast.success("Signin successful!");
-            router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
+            if (role) {
+              router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+            } else {
+              router.replace("/dashboard");
+            }
             return;
           } else {
             router.replace("/signin?error=exchange_failed");
@@ -49,14 +53,22 @@ function AuthCallbackHandler() {
           const user = getUserFromSession(data.session);
           const role = getRoleFromUser(user);
           toast.success("Signup verified successfully.");
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
+          if (role) {
+            router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+          } else {
+            router.replace("/dashboard");
+          }
           return;
         }
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const role = getRoleFromUser(session.user);
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
+          if (role) {
+            router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+          } else {
+            router.replace("/dashboard");
+          }
           return;
         }
 
