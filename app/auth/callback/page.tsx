@@ -39,7 +39,7 @@ function AuthCallbackHandler() {
             }
             return;
           } else {
-            router.replace("/signin?error=exchange_failed");
+            router.replace("/dashboard");
             return;
           }
         }
