@@ -27,16 +27,17 @@ function AuthCallbackHandler() {
         if (isDev) console.log("Auth callback params:", { code, type, tokenHash });
 
         if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error || !data.session) {
-            router.replace("/signin?error=oauth_failed");
+          const { data } = await supabase.auth.exchangeCodeForSession(code);
+          if (data?.session) {
+            const user = getUserFromSession(data.session);
+            const role = getRoleFromUser(user);
+            if (isDev) toast.success("Signin successful!");
+            router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
+            return;
+          } else {
+            router.replace("/signin?error=exchange_failed");
             return;
           }
-          const user = getUserFromSession(data.session);
-          const role = getRoleFromUser(user);
-          toast.success("Signed in successfully.");
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
-          return;
         }
 
         if (type === "signup" && tokenHash) {
@@ -68,7 +69,7 @@ function AuthCallbackHandler() {
     };
 
     handleCallback();
-  }, [router, searchParams, supabase, toast, isDev]);
+  }, []);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black">

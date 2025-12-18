@@ -103,7 +103,7 @@ export const useSignin = () => {
       queryClient.invalidateQueries({ queryKey: ["auth"] });
 
       const role = data?.user?.user_metadata?.role || "buyer";
-      router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/dashboard");
+      router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
     },
   });
 };
