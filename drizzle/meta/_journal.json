@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1758118033733,
-      "tag": "0000_slow_malcolm_colcord",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1760796656503,
-      "tag": "0001_past_phil_sheldon",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1760798832496,
-      "tag": "0002_chief_crusher_hogan",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1762096743353,
-      "tag": "0003_fine_cyclops",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1762119494828,
-      "tag": "0004_whole_nicolaos",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1765035755176,
-      "tag": "0005_short_serpent_society",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1765477883230,
-      "tag": "20251211183122_brainy_magdalene",
+      "when": 1766018720688,
+      "tag": "0000_strange_sandman",
       "breakpoints": true
     }
   ]

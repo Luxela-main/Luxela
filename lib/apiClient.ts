@@ -4,7 +4,6 @@ import { toastSvc } from "@/services/toast";
 const defaultOptions: DefaultOptions = {
   queries: {
     retry: false,
-    // @ts-expect-error react-query v5 types are strict
     onError: (error: any) => toastSvc.apiError(error),
   },
   mutations: {

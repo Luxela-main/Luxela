@@ -102,13 +102,16 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     checkoutMutation.mutate(data);
   };
 
+  const normalizedError: Error | null =
+  error instanceof Error ? error : null;
+
   const value: CartContextType = {
     cart,
     items,
     discount,
     isLoading,
     isError,
-    error,
+    error: normalizedError,
     addToCart,
     updateQuantity,
     removeItem,

@@ -4,7 +4,7 @@
 import Image from "next/image"
 import { useState } from "react"
 import { ShoppingCart, Heart, ChevronRight, MoreHorizontal } from "lucide-react"
-import { motion } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Separator } from "@/components/ui/separator"
 import { RatingItem } from "@/components/rating-item"
@@ -120,6 +120,7 @@ export default function Item() {
             {/* Main image */}
             <div className="col-span-1">
               <div className="bg-[#0f0f10] rounded-2xl border border-neutral-800 p-6 flex items-center justify-center">
+                <AnimatePresence mode="wait">
                 <motion.div
                   key={mainImage}
                   initial={{ opacity: 0, scale: 0.98 }}
@@ -135,6 +136,7 @@ export default function Item() {
                     className="object-cover rounded-[8px] max-h-[520px] w-full"
                   />
                 </motion.div>
+                </AnimatePresence>
               </div>
 
               {/* mobile thumbnail row */}

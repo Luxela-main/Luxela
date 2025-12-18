@@ -1,33 +1,11 @@
-import { defineConfig } from "drizzle-kit";
-import dotenv from "dotenv";
-
-dotenv.config();
+import 'dotenv/config';
+import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  out: "./drizzle",
-  dialect: "postgresql", 
-  schema: "./server/db/schema.ts",
-
-  driver: "pglite",
+  out: './drizzle',
+  schema: './server/db/schema.ts',
+  dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-
-  extensionsFilters: ["postgis"],
-  schemaFilter: "public",
-  tablesFilter: "*",
-
-  introspect: {
-    casing: "camel",
-  },
-
-  migrations: {
-    prefix: "timestamp",
-    table: "__drizzle_migrations__",
-    schema: "public",
-  },
-
-  breakpoints: true,
-  strict: true,
-  verbose: true,
 });

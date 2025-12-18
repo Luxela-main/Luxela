@@ -5,6 +5,7 @@
     "lib": [
       "dom",
       "dom.iterable",
+      "es2022",
       "esnext"
     ],
     "allowJs": true,
@@ -20,12 +21,9 @@
     "outDir": "dist",
     "incremental": true,
     "types": [
-      "node",
-      "next",
-      "react",
-      "react-dom"
+      "node"
     ],
-    "moduleResolution":"NodeNext",
+    "moduleResolution": "NodeNext",
     "plugins": [
       {
         "name": "next"
@@ -45,7 +43,6 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    ".next"
+    "node_modules"
   ]
 }

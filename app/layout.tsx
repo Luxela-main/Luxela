@@ -10,30 +10,31 @@ import type { Metadata } from "next";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "";
 
-/**
- * Global SEO metadata (applies to ALL pages)
- * Google-safe title length
- * No duplicate manual <meta> tags
- */
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com"
   ),
-
   title: {
     default: "Luxela Fashion – African Trendy Clothing Store",
     template: "%s | Luxela Fashion",
   },
-
   description:
     "Shop trendy and affordable African fashion for men and women. Premium clothing, fast delivery, and flexible payments across Africa.",
-
   keywords: SITE.keywords,
-
   alternates: {
     canonical: SITE.url,
   },
-
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     title: "Luxela Fashion – African Trendy Clothing Store",
     description:
@@ -51,7 +52,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-
   twitter: {
     card: "summary_large_image",
     title: "Luxela Fashion – African Trendy Clothing Store",
@@ -60,13 +60,14 @@ export const metadata: Metadata = {
     creator: SITE.twitter,
     images: [SITE.defaultImage],
   },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -85,14 +86,17 @@ export default function RootLayout({
                   window.dataLayer = window.dataLayer || [];
                   function gtag(){dataLayer.push(arguments);}
                   gtag('js', new Date());
-                  gtag('config', '${GA_ID}', {
-                    page_path: window.location.pathname,
-                  });
+                  gtag('config', '${GA_ID}', { page_path: window.location.pathname });
                 `,
               }}
             />
           </>
         )}
+        {/* Robots meta for search engines */}
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={SITE.url} />
+        {/* Sitemap reference */}
+        <link rel="sitemap" type="application/xml" href={`${SITE.url}/sitemap.xml`} />
       </head>
 
       <body suppressHydrationWarning className={spaceGrotesk.className}>

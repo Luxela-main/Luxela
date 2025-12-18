@@ -1,140 +1,82 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Loader } from "@/components/loader/loader";
 import { useToast } from "@/components/hooks/useToast";
 
-
 function AuthCallbackHandler() {
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
   const toast = useToast();
+  const isDev = process.env.NODE_ENV === "development";
+
+  const getUserFromSession = (session: any) => session?.user ?? null;
+  const getRoleFromUser = (user: any): "buyer" | "seller" =>
+    user?.user_metadata?.role === "seller" ? "seller" : "buyer";
 
   useEffect(() => {
-    const env = process.env.NODE_ENV?.trim().toLowerCase() || "development";
-    const isDev = env === "development";
-
-    const parseFragmentToken = (): string | null => {
-      if (typeof window === "undefined") return null;
-      try {
-        const hash = window.location.hash;
-        if (!hash) return null;
-        const params = new URLSearchParams(
-          hash.startsWith("#") ? hash.slice(1) : hash
-        );
-        return (
-          params.get("access_token") ||
-          params.get("token_hash") ||
-          params.get("token") ||
-          params.get("code") ||
-          null
-        );
-      } catch (err) {
-        if (isDev) console.warn("Failed to parse fragment:", err);
-        return null;
-      }
-    };
-
-    const normalizeUser = (data: any): any => {
-      if (!data) return null;
-      if (data.user) return data.user;
-      if (data.session?.user) return data.session.user;
-      return null;
-    };
-
-    const getRole = (user: any): string => {
-      const role = user?.user_metadata?.role ?? user?.role ?? null;
-      return typeof role === "string" && role.length > 0 ? role : "buyer";
-    };
-
     const handleCallback = async () => {
-      const code = searchParams.get("code")?.trim() || null;
-      const type = searchParams.get("type")?.trim() || null;
-      const fragToken = parseFragmentToken();
-      const tokenHash = fragToken || searchParams.get("token_hash");
-
-      if (isDev) {
-        console.log("Auth callback params:", {
-          code,
-          type,
-          tokenHash,
-          url: typeof window !== "undefined" ? window.location.href : null,
-        });
-      }
-
       try {
-        // Google / OAuth flow
+        const code = searchParams.get("code");
+        const type = searchParams.get("type");
+        const tokenHash = searchParams.get("token_hash");
+
+        if (isDev) console.log("Auth callback params:", { code, type, tokenHash });
+
         if (code) {
-          const { data } = await supabase.auth.exchangeCodeForSession(code);
-          if (code || !data?.session) {
-            if (isDev) toast.success("Signin successful!");
-            router.replace("/");
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error || !data.session) {
+            router.replace("/signin?error=oauth_failed");
             return;
           }
+          const user = getUserFromSession(data.session);
+          const role = getRoleFromUser(user);
+          toast.success("Signed in successfully.");
+          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
+          return;
         }
 
-        // Email verification / signup flow
         if (type === "signup" && tokenHash) {
-          const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-            type: "signup",
-            token_hash: tokenHash,
-          });
-
-          if (verifyError) {
-            console.error("verifyOtp failed:", verifyError);
+          const { data, error } = await supabase.auth.verifyOtp({ type: "signup", token_hash: tokenHash });
+          if (error || !data.session) {
             router.replace("/signin?error=verification_failed");
             return;
           }
-
-          const user = normalizeUser(verifyData);
-          const role = getRole(user);
-          toast.success("Signup successful!");
-
+          const user = getUserFromSession(data.session);
+          const role = getRoleFromUser(user);
+          toast.success("Signup verified successfully.");
           router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
           return;
         }
 
-        // If already logged in (rare fallback)
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          const user = normalizeUser({ session });
-          const role = getRole(user);
-          toast.success("Signup successful!");
+          const role = getRoleFromUser(session.user);
           router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
           return;
         }
 
-        // No valid token/code found
-        if (isDev) console.error("Missing code or token_hash in callback URL.");
-        router.replace("/signin?error=missing_token");
+        if (isDev) console.error("Invalid auth callback state.");
+        router.replace("/signin?error=invalid_callback");
       } catch (err) {
-        console.error("Unexpected error during auth callback:", err);
+        console.error("Auth callback fatal error:", err);
         router.replace("/signin?error=unexpected");
       }
     };
 
     handleCallback();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, searchParams, supabase]);
+  }, [router, searchParams, supabase, toast, isDev]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <Loader />
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-black">
+      <Loader />
+    </div>
+  );
 }
 
-/**
- * Everything wrapped in a Suspense boundary
- */
 export default function AuthCallbackPage() {
   return (
     <Suspense

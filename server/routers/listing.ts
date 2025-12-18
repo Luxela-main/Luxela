@@ -125,7 +125,7 @@ export const listingRouter = createTRPCRouter({
         const [created] = await db
           .insert(listings)
           .values({
-            id: randomUUID(),
+            productId: randomUUID(),
             sellerId: seller.id,
             type: "single",
             title: input.title,
@@ -195,7 +195,7 @@ export const listingRouter = createTRPCRouter({
         const [created] = await db
           .insert(listings)
           .values({
-            id: randomUUID(),
+            productId: randomUUID(),
             sellerId: seller.id,
             type: "collection",
             title: input.title,

@@ -29,45 +29,62 @@ function SignInContent() {
   const toast = useToast();
 
   const handleSignIn = async (
-    values: SignInFormValues,
-    { setSubmitting, resetForm }: any
-  ) => {
-    try {
-      const { email, password } = values;
+  values: SignInFormValues,
+  { setSubmitting, resetForm }: any
+) => {
+  try {
+    const { email, password } = values;
 
-      // Call server-side signin
-      const { success } = await authActions.signinAction(email, password);
+    const { success, error, user } = await authActions.signinAction(email, password);
 
-      if (success) {
-        toast.success("Welcome back!");
-        resetForm();
-        router.push("/");
-      }
-    } catch (err: any) {
-      // Check for email not verified
-      if (err.message.toLowerCase().includes("not verified")) {
-        setUnverifiedEmail(values.email);
-        setDialogOpen(true);
-      } else {
-        toast.error(err.message || "Invalid email or password");
-      }
-    } finally {
-      setSubmitting(false);
+    if (success && user) {
+      toast.success("Welcome back!");
+      resetForm();
+
+      // Optional: role-based redirect if user_metadata.role exists
+      const role = user.user_metadata?.role === "seller" ? "seller" : "buyer";
+      router.push(role === "seller" ? "/sellers/dashboard" : "/buyer");
+      return;
     }
-  };
 
-  const handleResendVerification = async () => {
-    setIsResending(true);
-    try {
-      await authActions.resendVerificationAction(unverifiedEmail);
+    // Handle unverified email
+    if (error?.toLowerCase().includes("not verified")) {
+      setUnverifiedEmail(email);
+      setDialogOpen(true);
+    } else {
+      toast.error(error || "Invalid email or password");
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      toast.error(err.message || "Sign-in failed unexpectedly");
+    } else {
+      toast.error("Sign-in failed unexpectedly");
+    }
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleResendVerification = async () => {
+  if (!unverifiedEmail) return;
+
+  setIsResending(true);
+  try {
+    const { success, error } = await authActions.resendVerificationAction(unverifiedEmail);
+
+    if (success) {
       toast.success("Verification email resent! Check your inbox.");
       setDialogOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to resend verification email");
-    } finally {
-      setIsResending(false);
+    } else {
+      toast.error(error || "Failed to resend verification email");
     }
-  };
+  } catch (err: unknown) {
+    if (err instanceof Error) toast.error(err.message || "Failed to resend verification email");
+    else toast.error("Failed to resend verification email");
+  } finally {
+    setIsResending(false);
+  }
+};
 
   return (
     <>

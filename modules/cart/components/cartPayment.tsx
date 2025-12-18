@@ -23,6 +23,10 @@ export default function CartPaymentPage() {
   const shipping = 100;
   const finalTotal = total + shipping;
 
+  // Derived state for button
+  const isSubmitting = checkoutMutation.status === "loading";
+
+
   const handleMakePayment = () => {
     checkoutMutation.mutate({
       shipping: {
@@ -113,11 +117,14 @@ export default function CartPaymentPage() {
               NGN {(finalTotal / 100).toLocaleString()}
             </span>
           </div>
+
+          {/* Make Payment Button */}
           <Button
             className="w-full bg-secondary hover:bg-primary text-white"
             onClick={handleMakePayment}
-            disabled={checkoutMutation.isPending}>
-            {checkoutMutation.isPending ? "Processing..." : "Make Payment"}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Processing..." : "Make Payment"}
           </Button>
         </div>
       </div>

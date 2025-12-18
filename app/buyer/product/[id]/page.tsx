@@ -1,10 +1,9 @@
-// app/buyer/product/[id]/page.tsx
 "use client"
 
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { ShoppingCart, Heart, ChevronRight, MoreHorizontal } from "lucide-react"
-import { motion } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Separator } from "@/components/ui/separator"
 import { RatingItem } from "@/components/rating-item"
@@ -152,8 +151,8 @@ const reviews = [
   },
 ]
 
-export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = React.use(params)
+export default function ProductPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const productId = parseInt(id)
   
   const [product, setProduct] = useState<Product | null>(null)
@@ -242,6 +241,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             {/* Main image */}
             <div className="col-span-1">
               <div className="bg-[#0f0f10] rounded-2xl border border-neutral-800 p-6 flex items-center justify-center">
+                <AnimatePresence mode="wait">
                 <motion.div
                   key={mainImage}
                   initial={{ opacity: 0, scale: 0.98 }}
@@ -257,6 +257,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     className="object-cover rounded-[8px] max-h-[520px] w-full"
                   />
                 </motion.div>
+                </AnimatePresence>
               </div>
 
               {/* Mobile thumbnail row */}

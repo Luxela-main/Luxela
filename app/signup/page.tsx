@@ -33,56 +33,81 @@ function SignUpContent() {
   const searchParams = useSearchParams();
 
   const handleSignUp = async (
-    values: SignUpFormValues,
-    { setSubmitting, resetForm }: any
-  ) => {
-    // Basic validation before server call
-    if (!values.role) {
-      toast.error("Please select a role before signing up.");
-      setSubmitting(false);
-      return;
-    }
+  values: SignUpFormValues,
+  { setSubmitting, resetForm }: any
+) => {
+  // Basic pre-submit validations
+  if (!values.role) {
+    toast.error("Please select a role before signing up.");
+    setSubmitting(false);
+    return;
+  }
 
-    if (!values.agreeTerms) {
-      toast.error("You must agree to the Terms and Conditions.");
-      setSubmitting(false);
-      return;
-    }
+  if (!values.agreeTerms) {
+    toast.error("You must agree to the Terms and Conditions.");
+    setSubmitting(false);
+    return;
+  }
 
-    if (values.password !== values.confirmPassword) {
-      toast.error("Passwords do not match.");
-      setSubmitting(false);
-      return;
-    }
+  if (values.password !== values.confirmPassword) {
+    toast.error("Passwords do not match.");
+    setSubmitting(false);
+    return;
+  }
 
-    try {
-      const { email, password, role } = values;
+  try {
+    const { email, password, role } = values;
 
-      // Call server-side signup action
-      await authActions.signupAction(email, password, role as "buyer" | "seller");
+    const { success, error } = await authActions.signupAction(
+      email,
+      password,
+      role as "buyer" | "seller"
+    );
 
+    if (success) {
       setUserEmail(email);
       setDialogOpen(true);
       toast.success("Signup successful! Please verify your email.");
       resetForm();
-    } catch (err: any) {
-      toast.error(err.message || "Signup failed. Please try again.");
-    } finally {
-      setSubmitting(false);
+      return;
     }
-  };
 
-  const handleResendVerification = async () => {
-    setIsResending(true);
-    try {
-      await authActions.resendVerificationAction(userEmail);
-      toast.success("Verification email resent! Please check your inbox.");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to resend verification email.");
-    } finally {
-      setIsResending(false);
+    // Handle common signup errors
+    if (error?.toLowerCase().includes("already registered")) {
+      toast.error("Email already registered. Please sign in instead.");
+    } else if (error?.toLowerCase().includes("weak password")) {
+      toast.error("Password too weak. Please choose a stronger password.");
+    } else {
+      toast.error(error || "Signup failed. Please try again.");
     }
-  };
+  } catch (err: unknown) {
+    if (err instanceof Error) toast.error(err.message || "Signup failed unexpectedly.");
+    else toast.error("Signup failed unexpectedly.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleResendVerification = async () => {
+  if (!userEmail) return;
+
+  setIsResending(true);
+  try {
+    const { success, error } = await authActions.resendVerificationAction(userEmail);
+
+    if (success) {
+      toast.success("Verification email resent! Check your inbox.");
+      setDialogOpen(false);
+    } else {
+      toast.error(error || "Failed to resend verification email.");
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error) toast.error(err.message || "Failed to resend verification email.");
+    else toast.error("Failed to resend verification email.");
+  } finally {
+    setIsResending(false);
+  }
+};
 
   return (
     <>

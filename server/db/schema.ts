@@ -1,10 +1,11 @@
-// --------------------------- START OF SCHEMA ---------------------------
-import { pgTable, text, varchar, timestamp, boolean, pgEnum, uuid, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, timestamp, boolean, pgEnum, uuid, integer, numeric, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
-// --------------------------- ENUMS ---------------------------
-export const rolesEnum = pgEnum('roles', ['buyer', 'seller', 'ADMIN']);
+// =======================
+// ENUMS
+// =======================
+export const rolesEnum = pgEnum('roles', ['buyer', 'seller', 'admin']);
 export const businessTypeEnum = pgEnum('business_type', ['individual', 'business']);
 export const idTypeEnum = pgEnum('id_type', ['passport', 'drivers_license', 'voters_card', 'national_id']);
 export const shippingTypeEnum = pgEnum('shipping_type', ['domestic']);
@@ -28,32 +29,43 @@ export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processin
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto','paypal','stripe','flutterwave','tsara']);
 export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder']);
-export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','successful','failed','refunded']);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','completed','failed','refunded']);
 export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterwave','stripe','paypal']);
 
-// --------------------------- USERS ---------------------------
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  oauthId: varchar('oauth_id', { length: 255 }),
-  name: varchar('name', { length: 255 }),
-  displayName: varchar('display_name', { length: 255 }),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  password: varchar('password', { length: 255 }).notNull(),
-  emailVerified: boolean('email_verified').default(false).notNull(),
-  image: text('image'),
-  role: rolesEnum('role').default('buyer').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+// =======================
+// DOMAIN TABLES
+// =======================
 
-// --------------------------- BUYERS ---------------------------
+// --- Buyers ---
 export const buyers = pgTable('buyers', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  // FK to Supabase Auth user
+  userId: uuid('user_id').notNull(), 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// --- Sellers ---
+export const sellers = pgTable('sellers', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid('user_id').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// --- Profiles (optional extension of auth.users) ---
+export const profiles = pgTable('profiles', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid('user_id').notNull(),
+  displayName: varchar('display_name', { length: 255 }),
+  image: text('image'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// ========================
+// BUYER DETAILS & SHIPPING
+// ========================
 export const buyerAccountDetails = pgTable('buyer_account_details', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
@@ -80,13 +92,6 @@ export const buyerBillingAddress = pgTable('buyer_billing_address', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const buyerFavorites = pgTable('buyer_favorites', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
-  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
 export const buyerShipping = pgTable('buyer_shipping', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
@@ -100,41 +105,9 @@ export const buyerShipping = pgTable('buyer_shipping', {
   isDefault: boolean('is_default').default(true).notNull(),
 });
 
-// --------------------------- DISCOUNTS & CART ---------------------------
-export const discounts = pgTable('discounts', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  code: varchar('code', { length: 64 }).notNull().unique(),
-  percentOff: integer('percent_off'),
-  amountOffCents: integer('amount_off_cents'),
-  active: boolean('active').default(true).notNull(),
-  expiresAt: timestamp('expires_at'),
-});
-
-export const carts = pgTable('carts', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
-  discountId: uuid('discount_id').references(() => discounts.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
-export const cartItems = pgTable('cart_items', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  cartId: uuid('cart_id').notNull().references(() => carts.id, { onDelete: 'cascade' }),
-  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-  quantity: integer('quantity').notNull(),
-  unitPriceCents: integer('unit_price_cents').notNull(),
-  currency: varchar('currency', { length: 16 }).notNull(),
-});
-
-// --------------------------- SELLERS ---------------------------
-export const sellers = pgTable('sellers', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
+// =======================
+// SELLERS
+// =======================
 export const sellerBusiness = pgTable('seller_business', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
@@ -170,35 +143,69 @@ export const sellerShipping = pgTable('seller_shipping', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const sellerPayment = pgTable('seller_payment', {
+// =================================
+// PRODUCT CATALOG, ORDERS, PAYMENTS
+// =================================
+export const brands = pgTable('brands', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
-  preferredPayoutMethod: preferredPayoutMethodEnum('preferred_payout_method').notNull(),
-  fiatPayoutMethod: fiatPayoutMethodEnum('fiat_payout_method'),
-  bankCountry: varchar('bank_country', { length: 100 }),
-  accountHolderName: varchar('account_holder_name', { length: 255 }),
-  accountNumber: varchar('account_number', { length: 50 }),
-  walletType: walletTypeEnum('wallet_type'),
-  walletAddress: varchar('wallet_address', { length: 255 }),
-  preferredPayoutToken: payoutTokenEnum('preferred_payout_token'),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  heroImage: text('hero_image'),
+  logoImage: text('logo_image'),
+  rating: numeric('rating', { precision: 2, scale: 1 }).default('0'),
+  totalProducts: integer('total_products').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const sellerAdditional = pgTable('seller_additional', {
+// =======================
+// COLLECTIONS
+// =======================
+export const collections = pgTable(
+  'collections',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    brandId: uuid('brand_id').notNull().references(() => brands.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    description: text('description'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueBrandSlug: unique().on(t.brandId, t.slug),
+  })
+);
+
+// =======================
+// PRODUCTS
+// =======================
+export const products = pgTable('products', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
-  productCategory: productCategoryEnum('product_category').notNull(),
-  targetAudience: targetAudienceEnum('target_audience').notNull(),
-  localPricing: localPricingEnum('local_pricing').notNull(),
+  brandId: uuid('brand_id').notNull().references(() => brands.id, { onDelete: 'cascade' }),
+  collectionId: uuid('collection_id').references(() => collections.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  category: productCategoryEnum('category'),
+  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 16 }).default('SOL').notNull(),
+  sku: text('sku').notNull().unique(),
+  inStock: boolean('in_stock').default(true),
+  shipsIn: varchar('ships_in', { length: 64 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// --------------------------- LISTINGS ---------------------------
+// =======================
+// LISTINGS
+// =======================
 export const listings = pgTable('listings', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
   type: listingTypeEnum('type').notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
@@ -206,23 +213,26 @@ export const listings = pgTable('listings', {
   image: text('image'),
   priceCents: integer('price_cents'),
   currency: varchar('currency', { length: 16 }),
-  sizesJson: text('sizes_json'),
-  supplyCapacity: supplyCapacityEnum('supply_capacity'),
   quantityAvailable: integer('quantity_available'),
   limitedEditionBadge: limitedEditionBadgeEnum('limited_edition_badge'),
-  releaseDuration: varchar('release_duration', { length: 64 }),
-  materialComposition: text('material_composition'),
-  colorsAvailable: text('colors_available'),
-  additionalTargetAudience: targetAudienceEnum('additional_target_audience'),
   shippingOption: shippingOptionEnum('shipping_option'),
   etaDomestic: shippingEtaEnum('eta_domestic'),
   etaInternational: shippingEtaEnum('eta_international'),
+  sizesJson: text('sizes_json'),
+  stock: integer('stock').default(0),
+  supplyCapacity: supplyCapacityEnum('supply_capacity'),
+  releaseDuration: varchar('release_duration', { length: 255 }),
+  materialComposition: text('material_composition'),
+  colorsAvailable: text('colors_available'),
+  additionalTargetAudience: targetAudienceEnum('additional_target_audience'),
   itemsJson: text('items_json'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// --------------------------- ORDERS ---------------------------
+// =======================
+// ORDERS
+// =======================
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
@@ -247,7 +257,9 @@ export const orders = pgTable('orders', {
   recipientEmail: varchar('recipient_email', { length: 255 }),
 });
 
-// --------------------------- PAYMENTS ---------------------------
+// =======================
+// PAYMENTS
+// =======================
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
@@ -266,7 +278,9 @@ export const payments = pgTable('payments', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// --------------------------- SALES ---------------------------
+// =======================
+// SALES
+// =======================
 export const sales = pgTable('sales', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
@@ -282,16 +296,48 @@ export const sales = pgTable('sales', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// --------------------------- EMAIL OTPS, NOTIFICATIONS, REVIEWS ---------------------------
-export const emailOtps = pgTable('email_otps', {
+// =======================
+// CARTS & CART ITEMS
+// =======================
+export const carts = pgTable('carts', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar('email', { length: 255 }).notNull(),
-  codeHash: varchar('code_hash', { length: 255 }).notNull(),
-  expiresAt: timestamp('expires_at').notNull(),
-  consumed: boolean('consumed').default(false).notNull(),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  discountId: uuid('discount_id').references(() => discounts.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const cartItems = pgTable('cart_items', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  cartId: uuid('cart_id').notNull().references(() => carts.id, { onDelete: 'cascade' }),
+  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+  quantity: integer('quantity').notNull(),
+  unitPriceCents: integer('unit_price_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+});
+
+// ============================
+// INVENTORY & PRODUCT VARIANTS
+// ============================
+export const productVariants = pgTable('product_variants', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }),
+  size: text('size').notNull(),
+  colorName: text('color_name').notNull(),
+  colorHex: text('color_hex').notNull(),
+});
+
+export const inventory = pgTable('inventory', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  variantId: uuid('variant_id').notNull().references(() => productVariants.id),
+  quantity: integer('quantity').notNull().default(0),
+  reservedQuantity: integer('reserved_quantity').notNull().default(0),
+});
+
+// ==================================
+// NOTIFICATIONS, REVIEWS, EMAIL OTPS
+// ==================================
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
@@ -304,115 +350,270 @@ export const notifications = pgTable('notifications', {
 
 export const reviews = pgTable('review', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  buyerId: uuid('buyer_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
   listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
   rating: integer('rating').notNull(),
   comment: text('comment'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-
-// --------------------------- PRODUCTS FOR SEO ---------------------------
-
-export const products = pgTable("products", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  slug: varchar("slug", { length: 255 }).notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  price: text("price"),
-  updatedAt: timestamp("updated_at"),
+export const emailOtps = pgTable('email_otps', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar('email', { length: 255 }).notNull(),
+  codeHash: varchar('code_hash', { length: 255 }).notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  consumed: boolean('consumed').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-// --------------------------- CATEGORIES FOR SEO ---------------------------
-
-export const categories = pgTable("categories", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  slug: varchar("slug", { length: 255 }).notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
+// =======================
+// USERS
+// =======================
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  oauthId: varchar('oauth_id', { length: 255 }),
+  name: varchar('name', { length: 255 }),
+  displayName: varchar('display_name', { length: 255 }),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  emailVerified: boolean('email_verified').default(false),
+  image: text('image'),
+  role: rolesEnum('role').default('buyer'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// --------------------------- BLOGS FOR SEO ---------------------------
-
-export const blogs = pgTable("blogs", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  slug: varchar("slug", { length: 255 }).notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  updatedAt: timestamp("updated_at"),
+// =======================
+// BUYER FAVORITES
+// =======================
+export const buyerFavorites = pgTable('buyer_favorites', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-// --------------------------- RELATIONS ---------------------------
-export const sellersRelations = relations(sellers, ({ one, many }) => ({
-  business: one(sellerBusiness, { fields: [sellers.id], references: [sellerBusiness.sellerId] }),
-  shipping: one(sellerShipping, { fields: [sellers.id], references: [sellerShipping.sellerId] }),
-  payment: one(sellerPayment, { fields: [sellers.id], references: [sellerPayment.sellerId] }),
-  additional: one(sellerAdditional, { fields: [sellers.id], references: [sellerAdditional.sellerId] }),
-  listings: many(listings),
-}));
+// =======================
+// SELLER PAYMENT
+// =======================
+export const sellerPayment = pgTable('seller_payment', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  preferredPayoutMethod: preferredPayoutMethodEnum('preferred_payout_method'),
+  fiatPayoutMethod: fiatPayoutMethodEnum('fiat_payout_method'),
+  bankCountry: varchar('bank_country', { length: 100 }),
+  bankName: varchar('bank_name', { length: 255 }),
+  accountName: varchar('account_name', { length: 255 }),
+  accountHolderName: varchar('account_holder_name', { length: 255 }),
+  accountNumber: varchar('account_number', { length: 255 }),
+  walletType: walletTypeEnum('wallet_type'),
+  walletAddress: varchar('wallet_address', { length: 255 }),
+  preferredPayoutToken: payoutTokenEnum('preferred_payout_token'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
-export const listingsRelations = relations(listings, ({ one }) => ({
-  seller: one(sellers, { fields: [listings.sellerId], references: [sellers.id] }),
+// =======================
+// SELLER ADDITIONAL
+// =======================
+export const sellerAdditional = pgTable('seller_additional', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  productCategory: productCategoryEnum('product_category'),
+  targetAudience: targetAudienceEnum('target_audience'),
+  localPricing: localPricingEnum('local_pricing'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
+// DISCOUNTS
+// =======================
+export const discounts = pgTable('discounts', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  percentOff: integer('percent_off'),
+  amountOffCents: integer('amount_off_cents'),
+  active: boolean('active').default(true).notNull(),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// PRODUCT IMAGES
+// =======================
+export const productImages = pgTable('product_images', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  imageUrl: text('image_url').notNull(),
+  position: integer('position').notNull(),
+});
+
+// =======================
+// RELATIONS
+// =======================
+
+// Users → Buyers & Sellers
+export const usersRelations = relations(users, ({ many }) => ({
+  buyers: many(buyers),
+  sellers: many(sellers),
 }));
 
 export const buyersRelations = relations(buyers, ({ one, many }) => ({
-  user: one(users, { fields: [buyers.userId], references: [users.id] }),
-  account: one(buyerAccountDetails, { fields: [buyers.id], references: [buyerAccountDetails.buyerId] }),
+  user: one(users),
+  account: one(buyerAccountDetails),
   shipping: many(buyerShipping),
+  favorites: many(buyerFavorites),
+  carts: many(carts),
+  orders: many(orders),
+  payments: many(payments),
+  sales: many(sales),
+  reviews: many(reviews),
+}));
+
+export const sellersRelations = relations(sellers, ({ one, many }) => ({
+  user: one(users),
+  business: one(sellerBusiness),
+  shipping: one(sellerShipping),
+  payment: one(sellerPayment),
+  additional: one(sellerAdditional),
+  listings: many(listings),
+  orders: many(orders),
+  payments: many(payments),
+  notifications: many(notifications),
+  sales: many(sales),
+  brands: many(brands),
+}));
+
+// Brands → Collections & Products
+export const brandsRelations = relations(brands, ({ one, many }) => ({
+  seller: one(sellers),
+  collections: many(collections),
+  products: many(products),
+}));
+
+// Collections → Products
+export const collectionsRelations = relations(collections, ({ one, many }) => ({
+  brand: one(brands),
+  products: many(products),
+}));
+
+// Products → Variants & Listings
+export const productsRelations = relations(products, ({ one, many }) => ({
+  brand: one(brands),
+  collection: one(collections),
+  images: many(productImages),
+  variants: many(productVariants),
+  listings: many(listings),
+  inventory: many(inventory),
+}));
+
+// Product Variants → Inventory
+export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
+  product: one(products),
+  inventory: many(inventory),
+}));
+
+// Inventory → Variants
+export const inventoryRelations = relations(inventory, ({ one }) => ({
+  variant: one(productVariants),
+  product: one(products),
+}));
+
+// Listings → Seller & Product
+export const listingsRelations = relations(listings, ({ one, many }) => ({
+  seller: one(sellers),
+  product: one(products),
+  cartItems: many(cartItems),
+  orders: many(orders),
+  payments: many(payments),
+  sales: many(sales),
+  reviews: many(reviews),
   favorites: many(buyerFavorites),
 }));
 
-export const buyerAccountDetailsRelations = relations(buyerAccountDetails, ({ one }) => ({
-  buyer: one(buyers, { fields: [buyerAccountDetails.buyerId], references: [buyers.id] }),
+// Orders → Buyer, Seller, Listing
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  buyer: one(buyers),
+  seller: one(sellers),
+  listing: one(listings),
+  payments: many(payments),
+  sales: many(sales),
 }));
 
-export const buyerBillingAddressRelations = relations(buyerBillingAddress, ({ one }) => ({
-  buyer: one(buyers, { fields: [buyerBillingAddress.buyerId], references: [buyers.id] }),
+// Payments → Buyer, Listing, Order
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  buyer: one(buyers),
+  listing: one(listings),
+  order: one(orders),
 }));
 
-export const buyerFavoritesRelations = relations(buyerFavorites, ({ one }) => ({
-  buyer: one(buyers, { fields: [buyerFavorites.buyerId], references: [buyers.id] }),
-  listing: one(listings, { fields: [buyerFavorites.listingId], references: [listings.id] }),
+// Sales → Buyer, Seller, Listing, Order
+export const salesRelations = relations(sales, ({ one }) => ({
+  buyer: one(buyers),
+  seller: one(sellers),
+  listing: one(listings),
+  order: one(orders),
+  payment: one(payments),
 }));
 
+// Carts → Buyer & Items
 export const cartRelations = relations(carts, ({ one, many }) => ({
   buyer: one(buyers, { fields: [carts.buyerId], references: [buyers.id] }),
+  discount: one(discounts, { fields: [carts.discountId], references: [discounts.id] }),
   items: many(cartItems),
 }));
 
+// Cart Items → Cart & Listing
 export const cartItemRelations = relations(cartItems, ({ one }) => ({
-  cart: one(carts, { fields: [cartItems.cartId], references: [carts.id] }),
-  listing: one(listings, { fields: [cartItems.listingId], references: [listings.id] }),
+  cart: one(carts),
+  listing: one(listings),
 }));
 
-export const ordersRelations = relations(orders, ({ one }) => ({
-  buyer: one(buyers, { fields: [orders.buyerId], references: [buyers.id] }),
-  seller: one(sellers, { fields: [orders.sellerId], references: [sellers.id] }),
-  listing: one(listings, { fields: [orders.listingId], references: [listings.id] }),
-}));
-
-export const paymentsRelations = relations(payments, ({ one }) => ({
-  buyer: one(buyers, { fields: [payments.buyerId], references: [buyers.id] }),
-  listing: one(listings, { fields: [payments.listingId], references: [listings.id] }),
-  order: one(orders, { fields: [payments.orderId], references: [orders.id] }),
-}));
-
-export const salesRelations = relations(sales, ({ one }) => ({
-  order: one(orders, { fields: [sales.orderId], references: [orders.id] }),
-  seller: one(sellers, { fields: [sales.sellerId], references: [sellers.id] }),
-  buyer: one(buyers, { fields: [sales.buyerId], references: [buyers.id] }),
-  listing: one(listings, { fields: [sales.listingId], references: [listings.id] }),
-  payment: one(payments, { fields: [sales.orderId], references: [payments.orderId] }),
-}));
-
+// Reviews → Buyer & Listing
 export const reviewsRelations = relations(reviews, ({ one }) => ({
-  listing: one(listings, { fields: [reviews.listingId], references: [listings.id] }),
-  buyer: one(users, { fields: [reviews.buyerId], references: [users.id] }),
+  buyer: one(buyers),
+  listing: one(listings),
 }));
 
+// Notifications → Seller
 export const notificationsRelations = relations(notifications, ({ one }) => ({
-  seller: one(sellers, { fields: [notifications.sellerId], references: [sellers.id] }),
+  seller: one(sellers),
 }));
 
-export const emailOtpsRelations = relations(emailOtps, ({ one }) => ({
-  // none by default
+// Buyer Account Details → Buyer
+export const buyerAccountDetailsRelations = relations(buyerAccountDetails, ({ one }) => ({
+  buyer: one(buyers),
 }));
 
-// --------------------------- END OF SCHEMA ---------------------------
+// Buyer Shipping → Buyer
+export const buyerShippingRelations = relations(buyerShipping, ({ one }) => ({
+  buyer: one(buyers),
+}));
+
+// Buyer Favorites → Buyer & Listing
+export const buyerFavoritesRelations = relations(buyerFavorites, ({ one }) => ({
+  buyer: one(buyers),
+  listing: one(listings),
+}));
+
+// Seller Payment → Seller
+export const sellerPaymentRelations = relations(sellerPayment, ({ one }) => ({
+  seller: one(sellers),
+}));
+
+// Seller Additional → Seller
+export const sellerAdditionalRelations = relations(sellerAdditional, ({ one }) => ({
+  seller: one(sellers),
+}));
+
+// Discounts → none (referenced by carts)
+export const discountsRelations = relations(discounts, ({}) => ({}));
+
+// Product Images → Product
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+  product: one(products),
+}));
+
+// Email OTPs → none
+export const emailOtpsRelations = relations(emailOtps, ({}) => ({}));

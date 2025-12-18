@@ -2,37 +2,37 @@ import { MetadataRoute } from "next";
 import { db } from "@/server/db";
 import { listings } from "@/server/db/schema";
 
-export const dynamic = "force-dynamic";
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theluxela.com";
 
-  let listingItems: { id: string; updatedAt: Date }[] = [];
-
-  // Static pages
-  const staticUrls = [
-    `${SITE_URL}/`,
-    `${SITE_URL}/buyer/brands`,
-    `${SITE_URL}/buyer/collections`,
-    `${SITE_URL}/#about`,
+  const staticPages: MetadataRoute.Sitemap = [
+    { url: `${SITE_URL}/`, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
+    { url: `${SITE_URL}/buyer/brands`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/buyer/collections`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/#about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
   ];
 
-  // Dynamic product pages
-  let productUrls: string[] = [];
+  let productPages: MetadataRoute.Sitemap = [];
+
   try {
-    const rows = await db.select({ id: listings.id }).from(listings);
-    productUrls = rows.map((p) => `${SITE_URL}/buyer/product/${p.id}`);
-  } catch (err) {
-    console.error("Error fetching products for sitemap.xml:", err);
+    const rows = await db.select({
+      id: listings.id,
+      updatedAt: listings.updatedAt,
+      image: listings.image,
+    }).from(listings);
+
+    productPages = rows.map(product => ({
+      url: `${SITE_URL}/buyer/product/${product.id}`,
+      lastModified: product.updatedAt ?? new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+      images: product.image
+        ? [product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image}`]
+        : undefined,
+    }));
+  } catch (error) {
+    console.error("Failed to generate product sitemap:", error);
   }
 
-  const allUrls = [...staticUrls, ...productUrls];
-
-const sitemap: MetadataRoute.Sitemap = allUrls.map((url) => ({
-  url,
-  changeFrequency: "weekly",
-  priority: 0.8,
-}));
-
-return sitemap;
-};
+  return [...staticPages, ...productPages];
+}
