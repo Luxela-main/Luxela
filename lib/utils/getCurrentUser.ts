@@ -28,9 +28,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return {
       id: user.id,
       email: user.email ?? null,
-      fullName: user.user_metadata?.full_name || "Unknown User",
+      fullName: user.user_metadata?.full_name || user.email,
       role: (user.user_metadata?.role as "buyer" | "seller") || "buyer",
-      avatarUrl: user.user_metadata?.avatar_url || "/placeholder.svg",
+      avatarUrl: user.user_metadata?.avatar_url || "/images/seller/sparkles.svg",
     };
   } catch (err) {
     console.error("Unexpected error in getCurrentUser:", err);
