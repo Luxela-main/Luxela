@@ -27,7 +27,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6">
+    <div className=" pt-16 lg:pt-0 p-6">
       <div className="flex items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Settings</h1>
