@@ -9,16 +9,17 @@ export default function Reports() {
   const [search, setSearch] = useState("");
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
+     <div className="pt-16 px-6 md:pt-0">
+      <div className="mb-6">
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
+          <SearchBar search={search} setSearch={setSearch} />
+        </div>
+      </div>
+      <div className="mb-6 md:max-lg:pt-10">
           <h1 className="text-2xl font-semibold">Reports</h1>
           <p className="text-gray-400 mt-1">View detailed reports and analytics for your store.</p>
         </div>
-        <div className="w-80">
-          <SearchBar search={search} setSearch={setSearch}/>
-        </div>
-      </div>
+     
 
       <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
         <div className="p-4 border-b border-[#333] flex items-center">

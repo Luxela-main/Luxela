@@ -14,11 +14,11 @@ export default function Sales() {
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
 
-  const { 
-    data: salesData, 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data: salesData,
+    isLoading,
+    error,
+    refetch,
   } = useSales(getStatusFromTab(activeTab));
 
   if (isLoading) {
@@ -27,7 +27,7 @@ export default function Sales() {
 
   if (error) {
     return (
-      <ErrorState 
+      <ErrorState
         message="Failed to load sales data. Please try again."
         onRetry={() => refetch()}
       />
@@ -40,18 +40,20 @@ export default function Sales() {
     setSelectedOrder(orderId);
   };
 
-  const orderDetail = selectedOrder ? {
-    id: selectedOrder,
-    customer: "John Doe",
-    product: "Sample Product",
-    quantity: 1,
-    orderDate: new Date().toLocaleDateString(),
-    amount: "₦50,000",
-    paymentMethod: "Credit Card",
-    paymentStatus: "Paid",
-    shippingAddress: "123 Main St, Lagos, Nigeria",
-    estimatedDelivery: "2-3 business days"
-  } : null;
+  const orderDetail = selectedOrder
+    ? {
+        id: selectedOrder,
+        customer: "John Doe",
+        product: "Sample Product",
+        quantity: 1,
+        orderDate: new Date().toLocaleDateString(),
+        amount: "₦50,000",
+        paymentMethod: "Credit Card",
+        paymentStatus: "Paid",
+        shippingAddress: "123 Main St, Lagos, Nigeria",
+        estimatedDelivery: "2-3 business days",
+      }
+    : null;
 
   const closeOrderDetail = () => {
     setSelectedOrder(null);
@@ -68,15 +70,15 @@ export default function Sales() {
   ];
 
   return (
-    <div className="p-6 relative">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Sales</h1>
-          <p className="text-gray-400 mt-1">View and manage all your sales</p>
-        </div>
-        <div className="w-80">
+    <div className="pt-16 px-6 md:pt-0 relative">
+      <div className="mb-6">
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />
         </div>
+      </div>
+      <div className="mb-6 md:max-lg:pt-10">
+        <h1 className="text-2xl font-semibold">Sales</h1>
+        <p className="text-gray-400 mt-1">View and manage all your sales</p>
       </div>
 
       <div className="flex justify-between mb-6">
@@ -89,7 +91,8 @@ export default function Sales() {
                   ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white"
                   : "text-gray-400"
               }`}
-              onClick={() => setActiveTab(tab)}>
+              onClick={() => setActiveTab(tab)}
+            >
               {tab}
             </button>
           ))}
@@ -107,7 +110,8 @@ export default function Sales() {
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="ml-2">
+              className="ml-2"
+            >
               <path
                 d="M6 9L12 15L18 9"
                 stroke="currentColor"
@@ -163,18 +167,24 @@ export default function Sales() {
                     order.payoutStatus === "paid"
                       ? "bg-green-100 text-green-800"
                       : order.payoutStatus === "processing"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-800"
-                  }`}>
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                  }`}
+                >
                   <span
                     className={`w-1.5 h-1.5 rounded-full mr-1 ${
                       order.payoutStatus === "paid"
                         ? "bg-green-600"
                         : order.payoutStatus === "processing"
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
-                    }`}></span>
-                  {order.payoutStatus === "paid" ? "Paid" : order.payoutStatus === "processing" ? "Processing" : "In Escrow"}
+                          ? "bg-yellow-600"
+                          : "bg-red-600"
+                    }`}
+                  ></span>
+                  {order.payoutStatus === "paid"
+                    ? "Paid"
+                    : order.payoutStatus === "processing"
+                      ? "Processing"
+                      : "In Escrow"}
                 </span>
               </div>
               <div>
@@ -183,16 +193,22 @@ export default function Sales() {
                     order.deliveryStatus === "delivered"
                       ? "bg-green-100 text-green-800"
                       : order.deliveryStatus === "in_transit"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-red-100 text-red-800"
-                  }`}>
-                  {order.deliveryStatus === "delivered" ? "Delivered" : order.deliveryStatus === "in_transit" ? "In Transit" : "Not Shipped"}
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {order.deliveryStatus === "delivered"
+                    ? "Delivered"
+                    : order.deliveryStatus === "in_transit"
+                      ? "In Transit"
+                      : "Not Shipped"}
                 </span>
               </div>
               <div>
                 <button
                   className="text-gray-400 hover:text-white"
-                  onClick={() => handleOrderClick(order.orderId)}>
+                  onClick={() => handleOrderClick(order.orderId)}
+                >
                   <MoreVertical className="h-5 w-5" />
                 </button>
               </div>
@@ -223,7 +239,7 @@ export default function Sales() {
         </div>
       </div>
 
-        {selectedOrder && orderDetail && (
+      {selectedOrder && orderDetail && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#1a1a1a] rounded-lg w-full max-w-2xl">
             <div className="p-6">
@@ -234,7 +250,8 @@ export default function Sales() {
                 </div>
                 <button
                   onClick={closeOrderDetail}
-                  className="text-gray-400 hover:text-white">
+                  className="text-gray-400 hover:text-white"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -312,7 +329,8 @@ export default function Sales() {
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="mr-2 text-gray-400">
+                        className="mr-2 text-gray-400"
+                      >
                         <rect
                           x="3"
                           y="4"
@@ -360,7 +378,8 @@ export default function Sales() {
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="text-gray-400">
+                        className="text-gray-400"
+                      >
                         <path
                           d="M6 9L12 15L18 9"
                           stroke="currentColor"

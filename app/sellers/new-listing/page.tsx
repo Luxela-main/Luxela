@@ -173,7 +173,7 @@ const NewListing: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 pt-16 lg:pt-0">
       <div className="flex items-center mb-2">
         <h1 className="text-2xl font-semibold">New Listing</h1>
       </div>

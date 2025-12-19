@@ -10,6 +10,7 @@ import * as Yup from "yup";
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { LoadingState } from "@/components/sellers/LoadingState";
+import { useSellerProfile } from "@/modules/sellers/queries/useSellerProfile";
 
 interface ProfileSettingsProps {
   initialData: any;
@@ -24,43 +25,63 @@ const validationSchema = Yup.object({
 });
 
 export function ProfileSettings({ initialData }: ProfileSettingsProps) {
-  const [firstName, ...lastNameParts] = (initialData?.business?.fullName || "").split(" ");
-  const lastName = lastNameParts.join(" ");
-
   const utils = trpc.useUtils();
-  
-  const updateProfileMutation = (trpc.seller as any).updateSellerBusiness.useMutation({
+
+  const profileData = initialData;
+  const hasProfile = !!profileData?.seller;
+
+  const createProfileMutation = trpc.seller.createSellerProfile.useMutation({
     onSuccess: () => {
-      toastSvc.success("Profile updated successfully");
-      (utils.seller as any).getProfile.invalidate();
+      toastSvc.success("Profile created successfully");
+      window.location.reload();
     },
-    onError: (error: any) => {
-      toastSvc.error(error.message || "Failed to update profile");
+    onError: (err: any) => {
+      toastSvc.error(err.message || "Failed to create profile");
     },
   });
+
+  const updateProfileMutation = trpc.seller.updateSellerBusiness.useMutation({
+    onSuccess: () => {
+      toastSvc.success("Profile updated successfully");
+      utils.seller.getProfile.invalidate();
+    },
+    onError: (err: any) => {
+      toastSvc.error(err.message || "Failed to update profile");
+    },
+  });
+
+  const [firstName, ...lastNameParts] = (
+    profileData?.business?.fullName || ""
+  ).split(" ");
+  const lastName = lastNameParts.join(" ");
 
   const formik = useFormik({
     initialValues: {
       firstName: firstName || "",
       lastName: lastName || "",
-      email: initialData?.business?.officialEmail || "",
-      phone: initialData?.business?.phoneNumber || "",
-      bio: initialData?.business?.bio || "",
+      email: profileData?.business?.officialEmail || "",
+      phone: profileData?.business?.phoneNumber || "",
+      bio: profileData?.business?.bio || "",
     },
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
+      if (!hasProfile) {
+        await createProfileMutation.mutateAsync();
+        return;
+      }
+
       await updateProfileMutation.mutateAsync({
         fullName: `${values.firstName} ${values.lastName}`.trim(),
         officialEmail: values.email,
         phoneNumber: values.phone,
         bio: values.bio,
-        // Preserve other required fields that are not in this form but required by backend
-        brandName: initialData?.business?.brandName || "My Store", // Fallback if missing
-        businessType: initialData?.business?.businessType || "individual",
-        businessAddress: initialData?.business?.businessAddress || "Not provided",
-        country: initialData?.business?.country || "Nigeria",
-        idType: initialData?.business?.idType || "national_id",
+        brandName: profileData.business?.brandName || "My Store",
+        businessType: profileData.business?.businessType || "individual",
+        businessAddress:
+          profileData.business?.businessAddress || "Not provided",
+        country: profileData.business?.country || "Nigeria",
+        idType: profileData.business?.idType || "national_id",
       });
     },
   });
@@ -77,7 +98,8 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
           <div>
             <Button
               variant="outline"
-              className="bg-[#222] border-[#333] hover:bg-[#333] hover:text-white mb-2">
+              className="bg-[#222] border-[#333] hover:bg-[#333] hover:text-white mb-2"
+            >
               Upload Photo
             </Button>
             <p className="text-xs text-gray-400">
@@ -97,11 +119,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-                formik.touched.firstName && formik.errors.firstName ? "border-red-500" : ""
+                formik.touched.firstName && formik.errors.firstName
+                  ? "border-red-500"
+                  : ""
               }`}
             />
             {formik.touched.firstName && formik.errors.firstName && (
-              <div className="text-red-500 text-xs mt-1">{formik.errors.firstName as string}</div>
+              <div className="text-red-500 text-xs mt-1">
+                {formik.errors.firstName as string}
+              </div>
             )}
           </div>
           <div>
@@ -112,11 +138,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-                formik.touched.lastName && formik.errors.lastName ? "border-red-500" : ""
+                formik.touched.lastName && formik.errors.lastName
+                  ? "border-red-500"
+                  : ""
               }`}
             />
             {formik.touched.lastName && formik.errors.lastName && (
-              <div className="text-red-500 text-xs mt-1">{formik.errors.lastName as string}</div>
+              <div className="text-red-500 text-xs mt-1">
+                {formik.errors.lastName as string}
+              </div>
             )}
           </div>
         </div>
@@ -129,11 +159,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
             className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-              formik.touched.email && formik.errors.email ? "border-red-500" : ""
+              formik.touched.email && formik.errors.email
+                ? "border-red-500"
+                : ""
             }`}
           />
           {formik.touched.email && formik.errors.email && (
-            <div className="text-red-500 text-xs mt-1">{formik.errors.email as string}</div>
+            <div className="text-red-500 text-xs mt-1">
+              {formik.errors.email as string}
+            </div>
           )}
         </div>
 
@@ -145,11 +179,15 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
             className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-              formik.touched.phone && formik.errors.phone ? "border-red-500" : ""
+              formik.touched.phone && formik.errors.phone
+                ? "border-red-500"
+                : ""
             }`}
           />
           {formik.touched.phone && formik.errors.phone && (
-            <div className="text-red-500 text-xs mt-1">{formik.errors.phone as string}</div>
+            <div className="text-red-500 text-xs mt-1">
+              {formik.errors.phone as string}
+            </div>
           )}
         </div>
 
@@ -166,8 +204,8 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
         </div>
 
         <div className="flex justify-end">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="bg-purple-600 hover:bg-purple-700"
             disabled={updateProfileMutation.isPending || !formik.isValid}
           >

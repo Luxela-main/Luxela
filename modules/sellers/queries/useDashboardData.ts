@@ -12,10 +12,16 @@ export const useDashboardData = () => {
     queryFn: async () => {
       const client = vanillaTrpc;
 
+      // const [sales, listings] = await Promise.all([
+      //   (client.sales as any).getAllSales.query(),
+      //   (client.listing as any).getMyListings.query(),
+      // ]);
+
       const [sales, listings] = await Promise.all([
-        (client.sales as any).getAllSales.query(),
-        (client.listing as any).getMyListings.query(),
-      ]);
+  client.sales.getAllSales.query({}),
+  client.listing.getMyListings.query(),
+]);
+
 
       const stats = calculateStats(sales || [], listings || []);
       const revenueReport = generateRevenueReport(sales);

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import withAuth from "../../functions/hoc/withAuth";
+import withAuth from "../../../functions/hoc/withAuth";
 import { AccountDetails } from "@/components/dashboard/account-details";
 import { BillingAddress } from "@/components/dashboard/billing-address";
 import { Breadcrumb } from "@/components/dashboard/breadcrumb";

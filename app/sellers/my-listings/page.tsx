@@ -1,113 +1,117 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Package, Filter, PlusCircle, SquarePen, Trash2 } from "lucide-react"
-import SearchBar from "@/components/search-bar"
-import EmptyState from "@/components/empty-state"
-import { useMyListings } from "@/modules/sellers"
-import { LoadingState } from "@/components/sellers/LoadingState"
-import { ErrorState } from "@/components/sellers/ErrorState"
-import { AddProductModal } from "@/components/sellers/AddProductModal"
-import { ListingDetailsModal } from "./ListingDetailsModal"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { trpc } from "@/lib/trpc"
-import { toastSvc } from "@/services/toast"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Package, Filter, PlusCircle, SquarePen, Trash2 } from "lucide-react";
+import SearchBar from "@/components/search-bar";
+import EmptyState from "@/components/empty-state";
+import { useMyListings } from "@/modules/sellers";
+import { LoadingState } from "@/components/sellers/LoadingState";
+import { ErrorState } from "@/components/sellers/ErrorState";
+import { AddProductModal } from "@/components/sellers/AddProductModal";
+import { ListingDetailsModal } from "./ListingDetailsModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { trpc } from "@/lib/trpc";
+import { toastSvc } from "@/services/toast";
+import { Button } from "@/components/ui/button";
 
-type TabType = "single" | "collection"
+type TabType = "single" | "collection";
 
 export default function MyListings() {
-    const router = useRouter();
-    const [search, setSearch] = useState("");
-    const [activeTab, setActiveTab] = useState<TabType>("single");
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedListing, setSelectedListing] = useState<any>(null);
-    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [listingToDelete, setListingToDelete] = useState<any>(null);
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<TabType>("single");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<any>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [listingToDelete, setListingToDelete] = useState<any>(null);
 
-    const { 
-      data: listings, 
-      isLoading, 
-      error, 
-      refetch 
-    } = useMyListings();
-  
-  console.log(listings, ' listings')
+  const { data: listings, isLoading, error, refetch } = useMyListings();
 
-    const deleteMutation = (trpc.listing as any).deleteListing.useMutation({
-      onSuccess: () => {
-        toastSvc.success("Listing deleted successfully!");
-        refetch();
-      },
-      onError: (error: any) => {
-        toastSvc.error(error.message || "Failed to delete listing");
-      },
-    });
+  console.log(listings, " listings");
 
-    const handleViewDetails = (listing: any) => {
-      setSelectedListing(listing);
-      setIsDetailsModalOpen(true);
-    };
+  const deleteMutation = (trpc.listing as any).deleteListing.useMutation({
+    onSuccess: () => {
+      toastSvc.success("Listing deleted successfully!");
+      refetch();
+    },
+    onError: (error: any) => {
+      toastSvc.error(error.message || "Failed to delete listing");
+    },
+  });
 
-    const handleEdit = (listing: any) => {
-      // Navigate to new-listing page with edit mode (to be implemented)
-      router.push(`/sellers/new-listing?edit=${listing.id}`);
-    };
+  const handleViewDetails = (listing: any) => {
+    setSelectedListing(listing);
+    setIsDetailsModalOpen(true);
+  };
 
-    const handleDeleteClick = (listing: any) => {
-      setListingToDelete(listing);
-      setIsDeleteDialogOpen(true);
-    };
+  const handleEdit = (listing: any) => {
+    // Navigate to new-listing page with edit mode (to be implemented)
+    router.push(`/sellers/new-listing?edit=${listing.id}`);
+  };
 
-    const handleDeleteConfirm = () => {
-      if (listingToDelete) {
-        deleteMutation.mutate({ id: listingToDelete.id });
-        setListingToDelete(null);
-      }
-    };
+  const handleDeleteClick = (listing: any) => {
+    setListingToDelete(listing);
+    setIsDeleteDialogOpen(true);
+  };
 
-    if (isLoading) {
-      return <LoadingState message="Loading your listings..." />;
+  const handleDeleteConfirm = () => {
+    if (listingToDelete) {
+      deleteMutation.mutate({ id: listingToDelete.id });
+      setListingToDelete(null);
     }
+  };
 
-    if (error) {
-      return (
-        <ErrorState 
-          message="Failed to load listings. Please try again."
-          onRetry={() => refetch()}
-        />
-      );
-    }
+  if (isLoading) {
+    return <LoadingState message="Loading your listings..." />;
+  }
 
-    const filteredListings = listings?.filter((listing: any) => {
+  if (error) {
+    return (
+      <ErrorState
+        message="Failed to load listings. Please try again."
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
+  const filteredListings =
+    listings?.filter((listing: any) => {
       const matchesTab = listing.type === activeTab;
-      const matchesSearch = 
+      const matchesSearch =
         listing.title.toLowerCase().includes(search.toLowerCase()) ||
         listing.category?.toLowerCase().includes(search.toLowerCase());
       return matchesTab && matchesSearch;
     }) || [];
 
-    const handleProductSuccess = () => {
-      refetch(); 
-    };
+  const handleProductSuccess = () => {
+    refetch();
+  };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">My Listing</h1>
-          <p className="text-gray-400 mt-1">View and manage all your listed products in one place.</p>
+    <div className="pt-16 px-6 md:pt-0">
+      <div className="mb-6">
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
+          <SearchBar search={search} setSearch={setSearch} />
         </div>
-        <div className="w-80">
-          <SearchBar search={search} setSearch={setSearch}/>
-        </div>
+      </div>
+      <div className="mb-6 md:max-lg:pt-10">
+        <h1 className="text-2xl font-semibold">My Listing</h1>
+        <p className="text-gray-400 mt-1">
+          View and manage all your listed products in one place.
+        </p>
       </div>
 
       <div className="flex justify-between mb-6">
         <div className="flex space-x-2">
-          <button 
+          <button
             onClick={() => setActiveTab("single")}
             className={`px-4 py-2 rounded-md flex items-center transition ${
               activeTab === "single"
@@ -117,7 +121,7 @@ export default function MyListings() {
           >
             <span className="mr-2">Single Items</span>
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab("collection")}
             className={`px-4 py-2 rounded-md transition ${
               activeTab === "collection"
@@ -133,7 +137,7 @@ export default function MyListings() {
             <Filter className="h-4 w-4 mr-2" />
             <span>Filter</span>
           </button>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-purple-600 text-white px-4 py-2 rounded-md flex items-center hover:bg-purple-700 transition"
           >
@@ -150,7 +154,9 @@ export default function MyListings() {
               type="checkbox"
               className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
             />
-            <span>{activeTab === "single" ? "Product Name" : "Collection Name"}</span>
+            <span>
+              {activeTab === "single" ? "Product Name" : "Collection Name"}
+            </span>
           </div>
           <div>Category</div>
           <div>Price</div>
@@ -181,22 +187,20 @@ export default function MyListings() {
                     <span>{listing.title}</span>
                   </div>
                 </div>
-                <div>{listing.category || 'N/A'}</div>
+                <div>{listing.category || "N/A"}</div>
                 <div>
-                  {listing.type === "single" && listing.priceCents 
+                  {listing.type === "single" && listing.priceCents
                     ? `₦${(listing.priceCents / 100).toLocaleString()}`
                     : listing.type === "collection"
-                    ? "Varies"
-                    : "N/A"
-                  }
+                      ? "Varies"
+                      : "N/A"}
                 </div>
                 <div>
-                  {listing.type === "single" 
+                  {listing.type === "single"
                     ? listing.quantityAvailable || 0
-                    : listing.itemsJson 
-                    ? JSON.parse(listing.itemsJson).length 
-                    : 0
-                  }
+                    : listing.itemsJson
+                      ? JSON.parse(listing.itemsJson).length
+                      : 0}
                 </div>
                 <div>
                   {listing.type === "single" ? (
@@ -205,14 +209,15 @@ export default function MyListings() {
                         (listing.quantityAvailable || 0) > 10
                           ? "bg-green-100 text-green-800"
                           : (listing.quantityAvailable || 0) > 0
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                      }`}>
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                      }`}
+                    >
                       {(listing.quantityAvailable || 0) > 10
                         ? "In stock"
                         : (listing.quantityAvailable || 0) > 0
-                        ? "Low stock"
-                        : "Sold out"}
+                          ? "Low stock"
+                          : "Sold out"}
                     </span>
                   ) : (
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -221,24 +226,24 @@ export default function MyListings() {
                   )}
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
+                  <Button
                     onClick={() => handleViewDetails(listing)}
                     className="bg-[#0a0a0a] border border-[#333] hover:bg-[#222] hover:border-purple-600 text-white text-sm px-4 py-2 rounded transition flex items-center"
                   >
                     View Details
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => handleEdit(listing)}
                     className="bg-[#0a0a0a] border border-[#333] hover:bg-purple-600 hover:border-purple-600 text-white text-sm p-2 rounded transition"
                     title="Edit listing"
                   >
                     <SquarePen className="h-4 w-4" />
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => handleDeleteClick(listing)}
                     title="Delete listing"
                   >
-                    <Trash2 className="h-4 w-4"/>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -247,13 +252,13 @@ export default function MyListings() {
         )}
       </div>
 
-      <AddProductModal 
+      <AddProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleProductSuccess}
       />
 
-      <ListingDetailsModal 
+      <ListingDetailsModal
         listing={selectedListing}
         isOpen={isDetailsModalOpen}
         onClose={() => {
@@ -267,7 +272,8 @@ export default function MyListings() {
           <DialogHeader>
             <DialogTitle>Delete Listing</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Are you sure you want to delete "{listingToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{listingToDelete?.title}"? This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-3 mt-4">
@@ -288,5 +294,5 @@ export default function MyListings() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

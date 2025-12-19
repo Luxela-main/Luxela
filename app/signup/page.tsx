@@ -215,7 +215,7 @@ const handleResendVerification = async () => {
                       <Field
                         as="select"
                         name="role"
-                        className={`w-full mt-1 rounded-md border border-input px-10 py-2 text-sm ${errors.role && touched.role ? "border-destructive" : ""}`}
+                        className={`w-full bg-black mt-1 rounded-md border border-input px-10 py-2 text-sm ${errors.role && touched.role ? "border-destructive" : ""}`}
                       >
                         <option value="" disabled>Select role</option>
                         <option value="buyer">Buyer</option>

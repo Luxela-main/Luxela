@@ -34,10 +34,11 @@ const NAVLINKS = [
 ];
 
 const USER_DROPDOWN = [
-  { name: "Track Order", href: "/buyer/track-order" },
-  { name: "Return and Refund", href: "/buyer/return-refund" },
+    { name: "My Account", href: "/buyer/dashboard" },
+  { name: "Track Order", href: "/buyer/dashboard/orders" },
+  { name: "Return and Refund", href: "#" },
   { name: "Profile", href: "/buyer/profile" },
-  { name: "Help Centre", href: "/buyer/help-centre" },
+  { name: "Help Centre", href: "#" },
 ];
 
 const BuyerHeader = () => {

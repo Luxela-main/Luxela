@@ -55,7 +55,6 @@ export default function Sidebar() {
 
   const [user, setUser] = useState<CurrentUser | null>(null);
 
-
   useEffect(() => {
     async function fetchUser() {
       const data = await getCurrentUser();
