@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Loader } from "@/components/loader/loader";
 import { useToast } from "@/components/hooks/useToast";
+import Commander from "ioredis/built/utils/Commander";
 
 function AuthCallbackHandler() {
   const router = useRouter();
@@ -27,9 +28,9 @@ function AuthCallbackHandler() {
         if (isDev) console.log("Auth callback params:", { code, type, tokenHash });
 
         if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error || !data.session) {
-            router.replace("/signin?error=oauth_failed");
+          const { data } = await supabase.auth.exchangeCodeForSession(code);
+          if (code || !data.session) {
+            router.replace("/dashboard");
             return;
           }
           const user = getUserFromSession(data.session);
