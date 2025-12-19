@@ -14,8 +14,8 @@ function AuthCallbackHandler() {
   const isDev = process.env.NODE_ENV === "development";
 
   const getUserFromSession = (session: any) => session?.user ?? null;
-  const getRoleFromUser = (user: any): "buyer" | "seller" | null =>
-    user?.user_metadata?.role || null;
+  const getRoleFromUser = (user: any): "buyer" | "seller" =>
+    user?.user_metadata?.role === "seller" ? "seller" : "buyer";
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -32,11 +32,7 @@ function AuthCallbackHandler() {
             const user = getUserFromSession(data.session);
             const role = getRoleFromUser(user);
             if (isDev) toast.success("Signin successful!");
-            if (role) {
-              router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
-            } else {
-              router.replace("/dashboard");
-            }
+            router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
             return;
           } else {
             router.replace("/dashboard");
@@ -53,22 +49,14 @@ function AuthCallbackHandler() {
           const user = getUserFromSession(data.session);
           const role = getRoleFromUser(user);
           toast.success("Signup verified successfully.");
-          if (role) {
-            router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
-          } else {
-            router.replace("/dashboard");
-          }
+          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
           return;
         }
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const role = getRoleFromUser(session.user);
-          if (role) {
-            router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
-          } else {
-            router.replace("/dashboard");
-          }
+          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer");
           return;
         }
 
