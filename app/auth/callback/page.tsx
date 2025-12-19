@@ -30,7 +30,7 @@ function AuthCallbackHandler() {
         if (code) {
           const { data } = await supabase.auth.exchangeCodeForSession(code);
           if (code || !data.session) {
-            router.replace("/dashboard");
+            router.replace("/");
             return;
           }
           const user = getUserFromSession(data.session);
