@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/hooks/useToast";
 
+import { trpc } from "@/lib/trpc";
+
 const NAVLINKS = [
   { name: "Home", href: "/buyer" },
   { name: "Brands", href: "/buyer/brands" },
@@ -34,7 +36,7 @@ const NAVLINKS = [
 ];
 
 const USER_DROPDOWN = [
-    { name: "My Account", href: "/buyer/dashboard" },
+  { name: "My Account", href: "/buyer/dashboard" },
   { name: "Track Order", href: "/buyer/dashboard/orders" },
   { name: "Return and Refund", href: "#" },
   { name: "Profile", href: "/buyer/profile" },
@@ -47,13 +49,31 @@ const BuyerHeader = () => {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Fetch buyer profile data
+  const { data: accountData } = trpc.buyer.getAccountDetails.useQuery(undefined, {
+    enabled: !!user,
+    retry: false,
+    onError: (err) => {
+      // Silently handle NOT_FOUND - user hasn't created profile yet
+      if (err.data?.code !== "NOT_FOUND") {
+        console.error("Failed to load profile:", err);
+      }
+    },
+  });
+
   const username =
+    accountData?.username ||
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
     user?.email?.split("@")[0] ||
     "User";
 
-  const userPicture = user?.user_metadata?.avatar_url || "/assets/image 38.png";
+  const userPicture = 
+    accountData?.profilePicture || 
+    user?.user_metadata?.avatar_url || 
+    "/images/seller/sparkles.svg";
+
+
 
   const handleLogout = async () => {
     try {
