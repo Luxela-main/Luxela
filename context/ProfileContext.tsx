@@ -4,18 +4,32 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from "@/context/AuthContext";
 
+
+interface BillingAddress {
+  id: string;
+  houseAddress: string;
+  city: string;
+  postalCode: string;
+  isDefault: boolean;
+}
+
 interface ProfileData {
   id: string;
   username: string;
   fullName: string;
   email: string;
   profilePicture: string | null;
+  dateOfBirth?: Date | string | null; 
+  phoneNumber?: string | null;        
+  country?: string | null;            
+  state?: string | null;  
+    billingAddress?: BillingAddress | null;             
 }
 
 interface ProfileContextType {
   profile: ProfileData | null;
   loading: boolean;
-  isInitialized: boolean; // NEW: Track if initial fetch is done
+  isInitialized: boolean;
   refreshProfile: () => void;
 }
 
@@ -24,7 +38,7 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false); // NEW
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const { data, isLoading, refetch, error } = trpc.buyer.getAccountDetails.useQuery(undefined, {
     enabled: !!user,
@@ -34,15 +48,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     useErrorBoundary: false,
   });
 
-  // Update profile when data changes
+
   useEffect(() => {
     if (data) {
       setProfile(data);
-      setIsInitialized(true); // Mark as initialized
+      setIsInitialized(true);
     } else if (error) {
-      // Profile doesn't exist - silent fail
+      
       setProfile(null);
-      setIsInitialized(true); // Still mark as initialized
+      setIsInitialized(true); 
     }
   }, [data, error]);
 

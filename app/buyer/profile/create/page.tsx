@@ -118,14 +118,14 @@ export default function CreateBuyerProfileForm() {
     }
   };
 
-  const removePicture = () => {
-    formik.setFieldValue("profilePicture", "");
-  };
+  // const removePicture = () => {
+  //   formik.setFieldValue("profilePicture", "");
+  // };
 
   return (
     <div className="bg-[#1a1a1a] rounded-lg p-6 max-w-md mx-auto mt-10">
       <h2 className="text-xl font-medium mb-6 text-white">
-        Create Your Buyer Profile
+        Create Your Profile to Continue
       </h2>
 
       <form onSubmit={formik.handleSubmit} className="space-y-4">
