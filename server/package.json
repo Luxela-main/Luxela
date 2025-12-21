@@ -10,7 +10,7 @@
     "dev:server": "ts-node server/index.ts",
     "dev:check-db": "ts-node-dev --respawn server/check-db.ts",
     "db:generate": "drizzle-kit generate:pg",
-    "build:client": "pnpm exec next build",
+    "build:client": "next build",
     "build": "pnpm run build:server && pnpm run build:client",
     "build:server": "tsc -p server/tsconfig.json",
     "start:server": "node dist/server/index.js",
