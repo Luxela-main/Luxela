@@ -200,7 +200,7 @@ export function BillingAddress() {
 
           <div>
             <label className="text-[#7e7e7e] text-sm block mb-1">Email Address</label>
-            <p className="text-white">{profile?.email || user?.email || 'N/A'}</p>
+            <p className="text-white break-all">{profile?.email || user?.email || 'N/A'}</p>
           </div>
         </div>
       </div>

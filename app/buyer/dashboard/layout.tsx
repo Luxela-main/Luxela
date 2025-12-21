@@ -13,7 +13,10 @@ export default async function Layout({ children }: LayoutProps) {
       <div className="flex flex-1">
         <Sidebar />
 
-        <main className="flex-1 p-8">{children}</main>
+        {/* Responsive main content with proper spacing for mobile */}
+        <main className="flex-1 p-4 md:p-6 lg:p-8 w-full lg:w-auto">
+          {children}
+        </main>
       </div>
 
       {/* <BuyerFooter /> */}
