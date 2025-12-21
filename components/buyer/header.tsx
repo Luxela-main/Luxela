@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/components/hooks/useToast";
 
 import { trpc } from "@/lib/trpc";
+import { useProfile } from "@/context/ProfileContext";
 
 const NAVLINKS = [
   { name: "Home", href: "/buyer" },
@@ -49,31 +50,11 @@ const BuyerHeader = () => {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Fetch buyer profile data
-  const { data: accountData } = trpc.buyer.getAccountDetails.useQuery(undefined, {
-    enabled: !!user,
-    retry: false,
-    onError: (err) => {
-      // Silently handle NOT_FOUND - user hasn't created profile yet
-      if (err.data?.code !== "NOT_FOUND") {
-        console.error("Failed to load profile:", err);
-      }
-    },
-  });
+  const { profile, loading: profileLoading } = useProfile();
 
-  const username =
-    accountData?.username ||
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
-    "User";
+  const username = profile?.username || user?.email?.split("@")[0] || "User";
 
-  const userPicture = 
-    accountData?.profilePicture || 
-    user?.user_metadata?.avatar_url || 
-    "/images/seller/sparkles.svg";
-
-
+  const userPicture = profile?.profilePicture || "/images/seller/sparkles.svg";
 
   const handleLogout = async () => {
     try {
@@ -166,8 +147,14 @@ const BuyerHeader = () => {
                         className="size-full rounded-full"
                       />
                     </div>
-                    <span className="max-w-20 truncate hidden md:block">{username}</span>
-                    <ChevronDown size={18} stroke="#DCDCDC" className="hidden md:block" />
+                    <span className="max-w-20 truncate hidden md:block">
+                      {username}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      stroke="#DCDCDC"
+                      className="hidden md:block"
+                    />
                   </button>
                 </DropdownMenuTrigger>
 
@@ -274,7 +261,9 @@ const BuyerHeader = () => {
               {/* User Menu (when signed in) */}
               {user && (
                 <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
-                  <h3 className="text-xs text-gray-500 uppercase tracking-wider">Account</h3>
+                  <h3 className="text-xs text-gray-500 uppercase tracking-wider">
+                    Account
+                  </h3>
                   {USER_DROPDOWN.map((item) => (
                     <Link
                       key={item.name}

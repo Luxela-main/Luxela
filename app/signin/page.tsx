@@ -43,7 +43,7 @@ function SignInContent() {
 
       // Optional: role-based redirect if user_metadata.role exists
       const role = user.user_metadata?.role === "seller" ? "seller" : "buyer";
-      router.push(role === "seller" ? "/sellers/dashboard" : "/buyer");
+      router.push(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
       return;
     }
 

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toastSvc } from "@/services/toast";
+import { useProfile } from "@/context/ProfileContext"; // Import this
 import {
   uploadImage,
   deleteImage,
@@ -14,15 +16,23 @@ import {
 } from "@/lib/upload-image";
 import { X, Upload } from "lucide-react";
 
-export function CreateBuyerProfileForm() {
+export default function CreateBuyerProfileForm() {
+  const router = useRouter();
   const utils = trpc.useUtils();
+  const { refreshProfile } = useProfile(); // Get refresh function
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const pictureInputRef = useRef<HTMLInputElement>(null);
 
   const createProfileMutation = trpc.buyer.createBuyerProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toastSvc.success("Buyer profile created successfully");
-      utils.buyer.getAccountDetails.invalidate();
+      
+      // Refresh both the profile context and the account details
+      await utils.buyer.getAccountDetails.invalidate();
+      refreshProfile(); // Refresh the context
+      
+      // Redirect to profile page
+      router.push("/buyer/profile"); // Adjust path as needed
     },
     onError: (error: any) => {
       toastSvc.error(error.message || "Failed to create profile");
@@ -84,12 +94,11 @@ export function CreateBuyerProfileForm() {
 
     setUploadingPicture(true);
     try {
-      // Convert file to base64
       const base64Data = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          resolve(result.split(",")[1]); // Remove data:image/xxx;base64, prefix
+          resolve(result.split(",")[1]);
         };
         reader.onerror = reject;
         reader.readAsDataURL(file);
@@ -192,6 +201,7 @@ export function CreateBuyerProfileForm() {
             name="country"
             value={formik.values.country}
             onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
             className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
               formik.touched.country && formik.errors.country
                 ? "border-red-500"
@@ -211,6 +221,7 @@ export function CreateBuyerProfileForm() {
             name="state"
             value={formik.values.state}
             onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
             className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
               formik.touched.state && formik.errors.state
                 ? "border-red-500"
@@ -222,62 +233,6 @@ export function CreateBuyerProfileForm() {
               {formik.errors.state}
             </div>
           )}
-        </div>
-
-        <div>
-          <label className="block text-sm mb-1 text-gray-400">
-            Profile Picture
-          </label>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-[#222] overflow-hidden relative flex items-center justify-center">
-              {formik.values.profilePicture ? (
-                <>
-                  <img
-                    src={formik.values.profilePicture}
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      removePicture();
-                    }}
-                    className="absolute top-1 right-1 bg-red-500 rounded-full p-1 hover:bg-red-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </>
-              ) : (
-                <div className="text-gray-400">No picture</div>
-              )}
-            </div>
-            <input
-              ref={pictureInputRef}
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp"
-              className="hidden"
-              onChange={handlePictureUpload}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                pictureInputRef.current?.click();
-              }}
-              disabled={uploadingPicture}
-              className="bg-[#222] border-[#333] hover:bg-[#333]"
-            >
-              {uploadingPicture ? (
-                "Uploading..."
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload
-                </>
-              )}
-            </Button>
-          </div>
         </div>
 
         <div className="flex justify-end mt-4">

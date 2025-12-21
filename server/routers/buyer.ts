@@ -1,4 +1,8 @@
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/trpc';
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "../trpc/trpc";
 import { db } from "../db";
 import {
   buyers,
@@ -12,7 +16,7 @@ import { and, eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let supabase: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient | null {
@@ -55,7 +59,10 @@ function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
   return true;
 }
 
-function validateFile(base64Data: string, fileType: string): { valid: boolean; error?: string } {
+function validateFile(
+  base64Data: string,
+  fileType: string
+): { valid: boolean; error?: string } {
   if (!FILE_CONSTRAINTS.allowedTypes.includes(fileType)) {
     return {
       valid: false,
@@ -113,7 +120,7 @@ export const buyerRouter = createTRPCRouter({
       z.object({
         username: z.string().min(3).max(100),
         fullName: z.string().min(1),
-        dateOfBirth: z.date().optional(),
+        dateOfBirth: z.coerce.date().optional(),
         phoneNumber: z.string().optional(),
         country: z.string(),
         state: z.string(),
@@ -183,7 +190,8 @@ export const buyerRouter = createTRPCRouter({
         path: "/buyer/account",
         tags: ["Buyer - Account"],
         summary: "Get buyer account details",
-        description: "Retrieve complete account information including profile and default billing address",
+        description:
+          "Retrieve complete account information including profile and default billing address",
       },
     })
     .input(z.void())
@@ -322,7 +330,8 @@ export const buyerRouter = createTRPCRouter({
           if (!input.username || !input.fullName) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "Username and fullName are required for initial creation",
+              message:
+                "Username and fullName are required for initial creation",
             });
           }
 
@@ -341,7 +350,10 @@ export const buyerRouter = createTRPCRouter({
           });
         }
 
-        return { success: true, message: "Account details updated successfully" };
+        return {
+          success: true,
+          message: "Account details updated successfully",
+        };
       } catch (err: any) {
         console.error("Error updating account details:", err);
         throw new TRPCError({
@@ -376,7 +388,13 @@ export const buyerRouter = createTRPCRouter({
       }
 
       const rateLimitKey = `profile_upload_${userId}`;
-      if (!checkRateLimit(rateLimitKey, RATE_LIMITS.profileUpload.limit, RATE_LIMITS.profileUpload.windowMs)) {
+      if (
+        !checkRateLimit(
+          rateLimitKey,
+          RATE_LIMITS.profileUpload.limit,
+          RATE_LIMITS.profileUpload.windowMs
+        )
+      ) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",
           message: "Profile picture upload limit exceeded. Try again later.",
@@ -414,9 +432,9 @@ export const buyerRouter = createTRPCRouter({
           throw new Error(`Upload failed: ${error.message}`);
         }
 
-        const { data: { publicUrl } } = sb.storage
-          .from("profile-pictures")
-          .getPublicUrl(data.path);
+        const {
+          data: { publicUrl },
+        } = sb.storage.from("profile-pictures").getPublicUrl(data.path);
 
         await db
           .update(buyerAccountDetails)
@@ -485,7 +503,7 @@ export const buyerRouter = createTRPCRouter({
             .limit(input.limit)
             .offset(offset),
           db
-            .select({ count: (db as any).fn.count().as('count') })
+            .select({ count: (db as any).fn.count().as("count") })
             .from(buyerBillingAddress)
             .where(eq(buyerBillingAddress.buyerId, buyer.id)),
         ]);
@@ -539,7 +557,13 @@ export const buyerRouter = createTRPCRouter({
       }
 
       const rateLimitKey = `address_create_${userId}`;
-      if (!checkRateLimit(rateLimitKey, RATE_LIMITS.addressCreate.limit, RATE_LIMITS.addressCreate.windowMs)) {
+      if (
+        !checkRateLimit(
+          rateLimitKey,
+          RATE_LIMITS.addressCreate.limit,
+          RATE_LIMITS.addressCreate.windowMs
+        )
+      ) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",
           message: "Address creation limit exceeded. Try again later.",
@@ -692,7 +716,9 @@ export const buyerRouter = createTRPCRouter({
           });
         }
 
-        await db.delete(buyerBillingAddress).where(eq(buyerBillingAddress.id, input.addressId));
+        await db
+          .delete(buyerBillingAddress)
+          .where(eq(buyerBillingAddress.id, input.addressId));
 
         return { success: true };
       } catch (err: any) {
@@ -768,7 +794,7 @@ export const buyerRouter = createTRPCRouter({
             .limit(input.limit)
             .offset(offset),
           db
-            .select({ count: (db as any).fn.count().as('count') })
+            .select({ count: (db as any).fn.count().as("count") })
             .from(buyerFavorites)
             .where(eq(buyerFavorites.buyerId, buyer.id)),
         ]);
@@ -809,7 +835,13 @@ export const buyerRouter = createTRPCRouter({
       }
 
       const rateLimitKey = `favorite_${userId}`;
-      if (!checkRateLimit(rateLimitKey, RATE_LIMITS.favorite.limit, RATE_LIMITS.favorite.windowMs)) {
+      if (
+        !checkRateLimit(
+          rateLimitKey,
+          RATE_LIMITS.favorite.limit,
+          RATE_LIMITS.favorite.windowMs
+        )
+      ) {
         throw new TRPCError({
           code: "TOO_MANY_REQUESTS",
           message: "Favorite action limit exceeded. Try again later.",
@@ -891,7 +923,9 @@ export const buyerRouter = createTRPCRouter({
           });
         }
 
-        await db.delete(buyerFavorites).where(eq(buyerFavorites.id, input.favoriteId));
+        await db
+          .delete(buyerFavorites)
+          .where(eq(buyerFavorites.id, input.favoriteId));
 
         return { success: true };
       } catch (err: any) {
@@ -909,11 +943,14 @@ export const buyerRouter = createTRPCRouter({
         path: "/buyer/favorites/check/{listingId}",
         tags: ["Buyer - Favorites"],
         summary: "Check if a listing is favorited",
-        description: "Check whether a specific listing is in the buyer's favorites",
+        description:
+          "Check whether a specific listing is in the buyer's favorites",
       },
     })
     .input(z.object({ listingId: z.string().uuid() }))
-    .output(z.object({ isFavorited: z.boolean(), favoriteId: z.string().nullable() }))
+    .output(
+      z.object({ isFavorited: z.boolean(), favoriteId: z.string().nullable() })
+    )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) {
@@ -955,7 +992,8 @@ export const buyerRouter = createTRPCRouter({
         path: "/buyer/orders",
         tags: ["Buyer - Orders"],
         summary: "Get purchase history",
-        description: "Retrieve paginated order history with optional status filtering",
+        description:
+          "Retrieve paginated order history with optional status filtering",
       },
     })
     .input(
@@ -997,15 +1035,24 @@ export const buyerRouter = createTRPCRouter({
         const offset = (input.page - 1) * input.limit;
 
         const status = input?.status ?? "all";
-        
+
         let whereCondition: any = eq(orders.buyerId, buyer.id);
 
         if (status === "ongoing") {
-          whereCondition = and(whereCondition, eq(orders.deliveryStatus, 'in_transit'));
+          whereCondition = and(
+            whereCondition,
+            eq(orders.deliveryStatus, "in_transit")
+          );
         } else if (status === "delivered") {
-          whereCondition = and(whereCondition, eq(orders.deliveryStatus, 'delivered'));
+          whereCondition = and(
+            whereCondition,
+            eq(orders.deliveryStatus, "delivered")
+          );
         } else if (status === "canceled") {
-          whereCondition = and(whereCondition, eq(orders.orderStatus, 'canceled'));
+          whereCondition = and(
+            whereCondition,
+            eq(orders.orderStatus, "canceled")
+          );
         }
 
         const [results, totalResult] = await Promise.all([
@@ -1027,7 +1074,7 @@ export const buyerRouter = createTRPCRouter({
             .limit(input.limit)
             .offset(offset),
           db
-            .select({ count: (db as any).fn.count().as('count') })
+            .select({ count: (db as any).fn.count().as("count") })
             .from(orders)
             .where(whereCondition),
         ]);
@@ -1066,7 +1113,8 @@ export const buyerRouter = createTRPCRouter({
         path: "/buyer/orders/{orderId}",
         tags: ["Buyer - Orders"],
         summary: "Get detailed order information",
-        description: "Fetch complete order details including shipping, tracking, and delivery info",
+        description:
+          "Fetch complete order details including shipping, tracking, and delivery info",
       },
     })
     .input(z.object({ orderId: z.string().uuid() }))
@@ -1144,12 +1192,19 @@ export const buyerRouter = createTRPCRouter({
         path: "/buyer/orders/by-status",
         tags: ["Buyer - Orders"],
         summary: "Get orders filtered by status",
-        description: "Retrieve orders filtered by specific order status with pagination support",
+        description:
+          "Retrieve orders filtered by specific order status with pagination support",
       },
     })
     .input(
       z.object({
-        status: z.enum(["processing", "shipped", "delivered", "canceled", "returned"]),
+        status: z.enum([
+          "processing",
+          "shipped",
+          "delivered",
+          "canceled",
+          "returned",
+        ]),
         page: z.number().int().positive().default(1),
         limit: z.number().int().min(5).max(50).default(10),
       })
@@ -1205,7 +1260,7 @@ export const buyerRouter = createTRPCRouter({
             .limit(input.limit)
             .offset(offset),
           db
-            .select({ count: (db as any).fn.count().as('count') })
+            .select({ count: (db as any).fn.count().as("count") })
             .from(orders)
             .where(
               and(
@@ -1249,7 +1304,8 @@ export const buyerRouter = createTRPCRouter({
         path: "/buyer/orders/stats",
         tags: ["Buyer - Orders"],
         summary: "Get buyer order statistics",
-        description: "Fetch summary statistics for buyer orders (total orders, total spent, status breakdown)",
+        description:
+          "Fetch summary statistics for buyer orders (total orders, total spent, status breakdown)",
       },
     })
     .input(z.void())
@@ -1279,10 +1335,19 @@ export const buyerRouter = createTRPCRouter({
 
         // Calculate stats in application
         const totalOrders = allOrders.length;
-        const totalSpentCents = allOrders.reduce((sum, o) => sum + (o.amountCents || 0), 0);
-        const pendingOrders = allOrders.filter((o) => o.deliveryStatus === 'in_transit').length;
-        const deliveredOrders = allOrders.filter((o) => o.deliveryStatus === 'delivered').length;
-        const canceledOrders = allOrders.filter((o) => o.orderStatus === 'canceled').length;
+        const totalSpentCents = allOrders.reduce(
+          (sum, o) => sum + (o.amountCents || 0),
+          0
+        );
+        const pendingOrders = allOrders.filter(
+          (o) => o.deliveryStatus === "in_transit"
+        ).length;
+        const deliveredOrders = allOrders.filter(
+          (o) => o.deliveryStatus === "delivered"
+        ).length;
+        const canceledOrders = allOrders.filter(
+          (o) => o.orderStatus === "canceled"
+        ).length;
 
         return {
           totalOrders,

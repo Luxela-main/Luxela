@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import PurchaseHistory from "@/components/buyer/profile/purchase-history";
 import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
 import { trpc } from "@/lib/trpc";
 import { validateImageFile } from "@/lib/upload-image";
 import { toastSvc } from "@/services/toast";
-import { CreateBuyerProfileForm } from "./createBuyerProfileForm/page";
 import { Edit } from "lucide-react";
 
 function fileToBase64(file: File): Promise<string> {
@@ -15,7 +16,6 @@ function fileToBase64(file: File): Promise<string> {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
-      // Remove "data:<type>;base64," prefix
       const base64String = (reader.result as string).split(",")[1];
       resolve(base64String);
     };
@@ -24,11 +24,20 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 const ProfilePage = () => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"loyalty" | "purchase">("loyalty");
   const { user } = useAuth();
+  const { profile, loading: profileLoading, isInitialized } = useProfile(); 
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
+ useEffect(() => {
+    if (isInitialized && !profile && user) {
+      router.push("/buyer/profile/create");
+    }
+  }, [profile, isInitialized, user, router]);
+
+  console.log("Profile data in page:", profile);
   async function compressImage(
     file: File,
     maxSizeMB: number = 0.5
@@ -44,7 +53,6 @@ const ProfilePage = () => {
           let width = img.width;
           let height = img.height;
 
-          // More aggressive - max 600px instead of 1200px
           const maxDimension = 600;
           if (width > height && width > maxDimension) {
             height = (height * maxDimension) / width;
@@ -73,7 +81,7 @@ const ProfilePage = () => {
               }
             },
             "image/jpeg",
-            0.6 // Lower quality to 60%
+            0.6
           );
         };
         img.onerror = reject;
@@ -84,26 +92,9 @@ const ProfilePage = () => {
 
   const utils = trpc.useUtils();
 
-  const {
-    data: accountData,
-    isLoading: accountLoading,
-    error: accountError,
-  } = trpc.buyer.getAccountDetails.useQuery(undefined, {
-    enabled: !!user,
-    onError: (err) => {
-      if (err.data?.code === "NOT_FOUND") {
-        toastSvc.success(
-          "Buyer profile not found, showing create form instead"
-        );
-      } else {
-    toastSvc.error("Failed to load profile. Please try again.");
-      }
-    },
-  });
-
   const { data: orderStats, isLoading: statsLoading } =
     trpc.buyer.getOrderStats.useQuery(undefined, {
-      enabled: !!user && !!accountData,
+      enabled: !!user && !!profile,
     });
 
   const uploadProfilePicMutation =
@@ -115,7 +106,6 @@ const ProfilePage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file type
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toastSvc.error(
@@ -125,11 +115,10 @@ const ProfilePage = () => {
       return;
     }
 
-    // Check file size (5MB = 5 * 1024 * 1024 bytes)
     const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
       toastSvc.error(
-        "Image is too large. Maximum size is 5MB. Please choose a smaller image."
+        "Image is too large. Maximum size is 3MB. Please choose a smaller image."
       );
       if (profilePicInputRef.current) profilePicInputRef.current.value = "";
       return;
@@ -166,13 +155,21 @@ const ProfilePage = () => {
     }
   };
 
-  // If buyer profile does not exist, show create form
-  if (accountError?.message.includes("Buyer profile not found")) {
-    return <CreateBuyerProfileForm />;
+  if (profileLoading || !isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading profile...</div>
+      </div>
+    );
+  }
+
+  // This will briefly show before redirect, but you can return null if preferred
+  if (!profile) {
+    return null; // Or a loading spinner
   }
 
   const username =
-    accountData?.username ||
+    profile.username ||
     user?.user_metadata?.full_name ||
     user?.email?.split("@")[0] ||
     "User";
@@ -199,7 +196,7 @@ const ProfilePage = () => {
         >
           <div className="relative w-[60px] md:w-[120px] h-[60px] md:h-[120px] rounded-full bg-gradient-to-br from-gray-700 to-gray-900 overflow-hidden">
             <img
-              src={accountData?.profilePicture || "/images/seller/sparkles.svg"}
+              src={profile?.profilePicture || "/images/seller/sparkles.svg"}
               alt="Profile"
               className="w-full h-full object-cover"
             />
