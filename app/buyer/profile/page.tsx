@@ -1,70 +1,232 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
-import PurchaseHistory from '@/components/buyer/profile/purchase-history';
-import { useAuth } from '@/context/AuthContext';
-import { trpc } from '@/lib/trpc';
+import React, { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import PurchaseHistory from "@/components/buyer/profile/purchase-history";
+import { useAuth } from "@/context/AuthContext";
+import { useProfile } from "@/context/ProfileContext";
+import { trpc } from "@/lib/trpc";
+import { validateImageFile } from "@/lib/upload-image";
+import { toastSvc } from "@/services/toast";
+import { Edit } from "lucide-react";
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64String = (reader.result as string).split(",")[1];
+      resolve(base64String);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+}
 
 const ProfilePage = () => {
-  const [activeTab, setActiveTab] = useState('loyalty');
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"loyalty" | "purchase">("loyalty");
   const { user } = useAuth();
+  const { profile, loading: profileLoading, isInitialized } = useProfile(); 
+  const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch data from backend
-  const { data: accountData, isLoading: accountLoading } = trpc.buyer.getAccountDetails.useQuery(undefined, {
-    enabled: !!user,
-  });
+ useEffect(() => {
+    if (isInitialized && !profile && user) {
+      router.push("/buyer/profile/create");
+    }
+  }, [profile, isInitialized, user, router]);
 
-  // Fetch order statistics
-  const { data: orderStats, isLoading: statsLoading } = trpc.buyer.getOrderStats.useQuery(undefined, {
-    enabled: !!user,
-  });
+  console.log("Profile data in page:", profile);
+  async function compressImage(
+    file: File,
+    maxSizeMB: number = 0.5
+  ): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
 
-  if (!user) return null;
+          const maxDimension = 600;
+          if (width > height && width > maxDimension) {
+            height = (height * maxDimension) / width;
+            width = maxDimension;
+          } else if (height > maxDimension) {
+            width = (width * maxDimension) / height;
+            height = maxDimension;
+          }
 
-  if (accountLoading || statsLoading) {
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error("Compression failed"));
+              }
+            },
+            "image/jpeg",
+            0.6
+          );
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  }
+
+  const utils = trpc.useUtils();
+
+  const { data: orderStats, isLoading: statsLoading } =
+    trpc.buyer.getOrderStats.useQuery(undefined, {
+      enabled: !!user && !!profile,
+    });
+
+  const uploadProfilePicMutation =
+    trpc.buyer.uploadProfilePicture.useMutation();
+
+  const handleProfilePicUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toastSvc.error(
+        "Invalid file type. Please upload a PNG, JPEG, or WebP image."
+      );
+      if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+      return;
+    }
+
+    const maxSize = 3 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toastSvc.error(
+        "Image is too large. Maximum size is 3MB. Please choose a smaller image."
+      );
+      if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+      return;
+    }
+
+    const validation = validateImageFile(file, 5);
+    if (!validation.valid) {
+      toastSvc.error(validation.error!);
+      if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+      return;
+    }
+
+    setUploadingProfilePic(true);
+
+    try {
+      const compressedFile = await compressImage(file, 1);
+      const base64Data = await fileToBase64(compressedFile);
+
+      const result = await uploadProfilePicMutation.mutateAsync({
+        fileName: file.name,
+        fileType: "image/jpeg",
+        base64Data: base64Data,
+      });
+
+      if (result.success) {
+        toastSvc.success("Profile picture updated successfully");
+        await utils.buyer.getAccountDetails.invalidate();
+      }
+    } catch (err: any) {
+      toastSvc.error(err.message || "Failed to upload profile picture");
+    } finally {
+      setUploadingProfilePic(false);
+      if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+    }
+  };
+
+  if (profileLoading || !isInitialized) {
     return (
-      <div className="min-h-screen text-white font-sans py-10 flex items-center justify-center">
-        <div className="text-gray-400">Loading profile...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading profile...</div>
       </div>
     );
   }
 
-  const username = accountData?.username || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-  const userPicture = accountData?.profilePicture || user.user_metadata?.avatar_url || "/assets/image 38.png";
-  const userSince = (user.created_at) ? new Date(user.created_at).getFullYear() : '2023';
+  // This will briefly show before redirect, but you can return null if preferred
+  if (!profile) {
+    return null; // Or a loading spinner
+  }
 
+  const username =
+    profile.username ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "User";
+
+  const userSince = user?.created_at
+    ? new Date(user.created_at).getFullYear()
+    : "2023";
 
   const nftItems = [
-    { id: 1, rarity: 'Rare', property: 'Digital Art' },
-    { id: 2, rarity: 'Epic', property: 'Collectible' },
-    { id: 3, rarity: 'Common', property: 'Avatar' },
+    { id: 1, rarity: "Rare", property: "Digital Art" },
+    { id: 2, rarity: "Epic", property: "Collectible" },
+    { id: 3, rarity: "Common", property: "Avatar" },
   ];
 
   return (
-    <div className="min-h-screen text-white font-sans py-10">
+    <div className="min-h-screen text-white px-6 py-10">
       {/* Header */}
-      <header className="flex flex-col gap-10 md:flex-row items-start justify-between px-2 ">
+      <header className="flex flex-col gap-10 md:flex-row items-start justify-between px-2">
         <motion.div
           className="flex items-center gap-4"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="size-[60px] md:size-[120px] rounded-full bg-gradient-to-br from-gray-700 to-gray-900 overflow-hidden">
-            <Image
-              width={120}
-              height={120}
-              src={userPicture}
+          <div className="relative w-[60px] md:w-[120px] h-[60px] md:h-[120px] rounded-full bg-gradient-to-br from-gray-700 to-gray-900 overflow-hidden">
+            <img
+              src={profile?.profilePicture || "/images/seller/sparkles.svg"}
               alt="Profile"
-              className="size-full object-cover"
+              className="w-full h-full object-cover"
             />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                profilePicInputRef.current?.click();
+              }}
+              className="absolute bottom-1 right-1 bg-purple-600 p-2 rounded-full hover:bg-purple-700 transition-colors"
+              disabled={uploadingProfilePic}
+            >
+              {uploadingProfilePic ? (
+                <span className="text-xs">...</span>
+              ) : (
+                <Edit className="w-4 h-4 text-white" />
+              )}
+            </button>
           </div>
+
+          <input
+            ref={profilePicInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp"
+            onChange={handleProfilePicUpload}
+            className="hidden"
+          />
 
           <div className="flex flex-col gap-4">
             <div>
-
               <motion.h1
                 className="text-lg font-medium"
                 initial={{ opacity: 0 }}
@@ -94,68 +256,53 @@ const ProfilePage = () => {
             </motion.p>
           </div>
         </motion.div>
-
-        <motion.div
-          className="flex gap-3"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.a
-            href='/account'
-            whileHover={{ scale: 1.01, boxShadow: "0 0 20px rgba(147, 51, 234, 0.5)" }}
-            whileTap={{ scale: 0.95 }}
-            className="px-6 py-2 bg-gradient-to-b from-purple-600 to-purple-700 rounded-md text-sm font-medium transition-all"
-          >
-            Profile Settings
-          </motion.a>
-          <motion.button
-            whileHover={{ scale: 1.01, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
-            whileTap={{ scale: 0.95 }}
-            className="px-6 py-2 bg-gray-900 rounded-md text-sm font-medium border border-gray-800 transition-all"
-          >
-            View cart
-          </motion.button>
-        </motion.div>
       </header>
 
       {/* Tabs */}
       <div className="px-2 mt-12">
         <div className="flex justify-between md:gap-8 md:justify-start">
           <motion.button
-            onClick={() => setActiveTab('loyalty')}
+            onClick={() => setActiveTab("loyalty")}
             className="relative pb-4 text-base font-semibold cursor-pointer"
             whileHover={{ y: -0.5 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <span className={activeTab === 'loyalty' ? 'text-purple-400' : 'text-[#DCDCDC] hover:text-purple-400'}>
+            <span
+              className={
+                activeTab === "loyalty"
+                  ? "text-purple-400"
+                  : "text-[#DCDCDC] hover:text-purple-400"
+              }
+            >
               Your loyalty NFTs
             </span>
-            {activeTab === 'loyalty' && (
+            {activeTab === "loyalty" && (
               <motion.div
                 layoutId="activeTab"
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400"
                 initial={false}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             )}
           </motion.button>
 
           <motion.button
-            onClick={() => setActiveTab('purchase')}
+            onClick={() => setActiveTab("purchase")}
             className="relative pb-4 text-base font-semibold cursor-pointer"
             whileHover={{ y: -0.5 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <span className={activeTab === 'purchase' ? 'text-purple-400' : 'text-[#DCDCDC] hover:text-purple-400'}>
+            <span
+              className={
+                activeTab === "purchase"
+                  ? "text-purple-400"
+                  : "text-[#DCDCDC] hover:text-purple-400"
+              }
+            >
               Purchase history
             </span>
-            {activeTab === 'purchase' && (
+            {activeTab === "purchase" && (
               <motion.div
                 layoutId="activeTab"
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400"
                 initial={false}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             )}
           </motion.button>
@@ -169,77 +316,33 @@ const ProfilePage = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        {activeTab === 'loyalty' && nftItems.map((item, index) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ y: -1, transition: { type: "spring", stiffness: 400, damping: 10 } }}
-            className="group cursor-pointer"
-          >
+        {activeTab === "loyalty" &&
+          nftItems.map((item, index) => (
             <motion.div
-              className="bg-gradient-to-br from-gray-900 to-gray-950 rounded-lg overflow-hidden border border-gray-800"
-              whileHover={{ borderColor: "rgba(147, 51, 234, 0.5)" }}
+              key={item.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ delay: index * 0.1 }}
             >
-              <div className="aspect-square bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative overflow-hidden">
-                <motion.div
-                  initial={{ opacity: 0.5 }}
-                  whileHover={{ opacity: 1 }}
-                  className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20"
-                />
-                <span className="text-gray-600 text-sm relative z-10">Picture of NFT</span>
-
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  whileHover={{ opacity: 1 }}
-                  className="absolute inset-0 bg-black/50 flex items-center justify-center"
-                >
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="z-[12] px-4 py-2 bg-purple-600 rounded-md text-sm font-medium"
-                  >
-                    View Details
-                  </motion.button>
-                </motion.div>
-              </div>
-
-              <div className="p-4">
-                <motion.p
-                  className="text-xs text-gray-500"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  Rating/Property
-                </motion.p>
-                <div className="flex gap-2 mt-2">
-                  <motion.span
-                    className="text-xs px-2 py-1 bg-purple-900/30 text-purple-400 rounded"
-                    whileHover={{ scale: 1.05, backgroundColor: "rgba(147, 51, 234, 0.3)" }}
-                  >
+              <div className="bg-gradient-to-br from-gray-900 to-gray-950 rounded-lg overflow-hidden border border-gray-800 p-4">
+                <div className="aspect-square bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                  <span className="text-gray-600 text-sm">NFT Placeholder</span>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <span className="text-xs px-2 py-1 bg-purple-900/30 text-purple-400 rounded">
                     {item.rarity}
-                  </motion.span>
-                  <motion.span
-                    className="text-xs px-2 py-1 bg-gray-800 text-gray-400 rounded"
-                    whileHover={{ scale: 1.05, backgroundColor: "rgba(75, 85, 99, 1)" }}
-                  >
+                  </span>
+                  <span className="text-xs px-2 py-1 bg-gray-800 text-gray-400 rounded">
                     {item.property}
-                  </motion.span>
+                  </span>
                 </div>
               </div>
             </motion.div>
-          </motion.div>
-        ))}
+          ))}
 
-        {activeTab === 'purchase' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="col-span-full"
-          >
+        {activeTab === "purchase" && (
+          <motion.div className="col-span-full">
             <PurchaseHistory />
           </motion.div>
         )}

@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/hooks/useToast";
 
+import { trpc } from "@/lib/trpc";
+import { useProfile } from "@/context/ProfileContext";
+
 const NAVLINKS = [
   { name: "Home", href: "/buyer" },
   { name: "Brands", href: "/buyer/brands" },
@@ -34,7 +37,7 @@ const NAVLINKS = [
 ];
 
 const USER_DROPDOWN = [
-    { name: "My Account", href: "/buyer/dashboard" },
+  { name: "My Account", href: "/buyer/dashboard" },
   { name: "Track Order", href: "/buyer/dashboard/orders" },
   { name: "Return and Refund", href: "#" },
   { name: "Profile", href: "/buyer/profile" },
@@ -47,13 +50,11 @@ const BuyerHeader = () => {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const username =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
-    "User";
+  const { profile, loading: profileLoading } = useProfile();
 
-  const userPicture = user?.user_metadata?.avatar_url || "/assets/image 38.png";
+  const username = profile?.username || user?.email?.split("@")[0] || "User";
+
+  const userPicture = profile?.profilePicture || "/images/seller/sparkles.svg";
 
   const handleLogout = async () => {
     try {
@@ -146,8 +147,14 @@ const BuyerHeader = () => {
                         className="size-full rounded-full"
                       />
                     </div>
-                    <span className="max-w-20 truncate hidden md:block">{username}</span>
-                    <ChevronDown size={18} stroke="#DCDCDC" className="hidden md:block" />
+                    <span className="max-w-20 truncate hidden md:block">
+                      {username}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      stroke="#DCDCDC"
+                      className="hidden md:block"
+                    />
                   </button>
                 </DropdownMenuTrigger>
 
@@ -254,7 +261,9 @@ const BuyerHeader = () => {
               {/* User Menu (when signed in) */}
               {user && (
                 <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
-                  <h3 className="text-xs text-gray-500 uppercase tracking-wider">Account</h3>
+                  <h3 className="text-xs text-gray-500 uppercase tracking-wider">
+                    Account
+                  </h3>
                   {USER_DROPDOWN.map((item) => (
                     <Link
                       key={item.name}
