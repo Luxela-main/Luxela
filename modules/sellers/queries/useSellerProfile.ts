@@ -32,9 +32,9 @@ import { trpc } from "@/lib/trpc";
 
 export const useSellerProfile = () => {
   return trpc.seller.getProfile.useQuery(undefined, {
-    staleTime: 0, // Always refetch on mount
+    staleTime: 0,
     retry: 1,
-    refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: true, 
+    refetchOnWindowFocus: false, 
   });
 };
