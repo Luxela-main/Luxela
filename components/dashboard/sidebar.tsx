@@ -26,11 +26,11 @@ export function Sidebar({ activeItem = "my-account" }: SidebarProps) {
   })()
 
   const menuItems = [
-    { id: "my-account", label: "My Account", icon: User, href: "/dashboard" },
-    { id: "orders", label: "Orders", icon: ShoppingBag, href: "/dashboard/orders" },
-    { id: "favorite-items", label: "Favorite Items", icon: Heart, href: "/dashboard/favorite-items" },
-    { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
-    { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
+    { id: "my-account", label: "My Account", icon: User, href: "/buyer/dashboard" },
+    { id: "orders", label: "Orders", icon: ShoppingBag, href: "/buyer/dashboard/orders" },
+    { id: "favorite-items", label: "Favorite Items", icon: Heart, href: "/buyer/dashboard/favorite-items" },
+    { id: "notifications", label: "Notifications", icon: Bell, href: "/buyer/dashboard/notifications" },
+    { id: "settings", label: "Settings", icon: Settings, href: "/buyer/dashboard/settings" },
   ]
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false)
