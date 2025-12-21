@@ -18,10 +18,10 @@ export function Sidebar({ activeItem = "my-account" }: SidebarProps) {
   const derivedActive = (() => {
     if (!pathname) return activeItem
     if (pathname === "/dashboard") return "my-account"
-    if (pathname.startsWith("/dashboard/orders")) return "orders"
-    if (pathname.startsWith("/dashboard/favorite-items")) return "favorite-items"
-    if (pathname.startsWith("/dashboard/notifications")) return "notifications"
-    if (pathname.startsWith("/dashboard/settings")) return "settings"
+    if (pathname.startsWith("/buyer/dashboard/orders")) return "orders"
+    if (pathname.startsWith("/buyer/dashboard/favorite-items")) return "favorite-items"
+    if (pathname.startsWith("/buyer/dashboard/notifications")) return "notifications"
+    if (pathname.startsWith("/buyer/dashboard/settings")) return "settings"
     return activeItem
   })()
 
