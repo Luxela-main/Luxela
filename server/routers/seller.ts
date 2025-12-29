@@ -83,7 +83,6 @@ export const sellerRouter = createTRPCRouter({
         seller: z.object({
           id: z.string(),
           userId: z.string(),
-          status: z.string().nullable().optional(),
           createdAt: z.date(),
           updatedAt: z.date(),
         }),
@@ -137,7 +136,6 @@ export const sellerRouter = createTRPCRouter({
               seller: {
                 id: seller.id,
                 userId: seller.userId,
-                status: (seller as any).status ?? null,
                 createdAt: seller.createdAt,
                 updatedAt: seller.updatedAt,
               },
@@ -397,6 +395,33 @@ export const sellerRouter = createTRPCRouter({
           code: "UNAUTHORIZED",
           message: "Authentication required",
         });
+      }
+
+      // Validate required fields based on preferred payout method
+      if (input.preferredPayoutMethod === "fiat_currency" || input.preferredPayoutMethod === "both") {
+        if (!input.fiatPayoutMethod) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Fiat payout method is required when selecting fiat currency",
+          });
+        }
+        if (input.fiatPayoutMethod === "bank") {
+          if (!input.bankCountry || !input.accountHolderName || !input.accountNumber) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Bank details (country, account holder name, account number) are required for bank transfers",
+            });
+          }
+        }
+      }
+
+      if (input.preferredPayoutMethod === "cryptocurrency" || input.preferredPayoutMethod === "both") {
+        if (!input.walletType || !input.walletAddress || !input.preferredPayoutToken) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Wallet type, wallet address, and preferred payout token are required when selecting cryptocurrency",
+          });
+        }
       }
 
       // Rate limiting

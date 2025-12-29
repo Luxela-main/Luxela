@@ -51,7 +51,6 @@ export interface ISellerProfile {
   seller: {
     id: string;
     userId: string;
-    status: string | null;
     createdAt: Date;
     updatedAt: Date;
   } | null;

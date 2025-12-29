@@ -130,7 +130,7 @@ export const sellerBusinessSchema = z.object({
 export const sellerPaymentSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
-  preferredPayoutMethod: z.enum(["fiat_currency", "cryptocurrency", "both"]).nullable().optional(),
+  preferredPayoutMethod: z.enum(["fiat_currency", "cryptocurrency", "both"]),
   fiatPayoutMethod: z.enum(["bank", "paypal", "stripe", "flutterwave"]).nullable().optional(),
   bankCountry: z.string().nullable().optional(),
   bankName: z.string().nullable().optional(),

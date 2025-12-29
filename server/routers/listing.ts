@@ -182,7 +182,7 @@ export const listingRouter = createTRPCRouter({
               currency: z.string().min(1).max(16),
             })
           )
-          .min(1),
+          .optional(),
       })
     )
     .output(ListingOutput)
@@ -200,7 +200,7 @@ export const listingRouter = createTRPCRouter({
             type: "collection",
             title: input.title,
             description: input.description,
-            itemsJson: JSON.stringify(input.items),
+            itemsJson: input.items && input.items.length > 0 ? JSON.stringify(input.items) : null,
           })
           .returning();
         return created;

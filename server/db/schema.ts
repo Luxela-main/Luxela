@@ -138,7 +138,7 @@ export const sellerShipping = pgTable('seller_shipping', {
   shippingType: shippingTypeEnum('shipping_type').notNull(),
   estimatedShippingTime: shippingEtaEnum('estimated_shipping_time').notNull(),
   refundPolicy: refundPolicyEnum('refund_policy').notNull(),
-  refundPeriod: shippingEtaEnum('refund_period').notNull(),
+  refundPeriod: shippingEtaEnum('refund_period'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -399,7 +399,7 @@ export const buyerFavorites = pgTable('buyer_favorites', {
 export const sellerPayment = pgTable('seller_payment', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
-  preferredPayoutMethod: preferredPayoutMethodEnum('preferred_payout_method'),
+  preferredPayoutMethod: preferredPayoutMethodEnum('preferred_payout_method').notNull(),
   fiatPayoutMethod: fiatPayoutMethodEnum('fiat_payout_method'),
   bankCountry: varchar('bank_country', { length: 100 }),
   bankName: varchar('bank_name', { length: 255 }),
