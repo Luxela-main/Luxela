@@ -183,6 +183,8 @@ export const sellerRouter = createTRPCRouter({
           "voters_card",
           "national_id",
         ]),
+        idNumber: z.string().optional(),
+        idVerified: z.boolean().optional(),
         bio: z.string().optional(),
         storeDescription: z.string().optional(),
         storeLogo: z.string().optional(),
@@ -253,6 +255,93 @@ export const sellerRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to update business information",
+        });
+      }
+    }),
+
+  verifyId: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: "/seller/verify-id",
+        tags: ["Seller"],
+        summary: "Verify seller ID",
+        description: "Verify the seller's ID number using external API",
+      },
+    })
+    .input(
+      z.object({
+        idType: z.enum(["passport", "drivers_license", "voters_card", "national_id"]),
+        idNumber: z.string().min(1, "ID number is required"),
+      })
+    )
+  //   .output(
+  //     z.object({
+  //       success: z.boolean(),
+  //       message: z.string(),
+  //     })
+  //   )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Authentication required",
+        });
+      }
+
+      try {
+        const seller = await getSeller(userId);
+
+        // Check if API keys are set
+        if (!process.env.DOJAH_SECRET_KEY || !process.env.DOJAH_APP_ID) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "ID verification service is not configured",
+          });
+        }
+
+        // Call Dojah API for verification
+        const response = await fetch('https://api.dojah.io/api/v1/kyc/nigeria/identity', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.DOJAH_SECRET_KEY}`,
+            'AppId': process.env.DOJAH_APP_ID,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id_type: input.idType === 'national_id' ? 'nin' : input.idType === 'drivers_license' ? 'dl' : input.idType === 'voters_card' ? 'pvc' : 'passport',
+            id_number: input.idNumber,
+          }),
+        });
+
+        const data = await response.json() as any;
+
+        if (data.status && data.data) {
+          // Update idVerified to true
+          await db
+            .update(sellerBusiness)
+            .set({ idVerified: true, idNumber: input.idNumber, updatedAt: new Date() })
+            .where(eq(sellerBusiness.sellerId, seller.id));
+
+          // Invalidate cache
+          await deleteCache(CacheKeys.sellerProfile(userId));
+
+          return {
+            success: true,
+            message: "ID verified successfully",
+          };
+        } else {
+          return {
+            success: false,
+            message: "ID verification failed. Please check your details.",
+          };
+        }
+      } catch (err: any) {
+        console.error("Error verifying ID:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to verify ID",
         });
       }
     }),

@@ -120,6 +120,8 @@ export const sellerBusiness = pgTable('seller_business', {
   socialMedia: text('social_media'),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   idType: idTypeEnum('id_type').notNull(),
+  idNumber: varchar('id_number', { length: 50 }),
+  idVerified: boolean('id_verified').default(false).notNull(),
   bio: text('bio'),
   storeDescription: text('store_description'),
   storeLogo: text('store_logo'),

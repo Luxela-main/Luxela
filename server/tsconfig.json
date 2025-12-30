@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "lib": ["ES2020"],
+    "lib": ["ES2020", "DOM"],
     "outDir": "dist",
     "rootDir": "./",
     "strict": false,
@@ -20,6 +20,7 @@
     "isolatedModules": true,
     "allowJs": true,
     "baseUrl": ".",
+    "types": ["node"],
     "paths": {
       "@/*": ["../*"]
     }

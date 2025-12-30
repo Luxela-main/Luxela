@@ -118,6 +118,8 @@ export const sellerBusinessSchema = z.object({
   socialMedia: z.string().nullable().optional(),
   fullName: z.string(),
   idType: z.enum(["passport", "drivers_license", "voters_card", "national_id"]),
+  idNumber: z.string().optional(),
+  idVerified: z.boolean().optional(),
   bio: z.string().nullable().optional(),
   storeDescription: z.string().nullable().optional(),
   storeLogo: z.string().nullable().optional(),

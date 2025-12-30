@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User } from "lucide-react";
+import { User, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,16 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
   const profileData = initialData;
   const hasProfile = !!profileData?.seller;
 
+  const [idType, setIdType] = useState(profileData?.business?.idType || "national_id");
+  const [idNumber, setIdNumber] = useState(profileData?.business?.idNumber || "");
+  const [isVerified, setIsVerified] = useState(profileData?.business?.idVerified || false);
+
+  useEffect(() => {
+    setIdType(profileData?.business?.idType || "national_id");
+    setIdNumber(profileData?.business?.idNumber || "");
+    setIsVerified(profileData?.business?.idVerified || false);
+  }, [profileData]);
+
   const createProfileMutation = trpc.seller.createSellerProfile.useMutation({
     onSuccess: () => {
       toastSvc.success("Profile created successfully");
@@ -47,6 +57,20 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
     },
     onError: (err: any) => {
       toastSvc.error(err.message || "Failed to update profile");
+    },
+  });
+
+  const verifyMutation = trpc.seller.verifyId.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toastSvc.success("Verification Successful");
+        utils.seller.getProfile.invalidate();
+      } else {
+        toastSvc.error(data.message);
+      }
+    },
+    onError: (err: any) => {
+      toastSvc.error(err.message || "Failed to verify ID");
     },
   });
 
@@ -81,7 +105,9 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
         businessAddress:
           profileData.business?.businessAddress || "Not provided",
         country: profileData.business?.country || "Nigeria",
-        idType: profileData.business?.idType || "national_id",
+        idType: idType,
+        idNumber: idNumber,
+        idVerified: isVerified,
       });
     },
   });
@@ -201,6 +227,59 @@ export function ProfileSettings({ initialData }: ProfileSettingsProps) {
             className="bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 min-h-[100px]"
             placeholder="Tell us about yourself..."
           />
+        </div>
+
+        <div className="border-t border-[#333] pt-6 mt-6">
+          <h3 className="text-lg font-medium mb-4">ID Verification</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm mb-2">ID Type</label>
+              <select
+                value={idType}
+                onChange={(e) => setIdType(e.target.value as any)}
+                className="w-full bg-[#222] border border-[#333] rounded-md px-3 py-2 focus:border-purple-600 focus:ring-purple-600"
+              >
+                <option value="national_id">National ID (NIN)</option>
+                <option value="passport">International Passport</option>
+                <option value="drivers_license">Driver's License</option>
+                <option value="voters_card">Voter's Card</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm mb-2">ID Number</label>
+              <Input
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                className="bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600"
+                placeholder="Enter your ID number"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => verifyMutation.mutate({ idType, idNumber })}
+              disabled={!idNumber || verifyMutation.isPending || isVerified}
+              className={`${
+                isVerified
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-purple-600 hover:bg-purple-700"
+              }`}
+            >
+              {verifyMutation.isPending ? (
+                "Verifying..."
+              ) : isVerified ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Verified
+                </>
+              ) : (
+                "Verify"
+              )}
+            </Button>
+            {isVerified && (
+              <span className="text-green-500 text-sm">Verification Successful</span>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end">
