@@ -4,11 +4,9 @@ import { toastSvc } from "@/services/toast";
 const defaultOptions: DefaultOptions = {
   queries: {
     retry: false,
-    onError: (error: any) => toastSvc.apiError(error),
   },
   mutations: {
     retry: false,
-    onError: (error: any) => toastSvc.apiError(error),
   },
 };
 

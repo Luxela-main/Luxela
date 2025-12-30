@@ -45,7 +45,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    useErrorBoundary: false,
   });
 
 

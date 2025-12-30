@@ -24,7 +24,7 @@ export default function CartPaymentPage() {
   const finalTotal = total + shipping;
 
   // Derived state for button
-  const isSubmitting = checkoutMutation.status === "loading";
+  const isSubmitting = checkoutMutation.status === "pending";
 
 
   const handleMakePayment = () => {
