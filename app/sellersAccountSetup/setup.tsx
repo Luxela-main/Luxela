@@ -31,11 +31,11 @@ const SellerSetupForm: React.FC<SellerSetupFormProps> = ({
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLDivElement>(null);
-
   const [idNumber, setIdNumber] = useState("");
 const [isVerified, setIsVerified] = useState(false);
-const [isVerifying, setIsVerifying] = useState(false);
+const [currentErrorIndex, setCurrentErrorIndex] = useState(0);
+
+// const [isVerifying, setIsVerifying] = useState(false);
 
   const validationSchema = Yup.object({
     brandName: Yup.string().required("Brand name is required"),
@@ -82,9 +82,6 @@ const [isVerifying, setIsVerifying] = useState(false);
   validateOnBlur: true,    
   validateOnMount: false,
     onSubmit: (values) => {
-      console.log("✅ Form submission triggered");
-      console.log("Values:", values);
-      console.log("Errors:", formik.errors);
 
        const submissionData = {
     ...values,
@@ -134,17 +131,81 @@ const handleVerifyId = () => {
 };
 
 
-  const handleNext = () => {
-    const idx = tabs.findIndex((t) => t.id === activeTab);
-    if (idx < tabs.length - 1) setActiveTab(tabs[idx + 1].id);
+const fieldNameMap: Record<string, string> = {
+  brandName: "Brand Name",
+  businessType: "Business Type", 
+  businessAddress: "Business Address",
+  officialEmail: "Official Email",
+  phoneNumber: "Phone Number",
+  country: "Country",
+  fullName: "Full Name",
+  idType: "ID Type",
+  shippingZone: "Shipping Zone",
+  cityTown: "City/Town",
+  shippingAddress: "Shipping Address",
+  returnAddress: "Return Address",
+  preferredPayoutMethod: "Preferred Payout Method",
+  productCategory: "Product Category",
+  targetAudience: "Target Audience",
+  localPricing: "Local Pricing"
+};
+
+
+const handleNext = async () => {
+  const errors = await formik.validateForm();
+  
+  const tabFields: Record<string, string[]> = {
+    business: ["brandName", "businessType", "businessAddress", "officialEmail", "phoneNumber", "country", "fullName", "idType"],
+    shipping: ["shippingZone", "cityTown", "shippingAddress", "returnAddress"],
+    payment: ["preferredPayoutMethod"],
+    additional: ["productCategory", "targetAudience", "localPricing"]
   };
+  
+  const currentTabFields = tabFields[activeTab] || [];
+  const currentTabErrors = currentTabFields
+    .filter(field => errors[field as keyof typeof errors])
+    .map(field => ({
+      field,
+      name: fieldNameMap[field] || field,
+      message: errors[field as keyof typeof errors]
+    }));
+  
+  if (currentTabErrors.length > 0) {
+    const errorIndex = currentErrorIndex % currentTabErrors.length;
+    const error = currentTabErrors[errorIndex];
+    
+    toastSvc.error(`${error.message}`);
+    
+    const errorField = document.querySelector(`[name="${error.field}"]`);
+    if (errorField) {
+      errorField.scrollIntoView({ behavior: "smooth", block: "center" });
+      (errorField as HTMLElement).focus();
+    }
+    
+    setCurrentErrorIndex(prev => prev + 1);
+    
+    return;
+  }
+  
+  setCurrentErrorIndex(0);
 
+  if (activeTab === "additional") {
+    const submissionData = {
+      ...formik.values,
+      idNumber: idNumber,
+      idVerified: isVerified
+    };
+    onPreview(submissionData);
+  } else {
+   const idx = tabs.findIndex((t) => t.id === activeTab);
+  if (idx < tabs.length - 1) {
+    setActiveTab(tabs[idx + 1].id);
+    // Scroll to top of the page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+};
 
-
-useEffect(() => {
-  // Scroll to form when activeTab changes
-  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}, [activeTab]);
 
 
   const toggleCategory = (
@@ -292,7 +353,7 @@ useEffect(() => {
 
         <div className="flex gap-6 mb-24">
           {/* Logo Upload */}
-          <div className="flex-shrink-0 relative">
+          <div className="shrink-0 relative">
             <div
               onClick={() => logoInputRef.current?.click()}
               className="z-999 absolute left-20 top-24 w-36 h-36 bg-[#141414] rounded-full border border-[#212121] flex flex-col items-center justify-center cursor-pointer hover:bg-[#222] transition-colors overflow-hidden"
@@ -338,7 +399,7 @@ useEffect(() => {
           <div className="flex-1">
             <div
               onClick={() => bannerInputRef.current?.click()}
-              className="w-full h-44 bg-[#141414] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[#222] transition-colors relative overflow-hidden"
+              className="w-full h-48 bg-[#141414] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[#222] transition-colors relative overflow-hidden"
             >
               {formik.values.storeBanner ? (
                 <>
@@ -402,7 +463,7 @@ useEffect(() => {
 
         <form onSubmit={formik.handleSubmit}>
           {/* <div className="bg-[#0a0a0a] border border-[#747474] rounded-lg p-8"> */}
-            <div ref={formRef} className="bg-[#0a0a0a] border border-[#747474] rounded-lg p-8">
+            <div className="bg-[#0a0a0a] border border-[#747474] rounded-lg p-8">
 
             {activeTab === "business" && (
               <div>
@@ -560,51 +621,7 @@ useEffect(() => {
                     />
                   </div>
 
-                  {/* <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="text-sm mb-2 text-[#dcdcdc] flex justify-between">
-                        Full name <span>Required</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="fullName"
-                        value={formik.values.fullName}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        placeholder="Enter your full name"
-                        className={inputClass}
-                      />
-                      {formik.touched.fullName && formik.errors.fullName && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.fullName}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
-                        ID Type <span>Required</span>
-                      </label>
-                      <select
-                        name="idType"
-                        value={formik.values.idType}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        className={selectClass}
-                        style={selectStyle}
-                      >
-                        <option value="">Select ID type</option>
-                        <option value="passport">Passport</option>
-                        <option value="drivers">Driver's License</option>
-                        <option value="national">National ID</option>
-                      </select>
-                      {formik.touched.idType && formik.errors.idType && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.idType}
-                        </div>
-                      )}
-                    </div>
-                  </div> */}
-
+                  
 
 
                   {/* Full Name */}
@@ -1116,12 +1133,7 @@ useEffect(() => {
 </button>
                       ))}
                     </div>
-                    {formik.touched.productCategory &&
-                      formik.errors.productCategory && (
-                        <div className="text-red-500 text-xs mt-2">
-                          {formik.errors.productCategory}
-                        </div>
-                      )}
+                
                   </div>
                   <div className="border border-[#747474] rounded-lg p-6">
                     <h3 className="text-base mb-4 text-[#f2f2f2]">
@@ -1141,12 +1153,7 @@ useEffect(() => {
                         </button>
                       ))}
                     </div>
-                    {formik.touched.targetAudience &&
-                      formik.errors.targetAudience && (
-                        <div className="text-red-500 text-xs mt-2">
-                          {formik.errors.targetAudience}
-                        </div>
-                      )}
+                 
                   </div>
                   <div className="border border-[#747474] rounded-lg p-6">
                     <h3 className="text-base mb-4 text-[#f2f2f2]">
@@ -1166,12 +1173,7 @@ useEffect(() => {
                       <option value="fiat">Fiat</option>
                       <option value="cryptocurrency">Cryptocurrency</option>
                     </select>
-                    {formik.touched.localPricing &&
-                      formik.errors.localPricing && (
-                        <div className="text-red-500 text-xs mt-2">
-                          {formik.errors.localPricing}
-                        </div>
-                      )}
+                   
                   </div>
                 </div>
               </div>
@@ -1187,7 +1189,8 @@ useEffect(() => {
             </button>
             {activeTab === "additional" ? (
               <button
-                type="submit"
+                type="button"
+                                onClick={handleNext}
                 className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors"
               >
                 Preview

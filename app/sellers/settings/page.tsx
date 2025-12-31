@@ -23,8 +23,8 @@ export default function SettingsPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
-const [idNumber, setIdNumber] = useState("");
-const [isVerified, setIsVerified] = useState(false);
+  const [idNumber, setIdNumber] = useState("");
+  const [isVerified, setIsVerified] = useState(false);
 
   // Fetch profile data
   const {
@@ -40,8 +40,7 @@ const [isVerified, setIsVerified] = useState(false);
   // Log errors
   useEffect(() => {
     if (error) {
-      console.error("Profile fetch error:", error);
-      toastSvc.error("Failed to load profile data");
+      toastSvc.error("Failed to load profile data, Try again");
     }
   }, [error]);
 
@@ -52,20 +51,20 @@ const [isVerified, setIsVerified] = useState(false);
   const updateAdditionalMutation =
     trpc.seller.updateSellerAdditional.useMutation();
 
-const verifyMutation = trpc.seller.verifyId.useMutation({
-  onSuccess: (data) => {
-    if (data.success) {
-      toastSvc.success("Verification Successful");
-      setIsVerified(true);
-      refetch();
-    } else {
-      toastSvc.error(data.message);
-    }
-  },
-  onError: (err: any) => {
-    toastSvc.error(err.message || "Failed to verify ID");
-  },
-});
+  const verifyMutation = trpc.seller.verifyId.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toastSvc.success("Verification Successful");
+        setIsVerified(true);
+        refetch();
+      } else {
+        toastSvc.error(data.message);
+      }
+    },
+    onError: (err: any) => {
+      toastSvc.error(err.message || "Failed to verify ID");
+    },
+  });
 
 
 
@@ -122,7 +121,6 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
   // Load data from API
   useEffect(() => {
     if (profileData) {
-      console.log("Profile data received:", profileData);
 
       const newData: SellerSetupFormData = {
         // Business fields
@@ -143,16 +141,16 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
         logoPath: "",
         bannerPath: "",
 
-        // Shipping fields - map API fields to your type
+        // Shipping fields
         shippingZone: profileData.shipping?.shippingZone || "",
-        cityTown: profileData.shipping?.city || "", // API uses 'city', your type uses 'cityTown'
+        cityTown: profileData.shipping?.city || "",
         shippingAddress: profileData.shipping?.shippingAddress || "",
         returnAddress: profileData.shipping?.returnAddress || "",
         shippingType: profileData.shipping?.shippingType || "",
         estimatedShippingTime:
           profileData.shipping?.estimatedShippingTime || "",
         refundPolicy: profileData.shipping?.refundPolicy || "",
-        periodUntilRefund: profileData.shipping?.refundPeriod || "", // API uses 'refundPeriod'
+        periodUntilRefund: profileData.shipping?.refundPeriod || "",
 
         // Payment fields
         paymentMethod: profileData.payment?.preferredPayoutMethod || "",
@@ -167,7 +165,7 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
         preferredPayoutToken: profileData.payment?.preferredPayoutToken || "",
 
         // Additional fields
-     productCategory: profileData.additional?.productCategory || "",
+        productCategory: profileData.additional?.productCategory || "",
         targetAudience: (profileData.additional?.targetAudience as any) || "",
         localPricing: profileData.additional?.localPricing || "",
       };
@@ -175,7 +173,7 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
       setData(newData);
       setTempData(newData);
       setIdNumber(profileData.business?.idNumber || "");
-    setIsVerified(profileData.business?.idVerified || false);
+      setIsVerified(profileData.business?.idVerified || false);
     }
   }, [profileData]);
 
@@ -217,7 +215,7 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
 
     setTempData((prev: any) => ({
       ...prev,
-      productCategory: [value], // Always single item array
+      productCategory: [value],
     }));
   };
   const selectAudience = (value: "male" | "female" | "unisex") => {
@@ -272,15 +270,15 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
             storeDescription: tempData.storeDescription,
             storeLogo: tempData.storeLogo,
             storeBanner: tempData.storeBanner,
-              idNumber: idNumber,
-    idVerified: isVerified,
+            idNumber: idNumber,
+            idVerified: isVerified,
           });
           break;
 
         case "shipping":
           await updateShippingMutation.mutateAsync({
             shippingZone: tempData.shippingZone,
-            city: tempData.cityTown, // Map cityTown to city
+            city: tempData.cityTown,
             shippingAddress: tempData.shippingAddress,
             returnAddress: tempData.returnAddress,
             shippingType: tempData.shippingType as "domestic",
@@ -296,7 +294,7 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
               | "48hrs"
               | "72hrs"
               | "5_working_days"
-              | "1week", // Map periodUntilRefund to refundPeriod
+              | "1week",
           });
           break;
 
@@ -308,20 +306,20 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
               | "both",
             fiatPayoutMethod: tempData.fiatPayoutMethod
               ? (tempData.fiatPayoutMethod as
-                  | "bank"
-                  | "paypal"
-                  | "stripe"
-                  | "flutterwave")
+                | "bank"
+                | "paypal"
+                | "stripe"
+                | "flutterwave")
               : undefined,
             bankCountry: tempData.bankCountry || undefined,
             accountHolderName: tempData.accountHolderName || undefined,
             accountNumber: tempData.accountNumber || undefined,
             walletType: tempData.walletType
               ? (tempData.walletType as
-                  | "phantom"
-                  | "solflare"
-                  | "backpack"
-                  | "wallet_connect")
+                | "phantom"
+                | "solflare"
+                | "backpack"
+                | "wallet_connect")
               : undefined,
             walletAddress: tempData.walletAddress || undefined,
             preferredPayoutToken: tempData.preferredPayoutToken
@@ -358,7 +356,6 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
 
       toastSvc.success("Changes saved successfully!");
     } catch (error: any) {
-      console.error("Save error:", error);
       toastSvc.error(error.message || "Failed to save changes");
     }
   };
@@ -473,11 +470,11 @@ const verifyMutation = trpc.seller.verifyId.useMutation({
   };
 
 
-const isSubmitting =
-  updateBusinessMutation.isPending ||
-  updateShippingMutation.isPending ||
-  updatePaymentMutation.isPending ||
-  updateAdditionalMutation.isPending;
+  const isSubmitting =
+    updateBusinessMutation.isPending ||
+    updateShippingMutation.isPending ||
+    updatePaymentMutation.isPending ||
+    updateAdditionalMutation.isPending;
 
   const inputClass =
     "w-full bg-[#1a1a1a] border border-[#333] rounded px-3 py-2 text-sm text-[#f2f2f2] focus:outline-none focus:border-purple-500";
@@ -518,10 +515,9 @@ const isSubmitting =
         )
       ) : (
         <p className="text-[#f2f2f2] text-sm capitalize">
-          {/* Show the label for the selected option, not the raw value */}
           {options
             ? options.find((opt) => opt.value === data[name])?.label ||
-              "Not provided"
+            "Not provided"
             : data[name] || "Not provided"}
         </p>
       )}
@@ -554,7 +550,7 @@ const isSubmitting =
   return (
     <div className="pt-16 px-6 md:pt-0 relative">
       <div className="mb-6">
-        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-4.5 lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>
@@ -573,11 +569,10 @@ const isSubmitting =
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 text-sm transition-colors relative ${
-                activeTab === tab.id
+              className={`py-4 text-sm transition-colors relative ${activeTab === tab.id
                   ? "text-purple-500"
                   : "text-[#858585] hover:text-[#f2f2f2]"
-              }`}
+                }`}
             >
               {tab.label}
               {activeTab === tab.id && (
@@ -604,17 +599,16 @@ const isSubmitting =
 
             <div className="flex gap-6 mb-24">
               {/* Logo Upload */}
-              <div className="flex-shrink-0 relative">
+              <div className="shrink-0 relative">
                 <div
                   onClick={() =>
                     editingSection === "business" &&
                     logoInputRef.current?.click()
                   }
-                  className={`z-999 absolute left-20 top-24 w-36 h-36 bg-[#141414] rounded-full border border-[#212121] flex flex-col items-center justify-center transition-colors overflow-hidden ${
-                    editingSection === "business"
+                  className={`z-20 absolute left-16 md:left-20 top-24 w-36 h-36 bg-[#141414] rounded-full border border-[#212121] flex flex-col items-center justify-center transition-colors overflow-hidden ${editingSection === "business"
                       ? "cursor-pointer hover:bg-[#222]"
                       : ""
-                  }`}
+                    }`}
                 >
                   {tempData.storeLogo ? (
                     <>
@@ -664,11 +658,10 @@ const isSubmitting =
                     editingSection === "business" &&
                     bannerInputRef.current?.click()
                   }
-                  className={`w-full h-44 bg-[#141414] rounded-lg flex flex-col items-center justify-center transition-colors relative overflow-hidden ${
-                    editingSection === "business"
+                  className={`w-full h-48 bg-[#141414] rounded-lg flex flex-col items-center justify-center transition-colors relative overflow-hidden ${editingSection === "business"
                       ? "cursor-pointer hover:bg-[#222]"
                       : ""
-                  }`}
+                    }`}
                 >
                   {tempData.storeBanner ? (
                     <>
@@ -802,124 +795,108 @@ const isSubmitting =
                   editingSection === "business"
                 )}
 
-                {/* {renderRow(
+                {renderField(
                   "Full Name",
                   "fullName",
-                  "ID Type",
-                  "idType",
-                  editingSection === "business",
-                  undefined,
-                  [
-                    { value: "passport", label: "Passport" },
-                    { value: "drivers_license", label: "Driver's License" },
-                    { value: "voters_card", label: "Voter's Card" },
-                    { value: "national_id", label: "National ID" },
-                  ]
-                )} */}
+                  editingSection === "business"
+                )}
 
-{renderField(
-  "Full Name",
-  "fullName",
-  editingSection === "business"
-)}
+                <div className="border-t border-[#333] pt-6 mt-6">
+                  <h3 className="text-base font-medium text-[#f2f2f2] mb-4">ID Verification</h3>
 
-<div className="border-t border-[#333] pt-6 mt-6">
-  <h3 className="text-base font-medium text-[#f2f2f2] mb-4">ID Verification</h3>
-  
-  <div className="grid grid-cols-2 gap-6 mb-4">
-    {/* ID Type */}
-    <div>
-      <p className={labelClass}>ID Type</p>
-      {editingSection === "business" ? (
-        <select
-          name="idType"
-          value={tempData.idType}
-          onChange={handleInputChange}
-          className={inputClass}
-        >
-          <option value="">Select ID type</option>
-          <option value="national_id">National ID (NIN)</option>
-          <option value="passport">International Passport</option>
-          <option value="drivers_license">Driver's License</option>
-          <option value="voters_card">Voter's Card</option>
-        </select>
-      ) : (
-        <p className="text-[#f2f2f2] text-sm capitalize">
-          {tempData.idType === "national_id"
-            ? "National ID (NIN)"
-            : tempData.idType === "passport"
-            ? "International Passport"
-            : tempData.idType === "drivers_license"
-            ? "Driver's License"
-            : tempData.idType === "voters_card"
-            ? "Voter's Card"
-            : "Not provided"}
-        </p>
-      )}
-    </div>
+                  <div className="grid grid-cols-2 gap-6 mb-4">
+                    {/* ID Type */}
+                    <div>
+                      <p className={labelClass}>ID Type</p>
+                      {editingSection === "business" ? (
+                        <select
+                          name="idType"
+                          value={tempData.idType}
+                          onChange={handleInputChange}
+                          className={inputClass}
+                        >
+                          <option value="">Select ID type</option>
+                          <option value="national_id">National ID (NIN)</option>
+                          <option value="passport">International Passport</option>
+                          <option value="drivers_license">Driver's License</option>
+                          <option value="voters_card">Voter's Card</option>
+                        </select>
+                      ) : (
+                        <p className="text-[#f2f2f2] text-sm capitalize">
+                          {tempData.idType === "national_id"
+                            ? "National ID (NIN)"
+                            : tempData.idType === "passport"
+                              ? "International Passport"
+                              : tempData.idType === "drivers_license"
+                                ? "Driver's License"
+                                : tempData.idType === "voters_card"
+                                  ? "Voter's Card"
+                                  : "Not provided"}
+                        </p>
+                      )}
+                    </div>
 
-    {/* ID Number */}
-    <div>
-      <p className={labelClass}>ID Number</p>
-      {editingSection === "business" ? (
-        <input
-          type="text"
-          value={idNumber}
-          onChange={(e) => setIdNumber(e.target.value)}
-          className={inputClass}
-          placeholder="Enter your ID number"
-        />
-      ) : (
-        <p className="text-[#f2f2f2] text-sm">
-          {idNumber || "Not provided"}
-        </p>
-      )}
-    </div>
-  </div>
+                    {/* ID Number */}
+                    <div>
+                      <p className={labelClass}>ID Number</p>
+                      {editingSection === "business" ? (
+                        <input
+                          type="text"
+                          value={idNumber}
+                          onChange={(e) => setIdNumber(e.target.value)}
+                          className={inputClass}
+                          placeholder="Enter your ID number"
+                        />
+                      ) : (
+                        <p className="text-[#f2f2f2] text-sm">
+                          {idNumber || "Not provided"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-  {/* Verify Button */}
-  {editingSection === "business" && (
-    <div className="flex items-center gap-4">
-      <button
-        type="button"
-        onClick={() => verifyMutation.mutate({ idType: tempData.idType as any, idNumber })}
-        disabled={!idNumber || !tempData.idType || verifyMutation.isPending || isVerified}
-        className={`px-4 py-2 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
-          isVerified
-            ? "bg-green-600 hover:bg-green-700 text-white"
-            : "bg-purple-600 hover:bg-purple-700 text-white"
-        }`}
-      >
-        {verifyMutation.isPending ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Verifying...
-          </>
-        ) : isVerified ? (
-          <>
-            <CheckCircle className="w-4 h-4" />
-            Verified
-          </>
-        ) : (
-          "Verify ID"
-        )}
-      </button>
-      {isVerified && (
-        <span className="text-green-500 text-sm flex items-center gap-1">
-          <CheckCircle className="w-4 h-4" />
-          Verification Successful
-        </span>
-      )}
-    </div>
-  )}
+                  {/* Verify Button */}
+                  {editingSection === "business" && (
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => verifyMutation.mutate({ idType: tempData.idType as any, idNumber })}
+                        disabled={!idNumber || !tempData.idType || verifyMutation.isPending || isVerified}
+                        className={`px-4 py-2 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${isVerified
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-purple-600 hover:bg-purple-700 text-white"
+                          }`}
+                      >
+                        {verifyMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : isVerified ? (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            Verified
+                          </>
+                        ) : (
+                          "Verify ID"
+                        )}
+                      </button>
+                      {isVerified && (
+                        <span className="text-green-500 text-sm flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4" />
+                          Verification Successful
+                        </span>
+                      )}
+                    </div>
+                  )}
 
-  {editingSection !== "business" && isVerified && (
-    <div className="flex items-center gap-2 text-green-500 text-sm">
-      <CheckCircle className="w-4 h-4" />
-      <span>ID Verified</span>
-    </div>
-  )}
-</div>
+                  {editingSection !== "business" && isVerified && (
+                    <div className="flex items-center gap-2 text-green-500 text-sm">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>ID Verified</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1149,67 +1126,67 @@ const isSubmitting =
                 {/* Fiat Details */}
                 {(tempData.preferredPayoutMethod === "fiat_currency" ||
                   tempData.preferredPayoutMethod === "both") && (
-                  <>
-                    <h4 className="text-sm font-medium text-[#f2f2f2] pt-4 border-t border-[#333]">
-                      Bank Information
-                    </h4>
-                    {renderRow(
-                      "Fiat Payout Method",
-                      "fiatPayoutMethod",
-                      "Bank Country",
-                      "bankCountry",
-                      editingSection === "payment",
-                      [
-                        { value: "bank", label: "Bank" },
-                        { value: "paypal", label: "Paypal" },
-                        { value: "stripe", label: "Stripe" },
-                        { value: "flutterwave", label: "Flutterwave" },
-                      ],
-                      undefined
-                    )}
-                    {renderRow(
-                      "Account Holder Name",
-                      "accountHolderName",
-                      "Account Number",
-                      "accountNumber",
-                      editingSection === "payment"
-                    )}
-                  </>
-                )}
+                    <>
+                      <h4 className="text-sm font-medium text-[#f2f2f2] pt-4 border-t border-[#333]">
+                        Bank Information
+                      </h4>
+                      {renderRow(
+                        "Fiat Payout Method",
+                        "fiatPayoutMethod",
+                        "Bank Country",
+                        "bankCountry",
+                        editingSection === "payment",
+                        [
+                          { value: "bank", label: "Bank" },
+                          { value: "paypal", label: "Paypal" },
+                          { value: "stripe", label: "Stripe" },
+                          { value: "flutterwave", label: "Flutterwave" },
+                        ],
+                        undefined
+                      )}
+                      {renderRow(
+                        "Account Holder Name",
+                        "accountHolderName",
+                        "Account Number",
+                        "accountNumber",
+                        editingSection === "payment"
+                      )}
+                    </>
+                  )}
 
                 {/* Crypto Details */}
                 {(tempData.preferredPayoutMethod === "cryptocurrency" ||
                   tempData.preferredPayoutMethod === "both") && (
-                  <>
-                    <h4 className="text-sm font-medium text-[#f2f2f2] pt-4 border-t border-[#333]">
-                      Digital Wallet Information
-                    </h4>
+                    <>
+                      <h4 className="text-sm font-medium text-[#f2f2f2] pt-4 border-t border-[#333]">
+                        Digital Wallet Information
+                      </h4>
 
-                    {renderRow(
-                      "Wallet Type",
-                      "walletType",
-                      "Preferred Payout Token",
-                      "preferredPayoutToken",
-                      editingSection === "payment",
-                      [
-                        { value: "phantom", label: "Phantom" },
-                        { value: "solflare", label: "Solflare" },
-                        { value: "backpack", label: "Backpack" },
-                      ],
-                      [
-                        { value: "USDT", label: "USDT" },
-                        { value: "USDC", label: "USDC" },
-                        { value: "solana", label: "Solana" },
-                      ]
-                    )}
+                      {renderRow(
+                        "Wallet Type",
+                        "walletType",
+                        "Preferred Payout Token",
+                        "preferredPayoutToken",
+                        editingSection === "payment",
+                        [
+                          { value: "phantom", label: "Phantom" },
+                          { value: "solflare", label: "Solflare" },
+                          { value: "backpack", label: "Backpack" },
+                        ],
+                        [
+                          { value: "USDT", label: "USDT" },
+                          { value: "USDC", label: "USDC" },
+                          { value: "solana", label: "Solana" },
+                        ]
+                      )}
 
-                    {renderField(
-                      "Wallet Address",
-                      "walletAddress",
-                      editingSection === "payment"
-                    )}
-                  </>
-                )}
+                      {renderField(
+                        "Wallet Address",
+                        "walletAddress",
+                        editingSection === "payment"
+                      )}
+                    </>
+                  )}
               </div>
             </div>
           </div>
@@ -1278,11 +1255,10 @@ const isSubmitting =
                       key={value}
                       type="button"
                       onClick={() => toggleCategory(value)}
-                      className={`px-6 py-3 rounded text-sm transition-colors ${
-                        tempData.productCategory.includes(value)
+                      className={`px-6 py-3 rounded text-sm transition-colors ${tempData.productCategory.includes(value)
                           ? "bg-purple-600 text-white"
                           : "bg-[#1a1a1a] text-[#858585] hover:bg-[#222]"
-                      }`}
+                        }`}
                       disabled={editingSection !== "additional"}
                     >
                       {label}
@@ -1302,11 +1278,10 @@ const isSubmitting =
                       onClick={() =>
                         selectAudience(value as "male" | "female" | "unisex")
                       }
-                      className={`px-6 py-3 rounded text-sm transition-colors ${
-                        tempData.targetAudience === value
+                      className={`px-6 py-3 rounded text-sm transition-colors ${tempData.targetAudience === value
                           ? "bg-purple-600 text-white"
                           : "bg-[#1a1a1a] text-[#858585] hover:bg-[#222]"
-                      }`}
+                        }`}
                     >
                       {label}
                     </button>

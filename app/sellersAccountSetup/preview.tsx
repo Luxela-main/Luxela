@@ -1,11 +1,11 @@
+"use client"
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Edit2, Save } from "lucide-react";
-import BuyerFooter from "@/components/buyer/footer";
+import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import Logo from "../../public/luxela.svg";
+import BuyerFooter from "@/components/buyer/footer";
 import { SellerSetupFormData } from "@/types/seller";
-import { CheckCircle } from "lucide-react";
 
 type SellerPreviewProps = {
   data: SellerSetupFormData;
@@ -24,15 +24,14 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localData, setLocalData] = useState<SellerSetupFormData>(data);
-const [idNumber, setIdNumber] = useState(data.idNumber || "");
-const [isVerified, setIsVerified] = useState(data.idVerified || false);
-
+  const [idNumber, setIdNumber] = useState(data.idNumber || "");
+  const [isVerified, setIsVerified] = useState(data.idVerified || false);
 
   useEffect(() => {
-  setLocalData(data);
-  setIdNumber(data.idNumber || "");
-  setIsVerified(data.idVerified || false);
-}, [data]);
+    setLocalData(data);
+    setIdNumber(data.idNumber || "");
+    setIsVerified(data.idVerified || false);
+  }, [data]);
 
   const tabs = [
     { id: "business", label: "Business Information" },
@@ -60,16 +59,18 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
   const handleEdit = (section: string) => setEditingSection(section);
 
   const handleSave = () => {
-  onUpdate({
-    ...localData,
-    idNumber: idNumber,
-    idVerified: isVerified
-  });
-  setEditingSection(null);
-};
+    onUpdate({
+      ...localData,
+      idNumber: idNumber,
+      idVerified: isVerified
+    });
+    setEditingSection(null);
+  };
 
   const handleCancel = () => {
     setLocalData(data);
+    setIdNumber(data.idNumber || "");
+    setIsVerified(data.idVerified || false);
     setEditingSection(null);
   };
 
@@ -91,10 +92,10 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
       | "merch"
       | "others";
 
-   setLocalData((prev) => ({
-  ...prev,
-  productCategory: categoryValue,
-}));
+    setLocalData((prev) => ({
+      ...prev,
+      productCategory: categoryValue,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -102,7 +103,6 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
     try {
       await onSubmit(data);
     } catch (error) {
-      console.error("Submit error:", error);
       setIsSubmitting(false);
     }
   };
@@ -110,7 +110,7 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
   const inputClass =
     "w-full bg-black border border-[#747474] rounded px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 transition-colors placeholder:text-gray-600";
   const selectClass =
-    "w-full bg-black border border-[#747474] rounded px-4 py-2.5 text-sm text-gray-400 focus:outline-none focus:border-purple-500 transition-colors appearance-none";
+    "w-full bg-black border border-[#747474] rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer";
 
   const renderInfoField = (
     label: string,
@@ -158,14 +158,14 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
           className={selectClass}
         >
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={opt.value} className="bg-black text-white">
               {opt.label}
             </option>
           ))}
         </select>
       ) : (
         <div className="text-gray-300 text-sm">
-          {(data[name] as string) || "Not provided"}
+          {options.find(opt => opt.value === (data[name] as string))?.label || (data[name] as string) || "Not provided"}
         </div>
       )}
     </div>
@@ -229,7 +229,7 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
             className="flex mx-auto justify-center items-center"
           >
             <Image
-              src={Logo}
+              src="/luxela.svg"
               alt="LUXELA"
               width={147.99}
               height={24.15}
@@ -256,7 +256,7 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
 
         <div className="mb-12 relative">
           {/* Banner */}
-          <div className="w-full h-40 bg-gray-700 rounded-lg overflow-hidden mb-8">
+          <div className="w-full h-48 bg-gray-700 rounded-lg overflow-hidden mb-8">
             {data.storeBanner ? (
               <img
                 src={data.storeBanner}
@@ -264,7 +264,7 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-r from-purple-900 to-blue-900"></div>
+              <div className="w-full h-full bg-linear-to-r from-purple-900 to-blue-900"></div>
             )}
           </div>
 
@@ -379,82 +379,82 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
                 editingSection === "business"
               )}
 
-           {/* Full Name */}
-{renderInfoField(
-  "Full Name",
-  "fullName",
-  editingSection === "business"
-)}
+              {/* Full Name */}
+              {renderInfoField(
+                "Full Name",
+                "fullName",
+                editingSection === "business"
+              )}
 
-{/* ID Verification Section */}
-<div className="border-t border-[#747474] pt-6 mt-6">
-  <h3 className="text-base font-medium mb-4">ID Verification</h3>
-  
-  <div className="grid grid-cols-2 gap-6 mb-4">
-    {/* ID Type */}
-    <div>
-      <label className="block text-sm text-gray-400 mb-2">ID Type</label>
-      {editingSection === "business" ? (
-        <select
-          name="idType"
-          value={localData.idType}
-          onChange={handleSelectChange}
-          className={selectClass}
-        >
-          <option value="">Select ID type</option>
-          <option value="national_id">National ID (NIN)</option>
-          <option value="passport">International Passport</option>
-          <option value="drivers_license">Driver's License</option>
-          <option value="voters_card">Voter's Card</option>
-        </select>
-      ) : (
-        <div className="text-gray-300 text-sm capitalize">
-          {data.idType === "national_id"
-            ? "National ID (NIN)"
-            : data.idType === "passport"
-            ? "International Passport"
-            : data.idType === "drivers_license"
-            ? "Driver's License"
-            : data.idType === "voters_card"
-            ? "Voter's Card"
-            : "Not provided"}
-        </div>
-      )}
-    </div>
+              {/* ID Verification Section */}
+              <div className="border-t border-[#747474] pt-6 mt-6">
+                <h3 className="text-base font-medium mb-4">ID Verification</h3>
+                
+                <div className="grid grid-cols-2 gap-6 mb-4">
+                  {/* ID Type */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">ID Type</label>
+                    {editingSection === "business" ? (
+                      <select
+                        name="idType"
+                        value={localData.idType}
+                        onChange={handleSelectChange}
+                        className={selectClass}
+                      >
+                        <option value="" className="bg-black text-white">Select ID type</option>
+                        <option value="national_id" className="bg-black text-white">National ID (NIN)</option>
+                        <option value="passport" className="bg-black text-white">International Passport</option>
+                        <option value="drivers_license" className="bg-black text-white">Driver's License</option>
+                        <option value="voters_card" className="bg-black text-white">Voter's Card</option>
+                      </select>
+                    ) : (
+                      <div className="text-gray-300 text-sm capitalize">
+                        {data.idType === "national_id"
+                          ? "National ID (NIN)"
+                          : data.idType === "passport"
+                          ? "International Passport"
+                          : data.idType === "drivers_license"
+                          ? "Driver's License"
+                          : data.idType === "voters_card"
+                          ? "Voter's Card"
+                          : "Not provided"}
+                      </div>
+                    )}
+                  </div>
 
-    {/* ID Number */}
-    <div>
-      <label className="block text-sm text-gray-400 mb-2">ID Number</label>
-      {editingSection === "business" ? (
-        <input
-          type="text"
-          value={idNumber}
-          onChange={(e) => setIdNumber(e.target.value)}
-          className={inputClass}
-          placeholder="Enter your ID number"
-        />
-      ) : (
-        <div className="text-gray-300 text-sm">
-          {idNumber || "Not provided"}
-        </div>
-      )}
-    </div>
-  </div>
+                  {/* ID Number */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">ID Number</label>
+                    {editingSection === "business" ? (
+                      <input
+                        type="text"
+                        value={idNumber}
+                        onChange={(e) => setIdNumber(e.target.value)}
+                        className={inputClass}
+                        placeholder="Enter your ID number"
+                      />
+                    ) : (
+                      <div className="text-gray-300 text-sm">
+                        {idNumber || "Not provided"}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-  {/* Verification Status */}
-  {isVerified && (
-    <div className="flex items-center gap-2 text-green-500 text-sm">
-      <CheckCircle className="w-4 h-4" />
-      <span>ID Verified</span>
-    </div>
-  )}
-  
-  {!isVerified && editingSection !== "business" && (
-    <div className="text-gray-400 text-sm">
-      ID not verified yet
-    </div>
-  )}
-</div>
+                {/* Verification Status */}
+                {isVerified && (
+                  <div className="flex items-center gap-2 text-green-500 text-sm">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>ID Verified</span>
+                  </div>
+                )}
+                
+                {!isVerified && editingSection !== "business" && (
+                  <div className="text-gray-400 text-sm">
+                    ID not verified yet
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -578,7 +578,7 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
                           type="radio"
                           name="preferredPayoutMethod"
                           value={method.value}
-                          checked={data.preferredPayoutMethod === method.value}
+                          checked={localData.preferredPayoutMethod === method.value}
                           onChange={handleInputChange}
                           className="w-4 h-4 accent-purple-600"
                         />
@@ -691,7 +691,7 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
                         type="button"
                         onClick={() => toggleCategory(value)}
                         className={`px-6 py-3 rounded text-sm transition-colors ${
-                          localData.productCategory.includes(value)
+                          localData.productCategory === value
                             ? "bg-purple-600 text-white"
                             : "bg-[#1a1a1a] text-[#858585] hover:bg-[#222]"
                         }`}
@@ -701,17 +701,17 @@ const [isVerified, setIsVerified] = useState(data.idVerified || false);
                     ))}
                   </div>
                 ) : (
-                 <div className="flex flex-wrap gap-2">
-  {data.productCategory ? (
-    <span className="px-4 py-2 bg-purple-600 text-white text-sm rounded">
-      {data.productCategory.replace(/_/g, " ")}
-    </span>
-  ) : (
-    <span className="text-gray-300 text-sm">
-      No category selected
-    </span>
-  )}
-</div>
+                  <div className="flex flex-wrap gap-2">
+                    {data.productCategory ? (
+                      <span className="px-4 py-2 bg-purple-600 text-white text-sm rounded capitalize">
+                        {data.productCategory.replace(/_/g, " ")}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 text-sm">
+                        No category selected
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
