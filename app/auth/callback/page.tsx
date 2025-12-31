@@ -5,18 +5,30 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Loader } from "@/components/loader/loader";
 import { useToast } from "@/components/hooks/useToast";
-import Commander from "ioredis/built/utils/Commander";
 
 function AuthCallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
   const toast = useToast();
-  const isDev = process.env.NODE_ENV === "development";
 
-  const getUserFromSession = (session: any) => session?.user ?? null;
-  const getRoleFromUser = (user: any): "buyer" | "seller" =>
-    user?.user_metadata?.role === "seller" ? "seller" : "buyer";
+  // Central redirect logic
+  const redirectUser = (user: any) => {
+    const role = user?.user_metadata?.role;
+
+    // NO ROLE
+    if (!role) {
+      router.replace("/select-role");
+      return;
+    }
+
+    // EXISTING USERS
+    if (role === "seller") {
+      router.replace("/sellers/dashboard");
+    } else {
+      router.replace("/buyer/profile");
+    }
+  };
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -25,51 +37,63 @@ function AuthCallbackHandler() {
         const type = searchParams.get("type");
         const tokenHash = searchParams.get("token_hash");
 
-        if (isDev) console.log("Auth callback params:", { code, type, tokenHash });
-
+        /**
+         * GOOGLE / OAUTH CALLBACK
+         */
         if (code) {
-          const { data } = await supabase.auth.exchangeCodeForSession(code);
-          if (code || !data.session) {
-            router.replace("/");
+          const { data, error } =
+            await supabase.auth.exchangeCodeForSession(code);
+
+          if (error || !data.session) {
+            router.replace("/signin?error=oauth_failed");
             return;
           }
-          const user = getUserFromSession(data.session);
-          const role = getRoleFromUser(user);
+
           toast.success("Signed in successfully.");
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+          redirectUser(data.session.user);
           return;
         }
 
+        /**
+         * EMAIL OTP SIGNUP VERIFICATION
+         */
         if (type === "signup" && tokenHash) {
-          const { data, error } = await supabase.auth.verifyOtp({ type: "signup", token_hash: tokenHash });
+          const { data, error } = await supabase.auth.verifyOtp({
+            type: "signup",
+            token_hash: tokenHash,
+          });
+
           if (error || !data.session) {
             router.replace("/signin?error=verification_failed");
             return;
           }
-          const user = getUserFromSession(data.session);
-          const role = getRoleFromUser(user);
+
           toast.success("Signup verified successfully.");
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+          redirectUser(data.session.user);
           return;
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
+        /**
+         * EXISTING SESSION (REFRESH / DIRECT VISIT)
+         */
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (session?.user) {
-          const role = getRoleFromUser(session.user);
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+          redirectUser(session.user);
           return;
         }
 
-        if (isDev) console.error("Invalid auth callback state.");
         router.replace("/signin?error=invalid_callback");
-      } catch (err) {
-        console.error("Auth callback fatal error:", err);
+      } catch (error) {
+        console.error("Auth callback error:", error);
         router.replace("/signin?error=unexpected");
       }
     };
 
     handleCallback();
-  }, [router, searchParams, supabase, toast, isDev]);
+  }, [router, searchParams, supabase, toast]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black">

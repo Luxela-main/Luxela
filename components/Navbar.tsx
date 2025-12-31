@@ -273,7 +273,7 @@ export default function client() {
 
           {user && (
             <Link
-              href="/account"
+              href={user.role === "seller" ? "/sellers/dashboard" : "/buyer/dashboard"}
               className="h-10 w-10 rounded-full overflow-hidden border border-white/30 hover:border-purple-500 transition">
               {user.user_metadata?.avatar_url ? (
                 <Image
