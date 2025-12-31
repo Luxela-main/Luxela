@@ -1,5 +1,5 @@
 // lib/upload-image.ts
-import { supabase } from '@/server/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
@@ -35,9 +35,12 @@ export async function uploadImage(
   file: File,
   bucket: string = 'store-assets',
   folder: string = '',
-  isPublicBucket: boolean = false // Add this parameter
+  isPublicBucket: boolean = false
 ): Promise<{ url: string; path: string } | null> {
   try {
+    // Create browser client that can read cookies
+    const supabase = createClient();
+    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('You must be logged in to upload images');
@@ -63,16 +66,14 @@ export async function uploadImage(
     let imageUrl: string;
 
     if (isPublicBucket) {
-      // For public buckets, use public URL
       const { data: { publicUrl } } = supabase.storage
         .from(bucket)
         .getPublicUrl(filePath);
       imageUrl = publicUrl;
     } else {
-      // For private buckets, generate a signed URL (valid for 1 year)
       const { data: signedData, error: signedError } = await supabase.storage
         .from(bucket)
-        .createSignedUrl(filePath, 31536000); // 1 year in seconds
+        .createSignedUrl(filePath, 31536000);
 
       if (signedError) {
         throw signedError;
@@ -95,6 +96,8 @@ export async function deleteImage(
   bucket: string = 'store-assets'
 ): Promise<boolean> {
   try {
+    const supabase = createClient();
+    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('You must be logged in to delete images');
@@ -122,6 +125,8 @@ export async function getSignedUrl(
   expiresIn: number = 3600
 ): Promise<string | null> {
   try {
+    const supabase = createClient();
+    
     const { data, error } = await supabase.storage
       .from(bucket)
       .createSignedUrl(path, expiresIn);
