@@ -1,10 +1,10 @@
 "use client";
 
 import withAuth from "@/functions/hoc/withAuth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import SearchBar from "@/components/search-bar";
 import { useDashboardData } from "@/modules/sellers";
-import { LoadingState } from "@/components/sellers/LoadingState";
 import { defaultDashboardData } from "./dashboardDataStats";
 import { DashboardSummary } from "./summary";
 import { RevenueReport } from "./RevenueReport";
@@ -13,14 +13,29 @@ import { TopSellingProducts } from "./TopSellingProducts";
 
 function Dashboard() {
   const [search, setSearch] = useState("");
+  const router = useRouter();
 
-  const { data: dashboardData, isLoading } = useDashboardData();
-
+  const { data: dashboardData } = useDashboardData();
   const displayData = dashboardData || defaultDashboardData;
 
-  // if (isLoading) {
-  //   return <LoadingState message="Loading dashboard data..." />;
-  // }
+  useEffect(() => {
+    const checkSellerSetup = async () => {
+      try {
+        const res = await fetch("/api/profile/check", { method: "GET" });
+
+        if (!res.ok) return;
+        const result = await res.json();
+
+        // If seller has not completed setup, redirect
+        if (result?.role === "seller" && result?.setupComplete === false) {
+          router.push("/sellersAccountSetup");
+        }
+      } catch (_) {
+      }
+    };
+
+    checkSellerSetup();
+  }, [router]);
 
   return (
     <div className="pt-16 px-6 md:pt-0">
@@ -29,11 +44,11 @@ function Dashboard() {
           <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>
+
       <div className="mb-6 md:max-lg:pt-10">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="text-gray-400 mt-1">
-          Monitor your sales, track payouts, and manage your listings—all in one
-          place
+          Monitor your sales, track payouts, and manage your listings—all in one place
         </p>
       </div>
 
@@ -47,4 +62,4 @@ function Dashboard() {
   );
 }
 
-export default withAuth(Dashboard);
+export default withAuth(Dashboard)
