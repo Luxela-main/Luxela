@@ -1,8 +1,8 @@
 "use client";
 
-import withAuth from "@/functions/hoc/withAuth";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import withAuth from "@/functions/hoc/withAuth";
 import SearchBar from "@/components/search-bar";
 import { useDashboardData } from "@/modules/sellers";
 import { defaultDashboardData } from "./dashboardDataStats";
@@ -12,30 +12,40 @@ import { VisitorTraffic } from "./VisitorTraffic";
 import { TopSellingProducts } from "./TopSellingProducts";
 
 function Dashboard() {
-  const [search, setSearch] = useState("");
   const router = useRouter();
 
-  const { data: dashboardData } = useDashboardData();
-  const displayData = dashboardData || defaultDashboardData;
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   useEffect(() => {
-    const checkSellerSetup = async () => {
+    async function checkProfile() {
       try {
-        const res = await fetch("/api/profile/check", { method: "GET" });
+        const res = await fetch("/api/profile/check");
+        const data = await res.json();
 
-        if (!res.ok) return;
-        const result = await res.json();
-
-        // If seller has not completed setup, redirect
-        if (result?.role === "seller" && result?.setupComplete === false) {
-          router.push("/sellersAccountSetup");
+        if (data.role === "seller") {
+          if (data.profileExists === false) {
+            router.push("/sellersAccountSetup");
+            return;
+          }
         }
-      } catch (_) {
-      }
-    };
 
-    checkSellerSetup();
-  }, [router]);
+        // allow render
+        setCheckingProfile(false);
+      } catch (e) {
+        console.error("Profile check failed:", e);
+        setCheckingProfile(false);
+      }
+    }
+
+    checkProfile();
+  }, []);
+
+  if (checkingProfile) return null;
+
+  const [search, setSearch] = useState("");
+  const { data: dashboardData } = useDashboardData();
+
+  const displayData = dashboardData || defaultDashboardData;
 
   return (
     <div className="pt-16 px-6 md:pt-0">
@@ -57,9 +67,10 @@ function Dashboard() {
         <RevenueReport />
         <VisitorTraffic />
       </div>
+
       <TopSellingProducts products={displayData.topSellingProducts} />
     </div>
   );
 }
 
-export default withAuth(Dashboard)
+export default withAuth(Dashboard);
