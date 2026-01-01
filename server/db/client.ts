@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import * as schema from "./schema";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -19,7 +20,7 @@ const pool = new Pool({
   // ssl: { rejectUnauthorized: false },
 });
 
-export const db = drizzle(pool);
+export const db = drizzle(pool, { schema });
 
 // Export pool for graceful shutdowns or raw access in tests
 export { pool as rawPgPool };
