@@ -11,6 +11,7 @@ import { uploadImage, validateImageFile } from "@/lib/upload-image";
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
+import CollectionForm from "@/components/sellers/NewListing/CollectionForm";
 
 const NewListing: React.FC = () => {
   const router = useRouter();
@@ -45,6 +46,9 @@ const NewListing: React.FC = () => {
     internationalDays: "",
     internationalMinutes: "",
     images: [],
+    collectionTitle: "",
+    collectionDescription: "",
+    collectionItems: [],
   });
 
   // Validation functions
@@ -112,9 +116,15 @@ const NewListing: React.FC = () => {
   };
 
   const handleAddProduct = (type: ListingType): void => {
-    setView(type);
-    setActiveTab("product-info");
-  };
+  setView(type);
+  setActiveTab("product-info");
+
+  setFormData((prev) => ({
+    ...prev,
+    type, // ✅ THIS LINE FIXES EVERYTHING
+  }));
+};
+
 
   const handleFormChange = (data: Partial<FormData>): void => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -149,7 +159,6 @@ const NewListing: React.FC = () => {
   };
 
   const handleTabChange = (tab: TabType): void => {
-    // Validate before allowing manual tab navigation
     if (tab === "additional-info") {
       const validation = validateProductInfo();
       if (!validation.valid) {
@@ -174,7 +183,6 @@ const NewListing: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    console.log("Submitting form data:", formData);
     setIsSubmitting(true);
     try {
       if (formData.type === "single") {
@@ -412,7 +420,7 @@ const NewListing: React.FC = () => {
 
       <TabsNav activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {activeTab === "product-info" && (
+      {/* {activeTab === "product-info" && (
         <ProductInfoForm
           formData={formData}
           onFormChange={handleFormChange}
@@ -421,7 +429,38 @@ const NewListing: React.FC = () => {
           onNext={handleNext}
           onCancel={handleCancel}
         />
-      )}
+      )} */}
+
+      {activeTab === "product-info" && formData.type === "single" && (
+  <ProductInfoForm
+    formData={formData}
+    onFormChange={handleFormChange}
+    images={formData.images}
+    onImagesChange={handleImagesChange}
+    onNext={handleNext}
+    onCancel={handleCancel}
+  />
+)}
+
+{activeTab === "product-info" && formData.type === "collection" && (
+  <CollectionForm
+    title={formData.collectionTitle || ""}
+    description={formData.collectionDescription || ""}
+    items={formData.collectionItems || []}
+    onTitleChange={(title) =>
+      handleFormChange({ collectionTitle: title })
+    }
+    onDescriptionChange={(description) =>
+      handleFormChange({ collectionDescription: description })
+    }
+    onItemsChange={(items) =>
+      handleFormChange({ collectionItems: items })
+    }
+    onNext={handleNext}
+    isSubmitting={isSubmitting}
+  />
+)}
+
 
       {activeTab === "additional-info" && (
         <AdditionalInfoForm
