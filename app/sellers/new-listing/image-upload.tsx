@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface ImageUploadProps {
   images: File[];
@@ -53,8 +53,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ images, onImagesChange }) => 
             </div>
           ) : (
             <>
-              <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center mb-4 border border-purple-600">
-                <Upload className="h-8 w-8 text-purple-600" />
+              <div className="w-20 h-20 flex items-center justify-center mb-4">
+                {/* <Upload className="h-8 w-8 text-purple-600" /> */}
+                <img src="/images/seller/elements.svg" alt="upload icon" />
               </div>
               <p className="text-sm font-medium mb-1">
                 Upload Image(s) or product videos

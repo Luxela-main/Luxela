@@ -548,9 +548,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="pt-16 px-6 md:pt-0 relative">
+    <div className="pt-16 px-2 lg:px-6 md:pt-0 relative">
       <div className="mb-6">
-        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-4.5 lg:ml-auto">
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-6 max-lg:right-12 max-lg:top-4.5 lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>

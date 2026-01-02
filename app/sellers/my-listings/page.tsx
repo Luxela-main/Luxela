@@ -96,9 +96,9 @@ export default function MyListings() {
   };
 
   return (
-    <div className="pt-16 px-6 md:pt-0 text-sm">
+    <div className="pt-16 px-2 lg:px-6 md:pt-0 text-sm">
       <div className="mb-6">
-        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
+        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-6 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>
@@ -132,14 +132,14 @@ export default function MyListings() {
             Collections
           </button>
         </div>
-        <div className="flex space-x-2 text-sm">
-          <button className="bg-[#1a1a1a] text-sm border border-[#333] text-white px-4 py-2 rounded-md flex items-center">
+        <div className="flex space-x-2">
+          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center">
             <Filter className="h-4 w-4 mr-2" />
             <span>Filter</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-purple-600 text-sm text-white px-4 py-2 rounded-md flex items-center hover:bg-purple-700 transition"
+            className="bg-purple-600 text-white px-4 py-2 rounded-md flex items-center hover:bg-purple-700 transition"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
             <span>Add Product</span>
@@ -147,7 +147,7 @@ export default function MyListings() {
         </div>
       </div>
 
-      <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
+      <div className="bg-[#1a1a1a] rounded-lg overflow-scroll">
         <div className="grid grid-cols-6 gap-4 p-4 border-b border-[#333] text-gray-400 text-sm">
           <div className="flex items-center">
             <input

@@ -1,10 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import EmptyState from "@/components/sellers/NewListing/EmptyState";
+import ProductListings from "@/components/sellers/NewListing/ProductListings";
 import TabsNav from "@/components/sellers/NewListing/TabsNav";
 import ProductInfoForm from "@/components/sellers/NewListing/ProductInfoForm";
 import AdditionalInfoForm from "@/components/sellers/NewListing/AdditionalInfoForm";
 import PreviewForm from "@/components/sellers/NewListing/PreviewForm";
+import SuccessModal from "@/components/sellers/NewListing/SuccessModal";
 import { FormData, ViewType, TabType, ListingType } from "@/types/newListing";
 import { uploadImage, validateImageFile } from "@/lib/upload-image";
 import { trpc } from "@/lib/trpc";
@@ -17,7 +18,7 @@ const NewListing: React.FC = () => {
   const [view, setView] = useState<ViewType>("empty");
   const [activeTab, setActiveTab] = useState<TabType>("product-info");
   const [isUploading, setIsUploading] = useState(false);
-
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +69,10 @@ const NewListing: React.FC = () => {
     if (!formData.images || formData.images.length === 0) {
       errors.push("At least one product image is required");
     }
-    if (formData.supplyCapacity === "limited" && (!formData.quantity || parseInt(formData.quantity) <= 0)) {
+    if (
+      formData.supplyCapacity === "limited" &&
+      (!formData.quantity || parseInt(formData.quantity) <= 0)
+    ) {
       errors.push("Quantity is required when supply capacity is limited");
     }
     if (!formData.releaseDuration) {
@@ -96,7 +100,11 @@ const NewListing: React.FC = () => {
     if (!formData.domesticDays) {
       errors.push("Domestic shipping ETA is required");
     }
-    if ((formData.shippingOption === "international" || formData.shippingOption === "both") && !formData.internationalDays) {
+    if (
+      (formData.shippingOption === "international" ||
+        formData.shippingOption === "both") &&
+      !formData.internationalDays
+    ) {
       errors.push("International shipping ETA is required");
     }
 
@@ -116,29 +124,29 @@ const NewListing: React.FC = () => {
     setFormData((prev) => ({ ...prev, images }));
   };
 
-const handleNext = (): void => {
-  if (activeTab === "product-info") {
-    const validation = validateProductInfo();
-    if (!validation.valid) {
-      validation.errors.forEach((error) => toastSvc.error(error));
-      return;
+  const handleNext = (): void => {
+    if (activeTab === "product-info") {
+      const validation = validateProductInfo();
+      if (!validation.valid) {
+        validation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+      setActiveTab("additional-info");
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 0);
+    } else if (activeTab === "additional-info") {
+      const validation = validateAdditionalInfo();
+      if (!validation.valid) {
+        validation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+      setActiveTab("preview");
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 0);
     }
-    setActiveTab("additional-info");
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 0);
-  } else if (activeTab === "additional-info") {
-    const validation = validateAdditionalInfo();
-    if (!validation.valid) {
-      validation.errors.forEach((error) => toastSvc.error(error));
-      return;
-    }
-    setActiveTab("preview");
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 0);
-  }
-};
+  };
 
   const handleTabChange = (tab: TabType): void => {
     // Validate before allowing manual tab navigation
@@ -151,7 +159,7 @@ const handleNext = (): void => {
     } else if (tab === "preview") {
       const productValidation = validateProductInfo();
       const additionalValidation = validateAdditionalInfo();
-      
+
       if (!productValidation.valid) {
         productValidation.errors.forEach((error) => toastSvc.error(error));
         return;
@@ -161,7 +169,7 @@ const handleNext = (): void => {
         return;
       }
     }
-    
+
     setActiveTab(tab);
   };
 
@@ -236,7 +244,7 @@ const handleNext = (): void => {
             : undefined;
 
         const uploadedImageUrls: string[] = [];
-        
+
         if (formData.images && formData.images.length > 0) {
           for (const imageFile of formData.images) {
             try {
@@ -245,26 +253,27 @@ const handleNext = (): void => {
                 console.warn(`Skipping invalid image: ${validation.error}`);
                 continue;
               }
-              
+
               const uploadResult = await uploadImage(
-                imageFile, 
-                'store-assets', 
-                'product-images', 
+                imageFile,
+                "store-assets",
+                "product-images",
                 true
               );
-              
+
               if (uploadResult) {
                 uploadedImageUrls.push(uploadResult.url);
               }
             } catch (uploadError) {
-              console.error('Failed to upload image:', uploadError);
+              console.error("Failed to upload image:", uploadError);
             }
           }
         }
-        
-        const mainImageUrl = uploadedImageUrls.length > 0 
-          ? uploadedImageUrls[0] 
-          : "https://via.placeholder.com/400";
+
+        const mainImageUrl =
+          uploadedImageUrls.length > 0
+            ? uploadedImageUrls[0]
+            : "https://via.placeholder.com/400";
 
         await createSingleMutation.mutateAsync({
           title: formData.name,
@@ -294,10 +303,7 @@ const handleNext = (): void => {
           items: formData.collectionItems || [],
         });
       }
-
-      setTimeout(() => {
-        router.push("/sellers/my-listings");
-      }, 1500);
+      setIsSubmitting(false);
     } catch (error) {
       setIsSubmitting(false);
       console.error("Error creating listing:", error);
@@ -333,12 +339,14 @@ const handleNext = (): void => {
     });
   };
 
+  const handleViewListings = () => {
+    router.push("/sellers/my-listings");
+  };
+
   const createSingleMutation = (trpc.listing as any).createSingle.useMutation({
     onSuccess: () => {
       toastSvc.success("Single listing created successfully!");
-      setTimeout(() => {
-        router.push("/sellers/my-listings");
-      }, 1500);
+      setShowSuccessModal(true);
     },
     onError: (error: any) => {
       try {
@@ -362,9 +370,7 @@ const handleNext = (): void => {
   ).createCollection.useMutation({
     onSuccess: () => {
       toastSvc.success("Collection created successfully!");
-      setTimeout(() => {
-        router.push("/sellers/my-listings");
-      }, 1500);
+      setShowSuccessModal(true);
     },
     onError: (error: any) => {
       try {
@@ -384,11 +390,11 @@ const handleNext = (): void => {
   });
 
   if (view === "empty") {
-    return <EmptyState onAddProduct={handleAddProduct} />;
+    return <ProductListings onAddProduct={handleAddProduct} />;
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-black text-white px-2 lg:px-6 pt-10">
       <div className="flex items-center gap-2 text-sm mb-6 text-gray-400">
         <span>New Listing</span>
         <span>›</span>
@@ -398,7 +404,7 @@ const handleNext = (): void => {
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold mb-2">New Listing</h1>
+        <h1 className="text-2xl font-semibold mb-2">New Listing</h1>
         <p className="text-gray-400">
           List product and fill in your listing details
         </p>
@@ -437,6 +443,8 @@ const handleNext = (): void => {
           error={error}
         />
       )}
+
+      <SuccessModal isOpen={showSuccessModal} onView={handleViewListings} />
     </div>
   );
 };
