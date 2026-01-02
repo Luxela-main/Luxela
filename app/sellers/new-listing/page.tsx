@@ -132,11 +132,11 @@ const NewListing: React.FC = () => {
         if (!allowedBadges.includes(limitedEditionBadge)) limitedEditionBadge = "do_not_show";
 
         // Map shippingOption
-        let shippingOption = formData.product.shippingOption;
+        let shippingOption = formData.product.shippingOption || "local";
         if (!allowedShippingOptions.includes(shippingOption)) shippingOption = "local";
 
         // Map additionalTargetAudience
-        let additionalTargetAudience = formData.product.targetAudience;
+        let additionalTargetAudience = formData.product.targetAudience || "unisex";
         if (!allowedAudiences.includes(additionalTargetAudience)) additionalTargetAudience = "unisex";
 
         // Map colorsAvailable to array of objects
