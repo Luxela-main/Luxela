@@ -10,6 +10,13 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "drizzle migrate",
+			"type": "shell",
+			"command": "pnpm drizzle-kit push:pg",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

@@ -1,6 +1,6 @@
 {
-  "id": "ab404c06-9236-4110-a0e6-f8b760684016",
-  "prevId": "c18f18ce-c0b4-47b6-8d3c-ced88282b66f",
+  "id": "474f12bf-5577-4f48-872f-469f628c2745",
+  "prevId": "ab404c06-9236-4110-a0e6-f8b760684016",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -927,14 +927,14 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "seller_id": {
-          "name": "seller_id",
+        "product_id": {
+          "name": "product_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "product_id": {
-          "name": "product_id",
+        "seller_id": {
+          "name": "seller_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -983,6 +983,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "sizes_json": {
+          "name": "sizes_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "supply_capacity": {
+          "name": "supply_capacity",
+          "type": "supply_capacity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "quantity_available": {
           "name": "quantity_available",
           "type": "integer",
@@ -992,47 +1005,6 @@
         "limited_edition_badge": {
           "name": "limited_edition_badge",
           "type": "limited_badge",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shipping_option": {
-          "name": "shipping_option",
-          "type": "shipping_option",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "eta_domestic": {
-          "name": "eta_domestic",
-          "type": "shipping_eta",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "eta_international": {
-          "name": "eta_international",
-          "type": "shipping_eta",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sizes_json": {
-          "name": "sizes_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stock": {
-          "name": "stock",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "supply_capacity": {
-          "name": "supply_capacity",
-          "type": "supply_capacity",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
@@ -1062,6 +1034,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "shipping_option": {
+          "name": "shipping_option",
+          "type": "shipping_option",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eta_domestic": {
+          "name": "eta_domestic",
+          "type": "shipping_eta",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eta_international": {
+          "name": "eta_international",
+          "type": "shipping_eta",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "items_json": {
           "name": "items_json",
           "type": "text",
@@ -1085,12 +1078,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "listings_seller_id_sellers_id_fk": {
-          "name": "listings_seller_id_sellers_id_fk",
+        "listings_product_id_products_id_fk": {
+          "name": "listings_product_id_products_id_fk",
           "tableFrom": "listings",
-          "tableTo": "sellers",
+          "tableTo": "products",
           "columnsFrom": [
-            "seller_id"
+            "product_id"
           ],
           "columnsTo": [
             "id"
@@ -1098,12 +1091,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "listings_product_id_products_id_fk": {
-          "name": "listings_product_id_products_id_fk",
+        "listings_seller_id_sellers_id_fk": {
+          "name": "listings_seller_id_sellers_id_fk",
           "tableFrom": "listings",
-          "tableTo": "products",
+          "tableTo": "sellers",
           "columnsFrom": [
-            "product_id"
+            "seller_id"
           ],
           "columnsTo": [
             "id"
@@ -1607,7 +1600,7 @@
           "name": "product_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "size": {
           "name": "size",
