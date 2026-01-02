@@ -87,6 +87,8 @@ const SingleListingInput = listingsSchema.omit({
   createdAt: true,
   updatedAt: true,
   sizesJson: true,
+  sellerId: true,
+  type: true,
 }).extend({
   productId: z.string().uuid().optional(),
   sizes: z.array(z.string()).nonempty().optional(),

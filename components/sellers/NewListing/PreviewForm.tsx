@@ -29,11 +29,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
       {/* Right Column - Preview Details */}
       <div className="col-span-12 lg:col-span-7 text-sm">
         <div className="space-y-6">
-          {/* Price */}
-          <div className="border-b border-[#333] pb-4">
-            <label className="block text-sm text-gray-400 mb-1">Price</label>
-            <p className="text-white">{formData.price || '₦14,500.00'}</p>
-          </div>
+         
 
           {/* Product Name */}
           <div className="border-b border-[#333] pb-4">
@@ -41,19 +37,23 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
             <p className="text-white">{formData.name || 'Name of Product'}</p>
           </div>
 
+           {/* Price */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">Price</label>
+            <p className="text-white">{formData.price || ''}</p>
+          </div>
+
           {/* Product Type */}
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Product type</label>
-            <p className="text-white">{formData.category || 'Clothing'}</p>
+            <p className="text-white">{formData.category || 'others'}</p>
           </div>
 
           {/* Product Description */}
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Product description</label>
             <p className="text-white">
-              {formData.description || 
-                'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'}
-            </p>
+              {formData.description || ''}            </p>
           </div>
 
           {/* Sizes Available */}
@@ -67,7 +67,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
           {/* Release Date */}
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Release date</label>
-            <p className="text-white">{formData.releaseDate || '30-09-2024'}</p>
+            <p className="text-white">{formData.releaseDate || ''}</p>
           </div>
 
           {/* Supply Capacity */}
@@ -81,7 +81,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
           {/* Quantity */}
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Quantity</label>
-            <p className="text-white">{formData.quantity || '40'}</p>
+            <p className="text-white">{formData.quantity || ''}</p>
           </div>
 
           {/* Show Limited Edition Badge */}
@@ -100,7 +100,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Release duration</label>
             <p className="text-white">
-              {formData.releaseDurationDays || '30'} Days, {formData.releaseDurationMinutes || '20'} Hours
+              {formData.releaseDurationDays || ''} Days, {formData.releaseDurationMinutes || ''} Hours
             </p>
           </div>
 
@@ -113,7 +113,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
           {/* Colour Options */}
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Colour options</label>
-            <p className="text-white">{formData.colors || 'Yellow, Black, Magenta, Titanium, Bleached'}</p>
+            <p className="text-white">{formData.colors || ''}</p>
           </div>
 
           {/* Target Audience */}
@@ -140,7 +140,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Estimated shipping time</label>
             <p className="text-white">
-              {formData.domesticDays || '2'} Days within country, {formData.internationalDays || '10'} Days international shipping
+              {formData.domesticDays || ''} Days within country, {formData.internationalDays || ''} Days international shipping
             </p>
           </div>
         </div>

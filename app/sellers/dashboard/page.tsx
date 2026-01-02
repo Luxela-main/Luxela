@@ -15,6 +15,10 @@ function Dashboard() {
   const router = useRouter();
 
   const [checkingProfile, setCheckingProfile] = useState(true);
+    const [search, setSearch] = useState("");
+  const { data: dashboardData } = useDashboardData();
+
+  const displayData = dashboardData || defaultDashboardData;
 
   useEffect(() => {
     async function checkProfile() {
@@ -42,10 +46,7 @@ function Dashboard() {
 
   if (checkingProfile) return null;
 
-  const [search, setSearch] = useState("");
-  const { data: dashboardData } = useDashboardData();
 
-  const displayData = dashboardData || defaultDashboardData;
 
   return (
     <div className="pt-16 px-6 md:pt-0">

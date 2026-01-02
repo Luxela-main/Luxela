@@ -33,7 +33,7 @@ export interface FormData {
   images: File[];
 
   //Listing Type
-    listingType?: "single" | "collection";
+    type?: "single" | "collection";
 
   
 }

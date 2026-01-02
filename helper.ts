@@ -100,6 +100,22 @@ const helper = {
     
     return "1week";
   },
+
+  mapDomesticDaysToEnum: (days?: string, minutes?: string): any => {
+  const dayNum = parseInt(days || "0");
+  
+  if (dayNum >= 1 && dayNum <= 3) return "days_1_to_3";
+  if (dayNum > 3 && dayNum <= 7) return "days_3_to_7";
+  return "custom";
+},
+
+mapInternationalDaysToEnum: (days?: string, minutes?: string): any => {
+  const dayNum = parseInt(days || "0");
+  
+  if (dayNum >= 7 && dayNum <= 14) return "days_7_to_14";
+  if (dayNum > 14 && dayNum <= 30) return "days_14_to_30";
+  return "custom";
+},
 };
 
 export default helper;
