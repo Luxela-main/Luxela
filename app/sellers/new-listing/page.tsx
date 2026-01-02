@@ -10,7 +10,6 @@ import { uploadImage, validateImageFile } from "@/lib/upload-image";
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
-// import helper from "@/helper";
 
 const NewListing: React.FC = () => {
   const router = useRouter();
@@ -24,23 +23,18 @@ const NewListing: React.FC = () => {
 
   const [formData, setFormData] = useState<FormData>({
     type: "single",
-    // Basic Information
     name: "",
     price: "",
     category: "",
     description: "",
     sizes: [],
     releaseDate: "",
-
-    // Supply Information
     supplyCapacity: "no-max",
     quantity: "",
     showBadge: "do_not_show",
     releaseDuration: "",
     releaseDurationDays: "",
     releaseDurationMinutes: "",
-
-    // Additional Information
     material: "",
     colors: "",
     targetAudience: "",
@@ -49,10 +43,65 @@ const NewListing: React.FC = () => {
     domesticMinutes: "",
     internationalDays: "",
     internationalMinutes: "",
-
-    // Images
     images: [],
   });
+
+  // Validation functions
+  const validateProductInfo = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (!formData.name.trim()) {
+      errors.push("Product name is required");
+    }
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      errors.push("Valid price is required");
+    }
+    if (!formData.category) {
+      errors.push("Category is required");
+    }
+    if (!formData.description.trim()) {
+      errors.push("Description is required");
+    }
+    if (!formData.sizes || formData.sizes.length === 0) {
+      errors.push("At least one size is required");
+    }
+    if (!formData.images || formData.images.length === 0) {
+      errors.push("At least one product image is required");
+    }
+    if (formData.supplyCapacity === "limited" && (!formData.quantity || parseInt(formData.quantity) <= 0)) {
+      errors.push("Quantity is required when supply capacity is limited");
+    }
+    if (!formData.releaseDuration) {
+      errors.push("Release duration is required");
+    }
+
+    return { valid: errors.length === 0, errors };
+  };
+
+  const validateAdditionalInfo = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (!formData.material?.trim()) {
+      errors.push("Material composition is required");
+    }
+    if (!formData.colors?.trim()) {
+      errors.push("Colors available is required");
+    }
+    if (!formData.targetAudience) {
+      errors.push("Target audience is required");
+    }
+    if (!formData.shippingOption) {
+      errors.push("Shipping option is required");
+    }
+    if (!formData.domesticDays) {
+      errors.push("Domestic shipping ETA is required");
+    }
+    if ((formData.shippingOption === "international" || formData.shippingOption === "both") && !formData.internationalDays) {
+      errors.push("International shipping ETA is required");
+    }
+
+    return { valid: errors.length === 0, errors };
+  };
 
   const handleAddProduct = (type: ListingType): void => {
     setView(type);
@@ -67,12 +116,53 @@ const NewListing: React.FC = () => {
     setFormData((prev) => ({ ...prev, images }));
   };
 
-  const handleNext = (): void => {
-    if (activeTab === "product-info") {
-      setActiveTab("additional-info");
-    } else if (activeTab === "additional-info") {
-      setActiveTab("preview");
+const handleNext = (): void => {
+  if (activeTab === "product-info") {
+    const validation = validateProductInfo();
+    if (!validation.valid) {
+      validation.errors.forEach((error) => toastSvc.error(error));
+      return;
     }
+    setActiveTab("additional-info");
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 0);
+  } else if (activeTab === "additional-info") {
+    const validation = validateAdditionalInfo();
+    if (!validation.valid) {
+      validation.errors.forEach((error) => toastSvc.error(error));
+      return;
+    }
+    setActiveTab("preview");
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 0);
+  }
+};
+
+  const handleTabChange = (tab: TabType): void => {
+    // Validate before allowing manual tab navigation
+    if (tab === "additional-info") {
+      const validation = validateProductInfo();
+      if (!validation.valid) {
+        validation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+    } else if (tab === "preview") {
+      const productValidation = validateProductInfo();
+      const additionalValidation = validateAdditionalInfo();
+      
+      if (!productValidation.valid) {
+        productValidation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+      if (!additionalValidation.valid) {
+        additionalValidation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+    }
+    
+    setActiveTab(tab);
   };
 
   const handleSubmit = async () => {
@@ -80,7 +170,6 @@ const NewListing: React.FC = () => {
     setIsSubmitting(true);
     try {
       if (formData.type === "single") {
-        // Map enums and format fields to match backend
         const allowedCategories = [
           "men_clothing",
           "women_clothing",
@@ -103,16 +192,13 @@ const NewListing: React.FC = () => {
         const allowedShippingOptions = ["local", "international", "both"];
         const allowedAudiences = ["male", "female", "unisex"];
 
-        // Map category
         let category = formData.type === "single" ? formData.category : "";
         if (!allowedCategories.includes(category)) category = "others";
 
-        // Map releaseDuration
         let releaseDuration = formData.releaseDuration || "";
         if (!allowedReleaseDurations.includes(releaseDuration))
           releaseDuration = "1week";
 
-        // Map supplyCapacity
         let supplyCapacity = formData.supplyCapacity
           ?.toLowerCase()
           .includes("limit")
@@ -121,7 +207,6 @@ const NewListing: React.FC = () => {
         if (!allowedSupplyCapacities.includes(supplyCapacity))
           supplyCapacity = "no_max";
 
-        // Map limitedEditionBadge
         let limitedEditionBadge = formData.showBadge
           ?.toLowerCase()
           .includes("show")
@@ -130,17 +215,14 @@ const NewListing: React.FC = () => {
         if (!allowedBadges.includes(limitedEditionBadge))
           limitedEditionBadge = "do_not_show";
 
-        // Map shippingOption
         let shippingOption = formData.shippingOption || "local";
         if (!allowedShippingOptions.includes(shippingOption))
           shippingOption = "local";
 
-        // Map additionalTargetAudience
         let additionalTargetAudience = formData.targetAudience || "unisex";
         if (!allowedAudiences.includes(additionalTargetAudience))
           additionalTargetAudience = "unisex";
 
-        // Map colorsAvailable to array of objects
         let colorsAvailable =
           formData.colors || formData.colors
             ? (formData.colors || formData.colors)
@@ -148,46 +230,41 @@ const NewListing: React.FC = () => {
                 .map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
             : undefined;
 
-        // Map sizes
         let sizes =
           formData.sizes && formData.sizes.length > 0
             ? formData.sizes.map((s: string) => s.trim().toUpperCase())
             : undefined;
 
-
-             // Handle image uploads
-    const uploadedImageUrls: string[] = [];
-    
-    if (formData.images && formData.images.length > 0) {
-      for (const imageFile of formData.images) {
-        try {
-          const validation = validateImageFile(imageFile, 10); // 10MB max
-          if (!validation.valid) {
-            console.warn(`Skipping invalid image: ${validation.error}`);
-            continue;
+        const uploadedImageUrls: string[] = [];
+        
+        if (formData.images && formData.images.length > 0) {
+          for (const imageFile of formData.images) {
+            try {
+              const validation = validateImageFile(imageFile, 10);
+              if (!validation.valid) {
+                console.warn(`Skipping invalid image: ${validation.error}`);
+                continue;
+              }
+              
+              const uploadResult = await uploadImage(
+                imageFile, 
+                'store-assets', 
+                'product-images', 
+                true
+              );
+              
+              if (uploadResult) {
+                uploadedImageUrls.push(uploadResult.url);
+              }
+            } catch (uploadError) {
+              console.error('Failed to upload image:', uploadError);
+            }
           }
-          
-          const uploadResult = await uploadImage(
-            imageFile, 
-            'store-assets', 
-            'product-images', 
-            true
-          );
-          
-          if (uploadResult) {
-            uploadedImageUrls.push(uploadResult.url);
-          }
-        } catch (uploadError) {
-          console.error('Failed to upload image:', uploadError);
-          // Continue with other images
         }
-      }
-    }
-    
-    // Get main image URL with fallback
-    const mainImageUrl = uploadedImageUrls.length > 0 
-      ? uploadedImageUrls[0] 
-      : "https://via.placeholder.com/400";
+        
+        const mainImageUrl = uploadedImageUrls.length > 0 
+          ? uploadedImageUrls[0] 
+          : "https://via.placeholder.com/400";
 
         await createSingleMutation.mutateAsync({
           title: formData.name,
@@ -195,7 +272,7 @@ const NewListing: React.FC = () => {
           category,
           priceCents: Math.round(parseFloat(formData.price) * 100),
           currency: "NGN",
-          image:mainImageUrl,
+          image: mainImageUrl,
           sizes,
           supplyCapacity,
           quantityAvailable: formData.quantity
@@ -211,7 +288,6 @@ const NewListing: React.FC = () => {
           etaInternational: formData.internationalDays,
         });
       } else {
-        // Collection
         await createCollectionMutation.mutateAsync({
           title: formData.collectionTitle || "",
           description: formData.collectionDescription,
@@ -307,77 +383,12 @@ const NewListing: React.FC = () => {
     },
   });
 
-  // const handleSubmit = async () => {
-  //   try {
-  //     // 1. Upload images first
-  //     const uploadedImageUrls: string[] = [];
-
-  //     if (formData.images && formData.images.length > 0) {
-  //       for (const imageFile of formData.images) {
-  //         try {
-  //           const uploadResult = await uploadImage(
-  //             imageFile,
-  //             'store-assets',
-  //             'product-images',
-  //             true
-  //           );
-
-  //           if (uploadResult) {
-  //             uploadedImageUrls.push(uploadResult.url);
-  //           }
-  //         } catch (uploadError) {
-  //           console.error('Failed to upload image:', uploadError);
-  //         }
-  //       }
-  //     }
-
-  //     // 2. Get main image URL
-  //     const mainImageUrl = uploadedImageUrls.length > 0
-  //       ? uploadedImageUrls[0]
-  //       : "https://via.placeholder.com/400";
-
-  //    // ... image upload code ...
-
-  //     const productData = {
-  //       // Your current data
-  //       type: "single",
-  //       title: formData.name.trim(),
-  //       description: formData.description?.trim() || "",
-  //       category: formData.category,
-  //       image: mainImageUrl,
-  //       priceCents: 1000,
-  //       currency: "NGN",
-  //       sizesJson: ["S", "M", "L"],
-  //       supplyCapacity: "limited",
-  //       quantityAvailable: 70,
-  //       limitedEditionBadge: "do_not_show",
-  //       releaseDuration: "6_months",
-  //       materialComposition: "cotton",
-  //       colorsAvailable: ["red", "blue", "yellow"],
-  //       additionalTargetAudience: "female",
-  //       shippingOption: "both",
-  //       etaDomestic: "5_working_days",
-  //       etaInternational: "1week",
-  //     };
-
-  //     console.log('Sending to API:', productData);
-
-  //     await createSingleMutation.mutateAsync(productData);
-
-  //     // ... success ...
-
-  //   } catch (error) {
-  //     console.error("Error creating listing:", error);
-  //   }
-  // };
-
   if (view === "empty") {
     return <EmptyState onAddProduct={handleAddProduct} />;
   }
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm mb-6 text-gray-400">
         <span>New Listing</span>
         <span>›</span>
@@ -386,7 +397,6 @@ const NewListing: React.FC = () => {
         </span>
       </div>
 
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-semibold mb-2">New Listing</h1>
         <p className="text-gray-400">
@@ -394,10 +404,8 @@ const NewListing: React.FC = () => {
         </p>
       </div>
 
-      {/* Tabs */}
-      <TabsNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabsNav activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* Form Content */}
       {activeTab === "product-info" && (
         <ProductInfoForm
           formData={formData}

@@ -19,12 +19,20 @@ const TabsNav: React.FC<TabsNavProps> = ({ activeTab, onTabChange }) => {
     { id: 'preview', label: 'Preview' }
   ];
 
+  const handleTabClick = (tabId: TabType) => {
+    onTabChange(tabId);
+    // Scroll to top after tab change
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 0);
+  };
+
   return (
     <div className="flex items-center justify-end gap-8 border-b border-black mb-8 text-sm">
       {tabs.map((tab) => (
         <button
           key={tab.id}
-          onClick={() => onTabChange(tab.id)}
+          onClick={() => handleTabClick(tab.id)}
           className={`pb-4 px-2 relative ${
             activeTab === tab.id ? 'text-purple-500' : 'text-gray-400'
           }`}
