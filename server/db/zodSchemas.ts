@@ -265,7 +265,7 @@ export const listingsSchema = z.object({
   additionalTargetAudience: z.enum(["male", "female", "unisex"]).nullable().optional(),
   shippingOption: z.enum(["local", "international", "both"]).nullable().optional(),
   etaDomestic: z.enum(["48hrs", "72hrs", "5_working_days", "1week"]).nullable().optional(),
-etaInternational: z.enum(["48hrs", "72hrs", "5_working_days", "1week"]).nullable().optional(),
+  etaInternational: z.enum(["custom", "days_7_to_14", "days_14_to_30"]).nullable().optional(),
   itemsJson: z.array(
     z.object({
       title: z.string(),

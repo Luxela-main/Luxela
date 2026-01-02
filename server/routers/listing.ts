@@ -22,6 +22,7 @@ const CategoryEnum = z.enum([
 ]);
 const ShippingOptionEnum = z.enum(["local", "international", "both"]);
 const ShippingEtaEnum = z.enum(["48hrs", "72hrs", "5_working_days", "1week"]);
+const ShippingEtaInternationalEnum = z.enum(["custom", "days_7_to_14", "days_14_to_30"]);
 const TargetAudienceEnum = z.enum(["male", "female", "unisex"]);
 const ReleaseDurationEnum = z.enum([
   "24hrs",
@@ -33,7 +34,7 @@ const ReleaseDurationEnum = z.enum([
 ]);
 
 const EtaDomesticEnum = ShippingEtaEnum;
-const EtaInternationalEnum = ShippingEtaEnum;
+const EtaInternationalEnum = ShippingEtaInternationalEnum;
 
 // ---------- OUTPUT SCHEMAS ----------
 const ListingOutput = z.object({

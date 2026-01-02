@@ -220,10 +220,9 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
     className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
   >
     <option value="">Select delivery time</option>
-    <option value="48hrs">48 Hours</option>
-    <option value="72hrs">72 Hours</option>
-    <option value="5_working_days">5 Working Days</option>
-    <option value="1week">1 Week</option>
+    <option value="custom">Custom</option>
+    <option value="days_7_to_14">7-14 Days</option>
+    <option value="days_14_to_30">14-30 Days</option> 
   </select>
 </div>
         </div>

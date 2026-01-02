@@ -206,7 +206,8 @@ export const products = pgTable('products', {
 // =======================
 export const listings = pgTable('listings', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  productId: uuid("product_id"),
+  // References products.id (auto-generated unique UUID)
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
   sellerId: uuid("seller_id").notNull().references(() => sellers.id, { onDelete: "cascade" }),
   type: listingTypeEnum('type').notNull(),
   title: varchar('title', { length: 255 }).notNull(),
@@ -322,7 +323,8 @@ export const cartItems = pgTable('cart_items', {
 // ============================
 export const productVariants = pgTable('product_variants', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }),
+  // References products.id (auto-generated unique UUID)
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
   size: text('size').notNull(),
   colorName: text('color_name').notNull(),
   colorHex: text('color_hex').notNull(),
