@@ -10,7 +10,6 @@ import { uploadImage, validateImageFile } from '@/lib/upload-image';
 import { trpc } from '@/lib/trpc';
 import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
-import helper from "@/helper";
 
 
 const NewListing: React.FC = () => {
@@ -73,8 +72,96 @@ const [error, setError] = useState<string | null>(null);
       setActiveTab('additional-info');
     } else if (activeTab === 'additional-info') {
       setActiveTab('preview');
+
     }
-  };
+  }
+
+  // const handleSubmit = async () => {
+  //   try {
+  //     if (formData.listingType === "single") {
+  //       // Map enums and format fields to match backend
+  //       const allowedCategories = [
+  //         "men_clothing", "women_clothing", "men_shoes", "women_shoes", "accessories", "merch", "others"
+  //       ];
+  //       const allowedReleaseDurations = [
+  //         "24hrs", "48hrs", "72hrs", "1week", "2weeks", "1month"
+  //       ];
+  //       const allowedSupplyCapacities = ["no_max", "limited"];
+  //       const allowedBadges = ["show_badge", "do_not_show"];
+  //       const allowedShippingOptions = ["local", "international", "both"];
+  //       const allowedAudiences = ["male", "female", "unisex"];
+
+  //       // Map category
+  //       let category = formData.product.type;
+  //       if (!allowedCategories.includes(category)) category = "others";
+
+  //       // Map releaseDuration
+  //       let releaseDuration = formData.product.durationTime || "";
+  //       if (!allowedReleaseDurations.includes(releaseDuration)) releaseDuration = "1week";
+
+  //       // Map supplyCapacity
+  //       let supplyCapacity = formData.product.supplyText?.toLowerCase().includes("limit") ? "limited" : "no_max";
+  //       if (!allowedSupplyCapacities.includes(supplyCapacity)) supplyCapacity = "no_max";
+
+  //       // Map limitedEditionBadge
+  //       let limitedEditionBadge = formData.product.badge?.toLowerCase().includes("show") ? "show_badge" : "do_not_show";
+  //       if (!allowedBadges.includes(limitedEditionBadge)) limitedEditionBadge = "do_not_show";
+
+  //       // Map shippingOption
+  //       let shippingOption = formData.product.shippingOption || "local";
+  //       if (!allowedShippingOptions.includes(shippingOption)) shippingOption = "local";
+
+  //       // Map additionalTargetAudience
+  //       let additionalTargetAudience = formData.product.targetAudience || "unisex";
+  //       if (!allowedAudiences.includes(additionalTargetAudience)) additionalTargetAudience = "unisex";
+
+  //       // Map colorsAvailable to array of objects
+  //       let colorsAvailable = (formData.product.colorsAvailable || formData.product.colors)
+  //         ? (formData.product.colorsAvailable || formData.product.colors).split(",").map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
+  //         : undefined;
+
+  //       // Map sizes
+  //       let sizes = formData.product.sizes
+  //         ? formData.product.sizes.split(",").map((s: string) => s.trim().toUpperCase())
+  //         : undefined;
+
+  //       await createSingleMutation.mutateAsync({
+  //         title: formData.product.name,
+  //         description: formData.product.description,
+  //         category,
+  //         priceCents: Math.round(parseFloat(formData.product.price) * 100),
+  //         currency: "NGN",
+  //         image: formData.images.length > 0 
+  //           ? "https://via.placeholder.com/400" 
+  //           : "https://via.placeholder.com/400",
+  //         sizes,
+  //         supplyCapacity,
+  //         quantityAvailable: formData.product.supplyCount ? parseInt(formData.product.supplyCount) : undefined,
+  //         limitedEditionBadge,
+  //         releaseDuration,
+  //         materialComposition: formData.product.materialComposition || formData.product.material,
+  //         colorsAvailable,
+  //         additionalTargetAudience,
+  //         shippingOption,
+  //         etaDomestic: helper.mapDaysToEtaEnum(formData.product.domesticDays, formData.product.domesticMinutes),
+  //         etaInternational: helper.mapDaysToEtaEnum(formData.product.internationalDays, formData.product.internationalMinutes),
+  //       });
+  //     } else {
+  //       // Collection
+  //       await createCollectionMutation.mutateAsync({
+  //         title: formData.collectionTitle || "",
+  //         description: formData.collectionDescription,
+  //         items: formData.collectionItems || [],
+  //       });
+  //     }
+
+  //     setTimeout(() => {
+  //       router.push("/sellers/my-listings");
+  //     }, 1500);
+  //   } catch (error) {
+  //     console.error("Error creating listing:", error);
+  //   }
+  // };
 
   const handleCancel = (): void => {
     setView('empty');

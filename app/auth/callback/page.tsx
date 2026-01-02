@@ -5,71 +5,99 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Loader } from "@/components/loader/loader";
 import { useToast } from "@/components/hooks/useToast";
-import Commander from "ioredis/built/utils/Commander";
 
 function AuthCallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
   const toast = useToast();
-  const isDev = process.env.NODE_ENV === "development";
 
-  const getUserFromSession = (session: any) => session?.user ?? null;
-  const getRoleFromUser = (user: any): "buyer" | "seller" =>
-    user?.user_metadata?.role === "seller" ? "seller" : "buyer";
+  const checkProfile = async (role: "buyer" | "seller") => {
+    const res = await fetch(`/api/profile/check?role=${role}`);
+    const data = await res.json();
+    return data?.exists === true;
+  };
+
+  const redirectUser = async (user: any) => {
+    const role = user?.user_metadata?.role;
+
+    if (!role) {
+      router.replace("/select-role");
+      return;
+    }
+
+    const exists = await checkProfile(role);
+
+    if (!exists) {
+      router.replace(role === "buyer"
+        ? "/buyer/profile/create"
+        : "/sellersAccountSetup"
+      );
+      return;
+    }
+
+    router.replace(role === "seller"
+      ? "/sellers/dashboard"
+      : "/buyer/profile"
+    );
+  };
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const run = async () => {
       try {
         const code = searchParams.get("code");
         const type = searchParams.get("type");
         const tokenHash = searchParams.get("token_hash");
 
-        if (isDev) console.log("Auth callback params:", { code, type, tokenHash });
-
+        // OAuth 
         if (code) {
           const { data } = await supabase.auth.exchangeCodeForSession(code);
-          if (code || !data.session) {
-            router.replace("/");
+
+          if (type === "signup" && data.session?.user) {
+            toast.success("Account created successfully.");
+            router.replace("/select-role");
             return;
           }
-          const user = getUserFromSession(data.session);
-          const role = getRoleFromUser(user);
-          toast.success("Signed in successfully.");
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
-          return;
-        }
 
-        if (type === "signup" && tokenHash) {
-          const { data, error } = await supabase.auth.verifyOtp({ type: "signup", token_hash: tokenHash });
+          if (data.session?.user) {
+            toast.success("Signed in successfully.");
+          }
+      }
+
+        // OTP (email confirmation)
+        if (tokenHash && type === "signup") {
+          const { data, error } = await supabase.auth.verifyOtp({
+            type: "signup",
+            token_hash: tokenHash,
+          });
+
           if (error || !data.session) {
             router.replace("/signin?error=verification_failed");
             return;
           }
-          const user = getUserFromSession(data.session);
-          const role = getRoleFromUser(user);
-          toast.success("Signup verified successfully.");
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+
+          toast.success("Signup verified.");
+          await redirectUser(data.session.user);
           return;
         }
 
+        // Final session check
         const { data: { session } } = await supabase.auth.getSession();
+
         if (session?.user) {
-          const role = getRoleFromUser(session.user);
-          router.replace(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+          await redirectUser(session.user);
           return;
         }
 
-        if (isDev) console.error("Invalid auth callback state.");
         router.replace("/signin?error=invalid_callback");
       } catch (err) {
-        console.error("Auth callback fatal error:", err);
+        console.error("Callback error:", err);
         router.replace("/signin?error=unexpected");
       }
     };
 
-    handleCallback();
-  }, [router, searchParams, supabase, toast, isDev]);
+    run();
+  }, [router, searchParams]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black">
@@ -80,13 +108,7 @@ function AuthCallbackHandler() {
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen bg-black">
-          <Loader />
-        </div>
-      }
-    >
+    <Suspense fallback={<Loader />}>
       <AuthCallbackHandler />
     </Suspense>
   );

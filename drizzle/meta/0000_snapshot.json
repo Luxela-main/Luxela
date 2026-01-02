@@ -1,6 +1,6 @@
 {
-  "id": "8ff946d9-d1ea-4684-8412-7a5994d211e4",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "4a5b158a-766b-400c-8689-feaee36cf64b",
+  "prevId": "ab404c06-9236-4110-a0e6-f8b760684016",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -927,14 +927,14 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "seller_id": {
-          "name": "seller_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "product_id": {
           "name": "product_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seller_id": {
+          "name": "seller_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -983,6 +983,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "sizes_json": {
+          "name": "sizes_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "supply_capacity": {
+          "name": "supply_capacity",
+          "type": "supply_capacity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "quantity_available": {
           "name": "quantity_available",
           "type": "integer",
@@ -992,47 +1005,6 @@
         "limited_edition_badge": {
           "name": "limited_edition_badge",
           "type": "limited_badge",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shipping_option": {
-          "name": "shipping_option",
-          "type": "shipping_option",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "eta_domestic": {
-          "name": "eta_domestic",
-          "type": "shipping_eta",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "eta_international": {
-          "name": "eta_international",
-          "type": "shipping_eta",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sizes_json": {
-          "name": "sizes_json",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stock": {
-          "name": "stock",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "supply_capacity": {
-          "name": "supply_capacity",
-          "type": "supply_capacity",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
@@ -1058,6 +1030,27 @@
         "additional_target_audience": {
           "name": "additional_target_audience",
           "type": "target_audience",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shipping_option": {
+          "name": "shipping_option",
+          "type": "shipping_option",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eta_domestic": {
+          "name": "eta_domestic",
+          "type": "shipping_eta",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eta_international": {
+          "name": "eta_international",
+          "type": "shipping_eta",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
@@ -1091,19 +1084,6 @@
           "tableTo": "sellers",
           "columnsFrom": [
             "seller_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "listings_product_id_products_id_fk": {
-          "name": "listings_product_id_products_id_fk",
-          "tableFrom": "listings",
-          "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
           ],
           "columnsTo": [
             "id"
@@ -2209,6 +2189,19 @@
           "primaryKey": false,
           "notNull": true
         },
+        "id_number": {
+          "name": "id_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_verified": {
+          "name": "id_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "bio": {
           "name": "bio",
           "type": "text",
@@ -2292,7 +2285,7 @@
           "type": "preferred_payout_method",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "fiat_payout_method": {
           "name": "fiat_payout_method",
@@ -2455,7 +2448,7 @@
           "type": "shipping_eta",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

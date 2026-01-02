@@ -173,6 +173,16 @@ export const sellerAdditionalSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
+// --------------------------- BRANDS -------------------------
+export const brandsSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
 // --------------------------- COLLECTIONS -------------------
 export const collectionsSchema = z.object({
   id: z.string().uuid().optional(),
@@ -241,18 +251,29 @@ export const listingsSchema = z.object({
   priceCents: z.number().nullable().optional(),
   currency: z.string().nullable().optional(),
   sizesJson: z.string().nullable().optional(),
-  stock: z.number().int().default(0),
-  supplyCapacity: z.string().nullable().optional(),
+  colorsAvailable: z.array(
+    z.object({
+      colorName: z.string(),
+      colorHex: z.string()
+    })
+  ).nullable().optional(),
+  supplyCapacity: z.enum(["no_max", "limited"]).nullable().optional(),
   quantityAvailable: z.number().int().nullable().optional(),
-  limitedEditionBadge: z.string().nullable().optional(),
-  releaseDuration: z.string().nullable().optional(),
+  limitedEditionBadge: z.enum(["show_badge", "do_not_show"]).nullable().optional(),
+  releaseDuration: z.enum(["24hrs", "48hrs", "72hrs", "1week", "2weeks", "1month"]).nullable().optional(),
   materialComposition: z.string().nullable().optional(),
-  colorsAvailable: z.string().nullable().optional(),
   additionalTargetAudience: z.enum(["male", "female", "unisex"]).nullable().optional(),
   shippingOption: z.enum(["local", "international", "both"]).nullable().optional(),
-  etaDomestic: z.string().nullable().optional(),
-  etaInternational: z.string().nullable().optional(),
-  itemsJson: z.string().nullable().optional(),
+  etaDomestic: z.enum(["custom", "days_1_to_3", "days_3_to_7"]).nullable().optional(),
+  etaInternational: z.enum(["custom", "days_7_to_14", "days_14_to_30"]).nullable().optional(),
+  itemsJson: z.array(
+    z.object({
+      title: z.string(),
+      priceCents: z.number(),
+      image: z.string().nullable(),
+      sizes: z.array(z.string()).nullable()
+    })
+  ).nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

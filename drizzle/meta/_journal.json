@@ -1,26 +1,10 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
       "version": "7",
-      "when": 1766018720688,
-      "tag": "0000_strange_sandman",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1767019235205,
-      "tag": "0001_harsh_nebula",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1767115787710,
-      "tag": "0002_fantastic_bruce_banner",
+      "when": 1767318015592,
+      "tag": "0000_curly_captain_marvel",
       "breakpoints": true
     }
   ]
