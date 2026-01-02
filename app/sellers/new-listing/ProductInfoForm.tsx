@@ -241,6 +241,72 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
               </div>
 
               <div className="mt-4">
+                <label className="block text-sm mb-2 font-medium">Supply Capacity</label>
+                <select
+                  value={formik.values.supplyText}
+                  onChange={e => handleFieldChange("supplyText", e.target.value)}
+                  className="w-full bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 rounded-md px-3 py-2 text-white"
+                >
+                  <option value="no_max">No Max</option>
+                  <option value="limited">Limited</option>
+                </select>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm mb-2 font-medium">Limited Edition Badge</label>
+                <select
+                  value={formik.values.badge}
+                  onChange={e => handleFieldChange("badge", e.target.value)}
+                  className="w-full bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 rounded-md px-3 py-2 text-white"
+                >
+                  <option value="show_badge">Show Badge</option>
+                  <option value="do_not_show">Do Not Show</option>
+                </select>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm mb-2 font-medium">Release Duration</label>
+                <select
+                  value={formik.values.durationTime}
+                  onChange={e => handleFieldChange("durationTime", e.target.value)}
+                  className="w-full bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 rounded-md px-3 py-2 text-white"
+                >
+                  <option value="24hrs">24hrs</option>
+                  <option value="48hrs">48hrs</option>
+                  <option value="72hrs">72hrs</option>
+                  <option value="1week">1 Week</option>
+                  <option value="2weeks">2 Weeks</option>
+                  <option value="1month">1 Month</option>
+                </select>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm mb-2 font-medium">Target Audience</label>
+                <select
+                  value={formik.values.audience}
+                  onChange={e => handleFieldChange("audience", e.target.value)}
+                  className="w-full bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 rounded-md px-3 py-2 text-white"
+                >
+                  <option value="unisex">Unisex</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm mb-2 font-medium">Shipping Option</label>
+                <select
+                  value={formik.values.shipping}
+                  onChange={e => handleFieldChange("shipping", e.target.value)}
+                  className="w-full bg-[#1a1a1a] border-[#333] focus:border-purple-600 focus:ring-purple-600 rounded-md px-3 py-2 text-white"
+                >
+                  <option value="local">Local</option>
+                  <option value="international">International</option>
+                  <option value="both">Both</option>
+                </select>
+              </div>
+
+              <div className="mt-4">
                 <label className="block text-sm mb-2 font-medium">
                   Product description <span className="text-red-500">*</span>
                 </label>

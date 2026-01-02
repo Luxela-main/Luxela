@@ -1,13 +1,13 @@
+type ReleaseDurationType = "24hrs" | "48hrs" | "72hrs" | "1week" | "2weeks" | "1month";
 import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
 import { db } from "../db";
 import { listings, sellers } from "../db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { listingsSchema } from "../db/zodSchemas";
 import { TRPCError } from "@trpc/server";
-import { randomUUID } from "crypto";
-import { getSeller } from "./utils";
 
-
+// ---------- ENUMS ----------
 const SizesEnum = z.enum(["S", "M", "L", "XL", "XXL", "XXXL"]);
 const SupplyCapacityEnum = z.enum(["no_max", "limited"]);
 const LimitedBadgeEnum = z.enum(["show_badge", "do_not_show"]);
@@ -23,7 +23,19 @@ const CategoryEnum = z.enum([
 const ShippingOptionEnum = z.enum(["local", "international", "both"]);
 const ShippingEtaEnum = z.enum(["48hrs", "72hrs", "5_working_days", "1week"]);
 const TargetAudienceEnum = z.enum(["male", "female", "unisex"]);
+const ReleaseDurationEnum = z.enum([
+  "24hrs",
+  "48hrs",
+  "72hrs",
+  "1week",
+  "2weeks",
+  "1month",
+]);
 
+const EtaDomesticEnum = ShippingEtaEnum;
+const EtaInternationalEnum = ShippingEtaEnum;
+
+// ---------- OUTPUT SCHEMAS ----------
 const ListingOutput = z.object({
   id: z.string().uuid(),
   sellerId: z.string().uuid(),
@@ -34,18 +46,25 @@ const ListingOutput = z.object({
   image: z.string().nullable(),
   priceCents: z.number().int().nullable(),
   currency: z.string().nullable(),
-  sizesJson: z.string().nullable(),
+  sizesJson: z.array(z.string()).nullable(),
   supplyCapacity: SupplyCapacityEnum.nullable(),
   quantityAvailable: z.number().int().nullable(),
   limitedEditionBadge: LimitedBadgeEnum.nullable(),
-  releaseDuration: z.string().nullable(),
+  releaseDuration: ReleaseDurationEnum.nullable(),
   materialComposition: z.string().nullable(),
-  colorsAvailable: z.string().nullable(),
+  colorsAvailable: z
+    .array(
+      z.object({
+        colorName: z.string(),
+        colorHex: z.string(),
+      })
+    )
+    .nullable(),
   additionalTargetAudience: TargetAudienceEnum.nullable(),
   shippingOption: ShippingOptionEnum.nullable(),
-  etaDomestic: ShippingEtaEnum.nullable(),
-  etaInternational: ShippingEtaEnum.nullable(),
-  itemsJson: z.string().nullable(),
+  etaDomestic: EtaDomesticEnum.nullable(),
+  etaInternational: EtaInternationalEnum.nullable(),
+  itemsJson: z.array(z.any()).nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -60,28 +79,20 @@ const DeleteOutput = z.object({
   success: z.boolean(),
 });
 
-const SingleListingInput = z.object({
-  // Personal information (required)
-  title: z.string().min(1),
-  category: CategoryEnum,
-  priceCents: z.number().int().positive(),
-  currency: z.string().min(1).max(16),
-  description: z.string().min(1),
-  image: z.string().url().min(1),
-  sizes: z.array(SizesEnum).nonempty(),
-  supplyCapacity: SupplyCapacityEnum,
-  quantityAvailable: z.number().int().nonnegative().optional(),
-  limitedEditionBadge: LimitedBadgeEnum,
-  releaseDuration: z.string().min(1),
-  // Additional information (optional)
-  materialComposition: z.string().optional(),
-  colorsAvailable: z.array(z.string().min(1)).optional(),
-  additionalTargetAudience: TargetAudienceEnum.optional(),
-  shippingOption: ShippingOptionEnum.optional(),
-  etaDomestic: ShippingEtaEnum.optional(),
-  etaInternational: ShippingEtaEnum.optional(),
+// ---------- INPUT SCHEMAS ----------
+// Use listingsSchema for input, picking only the fields needed for creation
+// Omit productId for creation, allow sizes as array for API input
+const SingleListingInput = listingsSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sizesJson: true,
+}).extend({
+  productId: z.string().uuid().optional(),
+  sizes: z.array(z.string()).nonempty().optional(),
 });
 
+// ---------- HELPERS ----------
 function computeStockStatus(
   supplyCapacity: "no_max" | "limited" | null,
   quantity: number | null
@@ -93,7 +104,22 @@ function computeStockStatus(
   return "in_stock";
 }
 
+import type { TRPCContext } from "../trpc/context";
+// Middleware to fetch seller
+async function fetchSeller(ctx: TRPCContext) {
+  const userId = ctx.user?.id;
+  if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+  const sellerRows = await db
+    .select()
+    .from(sellers)
+    .where(eq(sellers.userId, userId));
+  if (!sellerRows || sellerRows.length === 0) throw new TRPCError({ code: "FORBIDDEN", message: "Seller not found" });
+  return sellerRows[0];
+}
+
+// ---------- ROUTER ----------
 export const listingRouter = createTRPCRouter({
+  // ---- CREATE SINGLE LISTING ----
   createSingle: protectedProcedure
     .meta({
       openapi: {
@@ -106,59 +132,84 @@ export const listingRouter = createTRPCRouter({
     .input(SingleListingInput)
     .output(ListingOutput)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
-      try {
-        const seller = await getSeller(userId);
-
-        // if limited supply, quantity must be provided and > 0
-        if (
-          input.supplyCapacity === "limited" &&
-          (!input.quantityAvailable || input.quantityAvailable <= 0)
-        ) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "quantityAvailable is required for limited supply",
-          });
-        }
-
-        const [created] = await db
+      const seller = await fetchSeller(ctx);
+      // if limited supply, quantity must be provided and > 0
+      if (
+        input.supplyCapacity === "limited" &&
+        (!input.quantityAvailable || input.quantityAvailable <= 0)
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "quantityAvailable is required for limited supply",
+        });
+      }
+        await db
           .insert(listings)
           .values({
-            productId: randomUUID(),
             sellerId: seller.id,
             type: "single",
             title: input.title,
             description: input.description,
-            category: input.category,
+            category: input.category as any,
             image: input.image,
             priceCents: input.priceCents,
             currency: input.currency,
-            sizesJson: JSON.stringify(input.sizes),
-            supplyCapacity: input.supplyCapacity,
+            sizesJson: input.sizes ? JSON.stringify(input.sizes) : null,
+            supplyCapacity: input.supplyCapacity as any,
             quantityAvailable: input.quantityAvailable,
-            limitedEditionBadge: input.limitedEditionBadge,
+            limitedEditionBadge: input.limitedEditionBadge as any,
             releaseDuration: input.releaseDuration,
             materialComposition: input.materialComposition,
-            colorsAvailable: input.colorsAvailable
-              ? JSON.stringify(input.colorsAvailable)
-              : null,
-            additionalTargetAudience: input.additionalTargetAudience,
-            shippingOption: input.shippingOption,
-            etaDomestic: input.etaDomestic,
-            etaInternational: input.etaInternational,
-          })
-          .returning();
+            colorsAvailable: input.colorsAvailable ? JSON.stringify(input.colorsAvailable) : null,
+            additionalTargetAudience: input.additionalTargetAudience as any,
+            shippingOption: input.shippingOption as any,
+            etaDomestic: input.etaDomestic as any,
+            etaInternational: input.etaInternational as any,
+            itemsJson: input.itemsJson ? JSON.stringify(input.itemsJson) : null,
+            productId: input.productId,
+          });
+        const createdRows = await db
+          .select()
+          .from(listings)
+          .where(and(
+            eq(listings.sellerId, seller.id),
+            eq(listings.title, input.title),
+            eq(listings.type, "single")
+          ));
+        if (!createdRows || createdRows.length === 0 || !createdRows[0]?.id) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch created listing." });
+        }
+        const created = createdRows[0];
 
-        return created;
-      } catch (err: any) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: err?.message || "Failed to create listing",
-        });
-      }
+      return {
+        id: created.id,
+        sellerId: created.sellerId,
+        type: created.type,
+        title: created.title,
+        description: created.description,
+        category: created.category,
+        image: created.image,
+        priceCents: created.priceCents,
+        currency: created.currency,
+        sizesJson: created.sizesJson ? JSON.parse(created.sizesJson) : [],
+        supplyCapacity: created.supplyCapacity,
+        quantityAvailable: created.quantityAvailable,
+        limitedEditionBadge: created.limitedEditionBadge,
+        releaseDuration: created.releaseDuration as ReleaseDurationType,
+        materialComposition: created.materialComposition,
+        colorsAvailable: created.colorsAvailable ? JSON.parse(created.colorsAvailable) : null,
+        additionalTargetAudience: created.additionalTargetAudience,
+        shippingOption: created.shippingOption,
+        etaDomestic: created.etaDomestic,
+        etaInternational: created.etaInternational,
+        itemsJson: created.itemsJson ? JSON.parse(created.itemsJson) : [],
+        productId: created.productId,
+        createdAt: new Date(created.createdAt),
+        updatedAt: new Date(created.updatedAt),
+      };
     }),
 
+  // ---- CREATE COLLECTION ----
   createCollection: protectedProcedure
     .meta({
       openapi: {
@@ -187,31 +238,58 @@ export const listingRouter = createTRPCRouter({
     )
     .output(ListingOutput)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
-      try {
-        const seller = await getSeller(userId);
+      const seller = await fetchSeller(ctx);
 
-        const [created] = await db
-          .insert(listings)
-          .values({
-            productId: randomUUID(),
-            sellerId: seller.id,
-            type: "collection",
-            title: input.title,
-            description: input.description,
-            itemsJson: input.items && input.items.length > 0 ? JSON.stringify(input.items) : null,
-          })
-          .returning();
-        return created;
-      } catch (err: any) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: err?.message || "Failed to create listing",
+      await db
+        .insert(listings)
+        .values({
+          sellerId: seller.id,
+          type: "collection",
+          title: input.title,
+          description: input.description,
+          itemsJson: input.items && input.items.length > 0 ? JSON.stringify(input.items) : null,
         });
+      const createdRows = await db
+        .select()
+        .from(listings)
+        .where(and(
+          eq(listings.sellerId, seller.id),
+          eq(listings.title, input.title),
+          eq(listings.type, "collection")
+        ));
+      if (!createdRows || createdRows.length === 0 || !createdRows[0]?.id) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch created collection." });
       }
+      const created = createdRows[0];
+
+      return {
+        id: created.id,
+        sellerId: created.sellerId,
+        type: created.type,
+        title: created.title,
+        description: created.description,
+        category: created.category,
+        image: created.image,
+        priceCents: created.priceCents,
+        currency: created.currency,
+        sizesJson: created.sizesJson ? JSON.parse(created.sizesJson) : [],
+        supplyCapacity: created.supplyCapacity,
+        quantityAvailable: created.quantityAvailable,
+        limitedEditionBadge: created.limitedEditionBadge,
+        releaseDuration: created.releaseDuration as ReleaseDurationType,
+        materialComposition: created.materialComposition,
+        colorsAvailable: created.colorsAvailable ? JSON.parse(created.colorsAvailable) : null,
+        additionalTargetAudience: created.additionalTargetAudience,
+        shippingOption: created.shippingOption,
+        etaDomestic: created.etaDomestic,
+        etaInternational: created.etaInternational,
+        itemsJson: created.itemsJson ? JSON.parse(created.itemsJson) : [],
+        createdAt: new Date(created.createdAt),
+        updatedAt: new Date(created.updatedAt),
+      };
     }),
 
+  // ---- GET MY LISTINGS ----
   getMyListings: protectedProcedure
     .meta({
       openapi: {
@@ -225,24 +303,39 @@ export const listingRouter = createTRPCRouter({
     })
     .output(z.array(ListingOutput))
     .query(async ({ ctx }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
-      try {
-        const seller = await getSeller(userId);
-
-        const rows = await db
-          .select()
-          .from(listings)
-          .where(eq(listings.sellerId, seller.id));
-        return rows;
-      } catch (err: any) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: err?.message || "Failed to fetch listings",
-        });
-      }
+      const seller = await fetchSeller(ctx);
+      const rows = await db
+        .select()
+        .from(listings)
+        .where(eq(listings.sellerId, seller.id));
+      return rows.filter(r => r?.id).map((r) => ({
+        id: r.id,
+        sellerId: r.sellerId,
+        type: r.type,
+        title: r.title,
+        description: r.description,
+        category: r.category,
+        image: r.image,
+        priceCents: r.priceCents,
+        currency: r.currency,
+        sizesJson: r.sizesJson ? JSON.parse(r.sizesJson) : [],
+        supplyCapacity: r.supplyCapacity,
+        quantityAvailable: r.quantityAvailable,
+        limitedEditionBadge: r.limitedEditionBadge,
+        releaseDuration: r.releaseDuration as ReleaseDurationType,
+        materialComposition: r.materialComposition,
+        colorsAvailable: r.colorsAvailable ? JSON.parse(r.colorsAvailable) : null,
+        additionalTargetAudience: r.additionalTargetAudience,
+        shippingOption: r.shippingOption,
+        etaDomestic: r.etaDomestic,
+        etaInternational: r.etaInternational,
+        itemsJson: r.itemsJson ? JSON.parse(r.itemsJson) : [],
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt),
+      }));
     }),
 
+  // ---- GET MY LISTINGS BY CATEGORY ----
   getMyListingsByCategory: protectedProcedure
     .meta({
       openapi: {
@@ -269,95 +362,41 @@ export const listingRouter = createTRPCRouter({
       )
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
-      try {
-        const seller = await getSeller(userId);
+      const seller = await fetchSeller(ctx);
 
-        const rows = await db
-          .select({
-            id: listings.id,
-            title: listings.title,
-            category: listings.category,
-            priceCents: listings.priceCents,
-            currency: listings.currency,
-            quantityAvailable: listings.quantityAvailable,
-            supplyCapacity: listings.supplyCapacity,
-            type: listings.type,
-          })
-          .from(listings)
-          .where(
-            and(
-              eq(listings.sellerId, seller.id),
-              eq(listings.category, input.category)
-            )
-          );
+      const rows = await db
+        .select({
+          id: listings.id,
+          title: listings.title,
+          category: listings.category,
+          priceCents: listings.priceCents,
+          currency: listings.currency,
+          quantityAvailable: listings.quantityAvailable,
+          supplyCapacity: listings.supplyCapacity,
+          type: listings.type,
+        })
+        .from(listings)
+        .where(
+          and(
+            eq(listings.sellerId, seller.id),
+            eq(listings.category, input.category)
+          )
+        );
 
-        return rows
-          .filter((r) => r.type === "single")
-          .map((r) => ({
-            id: r.id,
-            title: r.title,
-            category: r.category,
-            priceCents: r.priceCents,
-            currency: r.currency,
-            stock:
-              r.supplyCapacity === "no_max" ? null : r.quantityAvailable ?? 0,
-            status: computeStockStatus(
-              r.supplyCapacity as any,
-              r.quantityAvailable ?? null
-            ),
-          }));
-      } catch (err: any) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: err?.message || "Failed to fetch listings by category",
-        });
-      }
+      return rows
+        .filter((r) => r.type === "single")
+        .map((r) => ({
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          priceCents: r.priceCents,
+          currency: r.currency,
+          stock: r.supplyCapacity === "no_max" ? null : r.quantityAvailable ?? 0,
+          status: computeStockStatus(r.supplyCapacity, r.quantityAvailable ?? null),
+        }));
     }),
 
-  // deleteListing = delete product, restockListing = restock product quantity for single listings
-  deleteListing: protectedProcedure
-    .meta({
-      openapi: {
-        method: "DELETE",
-        path: "/listings/{id}",
-        tags: ["Listings"],
-        summary: "Delete a listing",
-        description:
-          "Deletes a specific listing owned by the authenticated seller. The listing ID must belong to the seller; otherwise, an error is returned.",
-      },
-    })
-    .input(z.object({ id: z.string().uuid() }))
-    .output(DeleteOutput)
-    .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
-      try {
-        const seller = await getSeller(userId);
-
-        const owned = await db
-          .select()
-          .from(listings)
-          .where(
-            and(eq(listings.id, input.id), eq(listings.sellerId, seller.id))
-          );
-        if (!owned[0])
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Listing not found",
-          });
-
-        await db.delete(listings).where(eq(listings.id, input.id));
-        return { success: true };
-      } catch (err: any) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: err?.message || "Failed to delete listing",
-        });
-      }
-    }),
-
+  // ---- RESTOCK LISTING ----
   restockListing: protectedProcedure
     .meta({
       openapi: {
@@ -377,57 +416,76 @@ export const listingRouter = createTRPCRouter({
     )
     .output(RestockOutput)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
-      try {
-        const seller = await getSeller(userId);
+      const seller = await fetchSeller(ctx);
 
-        const owned = await db
-          .select()
-          .from(listings)
-          .where(
-            and(eq(listings.id, input.id), eq(listings.sellerId, seller.id))
-          );
-        const listing = owned[0];
-        if (!listing)
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Listing not found",
-          });
-        if (listing.type !== "single")
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Only single listings can be restocked",
-          });
-        if (listing.supplyCapacity === "no_max")
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Unlimited supply listing does not require restock",
-          });
-
-        const [updated] = await db
-          .update(listings)
-          .set({ quantityAvailable: input.quantityAvailable })
-          .where(eq(listings.id, input.id))
-          .returning({
-            id: listings.id,
-            quantityAvailable: listings.quantityAvailable,
-            supplyCapacity: listings.supplyCapacity,
-          });
-
-        return {
-          id: updated.id,
-          quantityAvailable: updated.quantityAvailable,
-          status: computeStockStatus(
-            updated.supplyCapacity as any,
-            updated.quantityAvailable ?? null
-          ),
-        };
-      } catch (err: any) {
+      const owned = await db
+        .select()
+        .from(listings)
+        .where(
+          and(eq(listings.id, input.id), eq(listings.sellerId, seller.id))
+        );
+      const listing = owned[0];
+      if (!listing)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Listing not found",
+        });
+      if (listing.type !== "single")
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: err?.message || "Failed to restock listing",
+          message: "Only single listings can be restocked",
         });
+      if (listing.supplyCapacity === "no_max")
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Unlimited supply listing does not require restock",
+        });
+
+      await db
+        .update(listings)
+        .set({ quantityAvailable: input.quantityAvailable })
+        .where(eq(listings.id, input.id));
+      const updatedRows = await db
+        .select({
+          id: listings.id,
+          quantityAvailable: listings.quantityAvailable,
+          supplyCapacity: listings.supplyCapacity,
+        })
+        .from(listings)
+        .where(eq(listings.id, input.id));
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch updated listing." });
       }
+      const updated = updatedRows[0];
+      return {
+        id: updated.id,
+        quantityAvailable: updated.quantityAvailable,
+        status: computeStockStatus(
+          updated.supplyCapacity as any,
+          updated.quantityAvailable ?? null
+        ),
+      };
+
     }),
+
+  // ---- DELETE LISTING ----
+  deleteListing: protectedProcedure
+    .meta({
+      openapi: {
+        method: "DELETE",
+        path: "/listing/{id}",
+        tags: ["Listing"],
+        summary: "Delete a listing by id",
+        description: "Deletes a listing owned by the authenticated seller.",
+      },
+    })
+    .input(z.object({ id: z.string().uuid() }))
+    .output(DeleteOutput)
+    .mutation(async ({ ctx, input }) => {
+      const seller = await fetchSeller(ctx);
+      const result = await db
+        .delete(listings)
+        .where(and(eq(listings.id, input.id), eq(listings.sellerId, seller.id)));
+      return { success: true };
+    })
 });

@@ -103,26 +103,70 @@ const NewListing: React.FC = () => {
   const handleSubmit = async () => {
     try {
       if (formData.listingType === "single") {
+        // Map enums and format fields to match backend
+        const allowedCategories = [
+          "men_clothing", "women_clothing", "men_shoes", "women_shoes", "accessories", "merch", "others"
+        ];
+        const allowedReleaseDurations = [
+          "24hrs", "48hrs", "72hrs", "1week", "2weeks", "1month"
+        ];
+        const allowedSupplyCapacities = ["no_max", "limited"];
+        const allowedBadges = ["show_badge", "do_not_show"];
+        const allowedShippingOptions = ["local", "international", "both"];
+        const allowedAudiences = ["male", "female", "unisex"];
+
+        // Map category
+        let category = formData.product.type;
+        if (!allowedCategories.includes(category)) category = "others";
+
+        // Map releaseDuration
+        let releaseDuration = formData.product.durationTime || "";
+        if (!allowedReleaseDurations.includes(releaseDuration)) releaseDuration = "1week";
+
+        // Map supplyCapacity
+        let supplyCapacity = formData.product.supplyText?.toLowerCase().includes("limit") ? "limited" : "no_max";
+        if (!allowedSupplyCapacities.includes(supplyCapacity)) supplyCapacity = "no_max";
+
+        // Map limitedEditionBadge
+        let limitedEditionBadge = formData.product.badge?.toLowerCase().includes("show") ? "show_badge" : "do_not_show";
+        if (!allowedBadges.includes(limitedEditionBadge)) limitedEditionBadge = "do_not_show";
+
+        // Map shippingOption
+        let shippingOption = formData.product.shippingOption;
+        if (!allowedShippingOptions.includes(shippingOption)) shippingOption = "local";
+
+        // Map additionalTargetAudience
+        let additionalTargetAudience = formData.product.targetAudience;
+        if (!allowedAudiences.includes(additionalTargetAudience)) additionalTargetAudience = "unisex";
+
+        // Map colorsAvailable to array of objects
+        let colorsAvailable = (formData.product.colorsAvailable || formData.product.colors)
+          ? (formData.product.colorsAvailable || formData.product.colors).split(",").map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
+          : undefined;
+
+        // Map sizes
+        let sizes = formData.product.sizes
+          ? formData.product.sizes.split(",").map((s: string) => s.trim().toUpperCase())
+          : undefined;
+
         await createSingleMutation.mutateAsync({
           title: formData.product.name,
           description: formData.product.description,
-          category: formData.product.type as any,
+          category,
           priceCents: Math.round(parseFloat(formData.product.price) * 100),
           currency: "NGN",
           image: formData.images.length > 0 
             ? "https://via.placeholder.com/400" 
             : "https://via.placeholder.com/400",
-          sizes: formData.product.sizes.split(",").map(s => s.trim().toUpperCase()) as any,
-          supplyCapacity: formData.product.supplyText?.toLowerCase().includes("limit") ? "limited" : "no_max",
+          sizes,
+          supplyCapacity,
           quantityAvailable: formData.product.supplyCount ? parseInt(formData.product.supplyCount) : undefined,
-          limitedEditionBadge: formData.product.badge?.toLowerCase().includes("show") ? "show_badge" : "do_not_show",
-          releaseDuration: `${formData.product.durationTime} ${formData.product.durationText}`,
+          limitedEditionBadge,
+          releaseDuration,
           materialComposition: formData.product.materialComposition || formData.product.material,
-          colorsAvailable: (formData.product.colorsAvailable || formData.product.colors) 
-            ? (formData.product.colorsAvailable || formData.product.colors).split(",").map(c => c.trim()) 
-            : undefined,
-          additionalTargetAudience: formData.product.targetAudience as any || undefined,
-          shippingOption: formData.product.shippingOption as any || undefined,
+          colorsAvailable,
+          additionalTargetAudience,
+          shippingOption,
           etaDomestic: helper.mapDaysToEtaEnum(formData.product.domesticDays, formData.product.domesticMinutes),
           etaInternational: helper.mapDaysToEtaEnum(formData.product.internationalDays, formData.product.internationalMinutes),
         });
