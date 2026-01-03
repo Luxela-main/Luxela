@@ -9,15 +9,26 @@ interface DecodedToken {
   [key: string]: any;
 }
 
+function getAdminClient(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const client: SupabaseClient = createClient(url, serviceKey, {
+    auth: { persistSession: false },
+  });
+  return client;
+}
+
+function getBearerToken(header?: string) {
+  if (!header) return null;
+  const [scheme, token] = header.split(" ");
+  return scheme?.toLowerCase() === "bearer" ? token : null;
+}
+
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
-  const adminClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+  const adminClient = getAdminClient();
 
   const authHeader = req?.headers?.authorization;
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+  const token = getBearerToken(authHeader);
 
   let user: { id: string; email?: string; name?: string; role?: string } | null = null;
 
