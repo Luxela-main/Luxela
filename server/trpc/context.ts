@@ -1,16 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 import type { inferAsyncReturnType } from "@trpc/server";
 
-function getUserAuthClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createClient(url, anon, { auth: { persistSession: false } });
+function getUserClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
 }
 
 function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  return createClient(url, service, { auth: { persistSession: false } });
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
 }
 
 function getBearerToken(header?: string) {
@@ -21,20 +25,13 @@ function getBearerToken(header?: string) {
 
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
   const token = getBearerToken(req?.headers?.authorization);
-
-  const authClient = getUserAuthClient();
+  const userClient = getUserClient();
   const adminClient = getAdminClient();
 
-  let user: {
-    id: string;
-    email: string;
-    name?: string;
-    role?: string;
-  } | null = null;
+  let user: { id: string; email: string; name?: string; role?: string } | null = null;
 
   if (token) {
-    const { data, error } = await authClient.auth.getUser(token);
-
+    const { data, error } = await userClient.auth.getUser(token);
     if (!error && data?.user) {
       user = {
         id: data.user.id,
@@ -50,7 +47,6 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
     res,
     supabase: adminClient,
     user,
-    session: null,
   };
 }
 
