@@ -1,21 +1,20 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { inferAsyncReturnType } from "@trpc/server";
-import jwt_decode from "jwt-decode";
+import * as jwt_decode from "jwt-decode";
 
 interface DecodedToken {
-  sub: string;            
+  sub: string;
   email?: string;
   exp?: number;
   [key: string]: any;
 }
 
 function getAdminClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const client: SupabaseClient = createClient(url, serviceKey, {
-    auth: { persistSession: false },
-  });
-  return client;
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
 }
 
 function getBearerToken(header?: string) {
@@ -26,7 +25,6 @@ function getBearerToken(header?: string) {
 
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
   const adminClient = getAdminClient();
-
   const authHeader = req?.headers?.authorization;
   const token = getBearerToken(authHeader);
 
