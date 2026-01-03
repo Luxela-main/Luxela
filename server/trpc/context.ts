@@ -32,10 +32,12 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
 
   if (token) {
     try {
+      // TS-safe decode
       const decodeToken = jwt_decode as unknown as <T = any>(token: string) => T;
       const decoded = decodeToken<DecodedToken>(token);
 
-      const { data } = await adminClient.auth.admin.getUserById(decoded.sub);
+      // Cast auth to any to allow admin usage
+      const { data } = await (adminClient.auth as any).admin.getUserById(decoded.sub);
 
       if (data.user) {
         user = {
@@ -54,4 +56,5 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
   return { req, res, supabase: adminClient, user };
 }
 
+// Type for tRPC context
 export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;
