@@ -195,14 +195,26 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
   }
 });
 
-app.use(
-  cors({
-    origin: ["http://localhost:3000", "http://localhost:5000", "https://theluxela.com"],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5000",
+  process.env.FRONTEND_URL,
+  process.env.API_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS policy violation"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
 
 app.use(
   "/trpc",
