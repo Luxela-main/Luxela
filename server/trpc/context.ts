@@ -1,33 +1,57 @@
 import { createClient } from "@supabase/supabase-js";
-import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
+import type { inferAsyncReturnType } from "@trpc/server";
 
-export async function createTRPCContext({ req, res }: CreateNextContextOptions) {
-  // Create the Supabase client with the request so it can read cookies automatically
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-      global: {
-        headers: {
-          Authorization: req.headers.authorization ?? "",
-        },
-      },
+function getUserAuthClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  return createClient(url, anon, { auth: { persistSession: false } });
+}
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, service, { auth: { persistSession: false } });
+}
+
+function getBearerToken(header?: string) {
+  if (!header) return null;
+  const [scheme, token] = header.split(" ");
+  return scheme?.toLowerCase() === "bearer" ? token : null;
+}
+
+export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
+  const token = getBearerToken(req?.headers?.authorization);
+
+  const authClient = getUserAuthClient();
+  const adminClient = getAdminClient();
+
+  let user: {
+    id: string;
+    email: string;
+    name?: string;
+    role?: string;
+  } | null = null;
+
+  if (token) {
+    const { data, error } = await authClient.auth.getUser(token);
+
+    if (!error && data?.user) {
+      user = {
+        id: data.user.id,
+        email: data.user.email!,
+        name: data.user.user_metadata?.full_name,
+        role: data.user.user_metadata?.role,
+      };
     }
-  );
-
-  // NEW CORRECT CALL (no arguments)
-  const { data: { user }, error } = await supabase.auth.getUser();
+  }
 
   return {
     req,
     res,
-    supabase,
-    user: error ? null : user,
+    supabase: adminClient,
+    user,
+    session: null,
   };
 }
 
-export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
+export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;
