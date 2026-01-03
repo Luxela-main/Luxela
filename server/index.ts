@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { createTRPCContext } from "./trpc/context";
@@ -230,5 +230,11 @@ app.get("/health", (_req, res) => res.json({ status: "ok" }));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  // Initialize DB connection on server start
   await initDB();
 });
+
+// Export for Vercel serverless
+export default (req: Request, res: Response) => {
+  app(req, res);
+};
