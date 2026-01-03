@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { CreditCard, Wallet } from "lucide-react";
+import Image from "next/image";
 
 type PaymentOption = "card" | "wallet" | null;
 
@@ -28,9 +29,9 @@ const PaymentMethods: React.FC = () => {
           <span className="text-sm">Add a new card</span>
         </div>
         <div className="flex items-center gap-3 mt-1">
-          <img src="/visa.svg" alt="VISA" className="h-6" />
-          <img src="/mastercard.svg" alt="MasterCard" className="h-6" />
-          <img src="/opay.svg" alt="Opay Checkout" className="h-6" />
+          <Image src="/visa.svg" alt="VISA" width={24} height={24} className="h-6 w-auto" />
+          <Image src="/mastercard.svg" alt="MasterCard" width={24} height={24} className="h-6 w-auto" />
+          <Image src="/opay.svg" alt="Opay Checkout" width={24} height={24} className="h-6 w-auto" />
         </div>
       </div>
 
@@ -61,7 +62,7 @@ const PaymentMethods: React.FC = () => {
             <button
               key={wallet.name}
               className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 px-3 py-2 rounded-md text-xs transition">
-              <img src={wallet.icon} alt={wallet.name} className="h-4" />
+              <Image src={wallet.icon} alt={wallet.name} width={16} height={16} className="h-4 w-auto" />
               {wallet.name}
             </button>
           ))}

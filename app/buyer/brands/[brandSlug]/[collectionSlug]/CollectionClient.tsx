@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import ExploreAllProducts from '../../../../buyer/dynamic/explore-all-products.js';
 import { ShoppingCart, Heart } from "lucide-react";
 
 interface Product {

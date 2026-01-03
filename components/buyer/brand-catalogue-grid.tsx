@@ -1,8 +1,4 @@
 // 'use client'
-
-// import Link from "next/link"
-// import { useState, useEffect } from "react"
-
 // interface Product {
 //   id: number
 //   name: string
@@ -616,7 +612,7 @@ const BrandCatalogGrid = () => {
                       }`}
                   >
                     {/* Product Card */}
-                                  <Link key={product.id} href={`/buyer/product/${product.id}`}>
+                                  <Link key={product.id} href={`/buyer/product/${product.id}`} prefetch={true}> 
 
                     <div className="bg-[#161616] rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-gray-800 hover:border-[#9872DD]/30">
                       {/* Image Container */}
@@ -759,7 +755,7 @@ const BrandCatalogGrid = () => {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default BrandCatalogGrid

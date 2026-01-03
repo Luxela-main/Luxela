@@ -51,14 +51,14 @@ export default function Footer() {
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           <div className='max-w-[330px]'>
             {/* Logo */}
-            <Link href="/" className="flex items-center w-[132px] md:w-[200px] h-[32px]">
+            <Link href="/" prefetch={true} className="flex items-center w-[132px] md:w-[200px] h-[32px]">
               <Image src={"/images/Luxela-white-logo-200x32.svg"} width={200} height={32} className='w-full h-full' alt='Luxela logo' />
             </Link>
             <p className="text-[#BFBFBF] text-sm md:text-base my-9">
               Ready to share your fashion with the world? Join Luxela today to connect with a global audience, showcase your designs, and grow your brand.
             </p>
 
-            <Link href={"/signup"} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5' /></Link>
+            <Link href={"/signup"} prefetch={true} className='text-sm md:text-base text-[#FBFBFB]'><span className='underline'>Start Selling on LUXELA</span> <ArrowRight className='inline-block size-4 md:size-5' /></Link>
           </div>
 
           {/* newsletter */}
@@ -83,7 +83,7 @@ export default function Footer() {
                   <ul className="space-y-2">
                     {section.links.map((link) => (
                       <li key={link.name + link.route}>
-                        <Link href={link.route} className="text-xs md:text-sm text-[#BFBFBF] hover:text-purple-500 transition">
+                        <Link href={link.route} prefetch={true} className="text-xs md:text-sm text-[#BFBFBF] hover:text-purple-500 transition">
                           {link.name}
                         </Link>
                       </li>

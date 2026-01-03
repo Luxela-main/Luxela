@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
 import { db } from "../db";
 import { reviews, listings, notifications } from "../db/schema";
-import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { eq, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
@@ -44,7 +44,7 @@ export const reviewRouter = createTRPCRouter({
       const [newReview] = await db
         .insert(reviews)
         .values({
-          id: randomUUID(),
+          id: uuidv4(),
           listingId: input.listingId,
           buyerId,
           rating: input.rating,
@@ -60,7 +60,7 @@ export const reviewRouter = createTRPCRouter({
 
       if (listing) {
         await db.insert(notifications).values({
-          id: randomUUID(),
+          id: uuidv4(),
           sellerId: listing.sellerId,
           type: "review",
           message: `New review on ${listing.title}`,

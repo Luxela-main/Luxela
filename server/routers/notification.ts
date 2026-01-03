@@ -8,7 +8,7 @@ import { notifications, sellers } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 async function ensureSeller(userId: string) {
   const seller = await db

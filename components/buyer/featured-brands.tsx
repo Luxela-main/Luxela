@@ -185,7 +185,7 @@ const FeaturedBrands = () => {
                     Shop Now
                   </button> */}
 
-                  <Link href={`/buyer/brands/${brand.slug}`}>
+                  <Link href={`/buyer/brands/${brand.slug}`} prefetch={true}> 
                     <button className="cursor-pointer w-full md:max-w-[230px] mt-6 self-start bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white text-sm px-8 py-3 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                       Shop Now
                     </button>

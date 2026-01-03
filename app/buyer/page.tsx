@@ -1,7 +1,8 @@
-import ExploreAllProducts from '@/components/buyer/brand/explore-all-products'
-import FeaturedBrands from '@/components/buyer/featured-brands'
-import FeaturedCollection from '@/components/buyer/featured-collection'
-import React from 'react'
+"use client";
+
+import ExploreAllProducts from './dynamic/explore-all-products';
+import FeaturedBrands from './dynamic/featured-brands';
+import FeaturedCollection from './dynamic/featured-collection';
 
 const Homepage = () => {
   return (
@@ -10,7 +11,7 @@ const Homepage = () => {
       <FeaturedCollection />
       <ExploreAllProducts />
     </section>
-  )
-}
+  );
+};
 
-export default Homepage
+export default Homepage;

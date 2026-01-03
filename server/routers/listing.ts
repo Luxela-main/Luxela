@@ -1,5 +1,6 @@
 type ReleaseDurationType = "24hrs" | "48hrs" | "72hrs" | "1week" | "2weeks" | "1month";
 import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
+import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
 import { listings, sellers } from "../db/schema";
 import { and, eq } from "drizzle-orm";
@@ -143,31 +144,33 @@ export const listingRouter = createTRPCRouter({
           message: "quantityAvailable is required for limited supply",
         });
       }
-        await db
-          .insert(listings)
-          .values({
-            sellerId: seller.id,
-            type: "single",
-            title: input.title,
-            description: input.description,
-            category: input.category as any,
-            image: input.image,
-            priceCents: input.priceCents,
-            currency: input.currency,
-            sizesJson: input.sizes ? JSON.stringify(input.sizes) : null,
-            supplyCapacity: input.supplyCapacity as any,
-            quantityAvailable: input.quantityAvailable,
-            limitedEditionBadge: input.limitedEditionBadge as any,
-            releaseDuration: input.releaseDuration,
-            materialComposition: input.materialComposition,
-            colorsAvailable: input.colorsAvailable ? JSON.stringify(input.colorsAvailable) : null,
-            additionalTargetAudience: input.additionalTargetAudience as any,
-            shippingOption: input.shippingOption as any,
-            etaDomestic: input.etaDomestic as any,
-            etaInternational: input.etaInternational as any,
-            itemsJson: input.itemsJson ? JSON.stringify(input.itemsJson) : null,
-            productId: input.productId,
-          });
+      // Generate productId if not provided
+      const productId = input.productId ?? uuidv4();
+      await db
+        .insert(listings)
+        .values({
+          sellerId: String(seller.id),
+          type: "single",
+          title: input.title,
+          description: input.description,
+          category: input.category as any,
+          image: input.image,
+          priceCents: input.priceCents,
+          currency: input.currency,
+          sizesJson: input.sizes ? JSON.stringify(input.sizes) : null,
+          supplyCapacity: input.supplyCapacity as any,
+          quantityAvailable: input.quantityAvailable,
+          limitedEditionBadge: input.limitedEditionBadge as any,
+          releaseDuration: input.releaseDuration,
+          materialComposition: input.materialComposition,
+          colorsAvailable: input.colorsAvailable ? JSON.stringify(input.colorsAvailable) : null,
+          additionalTargetAudience: input.additionalTargetAudience as any,
+          shippingOption: input.shippingOption as any,
+          etaDomestic: input.etaDomestic as any,
+          etaInternational: input.etaInternational as any,
+          itemsJson: input.itemsJson ? JSON.stringify(input.itemsJson) : null,
+          productId,
+        });
         const createdRows = await db
           .select()
           .from(listings)
@@ -244,6 +247,7 @@ export const listingRouter = createTRPCRouter({
         .insert(listings)
         .values({
           sellerId: seller.id,
+          productId: uuidv4(),
           type: "collection",
           title: input.title,
           description: input.description,
@@ -424,45 +428,22 @@ export const listingRouter = createTRPCRouter({
         .where(
           and(eq(listings.id, input.id), eq(listings.sellerId, seller.id))
         );
-      const listing = owned[0];
-      if (!listing)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Listing not found",
-        });
-      if (listing.type !== "single")
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Only single listings can be restocked",
-        });
-      if (listing.supplyCapacity === "no_max")
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Unlimited supply listing does not require restock",
-        });
-
-      await db
+      const ownedListing = owned[0];
+      const result = await db
         .update(listings)
         .set({ quantityAvailable: input.quantityAvailable })
-        .where(eq(listings.id, input.id));
-      const updatedRows = await db
-        .select({
-          id: listings.id,
-          quantityAvailable: listings.quantityAvailable,
-          supplyCapacity: listings.supplyCapacity,
-        })
+        .where(and(eq(listings.id, input.id), eq(listings.sellerId, seller.id)));
+      const updated = await db
+        .select()
         .from(listings)
         .where(eq(listings.id, input.id));
-      if (!updatedRows || updatedRows.length === 0) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch updated listing." });
-      }
-      const updated = updatedRows[0];
+      const updatedListing = updated[0];
       return {
-        id: updated.id,
-        quantityAvailable: updated.quantityAvailable,
+        id: updatedListing.id,
+        quantityAvailable: updatedListing.quantityAvailable,
         status: computeStockStatus(
-          updated.supplyCapacity as any,
-          updated.quantityAvailable ?? null
+          updatedListing.supplyCapacity as any,
+          updatedListing.quantityAvailable ?? null
         ),
       };
 

@@ -1,14 +1,15 @@
 'use client'
 
 import { ShoppingCart } from "lucide-react"
-import Image from "next/image"
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { PRODUCTS } from "@/components/lib/products"
+import Link from "next/link"
 
 interface Product {
   id: number
   name: string
   brand: string
+  brandSlug: string 
   price: string
   currency: string
   image: string
@@ -24,89 +25,6 @@ type SortOption =
   | "Sort by Newest"
   | "Sort by Popular"
 
-const PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: "Baggy Jeans",
-    brand: "BAZ",
-    price: "0.06",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=300&h=400&fit=crop",
-    category: "Denim",
-    isLiked: false
-  },
-  {
-    id: 2,
-    name: "BAZ Hoodie",
-    brand: "BAZ",
-    price: "0.06",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=300&h=400&fit=crop",
-    category: "Hoodies",
-    isLiked: true
-  },
-  {
-    id: 3,
-    name: "Bat Tee Black Print",
-    brand: "BAZ",
-    price: "0.04",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=400&fit=crop",
-    category: "T-Shirts",
-    isLiked: false
-  },
-  {
-    id: 4,
-    name: "Bat Tee Black Print",
-    brand: "BAZ",
-    price: "0.6",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1583743814966-8936f37f4678?w=300&h=400&fit=crop",
-    category: "T-Shirts",
-    isLiked: false
-  },
-  {
-    id: 5,
-    name: "Bat Tee Edit",
-    brand: "BAZ",
-    price: "0.4",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1571945153237-4929e783af4a?w=300&h=400&fit=crop",
-    category: "T-Shirts",
-    isLiked: false
-  },
-  {
-    id: 6,
-    name: "Track Pants",
-    brand: "BAZ",
-    price: "0.06",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=300&h=400&fit=crop",
-    category: "Pants",
-    isLiked: true
-  },
-  {
-    id: 7,
-    name: "Cargo Pants",
-    brand: "BAZ",
-    price: "0.06",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=300&h=400&fit=crop",
-    category: "Pants",
-    isLiked: false
-  },
-  {
-    id: 8,
-    name: "Mantis Uniform",
-    brand: "BAZ",
-    price: "0.06",
-    currency: "SOL",
-    image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=300&h=400&fit=crop",
-    category: "Uniforms",
-    isLiked: false
-  }
-]
-
 const SORT_OPTIONS: SortOption[] = [
   "Sort by Price (Low to High)",
   "Sort by Price (High to Low)",
@@ -116,12 +34,30 @@ const SORT_OPTIONS: SortOption[] = [
   "Sort by Popular"
 ]
 
-const WranglerCollection = () => {
-    const [sortBy, setSortBy] = useState(SORT_OPTIONS[0])
-  const [products, setProducts] = useState(PRODUCTS)
+interface ExploreAllProductsProps {
+  brandSlug?: string 
+}
+
+const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
+  // Filter products by brand if brandSlug is provided
+  const filteredProducts = brandSlug 
+    ? PRODUCTS.filter(product => product.brandSlug === brandSlug)
+    : PRODUCTS
+
+  const [products, setProducts] = useState(filteredProducts)
+  const [sortBy, setSortBy] = useState("Sort by Price (Low to High)")
   const [showSortDropdown, setShowSortDropdown] = useState(false)
   const [visibleProducts, setVisibleProducts] = useState<number[]>([])
-  const [visibleCount, setVisibleCount] = useState(4)
+  const [visibleCount, setVisibleCount] = useState(12)
+
+  // Update products when brandSlug changes
+  useEffect(() => {
+    const filtered = brandSlug 
+      ? PRODUCTS.filter(product => product.brandSlug === brandSlug)
+      : PRODUCTS
+    setProducts(filtered)
+    setVisibleCount(12) 
+  }, [brandSlug])
 
   // Animate products on load
   useEffect(() => {
@@ -186,14 +122,36 @@ const WranglerCollection = () => {
     setVisibleCount(prev => Math.min(prev + 4, products.length))
   }
 
+  // Show message if no products found for the brand
+  if (brandSlug && products.length === 0) {
+    return (
+      <div className="mt-16">
+        <div className="px-6 py-8">
+          <div className="text-center py-12">
+            <p className="text-gray-400">No products found for this brand.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="">
+    <div className="mt-16">
       <div className="px-6 py-8">
         {/* Header */}
         <div className="md:flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-bold text-{#DCDCDC}">Wrangler Collections</h1>
+            <h1 className="text-2xl font-bold text-white">
+              {brandSlug ? `All ${products[0]?.brand} Products` : 'Explore All'}
+            </h1>
+            {!brandSlug && (
+              <a
+                href="#"
+                className="text-[#9872DD] hover:text-[#8451E1] text-sm transition-colors"
+              >
+                See All
+              </a>
+            )}
           </div>
 
           {/* Sort Dropdown */}
@@ -236,47 +194,79 @@ const WranglerCollection = () => {
             <div
               key={product.id}
               className={`group transition-all duration-700 ease-out ${visibleProducts.includes(index)
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-8'
+                  ? 'opacity-100 translate-y-0'
+                  : 'opacity-0 translate-y-8'
                 }`}
             >
               {/* Product Card */}
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-neutral-900 p-4 rounded-xl shadow hover:shadow-lg group max-w-[320px] h-[350px] flex flex-col justify-between duration-300 ease-in-out"
-              >
-                <Image
-                  src={product.image}
-                  width={150}
-                  height={180}
-                  alt={product.name}
-                  className="rounded-lg mb-3 w-full h-[200px] object-cover group-hover:scale-[1.03] duration-300 ease-in-out"
-                />
+                            <Link key={product.id} href={`/buyer/product/${product.id}`}>
+                             <div className="bg-[#161616] rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.01] border border-gray-800 hover:border-[#9872DD]/30">
+                {/* Image Container */}
+                <div className="relative aspect-[3/4] overflow-hidden">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
 
-                <div className="flex-1">
-                  <p className="text-gray-400 text-sm">{product.brand}</p>
-                  <h3 className="font-semibold">{product.name}</h3>
-                </div>
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <span className="text-white font-bold text-lg">
-                      {product.price}
-                    </span>
-                    <span className="text-gray-400 text-xs">
-                      {product.currency}
-                    </span>
-                  </div>
-                  {/* Add to Cart Button */}
-                  <button className="cursor-pointer bg-gradient-to-b text-sm from-[#9872DD] via-[#8451E1] to-[#5C2EAF]  
-                                     hover:bg-[#8451E1] text-white px-4 py-2 rounded-lg transition-colors duration-200 group/cart">
-                    <ShoppingCart size={16} className="inline-block" />
+                  {/* Like Button */}
+                  <button
+                    onClick={() => toggleLike(product.id)}
+                    className="absolute top-3 right-3 p-2 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/40 transition-all duration-200"
+                  >
+                    <svg
+                      className={`w-5 h-5 transition-colors ${product.isLiked ? 'text-red-500 fill-current' : 'text-white'
+                        }`}
+                      fill={product.isLiked ? "currentColor" : "none"}
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                      />
+                    </svg>
                   </button>
                 </div>
-              </motion.div>
+
+                {/* Product Info */}
+                <div className="p-4">
+                  {/* Brand */}
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">
+                    {product.brand}
+                  </p>
+
+                  {/* Product Name */}
+                  <h3 className="text-white font-medium text-sm mb-2 line-clamp-2">
+                    {product.name}
+                  </h3>
+
+                  {/* Price and Action */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <span className="text-white font-bold text-lg">
+                        {product.price}
+                      </span>
+                      <span className="text-gray-400 text-xs">
+                        {product.currency}
+                      </span>
+                    </div>
+
+                    {/* Add to Cart Button */}
+                    <button className="cursor-pointer bg-gradient-to-b text-sm from-[#9872DD] via-[#8451E1] to-[#5C2EAF]  hover:bg-[#8451E1] text-white px-4 py-2 rounded-lg transition-colors duration-200 group/cart">
+                      <ShoppingCart size={16} className="inline-block " />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+</Link>
+             
             </div>
           ))}
         </div>
@@ -305,4 +295,4 @@ const WranglerCollection = () => {
   )
 }
 
-export default WranglerCollection
+export default ExploreAllProducts;

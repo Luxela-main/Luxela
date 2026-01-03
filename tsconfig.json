@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2022",
-    "module": "NodeNext",
+    "module": "esnext",
     "lib": [
       "dom",
       "dom.iterable",
@@ -20,10 +20,7 @@
     "jsx": "react-jsx",
     "outDir": "dist",
     "incremental": true,
-    "types": [
-      "node"
-    ],
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "bundler",
     "plugins": [
       {
         "name": "next"
@@ -31,7 +28,7 @@
     ],
     "paths": {
       "@/*": [
-        "./*"
+        "*"
       ]
     }
   },
@@ -43,6 +40,8 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist",
+    ".next"
   ]
 }

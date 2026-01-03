@@ -242,7 +242,7 @@ export const inventorySchema = z.object({
 export const listingsSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
-  productId: z.string().uuid(),
+  productId: z.string().uuid().optional(),
   type: z.enum(["single", "collection"]),
   title: z.string(),
   description: z.string().nullable().optional(),

@@ -4,14 +4,14 @@ import { buyers, buyerAccountDetails, buyerBillingAddress, carts, cartItems, dis
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from "uuid";
 
 async function ensureBuyer(userId: string) {
   const existing = await db.select().from(buyers).where(eq(buyers.userId, userId));
   if (existing[0]) return existing[0];
   const [created] = await db
     .insert(buyers)
-    .values({ id: randomUUID(), userId, createdAt: new Date(), updatedAt: new Date() })
+    .values({ id: uuidv4(), userId, createdAt: new Date(), updatedAt: new Date() })
     .returning();
   return created;
 }
@@ -21,7 +21,7 @@ async function ensureCart(buyerId: string) {
   if (existing[0]) return existing[0];
   const [created] = await db
     .insert(carts)
-    .values({ id: randomUUID(), buyerId, createdAt: new Date(), updatedAt: new Date() })
+    .values({ id: uuidv4(), buyerId, createdAt: new Date(), updatedAt: new Date() })
     .returning();
   return created;
 }
@@ -128,7 +128,7 @@ export const cartRouter = createTRPCRouter({
           const [created] = await db
             .insert(cartItems)
             .values({
-              id: randomUUID(),
+              id: uuidv4(),
               cartId: cart.id,
               listingId: input.listingId,
               quantity: input.quantity,
@@ -401,7 +401,7 @@ export const cartRouter = createTRPCRouter({
           const sellerRow = await db.select().from(sellers).where(eq(sellers.id, listingRow.sellerId)).then((r) => r[0]);
           if (!sellerRow) continue;
 
-          const orderId = randomUUID();
+          const orderId = uuidv4();
           const [order] = await db
             .insert(orders)
             .values({

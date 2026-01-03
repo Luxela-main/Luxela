@@ -8,7 +8,7 @@ import {
   sellerAdditional,
 } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { checkRateLimit, getCached, deleteCache, CacheKeys } from "../lib/redis";
@@ -51,7 +51,7 @@ export const sellerRouter = createTRPCRouter({
         }
 
         await db.insert(sellers).values({
-          id: randomUUID(),
+          id: uuidv4(),
           userId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -238,7 +238,7 @@ export const sellerRouter = createTRPCRouter({
           // Create new
           await db.insert(sellerBusiness).values({
             ...input,
-            id: randomUUID(),
+            id: uuidv4(),
             sellerId: seller.id,
           } as any);
         }
@@ -419,7 +419,7 @@ export const sellerRouter = createTRPCRouter({
         } else {
           await db.insert(sellerShipping).values({
             ...input,
-            id: randomUUID(),
+            id: uuidv4(),
             sellerId: seller.id,
           } as any);
         }
@@ -543,7 +543,7 @@ export const sellerRouter = createTRPCRouter({
         } else {
           await db.insert(sellerPayment).values({
             ...input,
-            id: randomUUID(),
+            id: uuidv4(),
             sellerId: seller.id,
           } as any);
         }
@@ -635,7 +635,7 @@ export const sellerRouter = createTRPCRouter({
         } else {
           await db.insert(sellerAdditional).values({
             ...input,
-            id: randomUUID(),
+            id: uuidv4(),
             sellerId: seller.id,
           } as any);
         }

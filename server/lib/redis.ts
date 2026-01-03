@@ -4,14 +4,11 @@ import { Redis } from "ioredis";
 const REDIS_URL = process.env.REDIS_URL;
 
 if (!REDIS_URL) {
-  console.error("Missing REDIS_URL in environment variables!");
-  process.exit(1);
+  throw new Error("Missing environment variable: REDIS_URL");
 }
 
 console.log(
-  `Initializing Redis: ${
-    REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"
-  }`
+  `Initializing Redis: ${REDIS_URL.startsWith("rediss://") ? "Secure (Upstash)" : "Local"}`
 );
 
 export const redis = new Redis(REDIS_URL, {
@@ -47,12 +44,11 @@ const gracefulShutdown = async () => {
   } catch (err) {
     console.error("Error during Redis shutdown:", err);
   } finally {
-    process.exit(0);
+    // process.exit removed for Edge compatibility
   }
 };
 
-process.once("SIGINT", gracefulShutdown);
-process.once("SIGTERM", gracefulShutdown);
+// process.once removed for Edge compatibility
 
 // --- RATE LIMITING UTILS ---
 interface RateLimitConfig {

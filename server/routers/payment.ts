@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { db } from "../db";
 import { payments } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import {
   createFiatPaymentLink,
   createStablecoinPaymentLink,
@@ -81,9 +81,9 @@ export const paymentRouter = createTRPCRouter({
           if (input.success_url && input.cancel_url) {
             // Use checkout session for better UX
             response = await createCheckoutSession({
-              amount: Math.round(input.amount * 100), // Convert to cents for fiat
+              amount: Math.round(input.amount * 100), 
               currency: input.currency,
-              reference: `order_${input.orderId || randomUUID()}`,
+              reference: `order_${input.orderId || uuidv4()}`,
               customer_id: input.customer_id,
               success_url: input.success_url,
               cancel_url: input.cancel_url,

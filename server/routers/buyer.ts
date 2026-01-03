@@ -13,7 +13,7 @@ import {
   listings,
 } from "../db/schema";
 import { and, eq, desc } from "drizzle-orm";
-import { randomUUID } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -149,7 +149,7 @@ export const buyerRouter = createTRPCRouter({
           });
         }
 
-        const buyerId = randomUUID();
+        const buyerId = uuidv4();
         await db.insert(buyers).values({
           id: buyerId,
           userId,
@@ -158,7 +158,7 @@ export const buyerRouter = createTRPCRouter({
         });
 
         await db.insert(buyerAccountDetails).values({
-          id: randomUUID(),
+          id: uuidv4(),
           buyerId: buyerId,
           username: input.username,
           fullName: input.fullName,
@@ -336,7 +336,7 @@ export const buyerRouter = createTRPCRouter({
           }
 
           await db.insert(buyerAccountDetails).values({
-            id: randomUUID(),
+            id: uuidv4(),
             buyerId: buyer.id,
             username: input.username,
             fullName: input.fullName,
@@ -572,7 +572,7 @@ export const buyerRouter = createTRPCRouter({
 
       try {
         const buyer = await getBuyer(userId);
-        const addressId = randomUUID();
+        const addressId = uuidv4();
 
         await db.transaction(async (tx) => {
           if (input.isDefault) {
@@ -868,7 +868,7 @@ export const buyerRouter = createTRPCRouter({
           });
         }
 
-        const favoriteId = randomUUID();
+        const favoriteId = uuidv4();
         await db.insert(buyerFavorites).values({
           id: favoriteId,
           buyerId: buyer.id,
