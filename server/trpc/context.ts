@@ -2,34 +2,31 @@ import { createClient } from "@supabase/supabase-js";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 
 export async function createTRPCContext({ req, res }: CreateNextContextOptions) {
+  // Create the Supabase client with the request so it can read cookies automatically
   const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
     {
       auth: {
         persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: {
+          Authorization: req.headers.authorization ?? "",
+        },
       },
     }
   );
 
-  // Pull the access token from either Authorization header or cookies
-  const accessToken =
-    req.headers.authorization?.replace("Bearer ", "") ||
-    req.cookies["sb-access-token"];
-
-  let user = null;
-
-  // If we have a token → fetch user using the v2-compatible method
-  if (accessToken) {
-    const { data, error } = await supabase.auth.getUser(accessToken);
-    if (!error) user = data.user;
-  }
+  // NEW CORRECT CALL (no arguments)
+  const { data: { user }, error } = await supabase.auth.getUser();
 
   return {
     req,
     res,
     supabase,
-    user,
+    user: error ? null : user,
   };
 }
 
