@@ -24,15 +24,6 @@ export default function SelectRolePage() {
         router.replace("/signin");
         return;
       }
-
-      // Already has role? Redirect away
-      if (user.user_metadata?.role) {
-        router.replace(
-        selectedRole === "seller"
-        ? "/sellersAccountSetup"
-          : "/buyer/profile/create"
-      );
-      }
     };
 
     checkAuth();

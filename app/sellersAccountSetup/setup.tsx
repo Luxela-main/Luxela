@@ -59,6 +59,8 @@ const [currentErrorIndex, setCurrentErrorIndex] = useState(0);
   .required("Please select a category"),
       targetAudience: Yup.string().required("Target audience is required"),
     localPricing: Yup.string().required("Local pricing is required"),
+    refundPolicy: Yup.string().required('Refund policy is required when shipping type is selected'),
+    periodUntilRefund: Yup.string().required('Period until refund is required when shipping type is selected'),
   });
 
   const verifyMutation = trpc.seller.verifyId.useMutation({
@@ -147,7 +149,9 @@ const fieldNameMap: Record<string, string> = {
   preferredPayoutMethod: "Preferred Payout Method",
   productCategory: "Product Category",
   targetAudience: "Target Audience",
-  localPricing: "Local Pricing"
+  localPricing: "Local Pricing",
+  refundPolicy: "Refund Policy",
+  periodUntilRefund: "Period Until Refund",
 };
 
 

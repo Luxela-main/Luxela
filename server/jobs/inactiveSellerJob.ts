@@ -18,7 +18,7 @@ export function startInactiveSellerJob() {
       .groupBy(sellers.id)
       .having(
         or(
-          lt(sql`MAX(${orders.orderDate})`, oneWeekAgo),
+          sql`MAX(${orders.orderDate}) < ${oneWeekAgo}`,
           isNull(sql`MAX(${orders.orderDate})`)
         )
       );

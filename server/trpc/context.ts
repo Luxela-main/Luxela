@@ -1,60 +1,68 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { inferAsyncReturnType } from "@trpc/server";
-import * as jwt_decode from "jwt-decode";
 
-interface DecodedToken {
-  sub: string;
-  email?: string;
-  exp?: number;
-  [key: string]: any;
+
+// ---------- Create ANON client for auth ----------
+function getAuthClient(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  return createClient(url, anon, { auth: { persistSession: false } });
 }
-
+  // ---------- Create SERVICE ROLE client for admin/DB operations ----------
 function getAdminClient(): SupabaseClient {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, service, { auth: { persistSession: false } });
 }
 
+// ---------- Extract Bearer token from headers ----------
 function getBearerToken(header?: string) {
   if (!header) return null;
   const [scheme, token] = header.split(" ");
   return scheme?.toLowerCase() === "bearer" ? token : null;
 }
 
+// ---------- tRPC context ----------
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
+  const token = getBearerToken(req?.headers?.authorization);
+  const authClient = getAuthClient();
   const adminClient = getAdminClient();
-  const authHeader = req?.headers?.authorization;
-  const token = getBearerToken(authHeader);
 
-  let user: { id: string; email?: string; name?: string; role?: string } | null = null;
+  let user: {
+    id: string;
+    email?: string;
+    name?: string;
+    role?: string;
+  } | null = null;
 
   if (token) {
     try {
-      // TS-safe decode
-      const decodeToken = jwt_decode as unknown as <T = any>(token: string) => T;
-      const decoded = decodeToken<DecodedToken>(token);
-
-      // Cast auth to any to allow admin usage
-      const { data } = await (adminClient.auth as any).admin.getUserById(decoded.sub);
-
-      if (data.user) {
+      //Only the ANON client can call getUser
+      const { data } = await authClient.auth.getUser(token);
+      if (data?.user) {
         user = {
           id: data.user.id,
           email: data.user.email ?? undefined,
           name: data.user.user_metadata?.full_name,
           role: data.user.user_metadata?.role,
         };
+      } else {
+        user = null;
       }
     } catch (err) {
-      console.warn("Invalid JWT token in request", err);
+      console.warn("Invalid JWT token", err);
       user = null;
     }
   }
 
-  return { req, res, supabase: adminClient, user };
+  return {
+    req,
+    res,
+    supabase: adminClient,
+    user,
+    accessToken: token,
+  };
 }
 
-// Type for tRPC context
+// ---------- Type for tRPC context ----------
 export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;

@@ -4,7 +4,7 @@ import React, { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
-import { trpc } from "@/app/_trpc/client";
+import { trpc } from "./_trpc/client";
 import { httpBatchLink } from "@trpc/client";
 import { createClient } from "@/utils/supabase/client";
 import "react-toastify/dist/ReactToastify.css";
@@ -50,7 +50,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   const trpcClient = trpc.createClient({
     links: [
       httpBatchLink({
-        url: `${process.env.NEXT_PUBLIC_API_URL}/trpc`,
+        url: `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`,
         async headers() {
           const supabase = createClient();
           const { data: { session } } = await supabase.auth.getSession();

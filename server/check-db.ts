@@ -1,38 +1,42 @@
 import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  console.error("❌ DATABASE_URL is not set in .env");
+if (!DATABASE_URL) {
+  console.error("❌ DATABASE_URL is not set in .env or Vercel environment");
   process.exit(1);
 }
 
-export const sql = postgres(connectionString, {
-  ssl: { rejectUnauthorized: false },
-  max: 5,
-  idle_timeout: 0,
-  connect_timeout: 10,
-});
+// Global singletons for serverless environments
+declare global {
+  var _pgSqlClient: ReturnType<typeof postgres> | undefined;
+  var _db: ReturnType<typeof drizzle> | undefined;
+}
 
-const RETRIES = 10;
-const DELAY = 2000;
-const PING_INTERVAL = 30_000;
+// Create or reuse a postgres client
+export const sql = global._pgSqlClient ?? postgres(DATABASE_URL, { prepare: false });
+if (!global._pgSqlClient) global._pgSqlClient = sql;
 
-async function waitForDB() {
-  for (let attempt = 1; attempt <= RETRIES; attempt++) {
+// Create or reuse a drizzle instance
+export const db = global._db ?? drizzle({ client: sql });
+if (!global._db) global._db = db;
+
+// Simple DB health check
+export async function waitForDB(retries = 10, delay = 2000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await sql`SELECT 1`;
-      console.log("✅ Supabase Postgres is reachable and connection is alive");
+      console.log("✅ Supabase Postgres is reachable");
       return;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.log(`⏳ Attempt ${attempt} failed: ${message}`);
-      if (attempt < RETRIES) {
-        console.log(`⏳ Retrying in ${DELAY / 1000}s...`);
-        await new Promise((res) => setTimeout(res, DELAY));
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`⏳ Attempt ${attempt} failed: ${msg}`);
+      if (attempt < retries) {
+        await new Promise((res) => setTimeout(res, delay));
       } else {
         console.error("❌ Could not connect to Supabase Postgres after multiple attempts.");
         process.exit(1);
@@ -41,25 +45,25 @@ async function waitForDB() {
   }
 }
 
-// Function to ping DB every interval
-function startKeepAlive() {
-  console.log(`🔄 Starting keep-alive pings every ${PING_INTERVAL / 1000}s...`);
+// keep-alive ping for local development
+const PING_INTERVAL = 30_000;
+export function startKeepAlive() {
+  console.log(`🔄 Starting DB keep-alive pings every ${PING_INTERVAL / 1000}s`);
   setInterval(async () => {
     try {
       await sql`SELECT 1`;
       console.log(`💓 DB ping successful at ${new Date().toLocaleTimeString()}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`❌ Lost DB connection at ${new Date().toLocaleTimeString()}:`, message);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`❌ Lost DB connection at ${new Date().toLocaleTimeString()}:`, msg);
     }
   }, PING_INTERVAL);
 }
 
-(async function main() {
-  await waitForDB();
-  startKeepAlive();
-})();
-
-export function keepAlive() {
-  startKeepAlive();
+// Auto-run keep-alive only in local dev
+if (process.env.NODE_ENV === "development") {
+  (async () => {
+    await waitForDB();
+    startKeepAlive();
+  })();
 }

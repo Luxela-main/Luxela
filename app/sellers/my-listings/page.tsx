@@ -196,12 +196,15 @@ export default function MyListings() {
                       : "N/A"}
                 </div>
                 <div>
-                  {listing.type === "single"
+                    {listing.type === "single"
                     ? listing.quantityAvailable || 0
                     : listing.itemsJson
-                      ? JSON.parse(listing.itemsJson).length
-                      : 0}
+                    ? (typeof listing.itemsJson === "string"
+                    ? JSON.parse(listing.itemsJson).length
+                    : listing.itemsJson.length)
+                    : 0}
                 </div>
+
                 <div>
                   {listing.type === "single" ? (
                     <span

@@ -31,13 +31,6 @@ const ProfilePage = () => {
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
- useEffect(() => {
-    if (isInitialized && !profile && user) {
-      router.push("/buyer/profile/create");
-    }
-  }, [profile, isInitialized, user, router]);
-
-  console.log("Profile data in page:", profile);
   async function compressImage(
     file: File,
     maxSizeMB: number = 0.5

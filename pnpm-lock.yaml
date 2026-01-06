@@ -253,9 +253,6 @@ importers:
       '@types/express-session':
         specifier: ^1.18.2
         version: 1.18.2
-      '@types/jwt-decode':
-        specifier: ^3.1.0
-        version: 3.1.0
       '@types/next':
         specifier: ^8.0.7
         version: 8.0.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -2319,10 +2316,6 @@ packages:
 
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
-
-  '@types/jwt-decode@3.1.0':
-    resolution: {integrity: sha512-tthwik7TKkou3mVnBnvVuHnHElbjtdbM63pdBCbZTirCt3WAdM73Y79mOri7+ljsS99ZVwUFZHLMxJuJnv/z1w==}
-    deprecated: This is a stub types definition. jwt-decode provides its own type definitions, so you do not need this installed.
 
   '@types/long@4.0.2':
     resolution: {integrity: sha512-MqTGEo5bj5t157U6fA/BiDynNkn0YknVdh48CMPkTSpFTVmvao5UQmm7uEF6xBEo7qIMAlY/JSleYaE6VOdpaA==}
@@ -6897,10 +6890,6 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
       '@types/node': 20.19.27
-
-  '@types/jwt-decode@3.1.0':
-    dependencies:
-      jwt-decode: 4.0.0
 
   '@types/long@4.0.2':
     optional: true

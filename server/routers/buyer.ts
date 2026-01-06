@@ -136,6 +136,13 @@ export const buyerRouter = createTRPCRouter({
         });
       }
 
+      const userEmail = ctx.user?.email;
+      if (!userEmail) { 
+          throw new TRPCError({
+              code: "UNAUTHORIZED",
+              message: "Authenticated user email is missing. Cannot create profile.",
+          });
+      }
       try {
         const existingBuyer = await db
           .select()
@@ -162,7 +169,7 @@ export const buyerRouter = createTRPCRouter({
           buyerId: buyerId,
           username: input.username,
           fullName: input.fullName,
-          email: ctx.user?.email || "",
+          email: ctx.user?.email || userEmail,
           country: input.country,
           state: input.state,
           dateOfBirth: input.dateOfBirth || null,

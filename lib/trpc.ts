@@ -1,39 +1,41 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
-import { createClient } from "@/utils/supabase/client";
+import { createTRPCProxyClient } from "@trpc/client";
 import type { AppRouter } from "@/server";
+
+// Safely compute API URL
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL
+    ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
+    : "http://localhost:5000/api/trpc";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const links = [
-  httpBatchLink({
-    url:
-      process.env.NEXT_PUBLIC_API_URL + "/trpc" ||
-      "http://localhost:5000/trpc",
-    async headers() {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      return {
-        authorization: session?.access_token
-          ? `Bearer ${session.access_token}`
-          : "",
-      };
-    },
-  }),
-];
-
 export function getTRPCClient() {
   return trpc.createClient({
-    links,
+    links: [
+      httpBatchLink({
+        url: API_URL,
+        fetch: (input, init) => {
+          return fetch(input, {
+            ...init,
+            credentials: "include",
+          });
+        },
+      }),
+    ],
   });
 }
 
-import { createTRPCProxyClient } from "@trpc/client";
-
 export const vanillaTrpc = createTRPCProxyClient<AppRouter>({
-  links,
+  links: [
+    httpBatchLink({
+      url: API_URL,
+      fetch: (input, init) =>
+        fetch(input, {
+          ...init,
+          credentials: "include",
+        }),
+    }),
+  ],
 });
-

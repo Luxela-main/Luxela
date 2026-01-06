@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    // Securely validate user
+    // Authenticate user
     const {
       data: { user },
       error: userError,
@@ -24,35 +24,43 @@ export async function GET() {
     }
 
     const userId = user.id;
+    const role = user.user_metadata?.role as "buyer" | "seller" | undefined;
 
-    // Check buyer profile
-    const buyer = await db.query.buyers.findFirst({
-      where: eq(buyers.userId, userId),
-    });
+    // If no role is set yet, do NOT try to find a profile
+    if (!role) {
+      return NextResponse.json({
+        role: null,
+        exists: false,
+      });
+    }
 
-    if (buyer) {
+    // Query based on the assigned role only
+    if (role === "buyer") {
+      const buyer = await db.query.buyers.findFirst({
+        where: eq(buyers.userId, userId),
+      });
+
       return NextResponse.json({
         role: "buyer",
-        profileExists: true,
+        exists: !!buyer,
       });
     }
 
-    // Check seller profile
-    const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.userId, userId),
-    });
+    if (role === "seller") {
+      const seller = await db.query.sellers.findFirst({
+        where: eq(sellers.userId, userId),
+      });
 
-    if (seller) {
       return NextResponse.json({
         role: "seller",
-        profileExists: true,
+        exists: !!seller,
       });
     }
 
-    // Default — no profile yet
+    // Fallback (should never happen)
     return NextResponse.json({
-      role: user.user_metadata.role || null,
-      profileExists: false,
+      role: null,
+      exists: false,
     });
   } catch (error) {
     console.error("Profile check error:", error);

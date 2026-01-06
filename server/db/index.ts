@@ -7,16 +7,16 @@ if (!DATABASE_URL) {
   throw new Error("DATABASE_URL is not defined");
 }
 
-// Connection options:
-// - prepare: false disables prepared statement caching (safe for dev). Set to true in production for better perf.
-// - ssl: Uncomment and enable only if needed by your environment. Supabase usually handles SSL via the DATABASE_URL.
-const sqlOptions: Record<string, unknown> = {
-  prepare: false,
-  // ssl: { rejectUnauthorized: false },
-};
+// A global variable for serverless environments
+declare global {
+  var _pgClient: ReturnType<typeof postgres> | undefined;
+  var _db: ReturnType<typeof drizzle> | undefined;
+}
 
-const client = postgres(DATABASE_URL, sqlOptions);
-export const db = drizzle({ client });
+const client = global._pgClient ?? postgres(DATABASE_URL, { prepare: false });
+if (!global._pgClient) global._pgClient = client;
 
-// Export raw client for low-level operations or graceful shutdowns in tests/CI
+export const db = global._db ?? drizzle({ client });
+if (!global._db) global._db = db;
+
 export { client as rawPgClient };

@@ -12,35 +12,6 @@ import { VisitorTraffic } from "./VisitorTraffic";
 import { TopSellingProducts } from "./TopSellingProducts";
 
 function Dashboard() {
-  const router = useRouter();
-
-  const [checkingProfile, setCheckingProfile] = useState(true);
-
-  useEffect(() => {
-    async function checkProfile() {
-      try {
-        const res = await fetch("/api/profile/check");
-        const data = await res.json();
-
-        if (data.role === "seller") {
-          if (data.profileExists === false) {
-            router.push("/sellersAccountSetup");
-            return;
-          }
-        }
-
-        // allow render
-        setCheckingProfile(false);
-      } catch (e) {
-        console.error("Profile check failed:", e);
-        setCheckingProfile(false);
-      }
-    }
-
-    checkProfile();
-  }, []);
-
-  if (checkingProfile) return null;
 
   const [search, setSearch] = useState("");
   const { data: dashboardData } = useDashboardData();

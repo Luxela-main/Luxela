@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/context/AuthContext";
-
 
 interface BillingAddress {
   id: string;
@@ -19,11 +18,11 @@ interface ProfileData {
   fullName: string;
   email: string;
   profilePicture: string | null;
-  dateOfBirth?: Date | string | null; 
-  phoneNumber?: string | null;        
-  country?: string | null;            
-  state?: string | null;  
-    billingAddress?: BillingAddress | null;             
+  dateOfBirth?: Date | string | null;
+  phoneNumber?: string | null;
+  country?: string | null;
+  state?: string | null;
+  billingAddress?: BillingAddress | null;
 }
 
 interface ProfileContextType {
@@ -36,53 +35,57 @@ interface ProfileContextType {
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const { data, isLoading, refetch, error } = trpc.buyer.getAccountDetails.useQuery(undefined, {
-    enabled: !!user,
+  const {
+    data,
+    isLoading: profileLoading,
+    refetch,
+    error,
+  } = trpc.buyer.getAccountDetails.useQuery(undefined, {
+    enabled: !!user && !authLoading,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 
-
   useEffect(() => {
-    if (data) {
+    if (!authLoading && user && data) {
       setProfile(data);
       setIsInitialized(true);
-    } else if (error) {
-      
+    } else if (!authLoading && error) {
       setProfile(null);
-      setIsInitialized(true); 
+      setIsInitialized(true);
     }
-  }, [data, error]);
+  }, [data, error, authLoading, user]);
 
-  // Reset when user changes
   useEffect(() => {
-    if (!user) {
+    if (!user && !authLoading) {
       setProfile(null);
-      setIsInitialized(false);
+      setIsInitialized(true);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   const refreshProfile = async () => {
-    if (user) {
-      try {
-        const result = await refetch();
-        if (result.data) {
-          setProfile(result.data);
-        }
-      } catch {
-        // Silent failure
-        setProfile(null);
-      }
+    if (!user) return;
+
+    const result = await refetch();
+    if (result.data) {
+      setProfile(result.data);
     }
   };
 
   return (
-    <ProfileContext.Provider value={{ profile, loading: isLoading, isInitialized, refreshProfile }}>
+    <ProfileContext.Provider
+      value={{
+        profile,
+        loading: profileLoading || authLoading,
+        isInitialized,
+        refreshProfile,
+      }}
+    >
       {children}
     </ProfileContext.Provider>
   );
@@ -91,7 +94,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 export function useProfile() {
   const context = useContext(ProfileContext);
   if (!context) {
-    throw new Error('useProfile must be used within ProfileProvider');
+    throw new Error("useProfile must be used within ProfileProvider");
   }
   return context;
 }

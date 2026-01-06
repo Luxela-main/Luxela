@@ -11,9 +11,10 @@ const SellerOnboarding = () => {
   const [currentPage, setCurrentPage] = useState<"setup" | "preview">("setup");
   const router = useRouter();
 
+  // Corrected initial state with safe literal values
   const [formData, setFormData] = useState<SellerSetupFormData>({
     brandName: "",
-    businessType: "",
+    businessType: "individual",
     businessAddress: "",
     officialEmail: "",
     phoneNumber: "",
@@ -21,37 +22,34 @@ const SellerOnboarding = () => {
     country: "",
     socialMedia: "",
     fullName: "",
-    idType: "",
-
+    idType: "passport",
     storeDescription: "",
     storeLogo: "",
     storeBanner: "",
     logoPath: "",
     bannerPath: "",
-
     shippingZone: "",
     cityTown: "",
     shippingAddress: "",
     returnAddress: "",
-    shippingType: "",
-    estimatedShippingTime: "",
-    refundPolicy: "",
-    periodUntilRefund: "",
-
+    shippingType: "domestic",
+    estimatedShippingTime: "48hrs",
+    refundPolicy: "no_refunds",
+    periodUntilRefund: "48hrs",
     paymentMethod: "",
-    preferredPayoutMethod: "",
-    fiatPayoutMethod: "",
+    preferredPayoutMethod: "fiat_currency",
+    fiatPayoutMethod: "bank",
     bankCountry: "",
     accountHolderName: "",
     accountNumber: "",
     supportedBlockchain: "solana",
-    walletType: "",
+    walletType: "phantom",
     walletAddress: "",
-    preferredPayoutToken: "",
-
-    productCategory: "",
-    targetAudience: "",
-    localPricing: "",
+    preferredPayoutToken: "solana",
+    productCategory: "others",
+    targetAudience: "unisex",
+    localPricing: "fiat",
+    bio: "",
   });
 
   const goToPreview = (data: SellerSetupFormData) => {
@@ -59,23 +57,20 @@ const SellerOnboarding = () => {
     setCurrentPage("preview");
   };
 
-  const goBackToSetup = () => {
-    setCurrentPage("setup");
-  };
+  const goBackToSetup = () => setCurrentPage("setup");
 
   const handlePreviewUpdate = (updatedData: SellerSetupFormData) => {
     setFormData(updatedData);
   };
 
+  // TRPC mutations
   const createSellerMutation = trpc.seller.createSellerProfile.useMutation();
   const updateBusinessMutation = trpc.seller.updateSellerBusiness.useMutation();
   const updateShippingMutation = trpc.seller.updateSellerShipping.useMutation();
   const updatePaymentMutation = trpc.seller.updateSellerPayment.useMutation();
-  const updateAdditionalMutation =
-    trpc.seller.updateSellerAdditional.useMutation();
+  const updateAdditionalMutation = trpc.seller.updateSellerAdditional.useMutation();
 
   const handleFinalSubmit = async (data: SellerSetupFormData) => {
-    console.log("Final submission:", data);
     try {
       await createSellerMutation.mutateAsync();
 
@@ -88,11 +83,7 @@ const SellerOnboarding = () => {
         country: data.country,
         socialMedia: data.socialMedia,
         fullName: data.fullName,
-        idType: data.idType as
-          | "passport"
-          | "drivers_license"
-          | "voters_card"
-          | "national_id",
+        idType: data.idType as "passport" | "drivers_license" | "voters_card" | "national_id",
         bio: data.bio,
         storeDescription: data.storeDescription,
         storeLogo: data.storeLogo,
@@ -104,46 +95,21 @@ const SellerOnboarding = () => {
         city: data.cityTown,
         shippingAddress: data.shippingAddress,
         returnAddress: data.returnAddress,
-        shippingType: "domestic" as const,
-        estimatedShippingTime: data.estimatedShippingTime as
-          | "48hrs"
-          | "72hrs"
-          | "5_working_days"
-          | "1week",
+        shippingType: "domestic",
+        estimatedShippingTime: data.estimatedShippingTime as "48hrs" | "72hrs" | "5_working_days" | "1week",
         refundPolicy: data.refundPolicy as "no_refunds" | "accept_refunds",
-        refundPeriod: data.periodUntilRefund as
-          | "48hrs"
-          | "72hrs"
-          | "5_working_days"
-          | "1week",
+        refundPeriod: data.periodUntilRefund as "48hrs" | "72hrs" | "5_working_days" | "1week",
       });
 
       await updatePaymentMutation.mutateAsync({
-        preferredPayoutMethod: data.preferredPayoutMethod as
-          | "fiat_currency"
-          | "cryptocurrency"
-          | "both",
-        fiatPayoutMethod: data.fiatPayoutMethod as
-          | "bank"
-          | "paypal"
-          | "stripe"
-          | "flutterwave"
-          | undefined,
+        preferredPayoutMethod: data.preferredPayoutMethod as "fiat_currency" | "cryptocurrency" | "both",
+        fiatPayoutMethod: data.fiatPayoutMethod as "bank" | "paypal" | "stripe" | "flutterwave" | undefined,
         bankCountry: data.bankCountry,
         accountHolderName: data.accountHolderName,
         accountNumber: data.accountNumber,
-        walletType: data.walletType as
-          | "phantom"
-          | "solflare"
-          | "backpack"
-          | "wallet_connect"
-          | undefined,
+        walletType: data.walletType as "phantom" | "solflare" | "backpack" | "wallet_connect" | undefined,
         walletAddress: data.walletAddress,
-        preferredPayoutToken: data.preferredPayoutToken as
-          | "USDT"
-          | "USDC"
-          | "solana"
-          | undefined,
+        preferredPayoutToken: data.preferredPayoutToken as "USDT" | "USDC" | "solana" | undefined,
       });
 
       await updateAdditionalMutation.mutateAsync({
@@ -162,11 +128,7 @@ const SellerOnboarding = () => {
       });
 
       toastSvc.success("Seller account created successfully!");
-
-      // Redirect to seller dashboard
-      setTimeout(() => {
-        router.push("/sellers/dashboard");
-      }, 1500);
+      setTimeout(() => router.push("/sellers/dashboard"), 1500);
     } catch (error: any) {
       console.error("Error creating seller account:", error);
       toastSvc.error(error.message || "Failed to create seller account");
