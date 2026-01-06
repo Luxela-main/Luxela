@@ -1,14 +1,14 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { inferAsyncReturnType } from "@trpc/server";
 
-
 // ---------- Create ANON client for auth ----------
 function getAuthClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   return createClient(url, anon, { auth: { persistSession: false } });
 }
-  // ---------- Create SERVICE ROLE client for admin/DB operations ----------
+
+// ---------- Create SERVICE ROLE client for admin/DB operations ----------
 function getAdminClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -16,7 +16,23 @@ function getAdminClient(): SupabaseClient {
 }
 
 // ---------- Extract Bearer token from headers ----------
-function getBearerToken(header?: string) {
+function extractAuthorizationHeader(req: any): string | null {
+  if (!req) return null;
+
+  // Local Node/Express-style (req.headers.authorization)
+  const header1 = req.headers?.authorization;
+  if (header1 && typeof header1 === "string") return header1;
+
+  // Vercel Serverless Fetch API style (req: Request)
+  if (typeof req.headers?.get === "function") {
+    const header2 = req.headers.get("authorization");
+    if (header2 && typeof header2 === "string") return header2;
+  }
+
+  return null;
+}
+
+function parseBearerToken(header?: string | null) {
   if (!header) return null;
   const [scheme, token] = header.split(" ");
   return scheme?.toLowerCase() === "bearer" ? token : null;
@@ -24,7 +40,9 @@ function getBearerToken(header?: string) {
 
 // ---------- tRPC context ----------
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
-  const token = getBearerToken(req?.headers?.authorization);
+  const rawAuthHeader = extractAuthorizationHeader(req);
+  const token = parseBearerToken(rawAuthHeader);
+
   const authClient = getAuthClient();
   const adminClient = getAdminClient();
 
@@ -37,7 +55,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
 
   if (token) {
     try {
-      //Only the ANON client can call getUser
+      // Only the ANON client can call getUser
       const { data } = await authClient.auth.getUser(token);
       if (data?.user) {
         user = {
@@ -46,8 +64,6 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           name: data.user.user_metadata?.full_name,
           role: data.user.user_metadata?.role,
         };
-      } else {
-        user = null;
       }
     } catch (err) {
       console.warn("Invalid JWT token", err);
@@ -66,3 +82,4 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
 
 // ---------- Type for tRPC context ----------
 export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;
+
