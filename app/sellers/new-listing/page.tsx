@@ -13,15 +13,16 @@ import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
 import CollectionForm from "@/components/sellers/NewListing/CollectionForm";
 
+
 const NewListing: React.FC = () => {
   const router = useRouter();
 
   const [view, setView] = useState<ViewType>("empty");
   const [activeTab, setActiveTab] = useState<TabType>("product-info");
-  const [isUploading, setIsUploading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+   const [showListings, setShowListings] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     type: "single",
@@ -115,15 +116,20 @@ const NewListing: React.FC = () => {
     return { valid: errors.length === 0, errors };
   };
 
-  const handleAddProduct = (type: ListingType): void => {
-    setView(type);
-    setActiveTab("product-info");
+const handleAddProduct = (type: ListingType): void => {
+  setView(type);
+  setShowListings(false);
+  setActiveTab("product-info");
 
-    setFormData((prev: any) => ({
-      ...prev,
-      type,
-    }));
-  };
+  setFormData((prev: any) => ({
+    ...prev,
+    type,
+  }));
+};
+
+const handleBackToListings = () => {
+  setShowListings(true);
+};
 
   const handleFormChange = (data: Partial<FormData>): void => {
     setFormData((prev: any) => ({ ...prev, ...data }));
@@ -181,141 +187,152 @@ const NewListing: React.FC = () => {
     setActiveTab(tab);
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      if (formData.type === "single") {
-        const allowedCategories = [
-          "men_clothing",
-          "women_clothing",
-          "men_shoes",
-          "women_shoes",
-          "accessories",
-          "merch",
-          "others",
-        ];
-        const allowedReleaseDurations = [
-          "24hrs",
-          "48hrs",
-          "72hrs",
-          "1week",
-          "2weeks",
-          "1month",
-        ];
-        const allowedSupplyCapacities = ["no_max", "limited"];
-        const allowedBadges = ["show_badge", "do_not_show"];
-        const allowedShippingOptions = ["local", "international", "both"];
-        const allowedAudiences = ["male", "female", "unisex"];
+// Handler for single items
+const handleSubmitSingle = async () => {
+  setIsSubmitting(true);
+  try {
+    const allowedCategories = [
+      "men_clothing",
+      "women_clothing",
+      "men_shoes",
+      "women_shoes",
+      "accessories",
+      "merch",
+      "others",
+    ];
+    const allowedReleaseDurations = [
+      "24hrs",
+      "48hrs",
+      "72hrs",
+      "1week",
+      "2weeks",
+      "1month",
+    ];
+    const allowedSupplyCapacities = ["no_max", "limited"];
+    const allowedBadges = ["show_badge", "do_not_show"];
+    const allowedShippingOptions = ["local", "international", "both"];
+    const allowedAudiences = ["male", "female", "unisex"];
 
-        let category = formData.type === "single" ? formData.category : "";
-        if (!allowedCategories.includes(category)) category = "others";
+    let category = formData.category || "";
+    if (!allowedCategories.includes(category)) category = "others";
 
-        let releaseDuration = formData.releaseDuration || "";
-        if (!allowedReleaseDurations.includes(releaseDuration))
-          releaseDuration = "1week";
+    let releaseDuration = formData.releaseDuration || "";
+    if (!allowedReleaseDurations.includes(releaseDuration))
+      releaseDuration = "1week";
 
-        let supplyCapacity = formData.supplyCapacity
-          ?.toLowerCase()
-          .includes("limit")
-          ? "limited"
-          : "no_max";
-        if (!allowedSupplyCapacities.includes(supplyCapacity))
-          supplyCapacity = "no_max";
+    let supplyCapacity = formData.supplyCapacity
+      ?.toLowerCase()
+      .includes("limit")
+      ? "limited"
+      : "no_max";
+    if (!allowedSupplyCapacities.includes(supplyCapacity))
+      supplyCapacity = "no_max";
 
-        let limitedEditionBadge = formData.showBadge
-          ?.toLowerCase()
-          .includes("show")
-          ? "show_badge"
-          : "do_not_show";
-        if (!allowedBadges.includes(limitedEditionBadge))
-          limitedEditionBadge = "do_not_show";
+    let limitedEditionBadge = formData.showBadge
+      ?.toLowerCase()
+      .includes("show")
+      ? "show_badge"
+      : "do_not_show";
+    if (!allowedBadges.includes(limitedEditionBadge))
+      limitedEditionBadge = "do_not_show";
 
-        let shippingOption = formData.shippingOption || "local";
-        if (!allowedShippingOptions.includes(shippingOption))
-          shippingOption = "local";
+    let shippingOption = formData.shippingOption || "local";
+    if (!allowedShippingOptions.includes(shippingOption))
+      shippingOption = "local";
 
-        let additionalTargetAudience = formData.targetAudience || "unisex";
-        if (!allowedAudiences.includes(additionalTargetAudience))
-          additionalTargetAudience = "unisex";
+    let additionalTargetAudience = formData.targetAudience || "unisex";
+    if (!allowedAudiences.includes(additionalTargetAudience))
+      additionalTargetAudience = "unisex";
 
-        let colorsAvailable =
-          formData.colors || formData.colors
-            ? (formData.colors || formData.colors)
-                .split(",")
-                .map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
-            : undefined;
+    let colorsAvailable =
+      formData.colors || formData.colors
+        ? (formData.colors || formData.colors)
+            .split(",")
+            .map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
+        : undefined;
 
-        let sizes =
-          formData.sizes && formData.sizes.length > 0
-            ? formData.sizes.map((s: string) => s.trim().toUpperCase())
-            : undefined;
+    let sizes =
+      formData.sizes && formData.sizes.length > 0
+        ? formData.sizes.map((s: string) => s.trim().toUpperCase())
+        : undefined;
 
-        const uploadedImageUrls: string[] = [];
+    const uploadedImageUrls: string[] = [];
 
-        if (formData.images && formData.images.length > 0) {
-          for (const imageFile of formData.images) {
-            try {
-              const validation = validateImageFile(imageFile, 10);
-              if (!validation.valid) {
-                console.warn(`Skipping invalid image: ${validation.error}`);
-                continue;
-              }
-
-              const uploadResult = await uploadImage(
-                imageFile,
-                "store-assets",
-                "product-images",
-                true
-              );
-
-              if (uploadResult) {
-                uploadedImageUrls.push(uploadResult.url);
-              }
-            } catch (uploadError) {
-              console.error("Failed to upload image:", uploadError);
-            }
+    if (formData.images && formData.images.length > 0) {
+      for (const imageFile of formData.images) {
+        try {
+          const validation = validateImageFile(imageFile, 10);
+          if (!validation.valid) {
+            console.warn(`Skipping invalid image: ${validation.error}`);
+            continue;
           }
+
+          const uploadResult = await uploadImage(
+            imageFile,
+            "store-assets",
+            "product-images",
+            true
+          );
+
+          if (uploadResult) {
+            uploadedImageUrls.push(uploadResult.url);
+          }
+        } catch (uploadError) {
+          console.error("Failed to upload image:", uploadError);
         }
-
-        const mainImageUrl =
-          uploadedImageUrls.length > 0
-            ? uploadedImageUrls[0]
-            : "https://via.placeholder.com/400";
-
-        await createSingleMutation.mutateAsync({
-          title: formData.name,
-          description: formData.description,
-          category,
-          priceCents: Math.round(parseFloat(formData.price) * 100),
-          currency: "NGN",
-          image: mainImageUrl,
-          sizes,
-          supplyCapacity,
-          quantityAvailable: formData.quantity
-            ? parseInt(formData.quantity)
-            : undefined,
-          limitedEditionBadge,
-          releaseDuration,
-          materialComposition: formData.material || formData.material,
-          colorsAvailable,
-          additionalTargetAudience,
-          shippingOption,
-          etaDomestic: formData.domesticDays,
-          etaInternational: formData.internationalDays,
-        });
-      } else {
-        await createCollectionMutation.mutateAsync({
-          title: formData.collectionTitle || "",
-          description: formData.collectionDescription,
-          items: formData.collectionItems || [],
-        });
       }
-      setIsSubmitting(false);
-    } catch (error) {
-      setIsSubmitting(false);
-      console.error("Error creating listing:", error);
     }
-  };
+
+    const mainImageUrl =
+      uploadedImageUrls.length > 0
+        ? uploadedImageUrls[0]
+        : "https://via.placeholder.com/400";
+
+    await createSingleMutation.mutateAsync({
+      title: formData.name,
+      description: formData.description,
+      category,
+      priceCents: Math.round(parseFloat(formData.price) * 100),
+      currency: "NGN",
+      image: mainImageUrl,
+      sizes,
+      supplyCapacity,
+      quantityAvailable: formData.quantity
+        ? parseInt(formData.quantity)
+        : undefined,
+      limitedEditionBadge,
+      releaseDuration,
+      materialComposition: formData.material || formData.material,
+      colorsAvailable,
+      additionalTargetAudience,
+      shippingOption,
+      etaDomestic: formData.domesticDays,
+      etaInternational: formData.internationalDays,
+    });
+    
+    setIsSubmitting(false);
+  } catch (error) {
+    setIsSubmitting(false);
+    console.error("Error creating single listing:", error);
+  }
+};
+
+// Handler for collections
+const handleSubmitCollection = async () => {
+  setIsSubmitting(true);
+  try {
+    await createCollectionMutation.mutateAsync({
+      title: formData.collectionTitle || "",
+      description: formData.collectionDescription,
+      items: formData.collectionItems || [],
+    });
+    
+    setIsSubmitting(false);
+  } catch (error) {
+    setIsSubmitting(false);
+    console.error("Error creating collection:", error);
+  }
+};
 
   const handleCancel = (): void => {
     setView("empty");
@@ -347,7 +364,7 @@ const NewListing: React.FC = () => {
   };
 
   const handleViewListings = () => {
-    router.push("/sellers/my-listings");
+    router.push("/sellers/new-listing");
   };
 
   const createSingleMutation = (trpc.listing as any).createSingle.useMutation({
@@ -399,26 +416,40 @@ const NewListing: React.FC = () => {
   if (view === "empty") {
     return <ProductListings onAddProduct={handleAddProduct} />;
   }
+   if (showListings) {
+  return <ProductListings onAddProduct={handleAddProduct} />;
+}
 
   return (
     <div className="min-h-screen bg-black text-white px-2 lg:px-6 pt-10">
-      <div className="flex items-center gap-2 text-sm mb-6 text-gray-400">
+    <div className="flex items-center gap-2 text-sm mb-6 text-gray-400">
+      <button 
+        onClick={handleBackToListings}
+        className="hover:text-white transition-colors cursor-pointer"
+      >
         <span>New Listing</span>
-        <span>›</span>
-        <span className="text-white">
-          {view === "single" ? "Single Items" : "Collection"}
-        </span>
-      </div>
+      </button>
+      <span>›</span>
+      <span className="text-white">
+        {view === "single" ? "Single Items" : "Collection"}
+      </span>
+    </div>
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold mb-2">New Listing</h1>
-        <p className="text-gray-400">
-          List product and fill in your listing details
-        </p>
-      </div>
+     <div className="mb-8">
+  <h1 className="text-xl font-semibold mb-2">
+    {formData.type === "collection" ? "Add Collection" : "New Listing"}
+  </h1>
+  <p className="text-gray-400">
+    {formData.type === "collection" 
+      ? "Create a collection and add items to it"
+      : "List product and fill in your listing details"
+    }
+  </p>
+</div>
 
-      <TabsNav activeTab={activeTab} onTabChange={handleTabChange} />
-
+{formData.type === "single" && (
+  <TabsNav activeTab={activeTab} onTabChange={handleTabChange} />
+)}
       {activeTab === "product-info" && formData.type === "single" && (
         <ProductInfoForm
           formData={formData}
@@ -430,24 +461,25 @@ const NewListing: React.FC = () => {
         />
       )}
 
-      {activeTab === "product-info" && formData.type === "collection" && (
-        <CollectionForm
-          title={formData.collectionTitle || ""}
-          description={formData.collectionDescription || ""}
-          items={formData.collectionItems || []}
-          onTitleChange={(title) =>
-            handleFormChange({ collectionTitle: title })
-          }
-          onDescriptionChange={(description) =>
-            handleFormChange({ collectionDescription: description })
-          }
-          onItemsChange={(items) =>
-            handleFormChange({ collectionItems: items })
-          }
-          onNext={handleNext}
-          isSubmitting={isSubmitting}
-        />
-      )}
+    {formData.type === "collection" && (
+  <CollectionForm
+    title={formData.collectionTitle || ""}
+    description={formData.collectionDescription || ""}
+    items={formData.collectionItems || []}
+    onTitleChange={(title) =>
+      handleFormChange({ collectionTitle: title })
+    }
+    onDescriptionChange={(description) =>
+      handleFormChange({ collectionDescription: description })
+    }
+    onItemsChange={(items) =>
+      handleFormChange({ collectionItems: items })
+    }
+    onSubmit={handleSubmitCollection} 
+    onNext={handleNext}
+    isSubmitting={isSubmitting}
+  />
+)}
 
       {activeTab === "additional-info" && (
         <AdditionalInfoForm
@@ -463,7 +495,7 @@ const NewListing: React.FC = () => {
       {activeTab === "preview" && (
         <PreviewForm
           formData={formData}
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmitSingle}
           onCancel={handleCancel}
           isSubmitting={isSubmitting}
           error={error}
