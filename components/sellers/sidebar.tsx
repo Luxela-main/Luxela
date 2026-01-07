@@ -79,13 +79,17 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 ml-4 md:ml-6 z-50 p-2 rounded-lg shadow-lg "
-      >
-        {isMobileMenuOpen ? <X size={24} className ="relative right-6" /> : <Menu size={24} />}
-      </button>
-
+   <button
+  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+  className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-[#141414] shadow-lg hover:bg-[#1f1f1f] transition-colors"
+  aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+>
+  {isMobileMenuOpen ? (
+    <X size={24} className="text-[#f1f1f1]" />
+  ) : (
+    <Menu size={24} className="text-[#f1f1f1]" />
+  )}
+</button>
       {/* Overlay */}
       {isMobileMenuOpen && (
         <div

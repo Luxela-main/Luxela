@@ -111,16 +111,16 @@
   --sidebar-ring: #725a41;
 }
 
-html {
+/* html {
   @apply overflow-x-hidden;
-}
+} */
 
 body {
-  @apply bg-[#0E0E0E] text-[#f1f1f1] scroll-smooth min-w-full;
+  @apply bg-[#0E0E0E] text-[#f1f1f1] scroll-smooth;
 }
 
 .layout {
-  @apply max-w-[1200px] px-2 md:px-5 mx-auto w-full;
+  @apply px-2 md:px-5 mx-auto w-full;
 }
 
 /* Add this to your existing global.css */
@@ -153,13 +153,13 @@ body {
 }
 
 /* Hide scrollbar but keep scroll */
-.scrollbar-hide::-webkit-scrollbar {
+/* .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
 .scrollbar-hide {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
+} */
 
 @keyframes fade-slide-up {
   0% {
