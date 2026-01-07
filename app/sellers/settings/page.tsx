@@ -548,7 +548,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="pt-16 px-6 md:pt-0 relative">
+    <div className="pt-16 px-4 md:pt-0 relative">
       <div className="mb-6">
         <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-4.5 lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />
@@ -563,8 +563,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex w-fit gap-8 bg-[#141414] pb-2 rounded-sm px-2">
-        <div className="max-w-7xl mx-auto flex gap-8">
+      <div className="w-full overflow-x-auto bg-[#141414] pb-2 rounded-sm">
+  <div className="flex flex-wrap gap-4 md:gap-8 px-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -584,7 +584,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Content */}
-      <div className="px-8 py-8 max-w-7xl mx-auto">
+      <div className="py-8 max-w-7xl mx-auto">
         {/* Business Information Tab */}
         {activeTab === "business" && (
           <div>

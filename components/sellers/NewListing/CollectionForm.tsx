@@ -18,6 +18,7 @@ interface CollectionFormProps {
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onItemsChange: (items: CollectionItem[]) => void;
+  onSubmit: () => void;
   onNext: () => void;
   isSubmitting?: boolean;
 }
@@ -29,6 +30,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
   onTitleChange,
   onDescriptionChange,
   onItemsChange,
+  onSubmit,
   onNext,
   isSubmitting = false,
 }) => {
@@ -55,7 +57,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
 
   return (
     <div className="bg-[#1a1a1a] rounded-lg p-6 border border-[#333]">
-      <h2 className="text-xl font-semibold mb-6">Collection Information</h2>
+      <h2 className="text-lg font-semibold mb-6">Collection Information</h2>
 
       <div className="space-y-6">
         <div>
@@ -67,7 +69,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="e.g., Summer Collection 2024"
-            className="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-4 py-2 focus:outline-none focus:border-purple-500"
+            className="w-full bg-[#0a0a0a] border placeholder:text-sm border-[#333] rounded-md px-4 py-2 focus:outline-none focus:border-purple-500"
           />
         </div>
 
@@ -78,7 +80,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             onChange={(e) => onDescriptionChange(e.target.value)}
             placeholder="Describe your collection..."
             rows={4}
-            className="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-4 py-2 focus:outline-none focus:border-purple-500"
+            className="w-full bg-[#0a0a0a] border placeholder:text-sm border-[#333] rounded-md px-4 py-2 focus:outline-none focus:border-purple-500"
           />
         </div>
 
@@ -132,7 +134,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                           updateItem(index, "title", e.target.value)
                         }
                         placeholder="e.g., White T-Shirt"
-                        className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        className="w-full placeholder:text-sm bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
                       />
                     </div>
 
@@ -151,7 +153,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                           )
                         }
                         placeholder="e.g., 5000"
-                        className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        className="w-full bg-[#1a1a1a] placeholder:text-sm border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         {helper.toCurrency((item.priceCents || 0) / 100)}
@@ -181,10 +183,10 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
           )}
         </div>
 
-        {/* Next Button */}
+        {/* Submit Button */}
         <div className="flex justify-end pt-4">
           <Button
-            onClick={onNext}
+            onClick={onSubmit}
             disabled={!title || items.length === 0 || isSubmitting}
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >

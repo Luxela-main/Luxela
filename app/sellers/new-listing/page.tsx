@@ -1,62 +1,383 @@
 "use client";
-
 import React, { useState } from "react";
-import { Tab, ListingForm, ProductData, CollectionItem } from "@/types";
-import { TabsNav } from "./TabsNav";
-import ProductInfoForm from "./ProductInfoForm";
-import AdditionalInfoForm from "./AdditionalInfoForm";
-import Preview from "./Preview";
-import CollectionForm from "./CollectionForm";
+import ProductListings from "@/components/sellers/NewListing/ProductListings";
+import TabsNav from "@/components/sellers/NewListing/TabsNav";
+import ProductInfoForm from "@/components/sellers/NewListing/ProductInfoForm";
+import AdditionalInfoForm from "@/components/sellers/NewListing/AdditionalInfoForm";
+import PreviewForm from "@/components/sellers/NewListing/PreviewForm";
+import SuccessModal from "@/components/sellers/NewListing/SuccessModal";
+import { FormData, ViewType, TabType, ListingType } from "@/types/newListing";
+import { uploadImage, validateImageFile } from "@/lib/upload-image";
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
-import helper from "@/helper";
+import CollectionForm from "@/components/sellers/NewListing/CollectionForm";
+
 
 const NewListing: React.FC = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("Product Information");
-  const [formData, setFormData] = useState<ListingForm>({
-    listingType: "single",
+
+  const [view, setView] = useState<ViewType>("empty");
+  const [activeTab, setActiveTab] = useState<TabType>("product-info");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+   const [showListings, setShowListings] = useState(false);
+
+  const [formData, setFormData] = useState<FormData>({
+    type: "single",
+    name: "",
+    price: "",
+    category: "",
+    description: "",
+    sizes: [],
+    releaseDate: "",
+    supplyCapacity: "no-max",
+    quantity: "",
+    showBadge: "do_not_show",
+    releaseDuration: "",
+    releaseDurationDays: "",
+    releaseDurationMinutes: "",
+    material: "",
+    colors: "",
+    targetAudience: "",
+    shippingOption: "",
+    domesticDays: "",
+    domesticMinutes: "",
+    internationalDays: "",
+    internationalMinutes: "",
     images: [],
-    product: {
-      price: "",
-      name: "",
-      type: "",
-      description: "",
-      sizes: "",
-      releaseDate: "",
-      supplyText: "",
-      supplyCount: "",
-      badge: "",
-      durationText: "",
-      durationTime: "",
-      material: "",
-      colors: "",
-      audience: "",
-      shipping: "",
-      shippingEstimate: "",
-    },
     collectionTitle: "",
     collectionDescription: "",
     collectionItems: [],
   });
 
-  const [isProductInfoValid, setIsProductInfoValid] = useState(false);
-  const [isAdditionalInfoValid, setIsAdditionalInfoValid] = useState(false);
+  // Validation functions
+  const validateProductInfo = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (!formData.name.trim()) {
+      errors.push("Product name is required");
+    }
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      errors.push("Valid price is required");
+    }
+    if (!formData.category) {
+      errors.push("Category is required");
+    }
+    if (!formData.description.trim()) {
+      errors.push("Description is required");
+    }
+    if (!formData.sizes || formData.sizes.length === 0) {
+      errors.push("At least one size is required");
+    }
+    if (!formData.images || formData.images.length === 0) {
+      errors.push("At least one product image is required");
+    }
+    if (
+      formData.supplyCapacity === "limited" &&
+      (!formData.quantity || parseInt(formData.quantity) <= 0)
+    ) {
+      errors.push("Quantity is required when supply capacity is limited");
+    }
+    if (!formData.releaseDuration) {
+      errors.push("Release duration is required");
+    }
+
+    return { valid: errors.length === 0, errors };
+  };
+
+  const validateAdditionalInfo = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (!formData.material?.trim()) {
+      errors.push("Material composition is required");
+    }
+    if (!formData.colors?.trim()) {
+      errors.push("Colors available is required");
+    }
+    if (!formData.targetAudience) {
+      errors.push("Target audience is required");
+    }
+    if (!formData.shippingOption) {
+      errors.push("Shipping option is required");
+    }
+    if (!formData.domesticDays) {
+      errors.push("Domestic shipping ETA is required");
+    }
+    if (
+      (formData.shippingOption === "international" ||
+        formData.shippingOption === "both") &&
+      !formData.internationalDays
+    ) {
+      errors.push("International shipping ETA is required");
+    }
+
+    return { valid: errors.length === 0, errors };
+  };
+
+const handleAddProduct = (type: ListingType): void => {
+  setView(type);
+  setShowListings(false);
+  setActiveTab("product-info");
+
+  setFormData((prev: any) => ({
+    ...prev,
+    type,
+  }));
+};
+
+const handleBackToListings = () => {
+  setShowListings(true);
+};
+
+  const handleFormChange = (data: Partial<FormData>): void => {
+    setFormData((prev: any) => ({ ...prev, ...data }));
+  };
+
+  const handleImagesChange = (images: File[]) => {
+    setFormData((prev: any) => ({ ...prev, images }));
+  };
+
+  const handleNext = (): void => {
+    if (activeTab === "product-info") {
+      const validation = validateProductInfo();
+      if (!validation.valid) {
+        validation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+      setActiveTab("additional-info");
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 0);
+    } else if (activeTab === "additional-info") {
+      const validation = validateAdditionalInfo();
+      if (!validation.valid) {
+        validation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+      setActiveTab("preview");
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 0);
+    }
+  };
+
+  const handleTabChange = (tab: TabType): void => {
+    if (tab === "additional-info") {
+      const validation = validateProductInfo();
+      if (!validation.valid) {
+        validation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+    } else if (tab === "preview") {
+      const productValidation = validateProductInfo();
+      const additionalValidation = validateAdditionalInfo();
+
+      if (!productValidation.valid) {
+        productValidation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+      if (!additionalValidation.valid) {
+        additionalValidation.errors.forEach((error) => toastSvc.error(error));
+        return;
+      }
+    }
+
+    setActiveTab(tab);
+  };
+
+// Handler for single items
+const handleSubmitSingle = async () => {
+  setIsSubmitting(true);
+  try {
+    const allowedCategories = [
+      "men_clothing",
+      "women_clothing",
+      "men_shoes",
+      "women_shoes",
+      "accessories",
+      "merch",
+      "others",
+    ];
+    const allowedReleaseDurations = [
+      "24hrs",
+      "48hrs",
+      "72hrs",
+      "1week",
+      "2weeks",
+      "1month",
+    ];
+    const allowedSupplyCapacities = ["no_max", "limited"];
+    const allowedBadges = ["show_badge", "do_not_show"];
+    const allowedShippingOptions = ["local", "international", "both"];
+    const allowedAudiences = ["male", "female", "unisex"];
+
+    let category = formData.category || "";
+    if (!allowedCategories.includes(category)) category = "others";
+
+    let releaseDuration = formData.releaseDuration || "";
+    if (!allowedReleaseDurations.includes(releaseDuration))
+      releaseDuration = "1week";
+
+    let supplyCapacity = formData.supplyCapacity
+      ?.toLowerCase()
+      .includes("limit")
+      ? "limited"
+      : "no_max";
+    if (!allowedSupplyCapacities.includes(supplyCapacity))
+      supplyCapacity = "no_max";
+
+    let limitedEditionBadge = formData.showBadge
+      ?.toLowerCase()
+      .includes("show")
+      ? "show_badge"
+      : "do_not_show";
+    if (!allowedBadges.includes(limitedEditionBadge))
+      limitedEditionBadge = "do_not_show";
+
+    let shippingOption = formData.shippingOption || "local";
+    if (!allowedShippingOptions.includes(shippingOption))
+      shippingOption = "local";
+
+    let additionalTargetAudience = formData.targetAudience || "unisex";
+    if (!allowedAudiences.includes(additionalTargetAudience))
+      additionalTargetAudience = "unisex";
+
+    let colorsAvailable =
+      formData.colors || formData.colors
+        ? (formData.colors || formData.colors)
+            .split(",")
+            .map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
+        : undefined;
+
+    let sizes =
+      formData.sizes && formData.sizes.length > 0
+        ? formData.sizes.map((s: string) => s.trim().toUpperCase())
+        : undefined;
+
+    const uploadedImageUrls: string[] = [];
+
+    if (formData.images && formData.images.length > 0) {
+      for (const imageFile of formData.images) {
+        try {
+          const validation = validateImageFile(imageFile, 10);
+          if (!validation.valid) {
+            console.warn(`Skipping invalid image: ${validation.error}`);
+            continue;
+          }
+
+          const uploadResult = await uploadImage(
+            imageFile,
+            "store-assets",
+            "product-images",
+            true
+          );
+
+          if (uploadResult) {
+            uploadedImageUrls.push(uploadResult.url);
+          }
+        } catch (uploadError) {
+          console.error("Failed to upload image:", uploadError);
+        }
+      }
+    }
+
+    const mainImageUrl =
+      uploadedImageUrls.length > 0
+        ? uploadedImageUrls[0]
+        : "https://via.placeholder.com/400";
+
+    await createSingleMutation.mutateAsync({
+      title: formData.name,
+      description: formData.description,
+      category,
+      priceCents: Math.round(parseFloat(formData.price) * 100),
+      currency: "NGN",
+      image: mainImageUrl,
+      sizes,
+      supplyCapacity,
+      quantityAvailable: formData.quantity
+        ? parseInt(formData.quantity)
+        : undefined,
+      limitedEditionBadge,
+      releaseDuration,
+      materialComposition: formData.material || formData.material,
+      colorsAvailable,
+      additionalTargetAudience,
+      shippingOption,
+      etaDomestic: formData.domesticDays,
+      etaInternational: formData.internationalDays,
+    });
+    
+    setIsSubmitting(false);
+  } catch (error) {
+    setIsSubmitting(false);
+    console.error("Error creating single listing:", error);
+  }
+};
+
+// Handler for collections
+const handleSubmitCollection = async () => {
+  setIsSubmitting(true);
+  try {
+    await createCollectionMutation.mutateAsync({
+      title: formData.collectionTitle || "",
+      description: formData.collectionDescription,
+      items: formData.collectionItems || [],
+    });
+    
+    setIsSubmitting(false);
+  } catch (error) {
+    setIsSubmitting(false);
+    console.error("Error creating collection:", error);
+  }
+};
+
+  const handleCancel = (): void => {
+    setView("empty");
+    setActiveTab("product-info");
+    setFormData({
+      name: "",
+      price: "",
+      category: "",
+      description: "",
+      sizes: [],
+      releaseDate: "",
+      supplyCapacity: "no-max",
+      quantity: "",
+      showBadge: "do_not_show",
+      releaseDuration: "",
+      releaseDurationDays: "",
+      releaseDurationMinutes: "",
+      material: "",
+      colors: "",
+      targetAudience: "",
+      shippingOption: "",
+      domesticDays: "",
+      domesticMinutes: "",
+      internationalDays: "",
+      internationalMinutes: "",
+      images: [],
+      type: "single",
+    });
+  };
+
+  const handleViewListings = () => {
+    router.push("/sellers/new-listing");
+  };
 
   const createSingleMutation = (trpc.listing as any).createSingle.useMutation({
     onSuccess: () => {
       toastSvc.success("Single listing created successfully!");
-      setTimeout(() => {
-        router.push("/sellers/my-listings");
-      }, 1500);
+      setShowSuccessModal(true);
     },
     onError: (error: any) => {
       try {
         const errorData = JSON.parse(error.message);
         if (Array.isArray(errorData)) {
           errorData.forEach((err: any) => {
-            const fieldName = err.path?.[0] || 'Field';
+            const fieldName = err.path?.[0] || "Field";
             toastSvc.error(`${fieldName}: ${err.message}`);
           });
         } else {
@@ -68,19 +389,19 @@ const NewListing: React.FC = () => {
     },
   });
 
-  const createCollectionMutation = (trpc.listing as any).createCollection.useMutation({
+  const createCollectionMutation = (
+    trpc.listing as any
+  ).createCollection.useMutation({
     onSuccess: () => {
       toastSvc.success("Collection created successfully!");
-      setTimeout(() => {
-        router.push("/sellers/my-listings");
-      }, 1500);
+      setShowSuccessModal(true);
     },
     onError: (error: any) => {
       try {
         const errorData = JSON.parse(error.message);
         if (Array.isArray(errorData)) {
           errorData.forEach((err: any) => {
-            const fieldName = err.path?.[0] || 'Field';
+            const fieldName = err.path?.[0] || "Field";
             toastSvc.error(`${fieldName}: ${err.message}`);
           });
         } else {
@@ -92,220 +413,98 @@ const NewListing: React.FC = () => {
     },
   });
 
-  const handleProductChange = (product: ProductData) => {
-    setFormData((prev) => ({ ...prev, product }));
-  };
-
-  const handleImagesChange = (images: File[]) => {
-    setFormData((prev) => ({ ...prev, images }));
-  };
-
-  const handleSubmit = async () => {
-    try {
-      if (formData.listingType === "single") {
-        // Map enums and format fields to match backend
-        const allowedCategories = [
-          "men_clothing", "women_clothing", "men_shoes", "women_shoes", "accessories", "merch", "others"
-        ];
-        const allowedReleaseDurations = [
-          "24hrs", "48hrs", "72hrs", "1week", "2weeks", "1month"
-        ];
-        const allowedSupplyCapacities = ["no_max", "limited"];
-        const allowedBadges = ["show_badge", "do_not_show"];
-        const allowedShippingOptions = ["local", "international", "both"];
-        const allowedAudiences = ["male", "female", "unisex"];
-
-        // Map category
-        let category = formData.product.type;
-        if (!allowedCategories.includes(category)) category = "others";
-
-        // Map releaseDuration
-        let releaseDuration = formData.product.durationTime || "";
-        if (!allowedReleaseDurations.includes(releaseDuration)) releaseDuration = "1week";
-
-        // Map supplyCapacity
-        let supplyCapacity = formData.product.supplyText?.toLowerCase().includes("limit") ? "limited" : "no_max";
-        if (!allowedSupplyCapacities.includes(supplyCapacity)) supplyCapacity = "no_max";
-
-        // Map limitedEditionBadge
-        let limitedEditionBadge = formData.product.badge?.toLowerCase().includes("show") ? "show_badge" : "do_not_show";
-        if (!allowedBadges.includes(limitedEditionBadge)) limitedEditionBadge = "do_not_show";
-
-        // Map shippingOption
-        let shippingOption = formData.product.shippingOption || "local";
-        if (!allowedShippingOptions.includes(shippingOption)) shippingOption = "local";
-
-        // Map additionalTargetAudience
-        let additionalTargetAudience = formData.product.targetAudience || "unisex";
-        if (!allowedAudiences.includes(additionalTargetAudience)) additionalTargetAudience = "unisex";
-
-        // Map colorsAvailable to array of objects
-        let colorsAvailable = (formData.product.colorsAvailable || formData.product.colors)
-          ? (formData.product.colorsAvailable || formData.product.colors).split(",").map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
-          : undefined;
-
-        // Map sizes
-        let sizes = formData.product.sizes
-          ? formData.product.sizes.split(",").map((s: string) => s.trim().toUpperCase())
-          : undefined;
-
-        await createSingleMutation.mutateAsync({
-          title: formData.product.name,
-          description: formData.product.description,
-          category,
-          priceCents: Math.round(parseFloat(formData.product.price) * 100),
-          currency: "NGN",
-          image: formData.images.length > 0 
-            ? "https://via.placeholder.com/400" 
-            : "https://via.placeholder.com/400",
-          sizes,
-          supplyCapacity,
-          quantityAvailable: formData.product.supplyCount ? parseInt(formData.product.supplyCount) : undefined,
-          limitedEditionBadge,
-          releaseDuration,
-          materialComposition: formData.product.materialComposition || formData.product.material,
-          colorsAvailable,
-          additionalTargetAudience,
-          shippingOption,
-          etaDomestic: helper.mapDaysToEtaEnum(formData.product.domesticDays, formData.product.domesticMinutes),
-          etaInternational: helper.mapDaysToEtaEnum(formData.product.internationalDays, formData.product.internationalMinutes),
-        });
-      } else {
-        // Collection
-        await createCollectionMutation.mutateAsync({
-          title: formData.collectionTitle || "",
-          description: formData.collectionDescription,
-          items: formData.collectionItems || [],
-        });
-      }
-
-      setTimeout(() => {
-        router.push("/sellers/my-listings");
-      }, 1500);
-    } catch (error) {
-      console.error("Error creating listing:", error);
-    }
-  };
-
-  const handleReset = () => {
-    setActiveTab("Product Information");
-    setFormData({
-      listingType: "single",
-      images: [],
-      product: {
-        price: "",
-        name: "",
-        type: "",
-        description: "",
-        sizes: "",
-        releaseDate: "",
-        supplyText: "",
-        supplyCount: "",
-        badge: "",
-        durationText: "",
-        durationTime: "",
-        material: "",
-        colors: "",
-        audience: "",
-        shipping: "",
-        shippingEstimate: "",
-      },
-      collectionTitle: "",
-      collectionDescription: "",
-      collectionItems: [],
-    });
-  };
+  if (view === "empty") {
+    return <ProductListings onAddProduct={handleAddProduct} />;
+  }
+   if (showListings) {
+  return <ProductListings onAddProduct={handleAddProduct} />;
+}
 
   return (
-    <div className="p-6 pt-16 lg:pt-0">
-      <div className="flex items-center mb-2">
-        <h1 className="text-2xl font-semibold">New Listing</h1>
-      </div>
-      <p className="text-gray-400 mb-6">
-        List product and fill in your listing details
-      </p>
+    <div className="min-h-screen bg-black text-white px-2 lg:px-6 pt-10">
+    <div className="flex items-center gap-2 text-sm mb-6 text-gray-400">
+      <button 
+        onClick={handleBackToListings}
+        className="hover:text-white transition-colors cursor-pointer"
+      >
+        <span>New Listing</span>
+      </button>
+      <span>›</span>
+      <span className="text-white">
+        {view === "single" ? "Single Items" : "Collection"}
+      </span>
+    </div>
 
-      <div className="mb-6 bg-[#1a1a1a] rounded-lg p-4 border border-[#333]">
-        <label className="block text-sm font-medium mb-3">Listing Type</label>
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setFormData(prev => ({ ...prev, listingType: "single" }))}
-            className={`px-6 py-3 rounded-md transition ${
-              formData.listingType === "single"
-                ? "bg-purple-600 text-white"
-                : "bg-[#0a0a0a] border border-[#333] text-gray-400 hover:text-white"
-            }`}
-          >
-            Single Product
-          </button>
-          <button
-            onClick={() => setFormData(prev => ({ ...prev, listingType: "collection" }))}
-            className={`px-6 py-3 rounded-md transition ${
-              formData.listingType === "collection"
-                ? "bg-purple-600 text-white"
-                : "bg-[#0a0a0a] border border-[#333] text-gray-400 hover:text-white"
-            }`}
-          >
-            Collection
-          </button>
-        </div>
-      </div>
+     <div className="mb-8">
+  <h1 className="text-xl font-semibold mb-2">
+    {formData.type === "collection" ? "Add Collection" : "New Listing"}
+  </h1>
+  <p className="text-gray-400">
+    {formData.type === "collection" 
+      ? "Create a collection and add items to it"
+      : "List product and fill in your listing details"
+    }
+  </p>
+</div>
 
-      {formData.listingType === "single" ? (
-        <>
-          <TabsNav 
-            activeTab={activeTab} 
-            onTabChange={setActiveTab}
-            isProductInfoValid={isProductInfoValid}
-            isAdditionalInfoValid={isAdditionalInfoValid}
-          />
-
-          {activeTab === "Product Information" && (
-            <ProductInfoForm
-              product={formData.product}
-              onProductChange={handleProductChange}
-              images={formData.images}
-              onImagesChange={handleImagesChange}
-              setActiveTab={setActiveTab}
-              onValidationChange={setIsProductInfoValid}
-            />
-          )}
-
-          {activeTab === "Additional Information" && (
-            <AdditionalInfoForm
-              product={formData.product}
-              onProductChange={handleProductChange}
-              images={formData.images}
-              onImagesChange={handleImagesChange}
-              setActiveTab={setActiveTab}
-              onValidationChange={setIsAdditionalInfoValid}
-            />
-          )}
-
-          {activeTab === "Preview" && (
-            <Preview
-              formData={formData}
-              handleReset={handleReset}
-              handleSubmit={handleSubmit}
-              isSubmitting={createSingleMutation.isPending}
-            />
-          )}
-        </>
-      ) : (
-        <CollectionForm
-          title={formData.collectionTitle || ""}
-          description={formData.collectionDescription || ""}
-          items={formData.collectionItems || []}
-          onTitleChange={(title) => setFormData(prev => ({ ...prev, collectionTitle: title }))}
-          onDescriptionChange={(desc) => setFormData(prev => ({ ...prev, collectionDescription: desc }))}
-          onItemsChange={(items) => setFormData(prev => ({ ...prev, collectionItems: items }))}
-          onNext={handleSubmit}
-          isSubmitting={createCollectionMutation.isPending}
+{formData.type === "single" && (
+  <TabsNav activeTab={activeTab} onTabChange={handleTabChange} />
+)}
+      {activeTab === "product-info" && formData.type === "single" && (
+        <ProductInfoForm
+          formData={formData}
+          onFormChange={handleFormChange}
+          images={formData.images}
+          onImagesChange={handleImagesChange}
+          onNext={handleNext}
+          onCancel={handleCancel}
         />
       )}
+
+    {formData.type === "collection" && (
+  <CollectionForm
+    title={formData.collectionTitle || ""}
+    description={formData.collectionDescription || ""}
+    items={formData.collectionItems || []}
+    onTitleChange={(title) =>
+      handleFormChange({ collectionTitle: title })
+    }
+    onDescriptionChange={(description) =>
+      handleFormChange({ collectionDescription: description })
+    }
+    onItemsChange={(items) =>
+      handleFormChange({ collectionItems: items })
+    }
+    onSubmit={handleSubmitCollection} 
+    onNext={handleNext}
+    isSubmitting={isSubmitting}
+  />
+)}
+
+      {activeTab === "additional-info" && (
+        <AdditionalInfoForm
+          formData={formData}
+          onFormChange={handleFormChange}
+          images={formData.images}
+          onImagesChange={handleImagesChange}
+          onNext={handleNext}
+          onCancel={handleCancel}
+        />
+      )}
+
+      {activeTab === "preview" && (
+        <PreviewForm
+          formData={formData}
+          onSubmit={handleSubmitSingle}
+          onCancel={handleCancel}
+          isSubmitting={isSubmitting}
+          error={error}
+        />
+      )}
+
+      <SuccessModal isOpen={showSuccessModal} onView={handleViewListings} />
     </div>
   );
 };
 
 export default NewListing;
-
