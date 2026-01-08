@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Search, Star, Trash } from "lucide-react";
+import { Bell, Star, Trash } from "lucide-react";
 import SearchBar from "@/components/search-bar";
 import {
   useNotifications,
   useMarkAllNotificationsAsRead,
   useToggleNotificationStar,
+  useMarkNotificationAsRead,
 } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ErrorState } from "@/components/sellers/ErrorState";
@@ -22,10 +23,11 @@ export default function Notifications() {
     refetch,
   } = useNotifications();
 
-  console.log("Notifications:", notifications);
-
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
   const toggleStarMutation = useToggleNotificationStar();
+  // const deleteNotificationMutation = useDeleteNotification();
+  // const deleteAllMutation = useDeleteAllNotifications();
+  const markAsReadMutation = useMarkNotificationAsRead();
 
   if (isLoading) {
     return <LoadingState message="Loading notifications..." />;
@@ -44,14 +46,23 @@ export default function Notifications() {
     markAllAsReadMutation.mutate();
   };
 
-  const toggleStar = (id: string) => {
-    toggleStarMutation.mutate(id);
+  const toggleStar = (notificationId: string) => {
+    toggleStarMutation.mutate({ notificationId });
   };
 
-  const filteredNotifications =
-    activeTab === "All"
-      ? notifications
-      : notifications.filter((notification: any) => notification.isStarred);
+  const handleNotificationClick = (notification: any) => {
+    if (!notification.isRead) {
+      markAsReadMutation.mutate({ notificationId: notification.id });
+    }
+  };
+
+  // Filter by search and tab
+  const filteredNotifications = notifications
+    .filter((notification: any) => {
+      if (activeTab === "Starred" && !notification.isStarred) return false;
+      if (search && !notification.message.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
 
   return (
     <div className="pt-16 px-6 md:pt-0">
@@ -100,6 +111,7 @@ export default function Notifications() {
             <button
               className="flex items-center text-gray-400 hover:text-white"
               onClick={markAllAsRead}
+              disabled={markAllAsReadMutation.isPending}
             >
               <span>Mark all as read</span>
               <svg
@@ -121,7 +133,8 @@ export default function Notifications() {
             </button>
             <button
               className="flex items-center text-red-500 hover:text-red-400"
-              onClick={() => {}}
+              // onClick={handleDeleteAll}
+              // disabled={deleteAllMutation.isPending}
             >
               <span>Delete all</span>
               <Trash className="h-4 w-4 ml-2" />
@@ -133,7 +146,8 @@ export default function Notifications() {
           filteredNotifications.map((notification: any) => (
             <div
               key={notification.id}
-              className="flex items-center p-4 border-b border-[#333] hover:bg-[#222]"
+              className="flex items-center p-4 border-b border-[#333] hover:bg-[#222] cursor-pointer"
+              onClick={() => handleNotificationClick(notification)}
             >
               <div className="flex items-center w-full">
                 <div
@@ -144,56 +158,85 @@ export default function Notifications() {
                 <input
                   type="checkbox"
                   className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                  onClick={(e) => e.stopPropagation()}
                 />
                 <button
                   className={`mr-3 ${
                     notification.isStarred ? "text-yellow-500" : "text-gray-500"
                   }`}
-                  onClick={() => toggleStar(notification.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleStar(notification.id);
+                  }}
                 >
-                  <Star className="h-4 w-4" />
+                  <Star className="h-4 w-4" fill={notification.isStarred ? "currentColor" : "none"} />
                 </button>
                 <span
-                  className={`${
+                  className={`flex-1 ${
                     notification.isRead ? "text-gray-400" : "text-white"
                   }`}
                 >
                   {notification.message}
                 </span>
-                <span className="ml-auto text-sm text-gray-500">
+                <span className="text-sm text-gray-500 mr-3">
                   {new Date(notification.createdAt).toLocaleDateString()}
                 </span>
+                <button
+                  className="text-red-500 hover:text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // handleDelete(notification.id);
+                  }}
+                >
+                  <Trash className="h-4 w-4" />
+                </button>
               </div>
             </div>
           ))
         ) : (
           <div className="p-8 text-center text-gray-400">
-            No notifications found
+            {activeTab === "Starred" 
+              ? "No starred notifications" 
+              : "You're all caught up! Keep selling notifications will appear here when something new happens."}
           </div>
         )}
       </div>
 
-      <div className="flex justify-between items-center mt-6 text-sm">
-        <div className="text-gray-400">Result 1 - 10 of 20</div>
-        <div className="flex space-x-2">
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
-            <span className="mr-1">Previous</span>
-          </button>
-          <button className="bg-purple-600 text-white px-3 py-1 rounded-md">
-            1
-          </button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
-            2
-          </button>
-          <button className="text-gray-400 px-3 py-1">...</button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
-            4
-          </button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
-            <span className="mr-1">Next</span>
-          </button>
+      {filteredNotifications.length > 0 && (
+        <div className="flex justify-between items-center mt-6 text-sm">
+          <div className="text-gray-400">
+            Showing {filteredNotifications.length} of {notifications.length}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
+
+
+
+
+
+
+//       <div className="flex justify-between items-center mt-6 text-sm">
+//         <div className="text-gray-400">Result 1 - 10 of 20</div>
+//         <div className="flex space-x-2">
+//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
+//             <span className="mr-1">Previous</span>
+//           </button>
+//           <button className="bg-purple-600 text-white px-3 py-1 rounded-md">
+//             1
+//           </button>
+//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
+//             2
+//           </button>
+//           <button className="text-gray-400 px-3 py-1">...</button>
+//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
+//             4
+//           </button>
+//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
+//             <span className="mr-1">Next</span>
+//           </button>
+//         </div>
+//       </div>
+
