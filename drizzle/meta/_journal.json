@@ -1,10 +1,12 @@
 {
+  "version": "7",
+  "dialect": "postgresql",
   "entries": [
     {
-      "idx": 2,
+      "idx": 0,
       "version": "7",
-      "when": 1767360261596,
-      "tag": "0002_acoustic_screwball",
+      "when": 1767814433551,
+      "tag": "0000_loving_mister_fear",
       "breakpoints": true
     }
   ]

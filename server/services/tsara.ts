@@ -199,9 +199,43 @@ export async function getPaymentLink(id: string) {
   return retrievePaymentLink(id);
 }
 
-// ---- WEBHOOK VERIFICATION ----
-// TODO: Implement webhook signature verification using a cross-platform library (e.g., use 'crypto-js' or run this only in Node.js environments)
-export function verifyWebhookSignature(payload: string, signature: string, secret: string = TSARA_SECRET_KEY): boolean {
-  console.warn('Webhook signature verification is not implemented in Edge runtime.');
-  return true;
+// ---- WEBHOOK VERIFICATION (Node + Edge compatible) ----
+export async function verifyWebhookSignature(
+  payload: string,
+  signature: string,
+  secret: string = TSARA_SECRET_KEY
+): Promise<boolean> {
+  if (typeof crypto?.subtle !== "undefined") {
+    // Edge Runtime (Web Crypto API)
+    try {
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(secret);
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+
+      const sigBuffer = Uint8Array.from(Buffer.from(signature, "hex"));
+      const dataBuffer = encoder.encode(payload);
+
+      const isValid = await crypto.subtle.verify("HMAC", cryptoKey, sigBuffer, dataBuffer);
+      return isValid;
+    } catch (err) {
+      console.error("Edge signature verification failed:", err);
+      return false;
+    }
+  } else {
+    // Node.js Runtime (use native crypto)
+    try {
+      const crypto = await import("crypto");
+      const hash = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+      return hash === signature;
+    } catch (err) {
+      console.error("Node signature verification failed:", err);
+      return false;
+    }
+  }
 }

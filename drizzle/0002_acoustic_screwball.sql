@@ -1,1 +1,0 @@
-ALTER TABLE "product_variants" ALTER COLUMN "product_id" SET NOT NULL;--> statement-breakpoint
