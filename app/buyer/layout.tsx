@@ -4,6 +4,7 @@ import BuyerFooter from '@/components/buyer/footer'
 import BuyerHeader from '@/components/buyer/header'
 import React from 'react'
 import { ProfileProvider } from '@/context/ProfileContext'
+import { ListingsProvider } from '@/context/ListingsContext'
 
 const BuyerPageLayout = ({ children }: { children: React.ReactNode }) => {
   
@@ -14,7 +15,9 @@ const BuyerPageLayout = ({ children }: { children: React.ReactNode }) => {
         <BuyerHeader />
       </div>
       <div className='flex-1 relative z-10'>
+        <ListingsProvider>  
         {children}
+        </ListingsProvider>
       </div>
       <BuyerFooter />
     </main>

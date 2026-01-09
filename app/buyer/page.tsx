@@ -1,8 +1,8 @@
 "use client";
 
-import ExploreAllProducts from './dynamic/explore-all-products';
-import FeaturedBrands from './dynamic/featured-brands';
-import FeaturedCollection from './dynamic/featured-collection';
+import ExploreAllProducts from '@/components/buyer/explore-all-products';
+import FeaturedBrands from '@/components/buyer/featured-brands';
+import FeaturedCollection from '@/components/buyer/featured-collection';
 
 const Homepage = () => {
   return (

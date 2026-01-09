@@ -66,7 +66,9 @@ function validateFile(
   if (!FILE_CONSTRAINTS.allowedTypes.includes(fileType)) {
     return {
       valid: false,
-      error: `File type not allowed. Accepted: ${FILE_CONSTRAINTS.allowedTypes.join(", ")}`,
+      error: `File type not allowed. Accepted: ${FILE_CONSTRAINTS.allowedTypes.join(
+        ", "
+      )}`,
     };
   }
 
@@ -74,7 +76,9 @@ function validateFile(
   if (sizeInBytes > FILE_CONSTRAINTS.maxSize) {
     return {
       valid: false,
-      error: `File size exceeds ${FILE_CONSTRAINTS.maxSize / 1024 / 1024}MB limit`,
+      error: `File size exceeds ${
+        FILE_CONSTRAINTS.maxSize / 1024 / 1024
+      }MB limit`,
     };
   }
 
@@ -137,11 +141,12 @@ export const buyerRouter = createTRPCRouter({
       }
 
       const userEmail = ctx.user?.email;
-      if (!userEmail) { 
-          throw new TRPCError({
-              code: "UNAUTHORIZED",
-              message: "Authenticated user email is missing. Cannot create profile.",
-          });
+      if (!userEmail) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message:
+            "Authenticated user email is missing. Cannot create profile.",
+        });
       }
       try {
         const existingBuyer = await db
@@ -172,6 +177,7 @@ export const buyerRouter = createTRPCRouter({
           email: ctx.user?.email || userEmail,
           country: input.country,
           state: input.state,
+          profilePicture: null,
           dateOfBirth: input.dateOfBirth || null,
           phoneNumber: input.phoneNumber || null,
           createdAt: new Date(),
