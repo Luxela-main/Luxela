@@ -7,9 +7,9 @@ export default function SellersLayout({
   children: React.ReactNode;
 }>) {
   return (
-     <div className="flex min-h-screen">
+     <div className="flex flex-col lg:flex-row lg:min-h-screen">
       <Sidebar />
-      <main className="flex-1 md:ml-0 min-h-screen">
+      <main className="flex-1 ml-0 lg:min-h-screen">
         <div className="p-4 md:p-6 lg:p-8">
           {children}
         </div>

@@ -1,5 +1,5 @@
-// ProductListings.tsx
-import React, { useState } from "react";
+"use client";
+import React, { useState, useMemo } from "react";
 import {
   Search,
   Package,
@@ -7,6 +7,8 @@ import {
   PlusCircle,
   SquarePen,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { ListingType } from "@/types/newListing";
 import SearchBar from "@/components/search-bar";
@@ -38,13 +40,49 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
   const [listingToDelete, setListingToDelete] = useState<any>(null);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
 
-  // Fetch listings to check if any exist
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const { data: listings, isLoading, refetch } = useMyListings();
+  const hasListings = listings && listings.length > 0;
+
+  const filteredListings =
+    listings?.filter((listing: any) => {
+      const matchesTab = listing.type === activeTab;
+      const matchesSearch =
+        listing.title.toLowerCase().includes(search.toLowerCase()) ||
+        listing.category?.toLowerCase().includes(search.toLowerCase());
+      return matchesTab && matchesSearch;
+    }) || [];
+
+  const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedListings = filteredListings.slice(startIndex, endIndex);
+
+  const allSelected =
+    paginatedListings.length > 0 &&
+    paginatedListings.every((listing: any) => selectedItems.has(listing.id));
+
+  const someSelected = paginatedListings.some((listing: any) =>
+    selectedItems.has(listing.id)
+  );
+  React.useEffect(() => {
+    setCurrentPage(1);
+    setSelectedItems(new Set());
+  }, [activeTab, search]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedItems(new Set());
+  };
 
   const deleteMutation = (trpc.listing as any).deleteListing.useMutation({
     onSuccess: () => {
       toastSvc.success("Listing deleted successfully!");
       refetch();
+      setSelectedItems(new Set());
     },
     onError: (error: any) => {
       toastSvc.error(error.message || "Failed to delete listing");
@@ -74,7 +112,26 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
     }
   };
 
-  const hasListings = listings && listings.length > 0;
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set<string>(
+        paginatedListings.map((listing: any) => listing.id as string)
+      );
+      setSelectedItems(allIds);
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
 
   if (isLoading) {
     return (
@@ -83,15 +140,6 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
       </div>
     );
   }
-
-  const filteredListings =
-    listings?.filter((listing: any) => {
-      const matchesTab = listing.type === activeTab;
-      const matchesSearch =
-        listing.title.toLowerCase().includes(search.toLowerCase()) ||
-        listing.category?.toLowerCase().includes(search.toLowerCase());
-      return matchesTab && matchesSearch;
-    }) || [];
 
   return (
     <div className="min-h-screen bg-black text-white px-2 lg:px-6 text-sm max-md:pt-6">
@@ -120,7 +168,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center gap-2 px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
             >
-              <PlusCircle className="w-5 h-5" />
+              <PlusCircle className="w-5 h-5 hidden lg:block" />
               Add Product
             </button>
 
@@ -202,6 +250,22 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
             </button>
           </div>
 
+          {/* Selection info */}
+          {selectedItems.size > 0 && (
+            <div className="mb-4 flex items-center justify-between bg-purple-900/20 border border-purple-700/30 rounded-lg px-4 py-2">
+              <span className="text-sm text-purple-300">
+                {selectedItems.size} item{selectedItems.size !== 1 ? "s" : ""}{" "}
+                selected
+              </span>
+              <button
+                onClick={() => setSelectedItems(new Set())}
+                className="text-sm text-purple-400 hover:text-purple-300 transition"
+              >
+                Clear selection
+              </button>
+            </div>
+          )}
+
           {/* Listings Table */}
           <div className="bg-[#0d0d0d] rounded-lg overflow-x-auto border border-[#1a1a1a]">
             <div className="min-w-[800px]">
@@ -209,7 +273,12 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 bg-transparent"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected && !allSelected;
+                    }}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="mr-3 max-h-5 max-w-5 rounded border-gray-600 text-purple-600 focus:ring-purple-500 bg-transparent cursor-pointer"
                   />
                   <span>Product Name</span>
                 </div>
@@ -238,7 +307,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                   </p>
                 </div>
               ) : (
-                filteredListings.map((listing: any) => (
+                paginatedListings.map((listing: any) => (
                   <div
                     key={listing.id}
                     className="border-b border-[#1a1a1a] last:border-b-0"
@@ -247,7 +316,11 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                       <div className="flex items-center">
                         <input
                           type="checkbox"
-                          className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 bg-transparent"
+                          checked={selectedItems.has(listing.id)}
+                          onChange={(e) =>
+                            handleSelectItem(listing.id, e.target.checked)
+                          }
+                          className="mr-3 min-h-5 min-w-5 rounded border-red-600 text-purple-600 focus:ring-purple-500 bg-transparent cursor-pointer"
                         />
                         <div className="flex items-center gap-2">
                           <span className="text-white capitalize">
@@ -360,6 +433,71 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
               )}
             </div>
           </div>
+
+          {/* Pagination */}
+          {filteredListings.length > 0 && (
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm text-gray-400">
+                Showing {startIndex + 1} to{" "}
+                {Math.min(endIndex, filteredListings.length)} of{" "}
+                {filteredListings.length} results
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-md border border-[#333] hover:bg-[#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`px-3 py-1 rounded-md text-sm transition ${
+                              currentPage === page
+                                ? "bg-purple-600 text-white"
+                                : "border border-[#333] hover:bg-[#1a1a1a] text-gray-400"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      } else if (
+                        page === currentPage - 2 ||
+                        page === currentPage + 2
+                      ) {
+                        return (
+                          <span key={page} className="px-2 text-gray-600">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    }
+                  )}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-md border border-[#333] hover:bg-[#1a1a1a] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         /* Empty State Placeholder */
