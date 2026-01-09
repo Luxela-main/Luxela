@@ -12,7 +12,7 @@ import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
 import CollectionForm from "@/components/sellers/NewListing/CollectionForm";
-
+import { createClient } from "@/utils/supabase/client";
 
 const NewListing: React.FC = () => {
   const router = useRouter();
@@ -288,7 +288,21 @@ const handleSubmitSingle = async () => {
         ? uploadedImageUrls[0]
         : "https://via.placeholder.com/400";
 
+    const supabase = createClient();
+    const {
+    data: { user },
+    } = await supabase.auth.getUser();
+
+    const sellerId = user?.id;
+
+    if (!sellerId) {
+      toastSvc.error("Cannot create listing: seller ID missing.");
+      setIsSubmitting(false);
+      return;
+    }
+
     await createSingleMutation.mutateAsync({
+      sellerId,
       title: formData.name,
       description: formData.description,
       category,
