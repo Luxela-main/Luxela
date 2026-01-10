@@ -137,13 +137,13 @@ export default function MyListings() {
             <Filter className="h-4 w-4 mr-2" />
             <span>Filter</span>
           </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
+          {/*<button
+            onClick={() => //setIsModalOpen(true)}
             className="bg-purple-600 text-white px-4 py-2 rounded-md flex items-center hover:bg-purple-700 transition"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
             <span>Add Product</span>
-          </button>
+          </button>*/}
         </div>
       </div>
 
