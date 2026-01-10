@@ -79,56 +79,10 @@ const FeaturedBrands = () => {
   return (
     <section className="mb-16">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-xl capitalize font-bold text-white">
+        <h2 className="text-xl ml-10 capitalize font-bold text-white">
           Featured Brands
         </h2>
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => scroll("left")}
-            disabled={!canScrollLeft}
-            className={`p-2 rounded-full transition-all ${
-              canScrollLeft
-                ? "bg-[#9872DD] text-white hover:bg-[#8451E1]"
-                : "bg-gray-800 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <button
-            onClick={() => scroll("right")}
-            disabled={!canScrollRight}
-            className={`p-2 rounded-full transition-all ${
-              canScrollRight
-                ? "bg-[#9872DD] text-white hover:bg-[#8451E1]"
-                : "bg-gray-800 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
           <Link
             href="/buyer/brands"
             className="text-sm text-[#9872DD] hover:text-[#8451E1] transition-colors flex items-center gap-1 ml-2"
@@ -142,13 +96,13 @@ const FeaturedBrands = () => {
       <div className="relative">
         <div
           ref={carouselRef}
-          className="py-6 flex gap-6 overflow-x-auto scrollbar-hide transition-all duration-200"
+          className="py-6 ml-24 flex gap-6 overflow-x-auto scrollbar-hide transition-all duration-200"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {brands.map((brand) => (
             <div
               key={brand.brand_name}
-              className="min-w-[320px] md:min-w-[480px] lg:min-w-[600px] bg-[#161616] rounded-[20px] p-8 overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] flex flex-col md:flex-row gap-6"
+              className="min-w-[320px] md:min-w-[480px] lg:min-w-[680px] bg-[#161616] rounded-[20px] p-8 overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] flex flex-col md:flex-row gap-6 border-2 border-gray-800"
             >
               <div className="flex-1 py-8 flex flex-col justify-between">
                 <div>
@@ -161,14 +115,14 @@ const FeaturedBrands = () => {
                 </div>
 
                 <Link href={`/buyer/brand/${brand.slug}`} prefetch={true}>
-                  <button className="cursor-pointer w-full md:max-w-[230px] mt-6 self-start bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white text-sm px-8 py-3 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                  <button className="cursor-pointer w-full md:max-w-[230px] mt-6 self-start bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white text-lg  px-8 py-4 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                     Shop Now
                   </button>
                 </Link>
               </div>
 
               {/* Image */}
-              <div className="flex-1 min-h-[250px] md:min-h-[300px] relative overflow-hidden rounded-lg">
+              <div className="flex-1 min-h-[250px] md:min-h-[300px] relative overflow-hidden rounded">
                 <img
                   src={brand.store_logo}
                   alt={`${brand.brand_name} brand showcase`}

@@ -70,7 +70,7 @@ const ExploreAllProducts = () => {
     <section>
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-xl capitalize font-bold text-white">Explore All</h2>
-        <Link 
+        <Link
           href="/buyer/brands"
           className="text-sm text-[#9872DD] hover:text-[#8451E1] transition-colors flex items-center gap-1"
         >
@@ -82,7 +82,7 @@ const ExploreAllProducts = () => {
       <div className="relative flex justify-end mb-6">
         <button
           onClick={() => setShowSortMenu(!showSortMenu)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#161616] hover:bg-[#1f1f1f] rounded-lg transition-colors text-gray-300 text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[#1A1A1A] hover:bg-[#1f1f1f] rounded-lg transition-colors text-gray-300 text-sm"
         >
           <span>
             Sort by:{" "}
@@ -91,14 +91,13 @@ const ExploreAllProducts = () => {
             </span>
           </span>
           <ChevronDown
-            className={`w-4 h-4 transition-transform ${
-              showSortMenu ? "rotate-180" : ""
-            }`}
+            className={`w-4 h-4 transition-transform ${showSortMenu ? "rotate-180" : ""
+              }`}
           />
         </button>
 
         {showSortMenu && (
-          <div className="absolute right-0 top-full mt-2 w-56 bg-[#161616] border border-gray-800 rounded-lg shadow-xl z-10">
+          <div className="absolute right-0 top-full mt-2 w-56 bg-[#1A1A1A] border border-gray-800 rounded-lg shadow-xl z-10">
             {sortOptions.map((option) => (
               <button
                 key={option.value}
@@ -106,11 +105,10 @@ const ExploreAllProducts = () => {
                   setSortBy(option.value);
                   setShowSortMenu(false);
                 }}
-                className={`w-full text-left px-4 py-3 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                  sortBy === option.value
+                className={`w-full text-left px-4 py-3 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${sortBy === option.value
                     ? "bg-[#9872DD] text-white"
                     : "text-gray-300 hover:bg-[#1f1f1f]"
-                }`}
+                  }`}
               >
                 {option.label}
               </button>
