@@ -5,7 +5,6 @@ import BuyerHeader from '@/components/buyer/header'
 import React from 'react'
 import { ProfileProvider } from '@/context/ProfileContext'
 import { ListingsProvider } from '@/context/ListingsContext'
-
 const BuyerPageLayout = ({ children }: { children: React.ReactNode }) => {
   
   return (   

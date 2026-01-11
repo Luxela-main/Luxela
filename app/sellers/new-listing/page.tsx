@@ -290,6 +290,7 @@ const handleSubmitSingle = async () => {
 
     await createSingleMutation.mutateAsync({
       title: formData.name,
+      type: formData.type,
       description: formData.description,
       category,
       priceCents: Math.round(parseFloat(formData.price) * 100),

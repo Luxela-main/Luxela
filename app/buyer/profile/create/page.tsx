@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toastSvc } from "@/services/toast";
-import { useProfile } from "@/context/ProfileContext"; // Import this
+import { useProfile } from "@/context/ProfileContext"; 
 import {
   uploadImage,
   deleteImage,
@@ -19,7 +19,7 @@ import { X, Upload } from "lucide-react";
 export default function CreateBuyerProfileForm() {
   const router = useRouter();
   const utils = trpc.useUtils();
-  const { refreshProfile } = useProfile(); // Get refresh function
+  const { refreshProfile } = useProfile();
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const pictureInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,12 +27,10 @@ export default function CreateBuyerProfileForm() {
     onSuccess: async () => {
       toastSvc.success("Buyer profile created successfully");
       
-      // Refresh both the profile context and the account details
       await utils.buyer.getAccountDetails.invalidate();
-      refreshProfile(); // Refresh the context
+      refreshProfile(); 
       
-      // Redirect to profile page
-      router.push("/buyer/profile"); // Adjust path as needed
+      router.push("/buyer/profile");
     },
     onError: (error: any) => {
       toastSvc.error(error.message || "Failed to create profile");

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Bell, ChevronDown, Search, ShoppingCart, Menu, X } from "lucide-react";
 import Image from "next/image";
@@ -26,8 +26,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/hooks/useToast";
-
-import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/context/ProfileContext";
 
 const NAVLINKS = [
@@ -49,11 +47,14 @@ const BuyerHeader = () => {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { profile, loading } = useProfile();
 
-  const { profile, loading: profileLoading } = useProfile();
+
+  useEffect(() => {
+  console.log('Header render - user:', user, 'loading:', loading);
+}, [user, loading]);
 
   const username = profile?.username || user?.email?.split("@")[0] || "User";
-
   const userPicture = profile?.profilePicture || "/images/seller/sparkles.svg";
 
   const handleLogout = async () => {
@@ -109,7 +110,6 @@ const BuyerHeader = () => {
             </Link>
           </div>
 
-          {/* Right Actions */}
           <div className="flex items-center gap-2 md:gap-5">
             {/* Desktop Icons */}
             <div className="hidden md:flex items-center gap-3">

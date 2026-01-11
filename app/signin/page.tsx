@@ -40,8 +40,6 @@ function SignInContent() {
     if (success && user) {
       toast.success("Welcome back!");
       resetForm();
-
-      // Optional: role-based redirect if user_metadata.role exists
       const role = user.user_metadata?.role === "seller" ? "seller" : "buyer";
       router.push(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
       return;
