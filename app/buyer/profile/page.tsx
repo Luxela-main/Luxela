@@ -11,6 +11,7 @@ import { validateImageFile } from "@/lib/upload-image";
 import { toastSvc } from "@/services/toast";
 import { Edit } from "lucide-react";
 
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -30,6 +31,10 @@ const ProfilePage = () => {
   const { profile, loading: profileLoading, isInitialized } = useProfile(); 
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
+
+
+  
+
 
   async function compressImage(
     file: File,
@@ -85,10 +90,10 @@ const ProfilePage = () => {
 
   const utils = trpc.useUtils();
 
-  const { data: orderStats, isLoading: statsLoading } =
-    trpc.buyer.getOrderStats.useQuery(undefined, {
-      enabled: !!user && !!profile,
-    });
+  // const { data: orderStats, isLoading: statsLoading } =
+  //   trpc.buyer.getOrderStats.useQuery(undefined, {
+  //     enabled: !!user && !!profile,
+  //   });
 
   const uploadProfilePicMutation =
     trpc.buyer.uploadProfilePicture.useMutation();
@@ -148,6 +153,7 @@ const ProfilePage = () => {
     }
   };
 
+
   if (profileLoading || !isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -156,9 +162,8 @@ const ProfilePage = () => {
     );
   }
 
-  // This will briefly show before redirect, but you can return null if preferred
   if (!profile) {
-    return null; // Or a loading spinner
+    return null; 
   }
 
   const username =

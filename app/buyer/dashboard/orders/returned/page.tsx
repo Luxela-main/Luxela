@@ -1,10 +1,10 @@
 "use client"
 
-import { Breadcrumb } from "@/components/dashboard/breadcrumb"
+import { Breadcrumb } from "@/components/buyer/dashboard/breadcrumb"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import Link from "next/link"
-import { OrderTabs } from "@/components/dashboard/order-tabs"
+import { OrderTabs } from "@/components/buyer/dashboard/order-tabs"
 
 export default function ReturnedOrdersPage() {
   return (

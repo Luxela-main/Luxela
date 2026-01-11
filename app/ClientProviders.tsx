@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode } from "react";
+import React, { ReactNode, useState } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
@@ -9,7 +9,6 @@ import { httpBatchLink } from "@trpc/client";
 import { createClient } from "@/utils/supabase/client";
 import "react-toastify/dist/ReactToastify.css";
 
-// Dynamically import ToastContainer to prevent SSR issues
 const ToastContainer = dynamic(
   async () => {
     const mod = await import("react-toastify");
@@ -18,7 +17,6 @@ const ToastContainer = dynamic(
   { ssr: false }
 );
 
-// Create a fresh QueryClient
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -30,7 +28,6 @@ function createQueryClient() {
   });
 }
 
-// Singleton QueryClient in browser
 let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient() {
@@ -44,24 +41,25 @@ interface ClientProvidersProps {
 }
 
 export default function ClientProviders({ children }: ClientProvidersProps) {
-  const queryClient = getQueryClient();
+  const [queryClient] = useState(() => createQueryClient());
+  
+  const [trpcClient] = useState(() =>
+    trpc.createClient({
+      links: [
+        httpBatchLink({
+          url: `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`,
+          async headers() {
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
 
-  // Setup TRPC client
-  const trpcClient = trpc.createClient({
-    links: [
-      httpBatchLink({
-        url: `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`,
-        async headers() {
-          const supabase = createClient();
-          const { data: { session } } = await supabase.auth.getSession();
-
-          return {
-            authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
-          };
-        },
-      }),
-    ],
-  });
+            return {
+              authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
+            };
+          },
+        }),
+      ],
+    })
+  );
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
@@ -69,14 +67,13 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
         <AuthProvider>
           {children}
 
-          {/* Single ToastContainer */}
           <ToastContainer
             position="top-right"
-            autoClose={3000}      // default 3s
+            autoClose={3000}      
             hideProgressBar={false}
             newestOnTop
             closeOnClick
-            pauseOnHover={false}   // ensure autoClose works
+            pauseOnHover={false}   
             pauseOnFocusLoss={false}
             draggable
             theme="colored"

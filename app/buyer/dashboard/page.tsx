@@ -2,9 +2,9 @@
 
 import React from "react";
 import withAuth from "../../../functions/hoc/withAuth";
-import { AccountDetails } from "@/components/dashboard/account-details";
-import { BillingAddress } from "@/components/dashboard/billing-address";
-import { Breadcrumb } from "@/components/dashboard/breadcrumb";
+import { AccountDetails } from "@/components/buyer/dashboard/account-details";
+import { BillingAddress } from "@/components/buyer/dashboard/billing-address";
+import { Breadcrumb } from "@/components/buyer/dashboard/breadcrumb";
 
 function Dashboard() {
   return (

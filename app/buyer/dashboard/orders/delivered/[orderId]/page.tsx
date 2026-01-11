@@ -1,6 +1,6 @@
-import { Breadcrumb } from "@/components/dashboard/breadcrumb"
+import { Breadcrumb } from "@/components/buyer/dashboard/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { OrderTabs } from "@/components/dashboard/order-tabs"
+import { OrderTabs } from "@/components/buyer/dashboard/order-tabs"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
