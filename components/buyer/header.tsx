@@ -50,10 +50,6 @@ const BuyerHeader = () => {
   const { profile, loading } = useProfile();
 
 
-  useEffect(() => {
-  console.log('Header render - user:', user, 'loading:', loading);
-}, [user, loading]);
-
   const username = profile?.username || user?.email?.split("@")[0] || "User";
   const userPicture = profile?.profilePicture || "/images/seller/sparkles.svg";
 

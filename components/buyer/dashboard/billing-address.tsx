@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card } from "../ui/Card"
+import { Card } from "../../ui/Card"
 import { useProfile } from "@/context/ProfileContext"
 import { useAuth } from "@/context/AuthContext"
 import { useState } from "react"

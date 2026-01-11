@@ -6,6 +6,20 @@ import { User, ShoppingBag, Heart, Bell, Settings, LogOut, Menu, X } from "lucid
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
+import { useAuth } from "@/context/AuthContext"
+import { useToast } from "@/components/hooks/useToast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface SidebarProps {
   activeItem?: string
@@ -14,6 +28,20 @@ interface SidebarProps {
 export function Sidebar({ activeItem = "my-account" }: SidebarProps) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [open, setOpen] = useState(false)
+  const { logout } = useAuth()
+  const toast = useToast()
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      toast.success("You have been successfully logged out.")
+    } catch (err) {
+      toast.error("Something went wrong while logging out.")
+    } finally {
+      setOpen(false)
+    }
+  }
 
   const derivedActive = (() => {
     if (!pathname) return activeItem
@@ -92,13 +120,38 @@ export function Sidebar({ activeItem = "my-account" }: SidebarProps) {
         </nav>
 
         <div className="p-4">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-[#1a1a1a]"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Log out</span>
-          </Button>
+          <AlertDialog open={open} onOpenChange={setOpen}>
+            <AlertDialogOverlay />
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-[#1a1a1a]"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Log out</span>
+              </Button>
+            </AlertDialogTrigger>
+
+            <AlertDialogContent className="bg-[#0E0E0E] border border-[#2B2B2B] text-white">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-400">
+                  Are you sure you want to log out of your account?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-[#141414] text-white border border-[#2B2B2B] hover:bg-[#1a1a1a]">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Log out
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </aside>
     </>

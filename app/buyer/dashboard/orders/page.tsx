@@ -1,6 +1,6 @@
 "use client"
 
-import { Breadcrumb } from "@/components/dashboard/breadcrumb"
+import { Breadcrumb } from "@/components/buyer/dashboard/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, ChevronLeft, ChevronRight } from "lucide-react"

@@ -1,4 +1,4 @@
-import { Card } from "../ui/Card"
+import { Card } from "../../ui/Card"
 import { useProfile } from "@/context/ProfileContext"
 import { useAuth } from "@/context/AuthContext"
 

@@ -1,6 +1,6 @@
 import BuyerFooter from "@/components/buyer/footer";
-import { Header } from "@/components/dashboard/header";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { Header } from "@/components/buyer/dashboard/header";
+import { Sidebar } from "@/components/buyer/dashboard/sidebar";
 import type React from "react";
 
 interface LayoutProps {
