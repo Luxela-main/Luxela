@@ -1,13 +1,27 @@
+"use client";
+
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * HOOK: Fetch the current user's cart
  * Corresponds to: getCart
  */
 export const useGetCart = () => {
+  const { user, loading: authLoading } = useAuth();
+
   return trpc.cart.getCart.useQuery(undefined, {
+    // ONLY run this query if user exists AND auth is done loading
+    enabled: !!user && !authLoading,
+
     staleTime: 1000 * 60 * 5, // 5 minutes
+
+    // Prevents constant retries on 401/error
+    retry: false,
+
+    // Optional: keeps the console cleaner during dev
+    refetchOnWindowFocus: false,
   });
 };
 

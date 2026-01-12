@@ -76,7 +76,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         price: item.unitPriceCents / 100,
       };
     });
-    console.log("Enriched Cart Items:", enrichedItems);
     // Sort by listingId so items don't swap positions on update
     return enrichedItems.sort((a, b) => a.listingId.localeCompare(b.listingId));
   }, [data?.items, listings]);

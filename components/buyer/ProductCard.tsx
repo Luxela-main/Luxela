@@ -55,11 +55,12 @@ export default function ProductCard({ product }: { product: Listing }) {
       setIsAdding(false);
     }
   };
+  const LUXELA_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
 
   const isValidImage =
     typeof product.image === "string" &&
     product.image.length > 0 &&
-    product.image !== "https://via.placeholder.com/400";
+    product.image !== LUXELA_PLACEHOLDER;
 
   // Parse Colors
   let colors: Array<{ colorName: string; colorHex: string }> = [];
