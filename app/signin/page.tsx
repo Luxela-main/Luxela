@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
 import GoogleSignInButton from "@/components/auth/google";
 import * as authActions from "@/app/actions/auth";
+import { useAuth } from "@/context/AuthContext";
 
 type SignInFormValues = {
   email: string;
@@ -25,33 +26,45 @@ function SignInContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
+
+
+ const { setUser } = useAuth(); // Get setUser from context
   const router = useRouter();
   const toast = useToast();
 
   const handleSignIn = async (
-  values: SignInFormValues,
-  { setSubmitting, resetForm }: any
-) => {
-  try {
-    const { email, password } = values;
+    values: SignInFormValues,
+    { setSubmitting, resetForm }: any
+  ) => {
+    try {
+      const { email, password } = values;
 
-    const { success, error, user } = await authActions.signinAction(email, password);
+      const { success, error, user } = await authActions.signinAction(email, password);
 
-    if (success && user) {
-      toast.success("Welcome back!");
-      resetForm();
-      const role = user.user_metadata?.role === "seller" ? "seller" : "buyer";
-      router.push(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
-      return;
-    }
+      if (success && user) {
+        // Set user in context BEFORE redirecting
+        setUser(user);
+        
+        toast.success("Welcome back!");
+        resetForm();
+        
+        const role = user.user_metadata?.role === "seller" ? "seller" : "buyer";
+        
+        // Tiny delay to ensure state updates
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        router.push(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
+        return;
+      }
 
-    // Handle unverified email
-    if (error?.toLowerCase().includes("not verified")) {
-      setUnverifiedEmail(email);
-      setDialogOpen(true);
-    } else {
-      toast.error(error || "Invalid email or password");
-    }
+      // Handle unverified email
+      if (error?.toLowerCase().includes("not verified")) {
+        setUnverifiedEmail(email);
+        setDialogOpen(true);
+      } else {
+        toast.error(error || "Invalid email or password");
+      }
+    
   } catch (err: unknown) {
     if (err instanceof Error) {
       toast.error(err.message || "Sign-in failed unexpectedly");
