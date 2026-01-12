@@ -19,11 +19,15 @@ interface ProfileData {
   fullName: string;
   email: string;
   profilePicture: string | null;
-  dateOfBirth?: Date | string | null; 
+  dateOfBirth?: string | null; 
   phoneNumber?: string | null;        
-  country?: string | null;            
-  state?: string | null;  
-    billingAddress?: BillingAddress | null;             
+  country?: string;            
+  state?: string;  
+  billingAddress?: BillingAddress | null;
+  name?: string;
+  city?: string;
+  address?: string;
+  postalCode?: string;
 }
 
 interface ProfileContextType {

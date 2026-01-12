@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/hooks/useToast";
 import { useProfile } from "@/context/ProfileContext";
+import { useCartState } from "@/modules/cart/context";
 
 const NAVLINKS = [
   { name: "Home", href: "/buyer" },
@@ -48,7 +49,8 @@ const BuyerHeader = () => {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { profile, loading } = useProfile();
-
+  const { cart } = useCartState();
+  const itemCount = cart?.items?.length || 0;
 
   const username = profile?.username || user?.email?.split("@")[0] || "User";
   const userPicture = profile?.profilePicture || "/images/seller/sparkles.svg";
@@ -115,19 +117,32 @@ const BuyerHeader = () => {
               <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out">
                 <Bell stroke="#DCDCDC" className="size-6" />
               </button>
-              {user && (
-                <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out">
+              {/* Desktop: Cart Icon */}
+
+              <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
+                <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group">
                   <ShoppingCart stroke="#DCDCDC" className="size-6" />
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-[#0E0E0E]">
+                      {itemCount}{" "}
+                    </span>
+                  )}
                 </button>
-              )}
+              </Link>
             </div>
 
-            {/* Mobile: Cart Icon (only when signed in) */}
-            {user && (
-              <button className="md:hidden cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121]">
-                <ShoppingCart stroke="#DCDCDC" className="size-5" />
+            {/* Mobile: Cart Icon */}
+
+            <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
+              <button className="md:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121]">
+                <ShoppingCart stroke="#DCDCDC" className="size-6" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full">
+                    {itemCount}{" "}
+                  </span>
+                )}
               </button>
-            )}
+            </Link>
 
             {/* User Dropdown or Sign In */}
             {user ? (

@@ -1,137 +1,120 @@
-import { api } from "@/lib/api";
-import { queryClient } from "@/lib/apiClient";
-import {
-  AddToCartRequest,
-  ApplyDiscountRequest,
-  CartResponse,
-  CheckoutRequest,
-  CheckoutResponse,
-  UpdateCartItemRequest,
-} from "./model";
+import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+/**
+ * HOOK: Fetch the current user's cart
+ * Corresponds to: getCart
+ */
 export const useGetCart = () => {
-  const queryClient = useQueryClient();
-  return useQuery<CartResponse>({
-    queryKey: ["cart"],
-    queryFn: async () => {
-      const res = await api.get("/docs/cart");
-      console.log("Cart data:", res?.data);
-      return res?.data;
-    },
+  return trpc.cart.getCart.useQuery(undefined, {
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
 
+/**
+ * HOOK: Add an item to the cart
+ * Corresponds to: addToCart
+ */
 export const useAddToCart = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationKey: ["add-to-cart"],
-    mutationFn: async (data: AddToCartRequest) => {
-      const res = await api.post("/docs/cart/add", data);
-      return res?.data;
-    },
+  const utils = trpc.useContext();
+
+  return trpc.cart.addToCart.useMutation({
     onSuccess: () => {
-      toastSvc.success("Item added to cart successfully.");
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      // toastSvc.success("Item added to cart successfully.");
+      utils.cart.getCart.invalidate();
     },
-    onError: (error: Error) => {
-      toastSvc.error(`Failed to add item to cart: ${error?.message}`);
+    onError: (error) => {
+      toastSvc.error(error.message || "Failed to add item to cart");
     },
   });
 };
 
+/**
+ * HOOK: Set or Update quantity
+ * Corresponds to: setItemQuantity
+ */
 export const useUpdateCartItem = () => {
-  const queryClient = useQueryClient();
+  const utils = trpc.useContext();
 
-  return useMutation({
-    mutationKey: ["update-cart-item"],
-    mutationFn: async (data: UpdateCartItemRequest) => {
-      const res = await api.patch("/docs/cart/item", data);
-      return res?.data;
-    },
+  return trpc.cart.setItemQuantity.useMutation({
     onSuccess: () => {
       toastSvc.success("Cart updated successfully.");
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      utils.cart.getCart.invalidate();
     },
-    onError: (error: Error) => {
-      toastSvc.error(`Failed to update cart: ${error?.message}`);
+    onError: (error) => {
+      toastSvc.error(error.message || "Failed to update cart");
     },
   });
 };
 
+/**
+ * HOOK: Remove a specific item from the cart
+ * Corresponds to: removeItem
+ */
 export const useRemoveCartItem = () => {
-  const queryClient = useQueryClient();
+  const utils = trpc.useContext();
 
-  return useMutation({
-    mutationKey: ["remove-cart-item"],
-    mutationFn: async (listingId: string) => {
-      const res = await api.delete(`/docs/cart/item?listingId=${listingId}`);
-      return res?.data;
-    },
+  return trpc.cart.removeItem.useMutation({
     onSuccess: () => {
       toastSvc.success("Item removed from cart.");
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      utils.cart.getCart.invalidate();
     },
-    onError: (error: Error) => {
-      toastSvc.error(`Failed to remove item: ${error?.message}`);
+    onError: (error) => {
+      toastSvc.error(error.message || "Failed to remove item");
     },
   });
 };
 
+/**
+ * HOOK: Clear all items and discounts
+ * Corresponds to: clearCart
+ */
 export const useClearCart = () => {
-  const queryClient = useQueryClient();
+  const utils = trpc.useContext();
 
-  return useMutation({
-    mutationKey: ["clear-cart"],
-    mutationFn: async () => {
-      const res = await api.delete("/docs/cart/clear");
-      return res?.data;
-    },
+  return trpc.cart.clearCart.useMutation({
     onSuccess: () => {
       toastSvc.success("Cart cleared successfully.");
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      utils.cart.getCart.invalidate();
     },
-    onError: (error: Error) => {
-      toastSvc.error(`Failed to clear cart: ${error?.message}`);
+    onError: (error) => {
+      toastSvc.error(error.message || "Failed to clear cart");
     },
   });
 };
 
+/**
+ * HOOK: Apply a discount code
+ * Corresponds to: applyDiscount
+ */
 export const useApplyDiscount = () => {
-  const queryClient = useQueryClient();
+  const utils = trpc.useContext();
 
-  return useMutation({
-    mutationKey: ["apply-discount"],
-    mutationFn: async (data: ApplyDiscountRequest) => {
-      const res = await api.post("/docs/cart/discount", data);
-      return res?.data;
-    },
+  return trpc.cart.applyDiscount.useMutation({
     onSuccess: () => {
       toastSvc.success("Discount applied successfully.");
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      utils.cart.getCart.invalidate();
     },
-    onError: (error: Error) => {
-      toastSvc.error(`Failed to apply discount: ${error?.message}`);
+    onError: (error) => {
+      toastSvc.error(error.message || "Invalid discount code");
     },
   });
 };
 
+/**
+ * HOOK: Process checkout
+ * Corresponds to: checkout
+ */
 export const useCheckout = () => {
-  const queryClient = useQueryClient();
+  const utils = trpc.useContext();
 
-  return useMutation<CheckoutResponse, Error, CheckoutRequest>({
-    mutationKey: ["checkout"],
-    mutationFn: async (data: CheckoutRequest) => {
-      const res = await api.post("/docs/checkout", data);
-      return res?.data;
-    },
+  return trpc.cart.checkout.useMutation({
     onSuccess: () => {
       toastSvc.success("Order placed successfully!");
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      utils.cart.getCart.invalidate();
     },
-    onError: (error: Error) => {
-      toastSvc.error(`Checkout failed: ${error?.message}`);
+    onError: (error) => {
+      toastSvc.error(error.message || "Checkout failed");
     },
   });
 };
