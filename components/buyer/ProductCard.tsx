@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Listing } from "@/types/listing";
 import { ShoppingCart, Images, Check, Loader2, LogIn } from "lucide-react";
 import { useCartState } from "@/modules/cart/context";
@@ -16,6 +16,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// Fallback map for when colorHex is empty in the database
+const UI_COLOR_MAP: { [key: string]: string } = {
+  red: "#ef4444",
+  green: "#22c55e",
+  blue: "#3b82f6",
+  yellow: "#eab308",
+  pink: "#ec4899",
+  purple: "#a855f7",
+  orange: "#f97316",
+  black: "#000000",
+  white: "#ffffff",
+  brown: "#78350f",
+  gray: "#6b7280",
+};
+
 export default function ProductCard({ product }: { product: Listing }) {
   const { addToCart } = useCartState();
   const { user } = useAuth();
@@ -28,11 +43,9 @@ export default function ProductCard({ product }: { product: Listing }) {
   const business = product.sellers?.seller_business?.[0];
 
   const handleQuickAdd = async (e: React.MouseEvent) => {
-    // Prevent the Link from routing to the product detail page
     e.preventDefault();
     e.stopPropagation();
 
-    // 1. Check if user is logged in
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -45,8 +58,6 @@ export default function ProductCard({ product }: { product: Listing }) {
       await addToCart(product.id, 1);
       setAdded(true);
       toastSvc.success(`${product.title} added to cart`);
-      
-      // Reset success checkmark after 2 seconds
       setTimeout(() => setAdded(false), 2000);
     } catch (err) {
       console.error("Failed to add to cart:", err);
@@ -55,6 +66,7 @@ export default function ProductCard({ product }: { product: Listing }) {
       setIsAdding(false);
     }
   };
+
   const LUXELA_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
 
   const isValidImage =
@@ -62,13 +74,21 @@ export default function ProductCard({ product }: { product: Listing }) {
     product.image.length > 0 &&
     product.image !== LUXELA_PLACEHOLDER;
 
-  // Parse Colors
-  let colors: Array<{ colorName: string; colorHex: string }> = [];
-  try {
-    colors = product.colors_available ? JSON.parse(product.colors_available) : [];
-  } catch (e) {
-    colors = [];
-  }
+  // Optimized Color Parsing & Mapping
+  const colors = useMemo(() => {
+    if (!product.colors_available) return [];
+    try {
+      // Handles JSON: "[{"colorName":"red","colorHex":""}]"
+      const parsed = JSON.parse(product.colors_available);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      // Handles raw string: "red,green,blue"
+      return product.colors_available.split(',').map(c => ({
+        colorName: c.trim(),
+        colorHex: ""
+      }));
+    }
+  }, [product.colors_available]);
 
   return (
     <>
@@ -89,7 +109,6 @@ export default function ProductCard({ product }: { product: Listing }) {
               </div>
             )}
 
-            {/* Limited Edition Badge */}
             {product.limited_edition_badge === "show_badge" && (
               <div className="absolute top-3 left-3 bg-purple-600 px-3 py-1 rounded shadow-md z-10">
                 <span className="text-[#f2f2f2] text-[10px] font-black uppercase tracking-widest">
@@ -101,7 +120,6 @@ export default function ProductCard({ product }: { product: Listing }) {
 
           {/* Content Section */}
           <div className="p-4 bg-black">
-            {/* Brand Name */}
             <p className="text-[#acacac] text-[11px] font-bold uppercase tracking-wider mb-1">
               {business?.brand_name || "Luxela Exclusive"}
             </p>
@@ -113,17 +131,33 @@ export default function ProductCard({ product }: { product: Listing }) {
               </h3>
               
               {colors.length > 0 && (
-                <div className="flex -space-x-1 mt-1">
-                  {colors.slice(0, 3).map((color, i) => (
-                    <div
-                      key={i}
-                      className="w-3 h-3 rounded-full border border-black shadow-sm"
-                      style={{ backgroundColor: color.colorHex }}
-                      title={color.colorName}
-                    />
-                  ))}
+                <div className="flex items-center -space-x-1.5 mt-1">
+                  {colors.slice(0, 3).map((color, i) => {
+                    const name = color.colorName?.toLowerCase().trim() || "";
+                    const hexFromDb = color.colorHex?.startsWith("#") ? color.colorHex : null;
+                    const hexFromMap = UI_COLOR_MAP[name];
+                    const finalColor = hexFromDb || hexFromMap;
+
+                    return (
+                      <div
+                        key={`${product.id}-${i}`}
+                        title={color.colorName}
+                        className={`
+                          flex items-center justify-center rounded-full border border-black shadow-sm transition-transform hover:z-10
+                          ${finalColor ? "w-3.5 h-3.5" : "w-5 h-5 bg-zinc-800"}
+                        `}
+                        style={{ backgroundColor: finalColor || undefined }}
+                      >
+                        {!finalColor && (
+                          <span className="text-[8px] text-white font-bold uppercase">
+                            {name.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                   {colors.length > 3 && (
-                    <span className="text-[9px] text-gray-500 pl-1">+{colors.length - 3}</span>
+                    <span className="text-[9px] text-gray-500 pl-2">+{colors.length - 3}</span>
                   )}
                 </div>
               )}
@@ -156,7 +190,7 @@ export default function ProductCard({ product }: { product: Listing }) {
               >
                 {isAdding ? (
                   <Loader2 className="w-4 h-4 text-white animate-spin" />
-                ) : added  ? (
+                ) : added ? (
                   <Check className="w-4 h-4 text-white animate-in zoom-in" />
                 ) : (
                   <ShoppingCart className="w-4 h-4 text-white" />

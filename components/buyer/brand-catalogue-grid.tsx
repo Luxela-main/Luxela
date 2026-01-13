@@ -115,7 +115,7 @@ const BrandCatalogGrid = () => {
       <div className="px-6 py-8 layout max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">All Brands</h1>
+            <h1 className="text-xl font-medium text-white">All Brands</h1>
             {selectedCategories.length > 0 && (
               <p className="text-gray-400 text-sm mt-1">
                 Filtered by {selectedCategories.length} {selectedCategories.length === 1 ? 'category' : 'categories'}
@@ -246,7 +246,7 @@ const BrandCatalogGrid = () => {
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   )}
-                  <h2 className="text-xl font-bold text-white">{brandSection.brandName}</h2>
+                  <h2 className="text-lg font-medium text-white">{brandSection.brandName}</h2>
                   <span className="text-sm text-gray-400">({brandSection.products.length} items)</span>
                 </div>
                 <Link 
