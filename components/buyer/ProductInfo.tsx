@@ -199,7 +199,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
         <button
           onClick={handleBuyNow}
           disabled={addingToCart}
-          className="w-full text-sm bg-purple-500 hover:bg-purple-600 text-white py-4 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full cursor-pointer text-sm bg-purple-500 hover:bg-purple-600 text-white py-4 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {addingToCart ? (
             "Processing..."
@@ -227,7 +227,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
         <button
           onClick={handleAddToCart}
           disabled={addingToCart}
-          className="w-full px-6 py-4 bg-[#161616] hover:bg-[#1f1f1f] rounded-xl transition-all border border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center group"
+          className="w-full px-6 cursor-pointer py-4 bg-[#161616] hover:bg-[#1f1f1f] rounded-xl transition-all border border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center group"
         >
           {addedToCart ? (
             <span className="text-sm text-green-500 flex items-center gap-2">

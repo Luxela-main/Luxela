@@ -115,7 +115,7 @@ export default function BrandPage({
   }
 
   return (
-    <div className="bg-black min-h-screen px-6">
+    <div className="bg-black min-h-screen px-6 lg:px-10">
       <header>
         {/* Breadcrumb */}
         <div className="w-fit flex items-center gap-2 my-10 text-sm text-[#858585]">

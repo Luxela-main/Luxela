@@ -148,7 +148,7 @@ const BuyerHeader = () => {
             {user ? (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 text-xs md:text-sm text-[#F2F2F2] px-2 md:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a]">
+                  <button className="flex cursor-pointer items-center gap-2 text-xs md:text-sm text-[#F2F2F2] px-2 md:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a]">
                     <div className="size-7 md:size-8 overflow-hidden rounded-full">
                       <Image
                         src={userPicture}
@@ -222,7 +222,7 @@ const BuyerHeader = () => {
               </DropdownMenu>
             ) : (
               <Link href="/signin">
-                <button className="flex items-center gap-2 text-xs md:text-sm text-[#F2F2F2] px-4 md:px-6 py-2 bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] rounded-[4px] hover:bg-[#8662cc] transition-colors duration-300 ease-in-out">
+                <button className="flex cursor-pointer items-center gap-2 text-xs md:text-sm text-[#F2F2F2] px-4 md:px-6 py-2 bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] rounded-[4px] hover:bg-[#8662cc] transition-colors duration-300 ease-in-out">
                   Sign In
                 </button>
               </Link>

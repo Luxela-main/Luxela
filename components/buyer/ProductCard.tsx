@@ -146,7 +146,7 @@ export default function ProductCard({ product }: { product: Listing }) {
                 onClick={handleQuickAdd}
                 disabled={isAdding}
                 className={`
-                  relative flex items-center justify-center p-3 rounded-xl transition-all duration-300
+                  relative flex cursor-pointer items-center justify-center p-3 rounded-xl transition-all duration-300
                   ${added 
                     ? "bg-green-500 scale-105" 
                     : "bg-purple-600 hover:bg-purple-500 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
@@ -156,7 +156,7 @@ export default function ProductCard({ product }: { product: Listing }) {
               >
                 {isAdding ? (
                   <Loader2 className="w-4 h-4 text-white animate-spin" />
-                ) : added ? (
+                ) : added  ? (
                   <Check className="w-4 h-4 text-white animate-in zoom-in" />
                 ) : (
                   <ShoppingCart className="w-4 h-4 text-white" />
