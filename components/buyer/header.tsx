@@ -258,7 +258,7 @@ const BuyerHeader = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-3">
+              {/* <div className="space-y-3">
                 <button className="w-full flex items-center gap-3 text-[#DCDCDC] text-sm py-3 px-4 rounded-[4px] shadow-[inset_0_0_0_1px_#212121]">
                   <Search stroke="#DCDCDC" className="size-5" />
                   <span>Search</span>
@@ -267,7 +267,7 @@ const BuyerHeader = () => {
                   <Bell stroke="#DCDCDC" className="size-5" />
                   <span>Notifications</span>
                 </button>
-              </div>
+              </div> */}
 
               {/* User Menu (when signed in) */}
               {user && (
