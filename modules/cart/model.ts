@@ -7,7 +7,7 @@ export type CartItemType = {
   currency: string;
   name?: string;
   price?: number;
-  image: any;
+  image?: any;
 };
 
 export type CartType = {
@@ -18,10 +18,10 @@ export type CartType = {
 export type DiscountType = {
   id: string;
   code: string;
-  percentOff: number;
-  amountOffCents: number;
+ percentOff?: number | null;      
+  amountOffCents?: number | null;   
   active: boolean;
-  expiresAt: string;
+  expiresAt?: string | Date | null;
 };
 
 export type CartResponse = {

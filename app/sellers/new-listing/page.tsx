@@ -282,11 +282,12 @@ const handleSubmitSingle = async () => {
         }
       }
     }
+  const LUXELA_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
 
     const mainImageUrl =
       uploadedImageUrls.length > 0
         ? uploadedImageUrls[0]
-        : "https://via.placeholder.com/400";
+        : LUXELA_PLACEHOLDER;
 
     const supabase = createClient();
     const {

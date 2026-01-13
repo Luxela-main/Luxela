@@ -137,11 +137,11 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
               {/* Helpful Buttons */}
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#9872DD] transition-colors">
-                  <ThumbsUp className="w-4 h-4" />
+                <button className="flex items-center gap-2 cursor-pointer text-sm text-gray-400 hover:text-[#9872DD] transition-colors">
+                  <ThumbsUp className="w-4 h-4 " />
                   <span>{review.helpful}</span>
                 </button>
-                <button className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors">
+                <button className="flex items-center cursor-pointer gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors">
                   <ThumbsDown className="w-4 h-4" />
                   <span>{review.notHelpful}</span>
                 </button>

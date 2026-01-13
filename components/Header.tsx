@@ -146,7 +146,7 @@ export default function Header() {
               </div>
 
               {/* Navigation arrows */}
-              <button
+              {/* <button
                 onClick={() => setCurrentSlide((prev) => (prev - 1 + images.length) % images.length)}
                 className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#8451E1] to-[#9872DD] flex items-center justify-center text-[#8451E1] hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#8451E1]/50"
                 aria-label="Previous slide"
@@ -163,7 +163,7 @@ export default function Header() {
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
+              </button> */}
             </div>
 
             <div className="mt-8 px-8">

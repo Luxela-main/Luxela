@@ -12,7 +12,7 @@ import {
   orders,
   listings,
 } from "../db/schema";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -508,34 +508,69 @@ export const buyerRouter = createTRPCRouter({
         const buyer = await getBuyer(userId);
         const offset = (input.page - 1) * input.limit;
 
-        const [addresses, totalResult] = await Promise.all([
-          db
-            .select()
-            .from(buyerBillingAddress)
-            .where(eq(buyerBillingAddress.buyerId, buyer.id))
-            .limit(input.limit)
-            .offset(offset),
-          db
-            .select({ count: (db as any).fn.count().as("count") })
-            .from(buyerBillingAddress)
-            .where(eq(buyerBillingAddress.buyerId, buyer.id)),
-        ]);
+        // const [addresses, totalResult] = await Promise.all([
+        //   db
+        //     .select()
+        //     .from(buyerBillingAddress)
+        //     .where(eq(buyerBillingAddress.buyerId, buyer.id))
+        //     .limit(input.limit)
+        //     .offset(offset),
+        //   db
+        //     .select({ count: (db as any).fn.count().as("count") })
+        //     .from(buyerBillingAddress)
+        //     .where(eq(buyerBillingAddress.buyerId, buyer.id)),
+        // ]);
 
-        const total = totalResult[0]?.count || 0;
+// HI, THIS IS TOLU, THIS WORKED SO I AM LEAVING IT AS IS NOW, YOU CAN CHECK AND CLEAN UP LATER IF NEEDED
+// Inside getBillingAddresses query
+const [addresses, totalResult] = await Promise.all([
+  db
+    .select()
+    .from(buyerBillingAddress)
+    .where(eq(buyerBillingAddress.buyerId, buyer.id))
+    .limit(input.limit)
+    .offset(offset),
+  // Changed this line to use a more direct SQL count approach
+  db.execute(sql`SELECT count(*) as count FROM ${buyerBillingAddress} WHERE buyer_id = ${buyer.id}`)
+]);
 
-        return {
-          data: addresses.map((a) => ({
-            id: a.id,
-            houseAddress: a.houseAddress,
-            city: a.city,
-            postalCode: a.postalCode,
-            isDefault: a.isDefault,
-          })),
-          total,
-          page: input.page,
-          limit: input.limit,
-          totalPages: Math.ceil(total / input.limit),
-        };
+// Most reliable way to extract count across different SQL drivers:
+const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+const total = Number(rawCount);
+
+return {
+  data: (addresses || []).map((a) => ({
+    id: a.id,
+    houseAddress: a.houseAddress,
+    city: a.city,
+    postalCode: a.postalCode,
+    isDefault: a.isDefault,
+  })),
+  total,
+  page: input.page,
+  limit: input.limit,
+  totalPages: Math.ceil(total / input.limit) || 1,
+};
+
+
+
+
+
+        // const total = totalResult[0]?.count || 0;
+
+        // return {
+        //   data: addresses.map((a) => ({
+        //     id: a.id,
+        //     houseAddress: a.houseAddress,
+        //     city: a.city,
+        //     postalCode: a.postalCode,
+        //     isDefault: a.isDefault,
+        //   })),
+        //   total,
+        //   page: input.page,
+        //   limit: input.limit,
+        //   totalPages: Math.ceil(total / input.limit),
+        // };
       } catch (err: any) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",

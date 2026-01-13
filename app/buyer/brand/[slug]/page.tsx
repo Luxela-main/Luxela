@@ -8,12 +8,24 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-type SortOption = "newest" | "oldest" | "price-low" | "price-high" | "name-az" | "name-za";
+type SortOption =
+  | "newest"
+  | "oldest"
+  | "price-low"
+  | "price-high"
+  | "name-az"
+  | "name-za";
 
-export default function BrandPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function BrandPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = use(params);
   const { listings, loading, error } = useListings();
-  const [activeTab, setActiveTab] = useState<"products" | "collections">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "collections">(
+    "products"
+  );
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [showSortMenu, setShowSortMenu] = useState(false);
 
@@ -21,34 +33,54 @@ export default function BrandPage({ params }: { params: Promise<{ slug: string }
     return listings.filter((listing) => {
       const business = listing.sellers?.seller_business?.[0];
       const sellerId = listing.seller_id;
-      
+
       // Check if slug matches the ID
       if (sellerId === slug) return true;
-      
-      const businessSlug = business?.brand_name?.toLowerCase().replace(/\s+/g, '-');
+
+      const businessSlug = business?.brand_name
+        ?.toLowerCase()
+        .replace(/\s+/g, "-");
       return businessSlug === slug;
     });
   }, [listings, slug]);
 
   const business = brandListings[0]?.sellers?.seller_business?.[0];
   const products = brandListings.filter((listing) => listing.type === "single");
-  const collections = brandListings.filter((listing) => listing.type === "collection");
+  const collections = brandListings.filter(
+    (listing) => listing.type === "collection"
+  );
 
   const sortItems = (items: any[]) => {
     const sorted = [...items];
     switch (sortBy) {
-      case "newest": return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      case "oldest": return sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      case "price-low": return sorted.sort((a, b) => a.price_cents - b.price_cents);
-      case "price-high": return sorted.sort((a, b) => b.price_cents - a.price_cents);
-      case "name-az": return sorted.sort((a, b) => a.title.localeCompare(b.title));
-      case "name-za": return sorted.sort((a, b) => b.title.localeCompare(a.title));
-      default: return sorted;
+      case "newest":
+        return sorted.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      case "oldest":
+        return sorted.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      case "price-low":
+        return sorted.sort((a, b) => a.price_cents - b.price_cents);
+      case "price-high":
+        return sorted.sort((a, b) => b.price_cents - a.price_cents);
+      case "name-az":
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case "name-za":
+        return sorted.sort((a, b) => b.title.localeCompare(a.title));
+      default:
+        return sorted;
     }
   };
 
   const sortedProducts = useMemo(() => sortItems(products), [products, sortBy]);
-  const sortedCollections = useMemo(() => sortItems(collections), [collections, sortBy]);
+  const sortedCollections = useMemo(
+    () => sortItems(collections),
+    [collections, sortBy]
+  );
 
   const sortOptions: { value: SortOption; label: string }[] = [
     { value: "newest", label: "Newest First" },
@@ -59,21 +91,31 @@ export default function BrandPage({ params }: { params: Promise<{ slug: string }
     { value: "name-za", label: "Name: Z-A" },
   ];
 
-  if (loading) return <div className="bg-black min-h-screen flex items-center justify-center text-white">Loading...</div>;
-  
+  if (loading)
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center text-white">
+        Loading...
+      </div>
+    );
+
   if (error || !business) {
     return (
       <div className="bg-black min-h-screen flex items-center justify-center text-center">
         <div>
           <p className="text-gray-400 text-lg mb-4">Brand "{slug}" not found</p>
-          <Link href="/buyer/brands" className="px-6 py-2 bg-purple-600 text-white rounded-lg">Back to Brands</Link>
+          <Link
+            href="/buyer/brands"
+            className="px-6 py-2 bg-purple-600 text-white rounded-lg"
+          >
+            Back to Brands
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-black min-h-screen px-6">
+    <div className="bg-black min-h-screen px-6 lg:px-10">
       <header>
         {/* Breadcrumb */}
         <div className="w-fit flex items-center gap-2 my-10 text-sm text-[#858585]">
@@ -117,23 +159,6 @@ export default function BrandPage({ params }: { params: Promise<{ slug: string }
         </div>
       </header>
 
-      {/* Brand Banner */}
-      <div
-        className="relative h-[280px] bg-cover bg-center overflow-hidden"
-        style={{ backgroundImage: `url(${business?.store_banner})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black" />
-
-        {/* Brand Logo Centered */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <img
-            src={business?.store_logo}
-            alt={business?.brand_name}
-            className="w-24 h-24 object-contain filter brightness-0 invert opacity-90"
-          />
-        </div>
-      </div>
-
       <div className="">
         {/* Tabs Navigation */}
         <div className="flex items-center justify-center gap-6 mb-10">
@@ -157,7 +182,6 @@ export default function BrandPage({ params }: { params: Promise<{ slug: string }
               }`}
             >
               Collections
-           
             </button>
           </div>
         </div>

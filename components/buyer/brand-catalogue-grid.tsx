@@ -3,16 +3,10 @@
 import Link from "next/link"
 import { useState, useMemo } from "react"
 import { useListings } from '@/context/ListingsContext'
-import { X } from 'lucide-react'
+import { X, ChevronRight } from 'lucide-react'
+import ProductCard from "./ProductCard"
 
 const BRANDS_PER_PAGE = 5
-
-interface BrandSection {
-  brandName: string
-  brandSlug: string
-  storeLogo: string
-  products: any[]
-}
 
 type SortOption = 'name-asc' | 'name-desc' | 'products-high' | 'products-low'
 
@@ -47,7 +41,7 @@ const BrandCatalogGrid = () => {
     }))
   }, [listings])
 
-  // unique categories for filtering
+  // Unique categories for filtering
   const availableCategories = useMemo(() => {
     const categories = new Set<string>()
     listings.forEach(listing => {
@@ -90,18 +84,6 @@ const BrandCatalogGrid = () => {
     }
   }, [filteredBrands, sortBy])
 
-  const parseColors = (colorsJson: string | null) => {
-    try {
-      return colorsJson ? JSON.parse(colorsJson) : []
-    } catch {
-      return []
-    }
-  }
-
-  const formatPrice = (priceCents: number) => {
-    return (priceCents / 100).toLocaleString()
-  }
-
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev => 
       prev.includes(category)
@@ -129,11 +111,11 @@ const BrandCatalogGrid = () => {
   }
 
   return (
-    <div className="bg-black min-h-screen w-full px-4">
-      <div className="px-6 py-8 layout">
+    <div className="bg-black min-h-screen w-full px-4 lg:px-8">
+      <div className="px-6 py-8 layout max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">All Brands</h1>
+            <h1 className="text-xl font-medium text-white">All Brands</h1>
             {selectedCategories.length > 0 && (
               <p className="text-gray-400 text-sm mt-1">
                 Filtered by {selectedCategories.length} {selectedCategories.length === 1 ? 'category' : 'categories'}
@@ -147,7 +129,7 @@ const BrandCatalogGrid = () => {
                   setShowFilterMenu(!showFilterMenu)
                   setShowSortMenu(false)
                 }}
-                className="text-[#9872DD] hover:text-[#8451E1] text-sm transition-colors flex items-center gap-2"
+                className="text-[#9872DD] cursor-pointer hover:text-[#8451E1] text-sm transition-colors flex items-center gap-2"
               >
                 Filter
                 {selectedCategories.length > 0 && (
@@ -198,65 +180,34 @@ const BrandCatalogGrid = () => {
                   setShowSortMenu(!showSortMenu)
                   setShowFilterMenu(false)
                 }}
-                className="text-[#9872DD] hover:text-[#8451E1] text-sm transition-colors"
+                className="text-[#9872DD] cursor-pointer hover:text-[#8451E1] text-sm transition-colors"
               >
                 Sort
               </button>
 
               {showSortMenu && (
                 <div className="absolute right-0 top-full mt-2 bg-[#161616] border border-gray-800 rounded-lg shadow-xl p-2 min-w-[180px] z-50">
-                  <button
-                    onClick={() => {
-                      setSortBy('name-asc')
-                      setShowSortMenu(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded text-sm ${
-                      sortBy === 'name-asc' 
-                        ? 'bg-[#9872DD] text-white' 
-                        : 'text-gray-300 hover:bg-gray-800'
-                    }`}
-                  >
-                    Name (A-Z)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortBy('name-desc')
-                      setShowSortMenu(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded text-sm ${
-                      sortBy === 'name-desc' 
-                        ? 'bg-[#9872DD] text-white' 
-                        : 'text-gray-300 hover:bg-gray-800'
-                    }`}
-                  >
-                    Name (Z-A)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortBy('products-high')
-                      setShowSortMenu(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded text-sm ${
-                      sortBy === 'products-high' 
-                        ? 'bg-[#9872DD] text-white' 
-                        : 'text-gray-300 hover:bg-gray-800'
-                    }`}
-                  >
-                    Most Products
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortBy('products-low')
-                      setShowSortMenu(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded text-sm ${
-                      sortBy === 'products-low' 
-                        ? 'bg-[#9872DD] text-white' 
-                        : 'text-gray-300 hover:bg-gray-800'
-                    }`}
-                  >
-                    Least Products
-                  </button>
+                  {[
+                    { id: 'name-asc', label: 'Name (A-Z)' },
+                    { id: 'name-desc', label: 'Name (Z-A)' },
+                    { id: 'products-high', label: 'Most Products' },
+                    { id: 'products-low', label: 'Least Products' }
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => {
+                        setSortBy(option.id as SortOption)
+                        setShowSortMenu(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded text-sm ${
+                        sortBy === option.id 
+                          ? 'bg-[#9872DD] text-white' 
+                          : 'text-gray-300 hover:bg-gray-800'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -286,148 +237,46 @@ const BrandCatalogGrid = () => {
         ) : (
           paginatedBrands.map((brandSection) => (
             <div key={brandSection.brandName} className="mb-12">
-              {/* Brand Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   {brandSection.storeLogo && (
                     <img 
                       src={brandSection.storeLogo} 
-                      alt={brandSection.brandName}
+                      alt=""
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   )}
-                  <h2 className="text-xl font-bold text-white">{brandSection.brandName}</h2>
+                  <h2 className="text-lg font-medium text-white">{brandSection.brandName}</h2>
                   <span className="text-sm text-gray-400">({brandSection.products.length} items)</span>
                 </div>
                 <Link 
                   href={`/buyer/brand/${brandSection.brandSlug}`} 
                   className="text-[#9872DD] hover:text-[#8451E1] text-sm transition-colors flex items-center gap-1"
                 >
-                  View All
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
+                  View All <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {brandSection.products.slice(0, 4).map((product) => {
-                  const colors = parseColors(product.colors_available)
-                  const business = product.sellers?.seller_business?.[0]
-
-                  return (
-                    <Link key={product.id} href={`/buyer/product/${product.id}`} prefetch={true}>
-                      <div className="group bg-[#161616] rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border border-gray-800 hover:border-[#9872DD]/30">
-                        <div className="relative aspect-[3/4] overflow-hidden">
-                          <img
-                            src={product.image}
-                            alt={product.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              console.log(`Toggling like for product ${product.id}`)
-                            }}
-                            className="absolute top-3 right-3 p-2 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/40 transition-all duration-200"
-                          >
-                            <svg
-                              className="w-5 h-5 text-white"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-
-                        <div className="p-4">
-                          <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">
-                            {business?.brand_name || 'Unknown Brand'}
-                          </p>
-
-                          <h3 className="text-white font-medium text-sm mb-3 line-clamp-2">
-                            {product.title}
-                          </h3>
-
-                          {colors.length > 0 && (
-                            <div className="flex items-center gap-2 mb-3">
-                              {colors.slice(0, 3).map((color: any, index: number) => (
-                                <div
-                                  key={index}
-                                  className="w-4 h-4 rounded-full border border-gray-400"
-                                  style={{ 
-                                    backgroundColor: color.colorHex || '#9ca3af' 
-                                  }}
-                                ></div>
-                              ))}
-                              {colors.length > 3 && (
-                                <span className="text-xs text-gray-400">+{colors.length - 3}</span>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
-                              <span className="text-white font-bold text-lg">
-                                {formatPrice(product.price_cents)}
-                              </span>
-                              <span className="text-white font-bold text-sm">
-                                {product.currency}
-                              </span>
-                            </div>
-
-                            <button 
-                              onClick={(e) => {
-                                e.preventDefault()
-                                console.log(`Adding ${product.id} to cart`)
-                              }}
-                              className="bg-[#9872DD] hover:bg-[#8451E1] text-white p-2.5 rounded-lg transition-colors duration-200 group/cart"
-                            >
-                              <svg
-                                className="w-4 h-4 group-hover/cart:scale-110 transition-transform"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4 0L3 3zM16 16a1 1 0 11-2 0 1 1 0 012 0zM9 16a1 1 0 11-2 0 1 1 0 012 0z"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })}
+              {/* ProductCard */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {brandSection.products.slice(0, 4).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
             </div>
           ))
         )}
 
+        {/* Pagination */}
         {totalPages > 1 && (
-          <>
-            <div className="flex items-center justify-end mt-8 gap-2">
+          <div className="mt-12">
+            <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className={`px-3 py-2 rounded-lg ${currentPage === 1
-                  ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                  : "bg-[#161616] text-white hover:bg-[#222]"
-                  }`}
+                className={`px-3 py-2 rounded-lg transition-colors ${
+                  currentPage === 1 ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-[#161616] text-white hover:bg-[#222]"
+                }`}
               >
                 Prev
               </button>
@@ -436,10 +285,9 @@ const BrandCatalogGrid = () => {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-4 py-1 rounded-md ${currentPage === pageNum
-                    ? "bg-[#9872DD] text-white"
-                    : "text-gray-300 hover:bg-[#222]"
-                    }`}
+                  className={`px-4 py-1 rounded-md transition-colors ${
+                    currentPage === pageNum ? "bg-[#9872DD] text-white" : "text-gray-300 hover:bg-[#222]"
+                  }`}
                 >
                   {pageNum}
                 </button>
@@ -448,21 +296,20 @@ const BrandCatalogGrid = () => {
               <button
                 onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className={`px-3 py-2 rounded-lg ${currentPage === totalPages
-                  ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                  : "bg-[#161616] text-white hover:bg-[#222]"
-                  }`}
+                className={`px-3 py-2 rounded-lg transition-colors ${
+                  currentPage === totalPages ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-[#161616] text-white hover:bg-[#222]"
+                }`}
               >
                 Next
               </button>
             </div>
 
             <div className="flex justify-end mt-4">
-              <span className="text-gray-400 text-sm">
+              <span className="text-gray-400 text-xs">
                 Page {currentPage} of {totalPages} • Showing {paginatedBrands.length} of {sortedBrands.length} brands
               </span>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

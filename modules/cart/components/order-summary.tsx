@@ -7,7 +7,7 @@ export default function OrderSummary() {
 
   return (
     <div className="bg-[#1a1a1a] p-6 rounded-lg">
-      <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
+      <h3 className="text-base mb-4">Order Summary</h3>
 
       <div className="space-y-4">
         {items.map((item) => (
@@ -30,7 +30,7 @@ export default function OrderSummary() {
               <p className="text-xs text-gray-400 mt-1">Qty: {item.quantity}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold text-white">
+              <p className="text-sm font-medium text-white">
                 NGN
                 {((item.unitPriceCents * item.quantity) / 100).toLocaleString()}
               </p>
@@ -45,7 +45,7 @@ export default function OrderSummary() {
       <div className="mt-6 pt-4 border-t border-gray-700">
         <div className="flex justify-between items-center">
           <span className="text-gray-400">Subtotal</span>
-          <span className="text-lg font-bold text-white">
+          <span className="text-lg  text-white">
             NGN {(subtotal / 100).toLocaleString()}
           </span>
         </div>

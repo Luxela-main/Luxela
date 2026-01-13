@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useMemo } from "react";
 import {
   useGetCart,
   useAddToCart,
@@ -11,6 +11,7 @@ import {
   useCheckout,
 } from "./query";
 import { DiscountType, CheckoutRequest, CartItemType } from "./model";
+import { useListings } from "@/context/ListingsContext";
 
 type CartContextType = {
   cart: any;
@@ -19,12 +20,12 @@ type CartContextType = {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
-  addToCart: (listingId: string, quantity: number) => void;
-  updateQuantity: (listingId: string, quantity: number) => void;
-  removeItem: (listingId: string) => void;
-  clearCart: () => void;
-  applyDiscount: (code: string) => void;
-  checkout: (data: CheckoutRequest) => void;
+  addToCart: (listingId: string, quantity: number) => Promise<void>;
+  updateQuantity: (listingId: string, quantity: number) => Promise<void>;
+  removeItem: (listingId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
+  applyDiscount: (code: string) => Promise<void>;
+  checkout: (data: CheckoutRequest) => Promise<void>;
   itemCount: number;
   subtotal: number;
   total: number;
@@ -57,7 +58,28 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const checkoutMutation = useCheckout();
 
   const cart = data?.cart;
-  const items = data?.items || [];
+
+  const { listings } = useListings();
+
+  const items = useMemo(() => {
+    const rawItems = data?.items || [];
+
+    const enrichedItems = rawItems.map((item) => {
+      // Find the product details from listings context
+      const product = listings.find((l) => l.id === item.listingId);
+
+      return {
+        ...item,
+        // Mapping backend fields to frontend
+        name: product?.title || `Product ${item.listingId.slice(0, 5)}`,
+        image: product?.image || undefined,
+        price: item.unitPriceCents / 100,
+      };
+    });
+    // Sort by listingId so items don't swap positions on update
+    return enrichedItems.sort((a, b) => a.listingId.localeCompare(b.listingId));
+  }, [data?.items, listings]);
+
   const discount = data?.discount || null;
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -67,43 +89,42 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   );
 
   const discountAmount = discount
-    ? discount.percentOff > 0
-      ? (subtotal * discount.percentOff) / 100
-      : discount.amountOffCents
+    ? (discount.percentOff ?? 0) > 0
+      ? (subtotal * (discount.percentOff ?? 0)) / 100
+      : discount.amountOffCents ?? 0
     : 0;
 
   const total = Math.max(0, subtotal - discountAmount);
 
-  const addToCart = (listingId: string, quantity: number) => {
-    addToCartMutation.mutate({ listingId, quantity });
+  const addToCart = async (listingId: string, quantity: number) => {
+    await addToCartMutation.mutateAsync({ listingId, quantity });
   };
 
-  const updateQuantity = (listingId: string, quantity: number) => {
+  const updateQuantity = async (listingId: string, quantity: number) => {
     if (quantity === 0) {
-      removeItem(listingId);
+      await removeItem(listingId);
     } else {
-      updateCartItemMutation.mutate({ listingId, quantity });
+      await updateCartItemMutation.mutateAsync({ listingId, quantity });
     }
   };
 
-  const removeItem = (listingId: string) => {
-    removeCartItemMutation.mutate(listingId);
+  const removeItem = async (listingId: string) => {
+    await removeCartItemMutation.mutateAsync({ listingId });
   };
 
-  const clearCart = () => {
-    clearCartMutation.mutate();
+  const clearCart = async () => {
+    await clearCartMutation.mutateAsync();
   };
 
-  const applyDiscount = (code: string) => {
-    applyDiscountMutation.mutate({ code });
+  const applyDiscount = async (code: string) => {
+    await applyDiscountMutation.mutateAsync({ code });
   };
 
-  const checkout = (data: CheckoutRequest) => {
-    checkoutMutation.mutate(data);
+  const checkout = async (data: CheckoutRequest) => {
+    await checkoutMutation.mutateAsync(data);
   };
 
-  const normalizedError: Error | null =
-  error instanceof Error ? error : null;
+  const normalizedError: Error | null = error instanceof Error ? error : null;
 
   const value: CartContextType = {
     cart,
@@ -123,5 +144,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     total,
     discountAmount,
   };
+
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
