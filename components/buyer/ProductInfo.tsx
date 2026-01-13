@@ -6,6 +6,7 @@ import { Listing } from "@/types/listing";
 import { Minus, Plus, ShoppingCart, Check } from "lucide-react";
 import { useCartState } from "@/modules/cart/context";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/hooks/useToast";
 
 interface ProductInfoProps {
   product: Listing;
@@ -33,7 +34,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  
+    const toast = useToast();
   const router = useRouter();
   const { addToCart } = useCartState();
 
@@ -74,7 +75,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
 
   const performAddToCart = async (qty: number = 1) => {
     if (sizes.length > 0 && !selectedSize) {
-      alert("Please select a size");
+      toast.warning("Please select a size");
       return false;
     }
 
@@ -84,7 +85,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       return true;
     } catch (error) {
       console.error("Failed to add to cart:", error);
-      alert("Failed to add item to cart. Please try again.");
+      toast.warning("Failed to add item to cart. Please try again.");
       return false;
     } finally {
       setAddingToCart(false);

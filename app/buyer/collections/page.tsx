@@ -73,7 +73,10 @@ function ProductCard({
   const isValidImage =
     typeof item.image === 'string' &&
     item.image.length > 0 &&
+  !item.image.includes("placeholder.com") &&
     item.image !== LUXELA_PLACEHOLDER
+
+
 
   return (
     <>

@@ -67,11 +67,13 @@ export default function ProductCard({ product }: { product: Listing }) {
     }
   };
 
-  const LUXELA_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
+  const LUXELA_PLACEHOLDER =
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
 
   const isValidImage =
-    typeof product.image === "string" &&
+    product.image &&
     product.image.length > 0 &&
+    !product.image.includes("placeholder.com") &&
     product.image !== LUXELA_PLACEHOLDER;
 
   // Optimized Color Parsing & Mapping
@@ -83,9 +85,9 @@ export default function ProductCard({ product }: { product: Listing }) {
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       // Handles raw string: "red,green,blue"
-      return product.colors_available.split(',').map(c => ({
+      return product.colors_available.split(",").map((c) => ({
         colorName: c.trim(),
-        colorHex: ""
+        colorHex: "",
       }));
     }
   }, [product.colors_available]);
@@ -94,7 +96,6 @@ export default function ProductCard({ product }: { product: Listing }) {
     <>
       <Link href={`/buyer/product/${product.id}`} className="block">
         <div className="group bg-[#161616] rounded-lg overflow-hidden hover:ring-2 hover:ring-[#9872DD]/50 transition-all duration-300 shadow-lg relative">
-          
           {/* Image Section */}
           <div className="h-80 md:h-96 bg-[#222] relative overflow-hidden">
             {isValidImage ? (
@@ -129,12 +130,14 @@ export default function ProductCard({ product }: { product: Listing }) {
               <h3 className="text-[#f2f2f2] capitalize font-medium text-sm line-clamp-2 leading-snug h-10 flex-1">
                 {product.title}
               </h3>
-              
+
               {colors.length > 0 && (
                 <div className="flex items-center -space-x-1.5 mt-1">
                   {colors.slice(0, 3).map((color, i) => {
                     const name = color.colorName?.toLowerCase().trim() || "";
-                    const hexFromDb = color.colorHex?.startsWith("#") ? color.colorHex : null;
+                    const hexFromDb = color.colorHex?.startsWith("#")
+                      ? color.colorHex
+                      : null;
                     const hexFromMap = UI_COLOR_MAP[name];
                     const finalColor = hexFromDb || hexFromMap;
 
@@ -157,7 +160,9 @@ export default function ProductCard({ product }: { product: Listing }) {
                     );
                   })}
                   {colors.length > 3 && (
-                    <span className="text-[9px] text-gray-500 pl-2">+{colors.length - 3}</span>
+                    <span className="text-[9px] text-gray-500 pl-2">
+                      +{colors.length - 3}
+                    </span>
                   )}
                 </div>
               )}
@@ -167,13 +172,15 @@ export default function ProductCard({ product }: { product: Listing }) {
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-[#f2f2f2] font-bold text-base">
-                  {product.currency} {(product.price_cents / 100).toLocaleString()}
+                  {product.currency}{" "}
+                  {(product.price_cents / 100).toLocaleString()}
                 </span>
-                {product.quantity_available <= 5 && product.quantity_available > 0 && (
-                  <span className="text-orange-500 text-[10px] font-medium">
-                    Only {product.quantity_available} left
-                  </span>
-                )}
+                {product.quantity_available <= 5 &&
+                  product.quantity_available > 0 && (
+                    <span className="text-orange-500 text-[10px] font-medium">
+                      Only {product.quantity_available} left
+                    </span>
+                  )}
               </div>
 
               <button
@@ -181,9 +188,10 @@ export default function ProductCard({ product }: { product: Listing }) {
                 disabled={isAdding}
                 className={`
                   relative flex cursor-pointer items-center justify-center p-3 rounded-xl transition-all duration-300
-                  ${added 
-                    ? "bg-green-500 scale-105" 
-                    : "bg-purple-600 hover:bg-purple-500 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                  ${
+                    added
+                      ? "bg-green-500 scale-105"
+                      : "bg-purple-600 hover:bg-purple-500 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
                   }
                   disabled:opacity-70 disabled:cursor-not-allowed
                 `}
@@ -208,14 +216,20 @@ export default function ProductCard({ product }: { product: Listing }) {
             <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mb-4">
               <LogIn className="w-6 h-6 text-purple-500" />
             </div>
-            <DialogTitle className="text-lg font-medium">Sign in Required</DialogTitle>
+            <DialogTitle className="text-lg font-medium">
+              Sign in Required
+            </DialogTitle>
             <DialogDescription className="text-[#ACACAC] text-center pt-2">
-              To add <span className="text-white font-medium">{product.title}</span> to your cart, please sign in to your Luxela account.
+              To add{" "}
+              <span className="text-white font-medium">{product.title}</span> to
+              your cart, please sign in to your Luxela account.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 mt-4">
             <button
-              onClick={() => router.push(`/signin?redirect=/buyer/product/${product.id}`)}
+              onClick={() =>
+                router.push(`/signin?redirect=/buyer/product/${product.id}`)
+              }
               className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-xl transition-all"
             >
               Sign In to Continue
