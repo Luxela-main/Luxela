@@ -3,17 +3,24 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Listing } from "@/types/listing";
-import { Minus, Plus, ShoppingCart, Check } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Check, LogIn } from "lucide-react";
 import { useCartState } from "@/modules/cart/context";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/hooks/useToast";
+import { useAuth } from "@/context/AuthContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ProductInfoProps {
   product: Listing;
   business: any;
 }
 
-// Fallback map for when colorHex is empty
 const UI_COLOR_MAP: { [key: string]: string } = {
   red: "#ef4444",
   green: "#22c55e",
@@ -34,11 +41,13 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-    const toast = useToast();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const { user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
   const { addToCart } = useCartState();
 
-  // Safe parsing for Sizes
   const sizes = useMemo(() => {
     if (!product.sizes_json) return [];
     try {
@@ -48,14 +57,12 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
     }
   }, [product.sizes_json]);
 
-  // Safe parsing and mapping for Colors
   const colors = useMemo(() => {
     if (!product.colors_available) return [];
     let parsed: any[] = [];
     try {
       parsed = JSON.parse(product.colors_available);
     } catch (e) {
-      // Handle raw comma string "red,green"
       parsed = product.colors_available.split(',').map(c => ({
         colorName: c.trim(),
         colorHex: ""
@@ -74,6 +81,12 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
   }, [product.colors_available]);
 
   const performAddToCart = async (qty: number = 1) => {
+    // 1. Auth Guard
+    if (!user) {
+      setShowAuthModal(true);
+      return false;
+    }
+
     if (sizes.length > 0 && !selectedSize) {
       toast.warning("Please select a size");
       return false;
@@ -83,9 +96,18 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
     try {
       await addToCart(product.id, qty);
       return true;
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
-      toast.warning("Failed to add item to cart. Please try again.");
+    } catch (error: any) {
+      // 2. TRPC Unauthorized Catch
+      const isAuthError = 
+        error.message?.includes("signed in") || 
+        error.data?.code === "UNAUTHORIZED";
+
+      if (isAuthError) {
+        setShowAuthModal(true);
+      } else {
+        console.error("Failed to add to cart:", error);
+        toast.warning("Failed to add item to cart. Please try again.");
+      }
       return false;
     } finally {
       setAddingToCart(false);
@@ -132,7 +154,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
 
       {/* Price */}
       <div className="flex items-baseline gap-3">
-        <span className="text-xl font-bold">
+        <span className="text-xl font-bold text-white">
           {(product.price_cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </span>
         <span className="text-sm text-gray-400">{product.currency}</span>
@@ -159,7 +181,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       {/* Color Selection */}
       {colors.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium mb-3">
+          <h3 className="text-sm font-medium mb-3 text-white">
             Color: <span className="text-gray-400 capitalize">{colors[selectedColor]?.colorName}</span>
           </h3>
           <div className="flex flex-wrap gap-3">
@@ -193,7 +215,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       {/* Size Selection */}
       {sizes.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium mb-3">Select size</h3>
+          <h3 className="text-sm font-medium mb-3 text-white">Select size</h3>
           <div className="grid grid-cols-5 gap-3">
             {sizes.map((size: string) => (
               <button
@@ -214,7 +236,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
 
       {/* Quantity Selector */}
       <div>
-        <h3 className="text-sm font-medium mb-3">Quantity</h3>
+        <h3 className="text-sm font-medium mb-3 text-white">Quantity</h3>
         <div className="flex items-center gap-4 bg-[#161616] rounded-lg p-2 w-fit">
           <button
             onClick={decrementQuantity}
@@ -289,13 +311,36 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
             <span className="text-white">{product.eta_domestic}</span>
           </div>
         )}
-        {product.eta_international && (
-          <div className="flex justify-between">
-            <span className="text-gray-400">Delivery (International):</span>
-            <span className="text-white">{product.eta_international.replace(/_/g, " ")}</span>
-          </div>
-        )}
       </div>
+
+      {/* Auth Requirement Modal */}
+      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+        <DialogContent className="bg-[#141414] border-[#212121] text-white sm:max-w-md rounded-2xl">
+          <DialogHeader className="flex flex-col items-center">
+            <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center mb-4">
+              <LogIn className="w-6 h-6 text-purple-500" />
+            </div>
+            <DialogTitle className="text-lg font-medium">Sign in Required</DialogTitle>
+            <DialogDescription className="text-[#ACACAC] text-center pt-2">
+              To add <span className="text-white font-medium">{product.title}</span> to your cart, please sign in to your Luxela account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-4">
+            <button
+              onClick={() => router.push(`/signin?redirect=/buyer/product/${product.id}`)}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-xl transition-all"
+            >
+              Sign In to Continue
+            </button>
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="w-full bg-transparent hover:bg-white/5 text-[#ACACAC] font-medium py-3 rounded-xl transition-all"
+            >
+              Maybe Later
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

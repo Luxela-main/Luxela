@@ -46,10 +46,10 @@ export default function ProductCard({ product }: { product: Listing }) {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
+if (!user || !user.id) {
+    setShowAuthModal(true);
+    return;
+  }
 
     if (isAdding) return;
 

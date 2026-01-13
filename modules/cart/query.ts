@@ -8,6 +8,8 @@ import { useAuth } from "@/context/AuthContext";
  * HOOK: Fetch the current user's cart
  * Corresponds to: getCart
  */
+
+
 export const useGetCart = () => {
   const { user, loading: authLoading } = useAuth();
 
@@ -38,7 +40,7 @@ export const useAddToCart = () => {
       utils.cart.getCart.invalidate();
     },
     onError: (error) => {
-      toastSvc.error(error.message || "Failed to add item to cart");
+      // toastSvc.error(error.message || "Failed to add item to cart");
     },
   });
 };
