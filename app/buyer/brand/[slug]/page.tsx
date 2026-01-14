@@ -194,7 +194,7 @@ export default function BrandPage({
           >
             <span>
               Sort By:{" "}
-              <span className="text-white">
+              <span className="text-[#dcdcdc]">
                 {sortOptions.find((o) => o.value === sortBy)?.label}
               </span>
             </span>
@@ -216,7 +216,7 @@ export default function BrandPage({
                   }}
                   className={`w-full text-left px-4 py-3 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
                     sortBy === option.value
-                      ? "bg-[#9872DD] text-white"
+                      ? "bg-[#8451E1CC] text-[#dcdcdc]"
                       : "text-gray-300 hover:bg-[#1f1f1f]"
                   }`}
                 >
@@ -233,7 +233,7 @@ export default function BrandPage({
             {activeTab === "products"
               ? `Made by ${business?.brand_name}`
               : `${business?.brand_name} Collections`}
-            <span className="text-gray-500 ml-2">
+            <span className="text-[#dcdcdc] text-xs ml-2">
               (
               {activeTab === "products"
                 ? sortedProducts.length

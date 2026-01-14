@@ -89,7 +89,7 @@ export function TsaraPaymentModal({
           <Button
             onClick={handleConfirm}
             disabled={createPayment.isPending}
-            className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white py-6 rounded-2xl text-md font-medium"
+            className="w-full text-white py-6 rounded-2xl text-md font-medium"
           >
             {createPayment.isPending ? (
               <Loader2 className="animate-spin" />

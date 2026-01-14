@@ -115,7 +115,7 @@ const BrandCatalogGrid = () => {
       <div className="px-6 py-8 layout max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-xl font-medium text-white">All Brands</h1>
+            {/* <h1 className="text-xl font-medium text-white">All Brands</h1> */}
             {selectedCategories.length > 0 && (
               <p className="text-gray-400 text-sm mt-1">
                 Filtered by {selectedCategories.length} {selectedCategories.length === 1 ? 'category' : 'categories'}
@@ -129,11 +129,11 @@ const BrandCatalogGrid = () => {
                   setShowFilterMenu(!showFilterMenu)
                   setShowSortMenu(false)
                 }}
-                className="text-[#9872DD] cursor-pointer hover:text-[#8451E1] text-sm transition-colors flex items-center gap-2"
+                className="text-[#8451E1CC] cursor-pointer hover:text-[#8451E1] text-sm transition-colors flex items-center gap-2"
               >
                 Filter
                 {selectedCategories.length > 0 && (
-                  <span className="bg-[#9872DD] text-white text-xs px-2 py-0.5 rounded-full">
+                  <span className="bg-[#8451E1CC] text-white text-xs px-2 py-0.5 rounded-full">
                     {selectedCategories.length}
                   </span>
                 )}
@@ -146,7 +146,7 @@ const BrandCatalogGrid = () => {
                     {selectedCategories.length > 0 && (
                       <button 
                         onClick={clearFilters}
-                        className="text-xs text-[#9872DD] hover:text-[#8451E1]"
+                        className="text-xs text-[#8451E1CC] hover:text-[#8451E1]"
                       >
                         Clear
                       </button>
@@ -162,7 +162,7 @@ const BrandCatalogGrid = () => {
                           type="checkbox"
                           checked={selectedCategories.includes(category)}
                           onChange={() => toggleCategory(category)}
-                          className="w-4 h-4 accent-[#9872DD]"
+                          className="w-4 h-4 accent-[#8451E1CC]"
                         />
                         <span className="text-gray-300 text-sm capitalize">
                           {category.replace(/_/g, ' ')}
@@ -180,7 +180,7 @@ const BrandCatalogGrid = () => {
                   setShowSortMenu(!showSortMenu)
                   setShowFilterMenu(false)
                 }}
-                className="text-[#9872DD] cursor-pointer hover:text-[#8451E1] text-sm transition-colors"
+                className="text-[#8451E1CC] cursor-pointer hover:text-[#8451E1] text-sm transition-colors"
               >
                 Sort
               </button>
@@ -201,7 +201,7 @@ const BrandCatalogGrid = () => {
                       }}
                       className={`w-full text-left px-3 py-2 rounded text-sm ${
                         sortBy === option.id 
-                          ? 'bg-[#9872DD] text-white' 
+                          ? 'bg-[#8451E1CC] text-white' 
                           : 'text-gray-300 hover:bg-gray-800'
                       }`}
                     >
@@ -220,7 +220,7 @@ const BrandCatalogGrid = () => {
               <button
                 key={category}
                 onClick={() => toggleCategory(category)}
-                className="bg-[#9872DD]/20 text-[#9872DD] px-3 py-1 rounded-full text-sm flex items-center gap-2 hover:bg-[#9872DD]/30 transition-colors"
+                className="bg-[#8451E1CC]/20 text-[#8451E1CC] px-3 py-1 rounded-full text-sm flex items-center gap-2 hover:bg-[#8451E1CC]/30 transition-colors"
               >
                 {category.replace(/_/g, ' ')}
                 <X className="w-3 h-3" />
@@ -237,23 +237,23 @@ const BrandCatalogGrid = () => {
         ) : (
           paginatedBrands.map((brandSection) => (
             <div key={brandSection.brandName} className="mb-12">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-start gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  {brandSection.storeLogo && (
+                  {/* {brandSection.storeLogo && (
                     <img 
                       src={brandSection.storeLogo} 
                       alt=""
                       className="w-10 h-10 rounded-full object-cover"
                     />
-                  )}
-                  <h2 className="text-lg font-medium text-white">{brandSection.brandName}</h2>
-                  <span className="text-sm text-gray-400">({brandSection.products.length} items)</span>
+                  )} */}
+                  <h2 className="text-lg font-medium text-[#dcdcdc]">{brandSection.brandName}</h2>
+                  {/* <span className="text-sm text-gray-400">({brandSection.products.length} items)</span> */}
                 </div>
                 <Link 
                   href={`/buyer/brand/${brandSection.brandSlug}`} 
-                  className="text-[#9872DD] hover:text-[#8451E1] text-sm transition-colors flex items-center gap-1"
+                  className="text-[#8451E1CC] underline underline-offset-8 hover:text-[#8451E1] text-sm transition-colors flex items-center gap-1"
                 >
-                  View All <ChevronRight className="w-4 h-4" />
+                  View all <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
 
@@ -286,7 +286,7 @@ const BrandCatalogGrid = () => {
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
                   className={`px-4 py-1 rounded-md transition-colors ${
-                    currentPage === pageNum ? "bg-[#9872DD] text-white" : "text-gray-300 hover:bg-[#222]"
+                    currentPage === pageNum ? "bg-[#8451E1CC] text-white" : "text-gray-300 hover:bg-[#222]"
                   }`}
                 >
                   {pageNum}

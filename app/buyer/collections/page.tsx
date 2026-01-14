@@ -20,7 +20,7 @@ function ProductCard({
   item, 
   collectionId, 
   brandName,
-  productId // Pass this if available in your item schema
+  productId 
 }: { 
   item: any
   collectionId: string
@@ -44,8 +44,6 @@ function ProductCard({
       return
     }
 
-    // Logic for adding to cart
-    // Note: Collection items usually need a specific productId or variantId
     const targetId = productId || item.id 
     if (!targetId || isAdding) return
 
@@ -62,32 +60,26 @@ function ProductCard({
     }
   }
 
-  // ... (Parsing logic remains the same)
   let colors: Array<{ colorName: string; colorHex: string }> = []
   try {
     colors = item.colors_available ? JSON.parse(item.colors_available) : []
   } catch (e) {}
-    const LUXELA_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
 
-
-  const isValidImage =
-    typeof item.image === 'string' &&
-    item.image.length > 0 &&
-  !item.image.includes("placeholder.com") &&
-    item.image !== LUXELA_PLACEHOLDER
-
-
+  const isValidImage = item.image && item.image.length > 0 && !item.image.includes("placeholder.com")
 
   return (
     <>
       <Link href={`/buyer/collection/${collectionId}`}>
-        <div className="group bg-[#161616] rounded-lg overflow-hidden hover:ring-2 hover:ring-[#9872DD]/50 transition-all min-w-[280px] w-[280px] flex-shrink-0">
-          <div className="h-96 bg-[#222] p-0 flex relative overflow-hidden">
+        {/* Updated card container: added shadow and duration-300 */}
+        <div className="group bg-[#161616] rounded-lg overflow-hidden hover:ring-2 hover:ring-[#9872DD]/50 transition-all duration-300 shadow-lg min-w-[280px] w-[280px] flex-shrink-0">
+          
+          {/* Image Section: scale-110 and duration-700 to match main card */}
+          <div className="h-96 bg-[#222] relative overflow-hidden">
             {isValidImage ? (
               <img
                 src={item.image}
                 alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
@@ -96,8 +88,8 @@ function ProductCard({
             )}
 
             {item.limited_edition_badge === 'show_badge' && (
-              <div className="absolute top-3 left-3 bg-purple-600 px-2.5 py-1 rounded">
-                <span className="text-[#f2f2f2] text-[10px] font-bold uppercase tracking-widest">
+              <div className="absolute top-3 left-3 bg-[#8451E1CC] px-3 py-1.5 rounded-lg">
+                <span className="text-white text-[10px] font-bold uppercase tracking-widest">
                   Limited
                 </span>
               </div>
@@ -105,20 +97,20 @@ function ProductCard({
           </div>
 
           <div className="p-4 bg-black">
-            <p className="text-[#acacac] text-[10px] font-bold uppercase tracking-wider mb-1">
-              {brandName || "Luxela"}
+            <p className="text-[#acacac] text-[11px] font-medium uppercase tracking-wider mb-1">
+              {brandName || "Luxela Exclusive"}
             </p>
 
-            <div className="flex items-center justify-between gap-3 mb-3 min-h-[40px]">
-              <h3 className="text-[#f2f2f2] capitalize font-medium text-sm line-clamp-2 leading-snug flex-1">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <h3 className="text-[#f2f2f2] capitalize font-medium text-base line-clamp-2 leading-snug h-10 flex-1">
                 {item.title}
               </h3>
               {colors.length > 0 && (
-                <div className="flex -space-x-1">
+                <div className="flex -space-x-1.5 pt-1">
                   {colors.slice(0, 3).map((color, i) => (
                     <div
                       key={i}
-                      className="w-3 h-3 rounded-full border border-black"
+                      className="w-3.5 h-3.5 rounded-full border border-black shadow-sm"
                       style={{ backgroundColor: color.colorHex }}
                     />
                   ))}
@@ -132,31 +124,40 @@ function ProductCard({
                   {item.currency || 'NGN'} {((item.price_cents || 0) / 100).toLocaleString()}
                 </div>
                 {item.quantity_available <= 5 && item.quantity_available > 0 && (
-                  <p className="text-orange-500 text-[9px] mt-0.5 font-medium">
+                  <p className="text-orange-500 text-[10px] mt-0.5 font-medium">
                     Only {item.quantity_available} left
                   </p>
                 )}
               </div>
 
+              {/* The Shopping Cart Button: Fixed Gradient Styling */}
               <button 
                 onClick={handleQuickAdd}
                 disabled={isAdding}
-                className={`p-2.5 rounded-lg transition-all duration-300 ${
-                  added ? "bg-green-500" : "bg-purple-600 hover:bg-purple-500"
-                }`}
+                className={`
+                  relative flex cursor-pointer items-center justify-center p-3 rounded-xl transition-all duration-300
+                  ${
+                    added
+                      ? "bg-green-500 scale-105"
+                      : "bg-[linear-gradient(180deg,#9872DD_0%,#8451E1_44.78%,#5C2EAF_90.62%)] hover:brightness-110 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                  }
+                  disabled:opacity-70 disabled:cursor-not-allowed
+                `}
               >
                 {isAdding ? (
                   <Loader2 className="w-4 h-4 text-white animate-spin" />
                 ) : added ? (
-                  <Check className="w-4 h-4 text-white" />
+                  <Check className="w-4 h-4 text-white animate-in zoom-in" />
                 ) : (
-                  <ShoppingCart className="w-4 h-4 text-[#f2f2f2]" />
+                  <ShoppingCart className="w-4 h-4 text-white" />
                 )}
               </button>
             </div>
           </div>
         </div>
       </Link>
+      
+      
 
       <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
         <DialogContent className="bg-[#111] border-[#222] text-white rounded-2xl">

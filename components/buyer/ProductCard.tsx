@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "../ui/button";
 
 // Fallback map for when colorHex is empty in the database
 const UI_COLOR_MAP: { [key: string]: string } = {
@@ -111,8 +112,8 @@ if (!user || !user.id) {
             )}
 
             {product.limited_edition_badge === "show_badge" && (
-              <div className="absolute top-3 left-3 bg-purple-600 px-3 py-1 rounded shadow-md z-10">
-                <span className="text-[#f2f2f2] text-[10px] font-black uppercase tracking-widest">
+              <div className="absolute top-3 left-3 bg-[#8451E1CC] px-3 py-1.5 rounded-lg">
+                    <span className="text-white text-xs font-medium uppercase">
                   Limited
                 </span>
               </div>
@@ -121,18 +122,18 @@ if (!user || !user.id) {
 
           {/* Content Section */}
           <div className="p-4 bg-black">
-            <p className="text-[#acacac] text-[11px] font-bold uppercase tracking-wider mb-1">
+            <p className="text-[#acacac] text-[11px] font-medium uppercase tracking-wider mb-1">
               {business?.brand_name || "Luxela Exclusive"}
             </p>
 
             {/* Title & Colors */}
-            <div className="flex items-start justify-between gap-2 mb-4">
-              <h3 className="text-[#f2f2f2] capitalize font-medium text-sm line-clamp-2 leading-snug h-10 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-[#f2f2f2] capitalize font-medium text-base line-clamp-2 leading-snug h-10 flex-1">
                 {product.title}
               </h3>
 
               {colors.length > 0 && (
-                <div className="flex items-center -space-x-1.5 mt-1">
+                <div className="flex items-center -space-x-1.5">
                   {colors.slice(0, 3).map((color, i) => {
                     const name = color.colorName?.toLowerCase().trim() || "";
                     const hexFromDb = color.colorHex?.startsWith("#")
@@ -171,7 +172,7 @@ if (!user || !user.id) {
             {/* Price & Quick Add */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <span className="text-[#f2f2f2] font-bold text-base">
+                <span className="text-[#f2f2f2] font-semibold text-sm">
                   {product.currency}{" "}
                   {(product.price_cents / 100).toLocaleString()}
                 </span>
@@ -186,15 +187,15 @@ if (!user || !user.id) {
               <button
                 onClick={handleQuickAdd}
                 disabled={isAdding}
-                className={`
-                  relative flex cursor-pointer items-center justify-center p-3 rounded-xl transition-all duration-300
-                  ${
-                    added
-                      ? "bg-green-500 scale-105"
-                      : "bg-purple-600 hover:bg-purple-500 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
-                  }
-                  disabled:opacity-70 disabled:cursor-not-allowed
-                `}
+            className={`
+    relative flex cursor-pointer items-center justify-center p-3 rounded-xl transition-all duration-300
+    ${
+      added
+        ? "bg-green-500 scale-105"
+        : "bg-[linear-gradient(180deg,#9872DD_0%,#8451E1_44.78%,#5C2EAF_90.62%)] hover:brightness-110 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+    }
+    disabled:opacity-70 disabled:cursor-not-allowed
+  `}
               >
                 {isAdding ? (
                   <Loader2 className="w-4 h-4 text-white animate-spin" />
@@ -226,14 +227,14 @@ if (!user || !user.id) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 mt-4">
-            <button
+            <Button
               onClick={() =>
                 router.push(`/signin?redirect=/buyer/product/${product.id}`)
               }
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-xl transition-all"
+              className="w-full text-white h-12 font-medium py-3 rounded-xl transition-all"
             >
               Sign In to Continue
-            </button>
+            </Button>
             <button
               onClick={() => setShowAuthModal(false)}
               className="w-full bg-transparent hover:bg-white/5 text-[#ACACAC] font-medium py-3 rounded-xl transition-all"

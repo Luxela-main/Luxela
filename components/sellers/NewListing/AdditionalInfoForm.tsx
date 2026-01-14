@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { FormData } from "@/types/newListing";
 import ImageUpload from "@/app/sellers/new-listing/image-upload";
 import ImagePreview from "@/app/sellers/new-listing/image-preview";
+import { Button } from "@/components/ui/button";
 
 interface AdditionalInfoFormProps {
   formData: FormData;
@@ -55,7 +56,9 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
 
         {/* Colors Available */}
         <div>
-          <label className="block text-sm mb-2">Colors available(Comma-Separated)</label>
+          <label className="block text-sm mb-2">
+            Colors available(Comma-Separated)
+          </label>
           <input
             type="text"
             placeholder="Enter all product colours"
@@ -191,58 +194,62 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
           </label>
 
           {/* Within Country */}
-        {/* Within country */}
-<div className="mb-4">
-  <label className="block text-sm text-gray-400 mb-2">
-    Within country
-  </label>
-  <select
-    value={formData.domesticDays}
-    onChange={(e) => handleInputChange("domesticDays", e.target.value)}
-    className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
-  >
-    <option value="">Select delivery time</option>
-    <option value="48hrs">48 Hours</option>
-    <option value="72hrs">72 Hours</option>
-    <option value="5_working_days">5 Working Days</option>
-    <option value="1week">1 Week</option>
-  </select>
-</div>
+          {/* Within country */}
+          <div className="mb-4">
+            <label className="block text-sm text-gray-400 mb-2">
+              Within country
+            </label>
+            <select
+              value={formData.domesticDays}
+              onChange={(e) =>
+                handleInputChange("domesticDays", e.target.value)
+              }
+              className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
+            >
+              <option value="">Select delivery time</option>
+              <option value="48hrs">48 Hours</option>
+              <option value="72hrs">72 Hours</option>
+              <option value="5_working_days">5 Working Days</option>
+              <option value="1week">1 Week</option>
+            </select>
+          </div>
 
-{/* International */}
-<div>
-  <label className="block text-sm text-gray-400 mb-2">
-    International
-  </label>
-  <select
-    value={formData.internationalDays}
-    onChange={(e) => handleInputChange("internationalDays", e.target.value)}
-    className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
-  >
-    <option value="">Select delivery time</option>
-    <option value="custom">Custom</option>
-    <option value="days_7_to_14">7-14 Days</option>
-    <option value="days_14_to_30">14-30 Days</option> 
-  </select>
-</div>
+          {/* International */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              International
+            </label>
+            <select
+              value={formData.internationalDays}
+              onChange={(e) =>
+                handleInputChange("internationalDays", e.target.value)
+              }
+              className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
+            >
+              <option value="">Select delivery time</option>
+              <option value="custom">Custom</option>
+              <option value="days_7_to_14">7-14 Days</option>
+              <option value="days_14_to_30">14-30 Days</option>
+            </select>
+          </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-6">
-          <button
+          <Button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3 border border-[#333] rounded-lg hover:border-gray-600 transition"
+            className="px-8 py-3 bg-transparent hover:bg-transparent border border-[#333] rounded-lg hover:border-gray-600 transition"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={onNext}
-            className="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+            className="px-8 py-3 rounded-lg transition"
           >
             Save
-          </button>
+          </Button>
         </div>
       </div>
     </div>
