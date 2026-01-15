@@ -3,6 +3,7 @@
 import { useListings } from "@/context/ListingsContext";
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
+import { Button } from "../ui/button";
 
 type ScrollDirection = "left" | "right";
 
@@ -55,7 +56,7 @@ const FeaturedBrands = () => {
     return (
       <section className="mb-16">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl capitalize font-bold text-white">Featured Brands</h2>
+          <h2 className="text-xl capitalize font-medium text-white">Featured Brands</h2>
         </div>
         <div className="flex gap-6 overflow-hidden">
           {[1, 2, 3].map((i) => (
@@ -88,7 +89,7 @@ const FeaturedBrands = () => {
             disabled={!canScrollLeft}
             className={`p-2 rounded-full transition-all ${
               canScrollLeft
-                ? "bg-[#9872DD] text-white hover:bg-[#8451E1]"
+                ? "bg-[#8451e1] text-white hover:bg-[#8451E1]"
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
@@ -111,7 +112,7 @@ const FeaturedBrands = () => {
             disabled={!canScrollRight}
             className={`p-2 rounded-full transition-all ${
               canScrollRight
-                ? "bg-[#9872DD] text-white hover:bg-[#8451E1]"
+                ? "bg-[#8451e1] text-white hover:bg-[#8451E1]"
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
@@ -152,18 +153,18 @@ const FeaturedBrands = () => {
             >
               <div className="flex-1 py-8 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-white font-bold text-xl mb-3">
+                  <h3 className="text-white font-medium text-xl mb-3">
                     {brand.brand_name}
                   </h3>
-                  <p className="text-[#DCDCDC] leading-relaxed text-sm">
+                  <p className="text-[#DCDCDC] text-sm">
                     {brand.store_description || 'Discover our unique collection of premium products.'}
                   </p>
                 </div>
 
                 <Link href={`/buyer/brand/${brand.slug}`} prefetch={true}>
-                  <button className="cursor-pointer w-full md:max-w-[230px] mt-6 self-start bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white text-sm px-8 py-3 rounded-lg font-semibold hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                  <Button className="cursor-pointer w-full md:max-w-[230px] mt-6 py-5 self-start text-white text-sm px-8 shadow-lg hover:shadow-xl">
                     Shop Now
-                  </button>
+                  </Button>
                 </Link>
               </div>
 

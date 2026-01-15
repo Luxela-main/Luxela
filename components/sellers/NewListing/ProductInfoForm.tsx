@@ -2,6 +2,7 @@
 import React from "react";
 import { FormData } from "@/types/newListing";
 import ImageUpload from "@/app/sellers/new-listing/image-upload";
+import { Button } from "@/components/ui/button";
 
 interface ProductInfoFormProps {
   formData: FormData;
@@ -324,20 +325,20 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-6">
-          <button
+          <Button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3 border border-[#333] rounded-lg hover:border-gray-600 transition"
+            className="px-8 py-3 bg-transparent hover:bg-transparent border border-[#333] rounded-lg hover:border-gray-600 transition"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={onNext}
-            className="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+            className="px-8 py-3 rounded-lg transition"
           >
             Save
-          </button>
+          </Button>
         </div>
       </div>
     </div>

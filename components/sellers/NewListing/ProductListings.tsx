@@ -164,13 +164,13 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
             Filter
           </button>
           <div className="relative">
-            <button
+            <Button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+              className="flex items-center gap-2 px-6 py-2 rounded-lg transition"
             >
               <PlusCircle className="w-5 h-5 hidden lg:block" />
               Add Product
-            </button>
+            </Button>
 
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-xl z-10">

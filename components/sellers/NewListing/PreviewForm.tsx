@@ -2,6 +2,7 @@
 import React from 'react';
 import { FormData } from '@/types/newListing';
 import ImagePreview from '@/app/sellers/new-listing/image-preview';
+import { Button } from "@/components/ui/button";
 
 interface PreviewFormProps {
   formData: FormData;
@@ -147,22 +148,22 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-8">
-          <button
+          <Button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3 border border-[#333] rounded-lg hover:border-gray-600 transition"
+            className="px-8 py-3 bg-transparent hover:bg-transparent border border-[#333] rounded-lg hover:border-gray-600 transition"
           >
             Cancel
-          </button>
+          </Button>
          
 
-        <button
+        <Button
   onClick={onSubmit}
   disabled={isSubmitting}
   className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 ${
     isSubmitting 
       ? 'bg-gray-600 cursor-not-allowed' 
-      : 'bg-purple-600 hover:bg-purple-700'
+      : ''
   } text-white transition-colors`}
 >
   {isSubmitting && (
@@ -188,7 +189,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
     </svg>
   )}
   {isSubmitting ? 'Creating Listing...' : 'Create Listing'}
-</button>
+</Button>
         </div>
       </div>
     </div>

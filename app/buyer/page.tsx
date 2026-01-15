@@ -6,7 +6,7 @@ import FeaturedCollection from '@/components/buyer/featured-collection';
 
 const Homepage = () => {
   return (
-    <section className='py-8 layout'>
+    <section className='py-8 px-6 lg:px-10'>
       <FeaturedBrands />
       <FeaturedCollection />
       <ExploreAllProducts />

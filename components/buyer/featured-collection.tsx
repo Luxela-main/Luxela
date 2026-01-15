@@ -1,10 +1,10 @@
-
-
 "use client";
 
 import { useListings } from "@/context/ListingsContext";
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import { MoveRight } from "lucide-react";
 
 type ScrollDirection = "left" | "right";
 
@@ -14,7 +14,9 @@ const FeaturedCollection = () => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const collections = listings.filter(listing => listing.type === 'collection');
+  const collections = listings.filter(
+    (listing) => listing.type === "collection"
+  );
 
   const checkScrollButtons = () => {
     if (carouselRef.current) {
@@ -35,7 +37,7 @@ const FeaturedCollection = () => {
 
   const scroll = (direction: ScrollDirection) => {
     if (carouselRef.current) {
-      const scrollAmount = 300; 
+      const scrollAmount = 300;
       carouselRef.current.scrollBy({
         left: direction === "left" ? -scrollAmount : scrollAmount,
         behavior: "smooth",
@@ -44,19 +46,22 @@ const FeaturedCollection = () => {
   };
 
   const getBadgeText = (collection: any) => {
-    if (collection.limited_edition_badge === 'show_badge') return 'Limited Edition';
+    if (collection.limited_edition_badge === "show_badge")
+      return "Limited Edition";
     const createdDate = new Date(collection.created_at);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    if (createdDate > weekAgo) return 'New Drop';
-    return 'Featured Item';
+    if (createdDate > weekAgo) return "New Drop";
+    return "Featured Item";
   };
 
   if (loading) {
     return (
       <section className="mb-16">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl capitalize font-bold text-white">Featured Collections</h2>
+          <h2 className="text-xl capitalize font-bold text-white">
+            Featured Collections
+          </h2>
         </div>
         <div className="flex gap-5 overflow-hidden">
           {[1, 2, 3, 4].map((i) => (
@@ -149,32 +154,31 @@ const FeaturedCollection = () => {
               >
                 <div className="relative aspect-[3/4] bg-[#161616] rounded-2xl overflow-hidden mb-3">
                   <img
-                    src={collection.image || '/images/baz1.svg'}
+                    src={collection.image || "/images/baz1.svg"}
                     alt={collection.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  
-                  <div className="absolute top-3 left-3 bg-purple-600 px-3 py-1.5 rounded-lg">
-                    <span className="text-white text-xs font-bold uppercase">
+
+                  <div className="absolute top-3 left-3 bg-[#8451E1CC] px-3 py-1.5 rounded-lg">
+                    <span className="text-white text-xs font-medium uppercase">
                       {getBadgeText(collection)}
                     </span>
-                  </div>
-
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
-                    <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                      View Collection
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-base font-semibold text-white mb-1 capitalize">
+                  <h3 className="text-base font-semibold text-[#dcdcdc] mb-1 capitalize">
                     {collection.title}
                   </h3>
-                  <p className="text-sm text-gray-500">{brand?.brand_name || 'Featured Brand'}</p>
+                  <p className="text-sm text-[#8451e1]">
+                    {brand?.brand_name || "Featured Brand"}
+                  </p>
+                  <Button className="w-full mt-4 text-white py-3 px-1.5 font-medium flex items-center justify-between gap-2">
+                    View Collection
+                    <span className="bg-black p-1.5 rounded">
+                      <MoveRight className="w-6 h-6 text-white" />
+                    </span>
+                  </Button>
                 </div>
               </Link>
             );
@@ -196,4 +200,3 @@ const FeaturedCollection = () => {
 };
 
 export default FeaturedCollection;
-

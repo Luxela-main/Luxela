@@ -205,7 +205,7 @@ export function BillingAddressStep({ onNext }: BillingAddressStepProps) {
         <Button
           type="submit"
           disabled={createAddressMutation.isPending}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-6 text-sm"
+          className="w-full text-white py-6 text-sm"
         >
           {createAddressMutation.isPending
             ? "Processing..."

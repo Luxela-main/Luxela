@@ -250,7 +250,7 @@ export default function CartPaymentPage() {
           <Button
             onClick={() => setShowTsaraModal(true)}
             disabled={isProcessing || billingLoading}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-7 rounded-xl text-base"
+            className="w-full text-white py-7 rounded-xl text-base"
           >
             {isProcessing ? "Opening Tsara..." : "Complete Payment"}
           </Button>
