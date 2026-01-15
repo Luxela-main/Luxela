@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useState, useMemo } from "react"
 import { useListings } from '@/context/ListingsContext'
+import { useSearch } from '@/context/SearchContext' // Import search context
 import { X, ChevronRight } from 'lucide-react'
 import ProductCard from "./ProductCard"
 
@@ -12,6 +13,7 @@ type SortOption = 'name-asc' | 'name-desc' | 'products-high' | 'products-low'
 
 const BrandCatalogGrid = () => {
   const { listings, loading } = useListings()
+  const { searchQuery } = useSearch() // Get search query from context
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState<SortOption>('name-asc')
   const [showSortMenu, setShowSortMenu] = useState(false)
@@ -52,19 +54,36 @@ const BrandCatalogGrid = () => {
     return Array.from(categories).sort()
   }, [listings])
 
-  // Filter brands by category
+  // Filter brands by search query AND category
   const filteredBrands = useMemo(() => {
-    if (selectedCategories.length === 0) return brandSections
+    let brands = brandSections
 
-    return brandSections
-      .map(brand => ({
-        ...brand,
-        products: brand.products.filter(product => 
-          selectedCategories.includes(product.category)
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      brands = brands.filter(brand => 
+        brand.brandName.toLowerCase().includes(query) ||
+        brand.products.some(product => 
+          product.title?.toLowerCase().includes(query) ||
+          product.description?.toLowerCase().includes(query)
         )
-      }))
-      .filter(brand => brand.products.length > 0)
-  }, [brandSections, selectedCategories])
+      )
+    }
+
+    // Filter by selected categories
+    if (selectedCategories.length > 0) {
+      brands = brands
+        .map(brand => ({
+          ...brand,
+          products: brand.products.filter(product => 
+            selectedCategories.includes(product.category)
+          )
+        }))
+        .filter(brand => brand.products.length > 0)
+    }
+
+    return brands
+  }, [brandSections, selectedCategories, searchQuery])
 
   // Sort brands
   const sortedBrands = useMemo(() => {
@@ -111,12 +130,11 @@ const BrandCatalogGrid = () => {
   }
 
   return (
-    <div className="bg-black min-h-screen w-full px-4 lg:px-8">
-      <div className="px-6 py-8 layout max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+    <div className="bg-black min-h-screen w-full">
+      <div className="py-8 mx-auto">
+        <div className="flex items-center justify-between max-md:mb-4">
           <div>
-            {/* <h1 className="text-xl font-medium text-white">All Brands</h1> */}
-            {selectedCategories.length > 0 && (
+            {!searchQuery && selectedCategories.length > 0 && (
               <p className="text-gray-400 text-sm mt-1">
                 Filtered by {selectedCategories.length} {selectedCategories.length === 1 ? 'category' : 'categories'}
               </p>
@@ -232,22 +250,19 @@ const BrandCatalogGrid = () => {
         {/* Brand Sections */}
         {paginatedBrands.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400">No brands found matching your filters</p>
+            <p className="text-gray-400">
+              {searchQuery 
+                ? `No brands found matching "${searchQuery}"`
+                : 'No brands found matching your filters'
+              }
+            </p>
           </div>
         ) : (
           paginatedBrands.map((brandSection) => (
             <div key={brandSection.brandName} className="mb-12">
               <div className="flex items-center justify-start gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  {/* {brandSection.storeLogo && (
-                    <img 
-                      src={brandSection.storeLogo} 
-                      alt=""
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  )} */}
                   <h2 className="text-lg font-medium text-[#dcdcdc]">{brandSection.brandName}</h2>
-                  {/* <span className="text-sm text-gray-400">({brandSection.products.length} items)</span> */}
                 </div>
                 <Link 
                   href={`/buyer/brand/${brandSection.brandSlug}`} 

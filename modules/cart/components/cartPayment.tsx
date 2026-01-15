@@ -46,33 +46,6 @@ export default function CartPaymentPage() {
   const shippingFees = 160000;
   const finalTotal = total + shippingFees;
 
-  // 3. Main Payment Handler
-  // const handlePayment = async () => {
-  //   if (!activeAddress) {
-  //     toastSvc.error("Please add a shipping address in the previous step.");
-  //     return;
-  //   }
-
-  //   createPaymentMutation.mutate({
-  //     buyerId: profile?.id || "",
-  //     listingId: items[0]?.listingId || "",
-  //     amount: finalTotal / 100, // Convert cents to actual NGN for Tsara
-  //     currency: "NGN",
-  //     description: `Order for ${items.length} items`,
-  //     // Map UI state to Backend Enum: "card", "bank_transfer", "crypto"
-  //     paymentMethod: paymentMethod,
-  //     // Map to Tsara types: Crypto uses stablecoin flow, others use fiat flow
-  //     paymentType: paymentMethod === "crypto" ? "stablecoin" : "fiat",
-  //     success_url: `${window.location.origin}/cart/success`,
-  //     cancel_url: `${window.location.origin}/cart/payment`,
-  //     // Use user wallet if crypto, otherwise undefined
-  //     wallet_id: paymentMethod === "crypto" ? "USER_WALLET_ADDRESS" : undefined,
-  //     metadata: {
-  //       city: activeAddress.city,
-  //       address: activeAddress.houseAddress
-  //     }
-  //   });
-  // };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">

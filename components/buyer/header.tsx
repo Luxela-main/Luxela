@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Bell, ChevronDown, Search, ShoppingCart, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearch } from "@/context/SearchContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +52,7 @@ const BuyerHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { profile, loading } = useProfile();
   const { cart } = useCartState();
+  const { searchQuery, setSearchQuery, clearSearch } = useSearch();
   const itemCount = cart?.items?.length || 0;
 
   const username = profile?.username || user?.email?.split("@")[0] || "User";
@@ -69,36 +71,36 @@ const BuyerHeader = () => {
 
   return (
     <>
-      <nav className="z-[999] bg-[#0E0E0E] px-3 md:px-6 py-[18px] border-b border-[#2B2B2B] w-full">
-        <div className="w-full flex items-center justify-between layout">
+      <nav className="z-[999] bg-[#0E0E0E] px-3 lg:px-6 py-[18px] border-b border-[#2B2B2B] w-full">
+        <div className="w-full flex items-center justify-between gap-4 max-w-[1400px] mx-auto">
           {/* Mobile: Hamburger Menu */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121]"
+            className="lg:hidden cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0"
           >
             {mobileMenuOpen ? (
               <X stroke="#DCDCDC" className="size-6" />
             ) : (
-              <Menu stroke="#DCDCDC" className="size-6" />
+              <Menu strokeWidth={1} stroke="#DCDCDC" className="size-6" />
             )}
           </button>
 
           {/* Desktop: Left Links */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6 flex-shrink-0">
             {NAVLINKS.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className="text-[#DCDCDC] text-xs md:text-sm py-3 hover:transform hover:text-[#9872DD] hover:-translate-y-[1px] duration-300 ease-in-out"
+                className="text-[#DCDCDC] text-sm py-3 hover:transform hover:text-[#9872DD] hover:-translate-y-[1px] duration-300 ease-in-out whitespace-nowrap"
               >
                 {link.name}
               </Link>
             ))}
           </div>
 
-          {/* Logo - Centered on mobile, normal on desktop */}
-          <div className="md:block">
-            <Link href="/" className="block w-[100px] md:w-[132px] h-auto">
+          {/* Logo */}
+          <div className="flex-shrink-0">
+            <Link href="/" className="block w-[100px] md:w-[110px] lg:w-[132px] h-auto">
               <Image
                 src={"/images/Luxela-white-logo-200x32.svg"}
                 width={200}
@@ -109,23 +111,43 @@ const BuyerHeader = () => {
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-5">
+          <div className="flex items-center gap-2 lg:gap-3">
             {/* Desktop Icons */}
-            <div className="hidden md:flex items-center gap-3">
-              <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out">
-                <Search stroke="#DCDCDC" strokeWidth={1} className="size-6" />
-              </button>
-              <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out">
+            <div className="hidden lg:flex items-center gap-3">
+              {/* Search Bar - Responsive width */}
+              <div className="relative w-[200px] xl:w-[280px]">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search Item or brand..."
+                  className="w-full px-4 py-2.5 pl-10 pr-10 bg-[#1A1A1A] border-none rounded-[6px] text-[#DCDCDC] text-sm placeholder:text-[#808080] focus:outline-none focus:ring-1 focus:ring-[#333333]"
+                />
+                <Search 
+                  stroke="#808080" 
+                  strokeWidth={1.5} 
+                  className="size-5 absolute left-3 top-1/2 -translate-y-1/2 flex-shrink-0"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={clearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#808080] hover:text-[#DCDCDC] transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+
+              <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
                 <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
               </button>
-              {/* Desktop: Cart Icon */}
 
               <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
-                <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group">
+                <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group flex-shrink-0">
                   <ShoppingCart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
                   {itemCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-[#0E0E0E]">
-                      {itemCount}{" "}
+                      {itemCount}
                     </span>
                   )}
                 </button>
@@ -133,13 +155,12 @@ const BuyerHeader = () => {
             </div>
 
             {/* Mobile: Cart Icon */}
-
             <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
-              <button className="md:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121]">
+              <button className="lg:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0">
                 <ShoppingCart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
                 {itemCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full">
-                    {itemCount}{" "}
+                    {itemCount}
                   </span>
                 )}
               </button>
@@ -149,8 +170,8 @@ const BuyerHeader = () => {
             {user ? (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex cursor-pointer items-center gap-2 text-xs md:text-sm text-[#F2F2F2] px-2 md:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a]">
-                    <div className="size-7 md:size-8 overflow-hidden rounded-full">
+                  <button className="flex cursor-pointer items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] px-2 lg:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] flex-shrink-0">
+                    <div className="size-7 lg:size-8 overflow-hidden rounded-full flex-shrink-0">
                       <Image
                         src={userPicture}
                         width={40}
@@ -159,13 +180,13 @@ const BuyerHeader = () => {
                         className="size-full rounded-full"
                       />
                     </div>
-                    <span className="max-w-20 truncate hidden md:block">
+                    <span className="max-w-20 truncate hidden xl:block">
                       {username}
                     </span>
                     <ChevronDown
                       size={18}
                       stroke="#DCDCDC"
-                      className="hidden md:block"
+                      className="hidden xl:block flex-shrink-0"
                     />
                   </button>
                 </DropdownMenuTrigger>
@@ -223,7 +244,7 @@ const BuyerHeader = () => {
               </DropdownMenu>
             ) : (
               <Link href="/signin">
-                <Button className="flex cursor-pointer px-4 items-center gap-2 text-xs md:text-sm text-[#F2F2F2] md:px-6 py-2 transition-colors duration-300 ease-in-out">
+                <Button className="flex cursor-pointer px-4 items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] lg:px-6 py-2 transition-colors duration-300 ease-in-out flex-shrink-0">
                   Sign In
                 </Button>
               </Link>
@@ -235,16 +256,36 @@ const BuyerHeader = () => {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <>
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/60 z-[998] md:hidden"
+            className="fixed inset-0 bg-black/60 z-[998] lg:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          {/* Slide-in Menu */}
-          <div className="fixed top-[70px] left-0 w-64 h-[calc(100vh-70px)] bg-[#0E0E0E] border-r border-[#2B2B2B] z-[999] md:hidden overflow-y-auto">
+          <div className="fixed top-[70px] left-0 w-64 h-[calc(100vh-70px)] bg-[#0E0E0E] border-r border-[#2B2B2B] z-[999] lg:hidden overflow-y-auto">
             <div className="p-6 space-y-6">
-              {/* Navigation Links */}
+              {/* Mobile Search */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full px-4 py-2 pl-10 bg-[#141414] border border-[#2B2B2B] rounded-[4px] text-[#DCDCDC] text-sm focus:outline-none focus:border-[#9872DD]"
+                />
+                <Search 
+                  stroke="#DCDCDC" 
+                  className="size-5 absolute left-3 top-1/2 -translate-y-1/2"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={clearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+
               <div className="space-y-4">
                 {NAVLINKS.map((link) => (
                   <Link
@@ -258,19 +299,6 @@ const BuyerHeader = () => {
                 ))}
               </div>
 
-              {/* Action Buttons */}
-              {/* <div className="space-y-3">
-                <button className="w-full flex items-center gap-3 text-[#DCDCDC] text-sm py-3 px-4 rounded-[4px] shadow-[inset_0_0_0_1px_#212121]">
-                  <Search stroke="#DCDCDC" className="size-5" />
-                  <span>Search</span>
-                </button>
-                <button className="w-full flex items-center gap-3 text-[#DCDCDC] text-sm py-3 px-4 rounded-[4px] shadow-[inset_0_0_0_1px_#212121]">
-                  <Bell stroke="#DCDCDC" className="size-5" />
-                  <span>Notifications</span>
-                </button>
-              </div> */}
-
-              {/* User Menu (when signed in) */}
               {user && (
                 <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
                   <h3 className="text-xs text-gray-500 uppercase tracking-wider">
