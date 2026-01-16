@@ -2,28 +2,45 @@
 
 import { useListings } from "@/context/ListingsContext";
 import Link from "next/link";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { Button } from "../ui/button";
 
 type ScrollDirection = "left" | "right";
 
-const FeaturedBrands = () => {
+interface FeaturedBrandsProps {
+  searchQuery?: string;
+}
+
+const FeaturedBrands = ({ searchQuery = '' }: FeaturedBrandsProps) => {
   const { listings, loading } = useListings();
   const carouselRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // Unique brands from listings
-  const brands = listings.reduce((acc, listing) => {
-    const business = listing.sellers?.seller_business?.[0];
-    if (business && !acc.find(b => b.brand_name === business.brand_name)) {
-      acc.push({
-        ...business,
-        slug: business.brand_name.toLowerCase().replace(/\s+/g, '-')
-      });
+  // Filter brands based on search query
+  const brands = useMemo(() => {
+    const brandMap = listings.reduce((acc, listing) => {
+      const business = listing.sellers?.seller_business?.[0];
+      if (business && !acc.find((b: any) => b.brand_name === business.brand_name)) {
+        acc.push({
+          ...business,
+          slug: business.brand_name.toLowerCase().replace(/\s+/g, '-')
+        });
+      }
+      return acc;
+    }, [] as any[]);
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      return brandMap.filter(brand => 
+        brand.brand_name?.toLowerCase().includes(query) ||
+        brand.store_description?.toLowerCase().includes(query)
+      );
     }
-    return acc;
-  }, [] as any[]);
+
+    return brandMap;
+  }, [listings, searchQuery]);
 
   const checkScrollButtons = () => {
     if (carouselRef.current) {
@@ -51,6 +68,11 @@ const FeaturedBrands = () => {
       });
     }
   };
+
+  // Don't render section if search returns no results
+  if (searchQuery && brands.length === 0) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -80,9 +102,15 @@ const FeaturedBrands = () => {
   return (
     <section className="mb-16">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-xl capitalize font-bold text-white">
-          Featured Brands
-        </h2>
+      <h2 className="text-[18px] lg:text-xl capitalize font-medium text-white">
+  {searchQuery ? (
+    <span className="text-sm text-[#dcdcdc] font-medium">
+      Brands ({brands.length})
+    </span>
+  ) : (
+    "Featured Brands"
+  )}
+</h2>
         <div className="flex items-center gap-4">
           <button
             onClick={() => scroll("left")}
@@ -93,18 +121,8 @@ const FeaturedBrands = () => {
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <button
@@ -116,18 +134,8 @@ const FeaturedBrands = () => {
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
           <Link
@@ -139,7 +147,6 @@ const FeaturedBrands = () => {
         </div>
       </div>
 
-      {/* Carousel Container */}
       <div className="relative">
         <div
           ref={carouselRef}
@@ -168,7 +175,6 @@ const FeaturedBrands = () => {
                 </Link>
               </div>
 
-              {/* Image */}
               <div className="flex-1 min-h-[250px] md:min-h-[300px] relative overflow-hidden rounded-lg">
                 <img
                   src={brand.store_logo}
@@ -196,3 +202,4 @@ const FeaturedBrands = () => {
 };
 
 export default FeaturedBrands;
+

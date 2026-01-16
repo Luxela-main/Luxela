@@ -28,26 +28,26 @@ export default function ProductImageGallery({ product }: ProductImageGalleryProp
         )}
       </div>
 
-      {/* Thumbnail Gallery */}
-    <div className="flex gap-3">
-  {images.map((img, index) => (
-    <button
-      key={index}
-      onClick={() => setSelectedImage(index)}
-      className={`w-28 h-28 rounded-xl p-4 overflow-hidden transition-all ${
-        selectedImage === index 
-          ? 'ring-2 ring-purple-500' 
-          : 'ring-1 ring-black hover:ring-gray-600'
-      }`}
-    >
-      <img 
-        src={img} 
-        alt={`${product.title} ${index + 1}`}
-        className="w-full h-full object-cover"
-      />
-    </button>
-  ))}
-</div>
+      {/* Thumbnail Gallery - Responsive */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        {images.map((img, index) => (
+          <button
+            key={index}
+            onClick={() => setSelectedImage(index)}
+            className={`aspect-square rounded-lg sm:rounded-xl overflow-hidden transition-all ${
+              selectedImage === index 
+                ? 'ring-2 ring-purple-500' 
+                : 'ring-1 ring-black hover:ring-gray-600'
+            }`}
+          >
+            <img 
+              src={img} 
+              alt={`${product.title} ${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

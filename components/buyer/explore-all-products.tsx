@@ -6,14 +6,22 @@ import ProductCard from "@/components/buyer/ProductCard";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
-type SortOption = "newest" | "oldest" | "price-low" | "price-high" | "name-az" | "name-za";
+type SortOption =
+  | "newest"
+  | "oldest"
+  | "price-low"
+  | "price-high"
+  | "name-az"
+  | "name-za";
 
-const ExploreAllProducts = () => {
+interface ExploreAllProductsProps {
+  searchQuery?: string;
+}
+
+const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
   const { listings, loading } = useListings();
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [showSortMenu, setShowSortMenu] = useState(false);
-
-  const products = listings.filter(listing => listing.type === 'single');
 
   const sortOptions: { value: SortOption; label: string }[] = [
     { value: "newest", label: "Newest First" },
@@ -24,13 +32,54 @@ const ExploreAllProducts = () => {
     { value: "name-za", label: "Name: Z-A" },
   ];
 
+  // Filter products based on search query
+  const filteredProducts = useMemo(() => {
+    const products = listings.filter((listing) => listing.type === "single");
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      return products.filter((product) => {
+        // Search by product title
+        if (product.title?.toLowerCase().includes(query)) {
+          return true;
+        }
+
+        // Search by description
+        if (product.description?.toLowerCase().includes(query)) {
+          return true;
+        }
+
+        // Search by category
+        if (product.category?.toLowerCase().includes(query)) {
+          return true;
+        }
+
+        // Search by brand name
+        const brandName = product.sellers?.seller_business?.[0]?.brand_name;
+        if (brandName?.toLowerCase().includes(query)) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    return products;
+  }, [listings, searchQuery]);
+
   const sortedProducts = useMemo(() => {
-    const sorted = [...products];
+    const sorted = [...filteredProducts];
     switch (sortBy) {
       case "newest":
-        return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return sorted.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       case "oldest":
-        return sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        return sorted.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
       case "price-low":
         return sorted.sort((a, b) => a.price_cents - b.price_cents);
       case "price-high":
@@ -42,15 +91,22 @@ const ExploreAllProducts = () => {
       default:
         return sorted;
     }
-  }, [products, sortBy]);
+  }, [filteredProducts, sortBy]);
 
   const displayedProducts = sortedProducts.slice(0, 8);
+
+  // Don't render section if search returns no results
+  if (searchQuery && filteredProducts.length === 0) {
+    return null;
+  }
 
   if (loading) {
     return (
       <section>
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl capitalize font-bold text-white">Explore All</h2>
+          <h2 className="text-xl capitalize font-bold text-white">
+            Explore All
+          </h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -69,8 +125,19 @@ const ExploreAllProducts = () => {
   return (
     <section>
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-xl capitalize font-bold text-white">Explore All</h2>
-        <Link 
+        <h2 className="text-[18px] lg:text-xl capitalize font-semibold text-white">
+          {searchQuery ? (
+            <>
+              <span className="text-sm text-[#dcdcdc] font-medium">
+                {" "}
+                Products ({filteredProducts.length})
+              </span>
+            </>
+          ) : (
+            <span className="">Explore All</span>
+          )}
+        </h2>
+        <Link
           href="/buyer/brands"
           className="text-sm text-[#9872DD] hover:text-[#8451E1] transition-colors flex items-center gap-1"
         >
@@ -120,7 +187,7 @@ const ExploreAllProducts = () => {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {displayedProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
