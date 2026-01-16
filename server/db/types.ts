@@ -26,6 +26,7 @@ import {
   notificationsSchema,
   emailOtpsSchema,
   discountSchema,
+  webhookEventsSchema,
 } from "./zodSchemas";
 
 // --------------------------- TYPES ---------------------------
@@ -62,6 +63,9 @@ export type Listing = z.infer<typeof listingsSchema>;
 // ORDERS & PAYMENTS
 export type Order = z.infer<typeof ordersSchema>;
 export type Payment = z.infer<typeof paymentsSchema>;
+
+// WEBHOOK EVENTS
+export type WebhookEvent = z.infer<typeof webhookEventsSchema>;
 
 // DISCOUNTS
 export type Discount = z.infer<typeof discountSchema>;
@@ -102,4 +106,5 @@ export {
   notificationsSchema,
   emailOtpsSchema,
   discountSchema,
+  webhookEventsSchema,
 };

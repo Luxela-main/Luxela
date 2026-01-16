@@ -323,6 +323,16 @@ export const paymentsSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
+// --------------------------- WEBHOOK EVENTS -----------------
+export const webhookEventsSchema = z.object({
+  id: z.string().uuid().optional(),
+  eventId: z.string(),
+  eventType: z.string(),
+  status: z.enum(["pending", "processed", "failed"]).default("pending"),
+  receivedAt: z.date(),
+  processedAt: z.date().nullable().optional(),
+});
+
 // --------------------------- DISCOUNTS ---------------------
 export const discountSchema = z.object({
   id: z.string().uuid().optional(),

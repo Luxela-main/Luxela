@@ -1,102 +1,218 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { payments, orders, listings, notifications } from "@/server/db/schema";
+import { payments, orders, listings, notifications, webhookEvents } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyWebhookSignature } from "@/server/services/tsara";
+import crypto from "crypto";
+import "dotenv/config";
+
+async function verifyWebhookSignature(
+  rawBody: string,
+  signature: string,
+  secret: string
+): Promise<boolean> {
+  try {
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(rawBody, "utf8")
+      .digest("hex");
+
+    const signatureBuffer = Buffer.from(signature, "utf8");
+    const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+
+    if (signatureBuffer.length !== expectedBuffer.length) {
+      console.error("Signature length mismatch:", { received: signatureBuffer.length, 
+      expected: expectedBuffer.length }); 
+      return false;
+    }
+
+    const isValid = crypto.timingSafeEqual(signatureBuffer, expectedBuffer); 
+    
+    if (!isValid) { 
+      console.error("Signature mismatch:", { received: signature, expected: expectedSignature 
+    });
+  } 
+    
+    return isValid; 
+  } catch (err) { console.error("Webhook signature verification error:", err); 
+    return false;
+    }
+  }
+
+export const runtime = "nodejs";
+
+export const GET = () =>
+  NextResponse.json({ message: "Webhook endpoint alive" });
 
 export const POST = async (req: NextRequest) => {
   try {
     const signature = req.headers.get("x-tsara-signature");
-    if (!signature) return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+    const secret = process.env.TSARA_WEBHOOK_SECRET;
 
-    const payload = await req.text();
-
-    if (!verifyWebhookSignature(payload, signature)) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    if (!secret) {
+      console.error("Missing TSARA_WEBHOOK_SECRET");
+      return NextResponse.json(
+        { error: "Server misconfigured" },
+        { status: 500 }
+      );
     }
 
-    const webhookData = JSON.parse(payload);
-    const { event, data } = webhookData;
+    if (!signature) {
+      console.error("Missing x-tsara-signature");
+      return NextResponse.json(
+        { error: "Missing signature" },
+        { status: 401 }
+      );
+    }
 
-    if (event === "payment.updated" || event === "payment_link.updated") {
-      const statusMap: Record<string, "pending" | "processing" | "completed" | "failed" | "refunded"> = {
-        pending: "pending",
-        processing: "processing",
-        success: "completed",
-        failed: "failed",
-        refunded: "refunded",
-      };
+    const rawBody = await req.text();
 
-      const updatedPayment = await db
-        .update(payments)
-        .set({
-          status: statusMap[data.status] || "pending",
-          updatedAt: new Date(),
-          gatewayResponse: JSON.stringify(webhookData),
-          ...(data.status === "refunded" && { isRefunded: true, refundedAt: new Date() }),
-        })
-        .where(eq(payments.transactionRef, data.reference))
-        .returning();
+    console.log("Webhook received:", { signature_length: signature.length, body_length: rawBody.length, body_preview: rawBody.substring(0, 100) });
 
-      if (!updatedPayment.length) {
-        return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-      }
+    const isValid = await verifyWebhookSignature(rawBody, signature, secret);
+    if (!isValid) {
+      console.error("Invalid webhook signature");
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 401 }
+      );
+    }
+    console.log("Signature verified successfully");
 
-      const payment = updatedPayment[0];
+    const { event, data, id: eventId } = JSON.parse(rawBody);
+    if (!eventId) {
+      return NextResponse.json({ error: "Missing event ID" }, { status: 400 });
+    }
 
-      // Payment business logic
-      if (["success", "completed"].includes(data.status)) {
-        if (payment.orderId) {
-          await db.update(orders).set({ orderStatus: "processing" }).where(eq(orders.id, payment.orderId));
+    // Idempotency
+    const existing = await db
+      .select()
+      .from(webhookEvents)
+      .where(eq(webhookEvents.eventId, eventId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      console.log("Event already processed (idempotent):", eventId);
+      return NextResponse.json({ success: true, idempotent: true });
+    }
+
+    // Map external statuses to internal payment statuses
+    const statusMap = {
+      pending: "pending",
+      processing: "processing",
+      success: "completed",
+      failed: "failed",
+      refunded: "refunded"
+    } as const;
+
+    const mappedStatus =
+      statusMap[String(data.status) as keyof typeof statusMap] ?? "pending";
+
+    await db.transaction(async (tx) => {
+      await tx.insert(webhookEvents).values({
+        eventId,
+        eventType: event,
+        status: "pending",
+        receivedAt: new Date()
+      });
+
+      // Process payment or payment link updates
+      if (event === "payment.updated" || event === "payment_link.updated") {
+        const updatedPayment = await tx
+          .update(payments)
+          .set({
+            status: mappedStatus,
+            updatedAt: new Date(),
+            gatewayResponse: rawBody,
+            ...(mappedStatus === "refunded"
+              ? { isRefunded: true, refundedAt: new Date() }
+              : {})
+          })
+          .where(eq(payments.transactionRef, data.reference))
+          .returning();
+
+        if (!updatedPayment.length) {
+          throw new Error("Payment not found");
         }
 
-        if (payment.listingId) {
-          const listingData = await db
-            .select({ sellerId: listings.sellerId, productTitle: listings.title })
+        const payment = updatedPayment[0];
+
+        // Notify seller and update orders if successful
+        if (["success", "completed"].includes(data.status)) {
+          if (payment.orderId) {
+            await tx
+              .update(orders)
+              .set({
+                orderStatus: "processing",
+                payoutStatus: "processing"
+              })
+              .where(eq(orders.id, payment.orderId));
+          }
+
+          if (payment.listingId) {
+            const listingRow = await tx
+              .select({
+                sellerId: listings.sellerId,
+                productTitle: listings.title
+              })
+              .from(listings)
+              .where(eq(listings.id, payment.listingId))
+              .limit(1);
+
+            if (listingRow[0]) {
+              await tx.insert(notifications).values({
+                sellerId: listingRow[0].sellerId,
+                type: "purchase",
+                message: `Payment received for "${listingRow[0].productTitle}" - $${(
+                  payment.amountCents / 100
+                ).toFixed(2)}`,
+                isRead: false,
+                isStarred: false,
+                createdAt: new Date()
+              });
+            }
+          }
+        }
+
+        // Failed notification
+        if (data.status === "failed" && payment.listingId) {
+          const listingRow = await tx
+            .select({
+              sellerId: listings.sellerId,
+              productTitle: listings.title
+            })
             .from(listings)
             .where(eq(listings.id, payment.listingId))
             .limit(1);
 
-          if (listingData[0]) {
-            await db.insert(notifications).values({
-              sellerId: listingData[0].sellerId,
+          if (listingRow[0]) {
+            await tx.insert(notifications).values({
+              sellerId: listingRow[0].sellerId,
               type: "purchase",
-              message: `Payment received for "${listingData[0].productTitle}" - $${(payment.amountCents / 100).toFixed(
-                2
-              )}`,
+              message: `Payment failed for "${listingRow[0].productTitle}"`,
               isRead: false,
               isStarred: false,
+              createdAt: new Date()
             });
           }
         }
-
-        if (payment.orderId) {
-          await db.update(orders).set({ payoutStatus: "processing" }).where(eq(orders.id, payment.orderId));
-        }
       }
 
-      if (data.status === "failed" && payment.listingId) {
-        const listingData = await db
-          .select({ sellerId: listings.sellerId, productTitle: listings.title })
-          .from(listings)
-          .where(eq(listings.id, payment.listingId))
-          .limit(1);
+      await tx
+        .update(webhookEvents)
+        .set({ status: "processed", processedAt: new Date() })
+        .where(eq(webhookEvents.eventId, eventId));
+    });
 
-        if (listingData[0]) {
-          await db.insert(notifications).values({
-            sellerId: listingData[0].sellerId,
-            type: "purchase",
-            message: `Payment failed for "${listingData[0].productTitle}"`,
-            isRead: false,
-            isStarred: false,
-          });
-        }
-      }
-    }
-
-    return NextResponse.json({ success: true, message: "Webhook processed successfully" });
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.log("Webhook processed successfully:", eventId);
+    return NextResponse.json({
+      success: true,
+      message: "Webhook processed"
+    });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 };

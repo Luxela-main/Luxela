@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, boolean, pgEnum, uuid, integer, numeric, unique } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, uuid, integer, numeric, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -26,10 +26,12 @@ export const limitedEditionBadgeEnum = pgEnum('limited_badge', ['show_badge', 'd
 export const shippingOptionEnum = pgEnum('shipping_option', ['local', 'international', 'both']);
 export const orderStatusEnum = pgEnum('order_status', ['processing', 'shipped', 'delivered', 'canceled', 'returned']);
 export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
+
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto','paypal','stripe','flutterwave','tsara']);
 export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','completed','failed','refunded']);
+export const WebhookEventStatusEnum = pgEnum('webhook_event_status', ['pending', 'processed', 'failed']);
 export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterwave','stripe','paypal']);
 
 // =======================
@@ -278,6 +280,18 @@ export const payments = pgTable('payments', {
   refundedAt: timestamp('refunded_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
+// WEBHOOK EVENTS
+// =======================
+export const webhookEvents = pgTable("webhook_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: text("event_id").notNull(),  
+  eventType: text("event_type").notNull(), 
+  status: WebhookEventStatusEnum("status").notNull().default("pending"), 
+  receivedAt: timestamp("received_at").defaultNow().notNull(), 
+  processedAt: timestamp("processed_at"),            
 });
 
 // =======================
@@ -550,6 +564,9 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   listing: one(listings),
   order: one(orders),
 }));
+
+// Webhook Events → none
+export const webhookEventsRelations = relations(webhookEvents, ({}) => ({}));
 
 // Sales → Buyer, Seller, Listing, Order
 export const salesRelations = relations(sales, ({ one }) => ({
