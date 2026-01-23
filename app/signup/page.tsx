@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import React, { useState, Suspense } from "react";
 import { useToast } from "@/components/hooks/useToast";
 import { useRouter, useSearchParams } from "next/navigation";

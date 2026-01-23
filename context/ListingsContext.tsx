@@ -91,12 +91,21 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
           )
         `);
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        const errorMessage = fetchError.message || JSON.stringify(fetchError) || "Unknown error";
+        console.error("Supabase fetch error:", fetchError);
+        throw new Error(errorMessage);
+      }
 
       setListings(data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch listings");
-      console.error("Error fetching listings:", err);
+    } catch (err: any) {
+      const errorMessage = err?.message || (err instanceof Error ? err.message : JSON.stringify(err) || "Failed to fetch listings");
+      setError(errorMessage);
+      console.error("Error fetching listings:", {
+        error: err,
+        message: errorMessage,
+        stack: err?.stack,
+      });
     } finally {
       setLoading(false);
     }
@@ -139,4 +148,4 @@ export function useListings() {
     throw new Error("useListings must be used within a ListingsProvider");
   }
   return context;
-}
+}

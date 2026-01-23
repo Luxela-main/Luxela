@@ -10,7 +10,7 @@ export default function DeliveredOrdersPage() {
   return (
     <div >
       <Breadcrumb
-        items={[{ label: "Home", href: "/dashboard" }, { label: "Orders", href: "/dashboard/orders/delivered" }, { label: "Delivered Orders" }]}
+        items={[{ label: "Home", href: "/buyer/dashboard" }, { label: "Orders", href: "/buyer/dashboard/orders/delivered" }, { label: "Delivered Orders" }]}
       />
 
       <h1 className="text-white text-2xl font-semibold mb-8">Orders</h1>
@@ -32,7 +32,7 @@ export default function DeliveredOrdersPage() {
         <div className="bg-[#1a1a1a] rounded-lg p-6 border border-[#212121]">
           <div className="flex items-center justify-between mb-4">
             <div className="text-white text-sm">Delivered 23rd October, 2025</div>
-            <Link href="/dashboard/orders/delivered/NOB-134560" className="text-[#8451e1] text-sm hover:underline">
+            <Link href="/buyer/dashboard/orders/delivered/NOB-134560" className="text-[#8451e1] text-sm hover:underline">
               View order details
             </Link>
           </div>
@@ -77,4 +77,4 @@ export default function DeliveredOrdersPage() {
       </div>
     </div>
   )
-}
+}

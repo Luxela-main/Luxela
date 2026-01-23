@@ -1,9 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { trpc } from '@/lib/trpc';
-import { useAuth } from "@/context/AuthContext";
-
 
 interface BillingAddress {
   id: string;
@@ -34,59 +33,80 @@ interface ProfileContextType {
   profile: ProfileData | null;
   loading: boolean;
   isInitialized: boolean;
-  refreshProfile: () => void;
+  refreshProfile: () => Promise<void>;
+  setProfile: (profile: ProfileData | null) => void;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data, isLoading, refetch, error } = trpc.buyer.getAccountDetails.useQuery(undefined, {
-    enabled: !!user,
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+  // Query profile data only when user is authenticated
+  const { data: profileData, isLoading: queryLoading, refetch } = trpc.buyer.getAccountDetails.useQuery(undefined, {
+    enabled: !!user && !authLoading,
+    retry: (failureCount, error: any) => {
+      // Don't retry on NOT_FOUND errors (user hasn't created profile yet)
+      if (error?.data?.code === 'NOT_FOUND') {
+        return false;
+      }
+      // Retry up to 2 times for other errors
+      return failureCount < 2;
+    },
   });
 
-
+  // Update profile state when query data changes
   useEffect(() => {
-    if (data) {
-      setProfile(data);
+    if (profileData) {
+      setProfile(profileData);
       setIsInitialized(true);
-    } else if (error) {
-      
-      setProfile(null);
-      setIsInitialized(true); 
     }
-  }, [data, error]);
+  }, [profileData]);
 
-  // Reset when user changes
+  // Handle initialization based on auth and query states
   useEffect(() => {
-    if (!user) {
+    if (!user && !authLoading) {
+      // No user - initialization is complete
       setProfile(null);
-      setIsInitialized(false);
+      setIsInitialized(true);
+    } else if (user && !authLoading && !queryLoading) {
+      // User exists and query has finished
+      setIsInitialized(true);
     }
-  }, [user]);
+  }, [user, authLoading, queryLoading]);
 
-  const refreshProfile = async () => {
-    if (user) {
-      try {
-        const result = await refetch();
-        if (result.data) {
-          setProfile(result.data);
-        }
-      } catch {
-        // Silent failure
-        setProfile(null);
+  const refreshProfile = async (): Promise<void> => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      console.log('[ProfileContext] Refreshing profile...');
+      
+      // Refetch the data from server
+      const result = await refetch();
+      
+      if (result.data) {
+        setProfile(result.data);
+        console.log('[ProfileContext] Profile refreshed successfully:', result.data);
       }
+    } catch (err: any) {
+      console.error('[ProfileContext] Failed to refresh profile:', err);
+      // Don't clear profile on error - keep existing data
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const setProfileData = (newProfile: ProfileData | null) => {
+    setProfile(newProfile);
+    setIsInitialized(true);
+  };
+
   return (
-    <ProfileContext.Provider value={{ profile, loading: isLoading, isInitialized, refreshProfile }}>
+    <ProfileContext.Provider value={{ profile, loading: isLoading || queryLoading, isInitialized, refreshProfile, setProfile: setProfileData }}>
       {children}
     </ProfileContext.Provider>
   );

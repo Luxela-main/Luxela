@@ -1,7 +1,9 @@
-// Export all seller query hooks
 export * from './useSellerProfile';
 export * from './useMyListings';
 export * from './useSales';
 export * from './useNotifications';
 export * from './useDashboardData';
+export * from './usePendingOrders';
+export * from './useSupportTickets';
+export * from './useDashboard';
 export * from './queryKeys';

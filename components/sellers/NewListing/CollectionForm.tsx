@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import helper from "@/helper";
 
-interface CollectionItem {
+export interface CollectionItem {
   title: string;
   priceCents: number;
   currency: string;
+  productId?: string;
+  image?: string;
 }
 
 interface CollectionFormProps {
@@ -19,8 +21,8 @@ interface CollectionFormProps {
   onDescriptionChange: (description: string) => void;
   onItemsChange: (items: CollectionItem[]) => void;
   onSubmit: () => void;
-  onNext: () => void;
-  isSubmitting?: boolean;
+  onNext?: () => void;
+  isSubmitting: boolean;
 }
 
 const CollectionForm: React.FC<CollectionFormProps> = ({

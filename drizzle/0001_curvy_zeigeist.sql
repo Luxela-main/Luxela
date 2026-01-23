@@ -1,12 +1,15 @@
 CREATE TYPE "public"."webhook_event_status" AS ENUM('pending', 'processed', 'failed');--> statement-breakpoint
-CREATE TYPE "public"."business_type" AS ENUM('individual', 'business');--> statement-breakpoint
+CREATE TYPE "public"."business_type" AS ENUM('individual', 'sole_proprietorship', 'llc', 'corporation', 'partnership', 'cooperative', 'non_profit', 'trust', 'joint_venture');--> statement-breakpoint
 CREATE TYPE "public"."delivery_status" AS ENUM('not_shipped', 'in_transit', 'delivered');--> statement-breakpoint
-CREATE TYPE "public"."fiat_payout_method" AS ENUM('bank', 'paypal', 'stripe', 'flutterwave');--> statement-breakpoint
-CREATE TYPE "public"."id_type" AS ENUM('passport', 'drivers_license', 'voters_card', 'national_id');--> statement-breakpoint
+CREATE TYPE "public"."fiat_payout_method" AS ENUM('bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'other');--> statement-breakpoint
+CREATE TYPE "public"."hold_status" AS ENUM('active', 'released', 'refunded', 'expired');--> statement-breakpoint
+CREATE TYPE "public"."id_type" AS ENUM('national_id', 'passport', 'drivers_license', 'voters_card', 'business_license', 'tax_id', 'business_registration');--> statement-breakpoint
+CREATE TYPE "public"."ledger_status" AS ENUM('pending', 'completed', 'failed', 'reversed');--> statement-breakpoint
 CREATE TYPE "public"."limited_badge" AS ENUM('show_badge', 'do_not_show');--> statement-breakpoint
 CREATE TYPE "public"."listing_type" AS ENUM('single', 'collection');--> statement-breakpoint
-CREATE TYPE "public"."local_pricing" AS ENUM('fiat', 'cryptocurrency');--> statement-breakpoint
-CREATE TYPE "public"."notification_type" AS ENUM('purchase', 'review', 'comment', 'reminder');--> statement-breakpoint
+CREATE TYPE "public"."local_pricing" AS ENUM('fiat', 'cryptocurrency', 'both');--> statement-breakpoint
+CREATE TYPE "public"."nft_tier" AS ENUM('bronze', 'silver', 'gold', 'platinum');--> statement-breakpoint
+CREATE TYPE "public"."notification_type" AS ENUM('purchase', 'review', 'comment', 'reminder', 'order_confirmed', 'payment_failed', 'refund_issued', 'delivery_confirmed');--> statement-breakpoint
 CREATE TYPE "public"."order_status" AS ENUM('processing', 'shipped', 'delivered', 'canceled', 'returned');--> statement-breakpoint
 CREATE TYPE "public"."payment_method" AS ENUM('card', 'bank_transfer', 'crypto', 'paypal', 'stripe', 'flutterwave', 'tsara');--> statement-breakpoint
 CREATE TYPE "public"."payment_provider" AS ENUM('tsara', 'flutterwave', 'stripe', 'paypal');--> statement-breakpoint
@@ -15,14 +18,24 @@ CREATE TYPE "public"."payout_status" AS ENUM('in_escrow', 'processing', 'paid');
 CREATE TYPE "public"."payout_token" AS ENUM('USDT', 'USDC', 'solana');--> statement-breakpoint
 CREATE TYPE "public"."preferred_payout_method" AS ENUM('fiat_currency', 'cryptocurrency', 'both');--> statement-breakpoint
 CREATE TYPE "public"."product_category" AS ENUM('men_clothing', 'women_clothing', 'men_shoes', 'women_shoes', 'accessories', 'merch', 'others');--> statement-breakpoint
-CREATE TYPE "public"."refund_policy" AS ENUM('no_refunds', 'accept_refunds');--> statement-breakpoint
+CREATE TYPE "public"."received_condition" AS ENUM('excellent', 'good', 'acceptable', 'poor');--> statement-breakpoint
+CREATE TYPE "public"."refund_policy" AS ENUM('no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit');--> statement-breakpoint
+CREATE TYPE "public"."refund_status" AS ENUM('pending', 'return_requested', 'return_approved', 'return_rejected', 'refunded', 'canceled');--> statement-breakpoint
+CREATE TYPE "public"."refund_type" AS ENUM('full', 'partial', 'store_credit');--> statement-breakpoint
+CREATE TYPE "public"."reservation_status" AS ENUM('active', 'confirmed', 'released', 'expired');--> statement-breakpoint
 CREATE TYPE "public"."roles" AS ENUM('buyer', 'seller', 'admin');--> statement-breakpoint
-CREATE TYPE "public"."shipping_eta" AS ENUM('48hrs', '72hrs', '5_working_days', '1week');--> statement-breakpoint
+CREATE TYPE "public"."shipping_eta" AS ENUM('same_day', 'next_day', '48hrs', '72hrs', '5_working_days', '1_2_weeks', '2_3_weeks', 'custom');--> statement-breakpoint
 CREATE TYPE "public"."shipping_option" AS ENUM('local', 'international', 'both');--> statement-breakpoint
-CREATE TYPE "public"."shipping_type" AS ENUM('domestic');--> statement-breakpoint
+CREATE TYPE "public"."shipping_type" AS ENUM('same_day', 'next_day', 'express', 'standard', 'domestic', 'international', 'both');--> statement-breakpoint
+CREATE TYPE "public"."social_media_platform" AS ENUM('x', 'instagram', 'facebook', 'whatsapp', 'tiktok');--> statement-breakpoint
 CREATE TYPE "public"."supply_capacity" AS ENUM('no_max', 'limited');--> statement-breakpoint
 CREATE TYPE "public"."target_audience" AS ENUM('male', 'female', 'unisex');--> statement-breakpoint
-CREATE TYPE "public"."wallet_type" AS ENUM('phantom', 'solflare', 'backpack', 'wallet_connect');--> statement-breakpoint
+CREATE TYPE "public"."ticket_category" AS ENUM('general_inquiry', 'technical_issue', 'payment_problem', 'order_issue', 'refund_request', 'account_issue', 'listing_help', 'other');--> statement-breakpoint
+CREATE TYPE "public"."ticket_priority" AS ENUM('low', 'medium', 'high', 'urgent');--> statement-breakpoint
+CREATE TYPE "public"."ticket_status" AS ENUM('open', 'in_progress', 'resolved', 'closed');--> statement-breakpoint
+CREATE TYPE "public"."transaction_type" AS ENUM('sale', 'refund', 'return_request', 'return_approved', 'refund_initiated', 'refund_completed', 'commission', 'payout');--> statement-breakpoint
+CREATE TYPE "public"."transition_type" AS ENUM('automatic', 'manual', 'system');--> statement-breakpoint
+CREATE TYPE "public"."wallet_type" AS ENUM('phantom', 'solflare', 'backpack', 'wallet_connect', 'magic_eden', 'ledger_live');--> statement-breakpoint
 CREATE TABLE "brands" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"seller_id" uuid NOT NULL,
@@ -109,6 +122,26 @@ CREATE TABLE "carts" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "categories" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"slug" varchar(255) NOT NULL,
+	"description" text,
+	"image" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "categories_name_unique" UNIQUE("name"),
+	CONSTRAINT "categories_slug_unique" UNIQUE("slug")
+);
+--> statement-breakpoint
+CREATE TABLE "collection_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"collection_id" uuid NOT NULL,
+	"product_id" uuid NOT NULL,
+	"position" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "collections" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"brand_id" uuid NOT NULL,
@@ -118,6 +151,15 @@ CREATE TABLE "collections" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "collections_brand_id_slug_unique" UNIQUE("brand_id","slug")
+);
+--> statement-breakpoint
+CREATE TABLE "conversations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"buyer_id" uuid NOT NULL,
+	"seller_id" uuid NOT NULL,
+	"last_message_at" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "discounts" (
@@ -131,12 +173,23 @@ CREATE TABLE "discounts" (
 	CONSTRAINT "discounts_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
-CREATE TABLE "email_otps" (
+CREATE TABLE "financial_ledger" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"email" varchar(255) NOT NULL,
-	"code_hash" varchar(255) NOT NULL,
-	"expires_at" timestamp NOT NULL,
-	"consumed" boolean DEFAULT false NOT NULL,
+	"seller_id" uuid NOT NULL,
+	"order_id" uuid,
+	"payment_id" uuid,
+	"transaction_type" "transaction_type" NOT NULL,
+	"amount_cents" integer NOT NULL,
+	"currency" varchar(16) NOT NULL,
+	"status" varchar(32) NOT NULL,
+	"description" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "follows" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"follower_id" uuid NOT NULL,
+	"following_id" uuid NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -148,9 +201,25 @@ CREATE TABLE "inventory" (
 	"reserved_quantity" integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "inventory_reservations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"inventory_id" uuid NOT NULL,
+	"order_id" uuid NOT NULL,
+	"quantity" integer NOT NULL,
+	"status" varchar(50) DEFAULT 'reserved' NOT NULL,
+	"reserved_at" timestamp DEFAULT now() NOT NULL,
+	"released_at" timestamp,
+	"confirmed_at" timestamp,
+	"expires_at" timestamp,
+	"notes" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "listings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"product_id" uuid NOT NULL,
+	"collection_id" uuid,
+	"product_id" uuid,
 	"seller_id" uuid NOT NULL,
 	"type" "listing_type" NOT NULL,
 	"title" varchar(255) NOT NULL,
@@ -170,18 +239,58 @@ CREATE TABLE "listings" (
 	"shipping_option" "shipping_option",
 	"eta_domestic" "shipping_eta",
 	"eta_international" "shipping_eta",
+	"refund_policy" "refund_policy",
+	"local_pricing" "local_pricing",
 	"items_json" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "loyalty_nfts" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"buyer_id" uuid NOT NULL,
+	"tier" "nft_tier" NOT NULL,
+	"title" varchar(255) NOT NULL,
+	"description" text,
+	"image" text NOT NULL,
+	"loyalty_points" integer NOT NULL,
+	"earned_date" timestamp DEFAULT now() NOT NULL,
+	"rarity" varchar(50) NOT NULL,
+	"property" varchar(100) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "messages" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"conversation_id" uuid NOT NULL,
+	"sender_id" uuid NOT NULL,
+	"sender_role" "roles" NOT NULL,
+	"content" text NOT NULL,
+	"is_read" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "notifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"seller_id" uuid NOT NULL,
+	"buyer_id" uuid,
+	"order_id" uuid,
 	"type" "notification_type" NOT NULL,
 	"message" text NOT NULL,
 	"is_read" boolean DEFAULT false NOT NULL,
 	"is_starred" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "order_state_transitions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"order_id" uuid NOT NULL,
+	"from_status" "order_status" NOT NULL,
+	"to_status" "order_status" NOT NULL,
+	"reason" text,
+	"triggered_by" uuid NOT NULL,
+	"triggered_by_role" "roles" NOT NULL,
+	"metadata" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -206,7 +315,26 @@ CREATE TABLE "orders" (
 	"tracking_number" varchar(255),
 	"estimated_arrival" timestamp,
 	"delivered_date" timestamp,
-	"recipient_email" varchar(255)
+	"recipient_email" varchar(255),
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "payment_holds" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"seller_id" uuid NOT NULL,
+	"order_id" uuid NOT NULL,
+	"payment_id" uuid NOT NULL,
+	"amount_cents" integer NOT NULL,
+	"currency" varchar(16) NOT NULL,
+	"hold_status" "hold_status" DEFAULT 'active' NOT NULL,
+	"reason" varchar(255),
+	"held_at" timestamp DEFAULT now() NOT NULL,
+	"releaseable_at" timestamp,
+	"refunded_at" timestamp,
+	"released_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "payments" (
@@ -253,6 +381,7 @@ CREATE TABLE "products" (
 	"category" "product_category",
 	"price" numeric(10, 2) NOT NULL,
 	"currency" varchar(16) DEFAULT 'SOL' NOT NULL,
+	"type" varchar(50),
 	"sku" text NOT NULL,
 	"in_stock" boolean DEFAULT true,
 	"ships_in" varchar(64),
@@ -268,6 +397,30 @@ CREATE TABLE "profiles" (
 	"image" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "refunds" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"order_id" uuid NOT NULL,
+	"payment_id" uuid,
+	"buyer_id" uuid NOT NULL,
+	"seller_id" uuid NOT NULL,
+	"amount_cents" integer NOT NULL,
+	"currency" varchar(16) NOT NULL,
+	"refund_type" varchar(32) NOT NULL,
+	"reason" text NOT NULL,
+	"refund_status" "refund_status" DEFAULT 'pending' NOT NULL,
+	"description" text,
+	"rma_number" varchar(255),
+	"images" text,
+	"seller_note" text,
+	"restock_percentage" integer,
+	"received_condition" "received_condition",
+	"notes" text,
+	"requested_at" timestamp,
+	"processed_at" timestamp,
+	"refunded_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "review" (
@@ -312,7 +465,9 @@ CREATE TABLE "seller_business" (
 	"business_address" text NOT NULL,
 	"official_email" varchar(255) NOT NULL,
 	"phone_number" varchar(50) NOT NULL,
+	"country_code" varchar(10),
 	"country" varchar(100) NOT NULL,
+	"social_media_platform" "social_media_platform",
 	"social_media" text,
 	"full_name" varchar(255) NOT NULL,
 	"id_type" "id_type" NOT NULL,
@@ -361,8 +516,61 @@ CREATE TABLE "seller_shipping" (
 CREATE TABLE "sellers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
+	"brand_id" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "shipping_rates" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"seller_id" uuid NOT NULL,
+	"shipping_zone" varchar(255) NOT NULL,
+	"min_weight" numeric(10, 2) NOT NULL,
+	"max_weight" numeric(10, 2) NOT NULL,
+	"rate_cents" integer NOT NULL,
+	"currency" varchar(16) NOT NULL,
+	"estimated_days" integer NOT NULL,
+	"shipping_type" "shipping_type" NOT NULL,
+	"active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "subcategories" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"category_id" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"slug" varchar(255) NOT NULL,
+	"description" text,
+	"image" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "support_ticket_replies" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"ticket_id" uuid NOT NULL,
+	"sender_id" uuid NOT NULL,
+	"sender_role" "roles" NOT NULL,
+	"message" text NOT NULL,
+	"attachment_url" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "support_tickets" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"buyer_id" uuid NOT NULL,
+	"seller_id" uuid,
+	"order_id" uuid,
+	"subject" varchar(255) NOT NULL,
+	"description" text NOT NULL,
+	"category" "ticket_category" NOT NULL,
+	"priority" "ticket_priority" DEFAULT 'medium' NOT NULL,
+	"status" "ticket_status" DEFAULT 'open' NOT NULL,
+	"assigned_to" uuid,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"resolved_at" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
@@ -389,6 +597,24 @@ CREATE TABLE "webhook_events" (
 	"processed_at" timestamp
 );
 --> statement-breakpoint
+CREATE TABLE "webhook_logs" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"provider" "payment_provider" NOT NULL,
+	"event_type" text NOT NULL,
+	"external_event_id" text,
+	"payment_id" uuid,
+	"order_id" uuid,
+	"status" "webhook_event_status" DEFAULT 'pending' NOT NULL,
+	"error_message" text,
+	"retry_count" integer DEFAULT 0 NOT NULL,
+	"last_retry_at" timestamp,
+	"next_retry_at" timestamp,
+	"received_at" timestamp DEFAULT now() NOT NULL,
+	"processed_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "brands" ADD CONSTRAINT "brands_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "buyer_account_details" ADD CONSTRAINT "buyer_account_details_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "buyer_billing_address" ADD CONSTRAINT "buyer_billing_address_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -399,15 +625,35 @@ ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_carts_id_fk" FOREIGN
 ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "carts" ADD CONSTRAINT "carts_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "carts" ADD CONSTRAINT "carts_discount_id_discounts_id_fk" FOREIGN KEY ("discount_id") REFERENCES "public"."discounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "collection_items" ADD CONSTRAINT "collection_items_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "collection_items" ADD CONSTRAINT "collection_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "collections" ADD CONSTRAINT "collections_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "financial_ledger" ADD CONSTRAINT "financial_ledger_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "financial_ledger" ADD CONSTRAINT "financial_ledger_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "financial_ledger" ADD CONSTRAINT "financial_ledger_payment_id_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payments"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "follows" ADD CONSTRAINT "follows_follower_id_sellers_id_fk" FOREIGN KEY ("follower_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "follows" ADD CONSTRAINT "follows_following_id_sellers_id_fk" FOREIGN KEY ("following_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "inventory" ADD CONSTRAINT "inventory_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "inventory" ADD CONSTRAINT "inventory_variant_id_product_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."product_variants"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "inventory_reservations" ADD CONSTRAINT "inventory_reservations_inventory_id_inventory_id_fk" FOREIGN KEY ("inventory_id") REFERENCES "public"."inventory"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "inventory_reservations" ADD CONSTRAINT "inventory_reservations_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "listings" ADD CONSTRAINT "listings_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "listings" ADD CONSTRAINT "listings_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "listings" ADD CONSTRAINT "listings_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loyalty_nfts" ADD CONSTRAINT "loyalty_nfts_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order_state_transitions" ADD CONSTRAINT "order_state_transitions_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payment_holds" ADD CONSTRAINT "payment_holds_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payment_holds" ADD CONSTRAINT "payment_holds_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payment_holds" ADD CONSTRAINT "payment_holds_payment_id_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payments"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -415,6 +661,10 @@ ALTER TABLE "product_images" ADD CONSTRAINT "product_images_product_id_products_
 ALTER TABLE "product_variants" ADD CONSTRAINT "product_variants_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_payment_id_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payments"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "review" ADD CONSTRAINT "review_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "review" ADD CONSTRAINT "review_listing_id_listings_id_fk" FOREIGN KEY ("listing_id") REFERENCES "public"."listings"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sales" ADD CONSTRAINT "sales_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -424,4 +674,13 @@ ALTER TABLE "sales" ADD CONSTRAINT "sales_listing_id_listings_id_fk" FOREIGN KEY
 ALTER TABLE "seller_additional" ADD CONSTRAINT "seller_additional_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "seller_business" ADD CONSTRAINT "seller_business_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "seller_payment" ADD CONSTRAINT "seller_payment_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "seller_shipping" ADD CONSTRAINT "seller_shipping_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "seller_shipping" ADD CONSTRAINT "seller_shipping_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "shipping_rates" ADD CONSTRAINT "shipping_rates_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "subcategories" ADD CONSTRAINT "subcategories_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "support_ticket_replies" ADD CONSTRAINT "support_ticket_replies_ticket_id_support_tickets_id_fk" FOREIGN KEY ("ticket_id") REFERENCES "public"."support_tickets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_buyer_id_buyers_id_fk" FOREIGN KEY ("buyer_id") REFERENCES "public"."buyers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_seller_id_sellers_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."sellers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_assigned_to_sellers_id_fk" FOREIGN KEY ("assigned_to") REFERENCES "public"."sellers"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "webhook_logs" ADD CONSTRAINT "webhook_logs_payment_id_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payments"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "webhook_logs" ADD CONSTRAINT "webhook_logs_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE set null ON UPDATE no action;

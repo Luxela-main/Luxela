@@ -175,6 +175,8 @@ export const sellerRouter = createTRPCRouter({
         officialEmail: z.string().email("Invalid email format"),
         phoneNumber: z.string().min(3, "Phone number is required"),
         country: z.string().min(2, "Country is required"),
+        countryCode: z.string().optional(),
+        socialMediaPlatform: z.string().optional(),
         socialMedia: z.string().optional(),
         fullName: z.string().min(1, "Full name is required"),
         idType: z.enum([
@@ -232,7 +234,7 @@ export const sellerRouter = createTRPCRouter({
           // Update existing
           await db
             .update(sellerBusiness)
-            .set({ ...input, updatedAt: new Date() })
+            .set({ ...(input as any), updatedAt: new Date() })
             .where(eq(sellerBusiness.sellerId, seller.id));
         } else {
           // Create new
@@ -365,13 +367,18 @@ export const sellerRouter = createTRPCRouter({
         returnAddress: z.string().min(1, "Return address is required"),
         shippingType: z.enum(["domestic"]),
         estimatedShippingTime: z.enum([
+          "same_day",
+          "next_day",
           "48hrs",
           "72hrs",
           "5_working_days",
+          "1_2_weeks",
+          "2_3_weeks",
           "1week",
+          "custom",
         ]),
-        refundPolicy: z.enum(["no_refunds", "accept_refunds"]),
-        refundPeriod: z.enum(["48hrs", "72hrs", "5_working_days", "1week"]),
+        refundPolicy: z.enum(["no_refunds", "accept_refunds", "14days", "30days", "60days", "store_credit"]),
+        refundPeriod: z.enum(["same_day", "next_day", "48hrs", "72hrs", "5_working_days", "1_2_weeks", "2_3_weeks", "1week", "14days", "30days", "60days", "store_credit", "custom"]),
       })
     )
     .output(
@@ -414,7 +421,7 @@ export const sellerRouter = createTRPCRouter({
         if (existing.length > 0) {
           await db
             .update(sellerShipping)
-            .set({ ...input, updatedAt: new Date() })
+            .set({ ...(input as any), updatedAt: new Date() })
             .where(eq(sellerShipping.sellerId, seller.id));
         } else {
           await db.insert(sellerShipping).values({
@@ -538,7 +545,7 @@ export const sellerRouter = createTRPCRouter({
         if (existing.length > 0) {
           await db
             .update(sellerPayment)
-            .set({ ...input, updatedAt: new Date() })
+            .set({ ...(input as any), updatedAt: new Date() })
             .where(eq(sellerPayment.sellerId, seller.id));
         } else {
           await db.insert(sellerPayment).values({
@@ -630,7 +637,7 @@ export const sellerRouter = createTRPCRouter({
         if (existing.length > 0) {
           await db
             .update(sellerAdditional)
-            .set({ ...input, updatedAt: new Date() })
+            .set({ ...(input as any), updatedAt: new Date() })
             .where(eq(sellerAdditional.sellerId, seller.id));
         } else {
           await db.insert(sellerAdditional).values({

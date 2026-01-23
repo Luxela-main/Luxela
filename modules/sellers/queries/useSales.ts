@@ -9,7 +9,7 @@ export const useSales = (status?: string) => {
     queryKey: sellersKeys.sales(status),
     queryFn: async () => {
       const client: any = getTRPCClient();
-      return await client.sales.getAllSales.query(status ? { status } : {});
+      return await ((client.sales as any).getAllSales as any).query(status ? { status } : {});
     },
     staleTime: 1 * 60 * 1000, // 1 minute
   });
@@ -20,7 +20,7 @@ export const useSaleById = (orderId: string) => {
     queryKey: [...sellersKeys.sales(), orderId],
     queryFn: async () => {
       const client: any = getTRPCClient();
-      return await client.sales.getSaleById.query({ orderId });
+      return await ((client.sales as any).getSaleById as any).query({ orderId });
     },
     enabled: !!orderId,
   });
@@ -57,4 +57,4 @@ export const useUpdateOrderStatus = () => {
       toastSvc.apiError(error);
     },
   });
-};
+};

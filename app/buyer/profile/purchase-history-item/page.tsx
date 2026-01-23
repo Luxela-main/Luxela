@@ -1,3 +1,6 @@
+'use client';
+export const dynamic = 'force-dynamic';
+
 import React from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Separator } from '@/components/ui/separator'
@@ -122,4 +125,4 @@ export default function PurchaseHistoryItem() {
       </section>
     </section>
   )
-}
+}

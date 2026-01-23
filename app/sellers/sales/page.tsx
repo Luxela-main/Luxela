@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Filter, MoreVertical, X } from "lucide-react";
 import SearchBar from "@/components/search-bar";
 import { Button } from "@/components/ui/button";
-import { useSales } from "@/modules/sellers";
+import { useSales, useSaleById } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ErrorState } from "@/components/sellers/ErrorState";
 import { getStatusFromTab } from "@/constants";
@@ -13,6 +13,8 @@ export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const {
     data: salesData,
@@ -36,24 +38,11 @@ export default function Sales() {
 
   const sales = salesData || [];
 
+  const { data: selectedOrderData } = useSaleById(selectedOrder || "");
+
   const handleOrderClick = (orderId: string) => {
     setSelectedOrder(orderId);
   };
-
-  const orderDetail = selectedOrder
-    ? {
-        id: selectedOrder,
-        customer: "John Doe",
-        product: "Sample Product",
-        quantity: 1,
-        orderDate: new Date().toLocaleDateString(),
-        amount: "₦50,000",
-        paymentMethod: "Credit Card",
-        paymentStatus: "Paid",
-        shippingAddress: "123 Main St, Lagos, Nigeria",
-        estimatedDelivery: "2-3 business days",
-      }
-    : null;
 
   const closeOrderDetail = () => {
     setSelectedOrder(null);
@@ -146,7 +135,7 @@ export default function Sales() {
           <div>Action</div>
         </div>
 
-        {sales.map((order, index) => (
+        {sales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((order, index) => (
           <div key={index} className="border-b border-[#333]">
             <div className="grid grid-cols-9 gap-4 p-4 items-center">
               <div className="flex items-center">
@@ -220,7 +209,7 @@ export default function Sales() {
       <div className="flex justify-between items-center mt-6 text-sm">
         <div className="text-gray-400">Result 1 - 10 of 20</div>
         <div className="flex space-x-2">
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center disabled:opacity-50">
             <span className="mr-1">Previous</span>
           </button>
           <button className="bg-purple-600 text-white px-3 py-1 rounded-md">
@@ -233,20 +222,20 @@ export default function Sales() {
           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
             4
           </button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
+          <button onClick={() => setCurrentPage(p => p + 1)} className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
             <span className="mr-1">Next</span>
           </button>
         </div>
       </div>
 
-      {selectedOrder && orderDetail && (
+      {selectedOrder && selectedOrderData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#1a1a1a] rounded-lg w-full max-w-2xl">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center">
                   <span className="text-gray-400 mr-2">Order Id:</span>
-                  <span className="font-medium">#{orderDetail.id}</span>
+                  <span className="font-medium">#{selectedOrderData?.orderId || selectedOrder}</span>
                 </div>
                 <button
                   onClick={closeOrderDetail}
@@ -268,33 +257,33 @@ export default function Sales() {
                 <div className="space-y-3 mt-4">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Customer</span>
-                    <span>{orderDetail.customer}</span>
+                    <span>{selectedOrderData?.customer || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Product</span>
-                    <span>{orderDetail.product}</span>
+                    <span>{selectedOrderData?.product || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Quantity</span>
-                    <span>{orderDetail.quantity}</span>
+                    <span>{selectedOrderData?.quantity || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Order date</span>
-                    <span>{orderDetail.orderDate}</span>
+                    <span>{selectedOrderData?.orderDate ? new Date(selectedOrderData.orderDate).toLocaleDateString() : 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Amount</span>
-                    <span>{orderDetail.amount}</span>
+                    <span>₦{((selectedOrderData?.amountCents || 0) / 100).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Payment Method</span>
-                    <span>{orderDetail.paymentMethod}</span>
+                    <span>{selectedOrderData?.paymentMethod || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Payment Status</span>
                     <span className="inline-flex items-center text-blue-500">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1"></span>
-                      {orderDetail.paymentStatus}
+                      {selectedOrderData?.payoutStatus === 'paid' ? 'Paid' : selectedOrderData?.payoutStatus === 'processing' ? 'Processing' : 'In Escrow'}
                     </span>
                   </div>
                 </div>
@@ -311,7 +300,7 @@ export default function Sales() {
                 <div className="space-y-3 mt-4">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Shipping Address</span>
-                    <span>{orderDetail.shippingAddress}</span>
+                    <span>{selectedOrderData?.shippingAddress || 'N/A'}</span>
                   </div>
                 </div>
               </div>
@@ -362,7 +351,7 @@ export default function Sales() {
                           strokeLinejoin="round"
                         />
                       </svg>
-                      <span>{orderDetail.estimatedDelivery}</span>
+                      <span>Est. delivery: 2-3 business days</span>
                     </div>
                   </div>
                 </div>
@@ -404,4 +393,4 @@ export default function Sales() {
       )}
     </div>
   );
-}
+}

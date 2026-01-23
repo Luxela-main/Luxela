@@ -60,7 +60,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
         <div>
           <label className="block text-sm mb-2">Price</label>
           <div className="flex gap-3">
-            <select className="bg-[#1a1a1a] text-xs border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white">
+            <select className="bg-[#1a1a1a] text-xs border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white cursor-pointer hover:border-purple-500 transition">
               <option>NGN</option>
             </select>
             <input
@@ -79,7 +79,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
           <select
             value={formData.category}
             onChange={(e) => handleInputChange("category", e.target.value)}
-            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
+            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white cursor-pointer hover:border-purple-500 transition"
           >
             <option value="">
               Select a category that best suits this product
@@ -115,7 +115,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
                 key={size}
                 type="button"
                 onClick={() => toggleSize(size)}
-                className={`px-6 py-2 rounded-lg border transition ${
+                className={`px-6 py-2 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                   formData.sizes?.includes(size)
                     ? "bg-purple-600 border-[#333] text-white"
                     : "bg-transparent border-[#333] text-gray-500"
@@ -161,7 +161,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ supplyCapacity: "no-max" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.supplyCapacity === "no-max"
                   ? "bg-[#1a1a1a] border-purple-600"
                   : "bg-transparent border-[#333]"
@@ -185,7 +185,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ supplyCapacity: "limited" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.supplyCapacity === "limited"
                   ? "bg-[#1a1a1a] border-purple-600"
                   : "bg-transparent border-[#333]"
@@ -230,7 +230,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ showBadge: "show_badge" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.showBadge === "show_badge"
                   ? "bg-[#1a1a1a] border-purple-600"
                   : "bg-transparent border-[#333]"
@@ -254,7 +254,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ showBadge: "do_not_show" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.showBadge === "do_not_show"
                   ? "bg-[#1a1a1a] border-purple-600"
                   : "bg-transparent border-[#333]"
@@ -278,7 +278,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
           </div>
         </div>
 
-        {/* Release Duration */}
+        {/* Release Duration - FIXED ENUM VALUES */}
         <div>
           <label className="block text-sm mb-2">Release duration</label>
           <select
@@ -286,15 +286,15 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
             onChange={(e) =>
               handleInputChange("releaseDuration", e.target.value)
             }
-            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
+            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white cursor-pointer hover:border-purple-500 transition"
           >
             <option value="">How long would this product be available</option>
-            <option value="1_week">1 Week</option>
-            <option value="2_weeks">2 Weeks</option>
-            <option value="1_month">1 Month</option>
-            <option value="3_months">3 Months</option>
-            <option value="6_months">6 Months</option>
-            <option value="1_year">1 Year</option>
+            <option value="24hrs">24 Hours</option>
+            <option value="48hrs">48 Hours</option>
+            <option value="72hrs">72 Hours</option>
+            <option value="1week">1 Week</option>
+            <option value="2weeks">2 Weeks</option>
+            <option value="1month">1 Month</option>
           </select>
         </div>
 
@@ -328,14 +328,14 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
           <Button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3 bg-transparent hover:bg-transparent border border-[#333] rounded-lg hover:border-gray-600 transition"
+            className="px-8 py-3 bg-transparent hover:bg-transparent border border-[#333] rounded-lg hover:border-gray-600 transition cursor-pointer"
           >
             Cancel
           </Button>
           <Button
             type="button"
             onClick={onNext}
-            className="px-8 py-3 rounded-lg transition"
+            className="px-8 py-3 rounded-lg transition cursor-pointer hover:shadow-lg"
           >
             Save
           </Button>

@@ -6,33 +6,46 @@ import { sql } from 'drizzle-orm';
 // ENUMS
 // =======================
 export const rolesEnum = pgEnum('roles', ['buyer', 'seller', 'admin']);
-export const businessTypeEnum = pgEnum('business_type', ['individual', 'business']);
-export const idTypeEnum = pgEnum('id_type', ['passport', 'drivers_license', 'voters_card', 'national_id']);
-export const shippingTypeEnum = pgEnum('shipping_type', ['domestic']);
-export const shippingEtaEnum = pgEnum('shipping_eta', ['48hrs', '72hrs', '5_working_days', '1week']);
-export const refundPolicyEnum = pgEnum('refund_policy', ['no_refunds', 'accept_refunds']);
+export const businessTypeEnum = pgEnum('business_type', ['individual', 'sole_proprietorship', 'llc', 'corporation', 'partnership', 'cooperative', 'non_profit', 'trust', 'joint_venture']);
+export const idTypeEnum = pgEnum('id_type', ['national_id', 'passport', 'drivers_license', 'voters_card', 'business_license', 'tax_id', 'business_registration']);
+export const shippingTypeEnum = pgEnum('shipping_type', ['same_day', 'next_day', 'express', 'standard', 'domestic', 'international', 'both']);
+export const shippingEtaEnum = pgEnum('shipping_eta', ['same_day', 'next_day', '48hrs', '72hrs', '5_working_days', '1_2_weeks', '2_3_weeks', 'custom']);
+export const refundPolicyEnum = pgEnum('refund_policy', ['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']);
 export const preferredPayoutMethodEnum = pgEnum('preferred_payout_method', ['fiat_currency', 'cryptocurrency', 'both']);
-export const fiatPayoutMethodEnum = pgEnum('fiat_payout_method', ['bank', 'paypal', 'stripe', 'flutterwave']);
-export const walletTypeEnum = pgEnum('wallet_type', ['phantom', 'solflare', 'backpack', 'wallet_connect']);
+export const fiatPayoutMethodEnum = pgEnum('fiat_payout_method', ['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'other']);
+export const walletTypeEnum = pgEnum('wallet_type', ['phantom', 'solflare', 'backpack', 'wallet_connect', 'magic_eden', 'ledger_live']);
 export const payoutTokenEnum = pgEnum('payout_token', ['USDT', 'USDC', 'solana']);
 export const productCategoryEnum = pgEnum('product_category', [
   'men_clothing', 'women_clothing', 'men_shoes', 'women_shoes', 'accessories', 'merch', 'others',
 ]);
 export const targetAudienceEnum = pgEnum('target_audience', ['male', 'female', 'unisex']);
-export const localPricingEnum = pgEnum('local_pricing', ['fiat', 'cryptocurrency']);
+export const localPricingEnum = pgEnum('local_pricing', ['fiat', 'cryptocurrency','both']);
+export const socialMediaPlatformEnum = pgEnum('social_media_platform', ['x', 'instagram', 'facebook', 'whatsapp', 'tiktok']);
 export const listingTypeEnum = pgEnum('listing_type', ['single', 'collection']);
 export const supplyCapacityEnum = pgEnum('supply_capacity', ['no_max', 'limited']);
 export const limitedEditionBadgeEnum = pgEnum('limited_badge', ['show_badge', 'do_not_show']);
 export const shippingOptionEnum = pgEnum('shipping_option', ['local', 'international', 'both']);
 export const orderStatusEnum = pgEnum('order_status', ['processing', 'shipped', 'delivered', 'canceled', 'returned']);
 export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
+export const ticketStatusEnum = pgEnum('ticket_status', ['open', 'in_progress', 'resolved', 'closed']);
+export const ticketPriorityEnum = pgEnum('ticket_priority', ['low', 'medium', 'high', 'urgent']);
+export const ticketCategoryEnum = pgEnum('ticket_category', ['general_inquiry', 'technical_issue', 'payment_problem', 'order_issue', 'refund_request', 'account_issue', 'listing_help', 'other']);
 
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto','paypal','stripe','flutterwave','tsara']);
-export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder']);
+export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder','order_confirmed','payment_failed','refund_issued','delivery_confirmed']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','completed','failed','refunded']);
 export const WebhookEventStatusEnum = pgEnum('webhook_event_status', ['pending', 'processed', 'failed']);
 export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterwave','stripe','paypal']);
+export const refundStatusEnum = pgEnum('refund_status', ['pending', 'return_requested', 'return_approved', 'return_rejected', 'refunded', 'canceled']);
+export const ledgerStatusEnum = pgEnum('ledger_status', ['pending', 'completed', 'failed', 'reversed']);
+export const transactionTypeEnum = pgEnum('transaction_type', ['sale', 'refund', 'return_request', 'return_approved', 'refund_initiated', 'refund_completed', 'commission', 'payout']);
+export const reservationStatusEnum = pgEnum('reservation_status', ['active', 'confirmed', 'released', 'expired']);
+export const transitionTypeEnum = pgEnum('transition_type', ['automatic', 'manual', 'system']);
+export const refundTypeEnum = pgEnum('refund_type', ['full', 'partial', 'store_credit']);
+export const holdStatusEnum = pgEnum('hold_status', ['active', 'released', 'refunded', 'expired']);
+export const receivedConditionEnum = pgEnum('received_condition', ['excellent', 'good', 'acceptable', 'poor']);
+export const nftTierEnum = pgEnum('nft_tier', ['bronze', 'silver', 'gold', 'platinum']);
 
 // =======================
 // DOMAIN TABLES
@@ -42,7 +55,7 @@ export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterw
 export const buyers = pgTable('buyers', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   // FK to Supabase Auth user
-  userId: uuid('user_id').notNull(), 
+  userId: uuid('user_id').notNull().unique(), 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -51,6 +64,7 @@ export const buyers = pgTable('buyers', {
 export const sellers = pgTable('sellers', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid('user_id').notNull(),
+  brandId: uuid('brand_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -70,12 +84,12 @@ export const profiles = pgTable('profiles', {
 // ========================
 export const buyerAccountDetails = pgTable('buyer_account_details', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  buyerId: uuid('buyer_id').notNull().unique().references(() => buyers.id, { onDelete: 'cascade' }),
   username: varchar('username', { length: 100 }).notNull().unique(),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   dateOfBirth: timestamp('date_of_birth'),
   phoneNumber: varchar('phone_number', { length: 50 }),
-  email: varchar('email', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
   country: varchar('country', { length: 100 }).notNull(),
   state: varchar('state', { length: 100 }).notNull(),
   profilePicture: text('profile_picture'),
@@ -118,7 +132,9 @@ export const sellerBusiness = pgTable('seller_business', {
   businessAddress: text('business_address').notNull(),
   officialEmail: varchar('official_email', { length: 255 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 50 }).notNull(),
+  countryCode: varchar('country_code', { length: 10 }),
   country: varchar('country', { length: 100 }).notNull(),
+  socialMediaPlatform: socialMediaPlatformEnum('social_media_platform'),
   socialMedia: text('social_media'),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   idType: idTypeEnum('id_type').notNull(),
@@ -148,7 +164,7 @@ export const sellerShipping = pgTable('seller_shipping', {
 });
 
 // =================================
-// PRODUCT CATALOG, ORDERS, PAYMENTS
+// BRANDS
 // =================================
 export const brands = pgTable('brands', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -184,6 +200,17 @@ export const collections = pgTable(
 );
 
 // =======================
+// COLLECTION ITEMS (Products in Collections)
+// =======================
+export const collectionItems = pgTable('collection_items', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  collectionId: uuid('collection_id').notNull().references(() => collections.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
 // PRODUCTS
 // =======================
 export const products = pgTable('products', {
@@ -196,6 +223,7 @@ export const products = pgTable('products', {
   category: productCategoryEnum('category'),
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 16 }).default('SOL').notNull(),
+  type: varchar("type", { length: 50 }),
   sku: text('sku').notNull().unique(),
   inStock: boolean('in_stock').default(true),
   shipsIn: varchar('ships_in', { length: 64 }),
@@ -208,8 +236,9 @@ export const products = pgTable('products', {
 // =======================
 export const listings = pgTable('listings', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  collectionId: uuid('collection_id').references(() => collections.id, { onDelete: 'set null' }),
   // References products.id (auto-generated unique UUID)
-  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: 'cascade' }),
   sellerId: uuid("seller_id").notNull().references(() => sellers.id, { onDelete: "cascade" }),
   type: listingTypeEnum('type').notNull(),
   title: varchar('title', { length: 255 }).notNull(),
@@ -229,6 +258,8 @@ export const listings = pgTable('listings', {
   shippingOption: shippingOptionEnum('shipping_option'),
   etaDomestic: shippingEtaEnum('eta_domestic'),
   etaInternational: shippingEtaEnum('eta_international'),
+  refundPolicy: refundPolicyEnum('refund_policy'),
+  localPricing: localPricingEnum('local_pricing'), 
   itemsJson: text('items_json'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -259,6 +290,8 @@ export const orders = pgTable('orders', {
   estimatedArrival: timestamp('estimated_arrival'),
   deliveredDate: timestamp('delivered_date'),
   recipientEmail: varchar('recipient_email', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // =======================
@@ -283,6 +316,69 @@ export const payments = pgTable('payments', {
 });
 
 // =======================
+// REFUNDS
+// =======================
+export const refunds = pgTable('refunds', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  amountCents: integer('amount_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+  refundType: varchar('refund_type', { length: 32 }).notNull(),
+  reason: text('reason').notNull(),
+  refundStatus: refundStatusEnum('refund_status').default('pending').notNull(),
+  description: text('description'),
+  rmaNumber: varchar('rma_number', { length: 255 }),
+  images: text('images'),
+  sellerNote: text('seller_note'),
+  restockPercentage: integer('restock_percentage'),
+  receivedCondition: receivedConditionEnum('received_condition'),
+  notes: text('notes'),
+  requestedAt: timestamp('requested_at'),
+  processedAt: timestamp('processed_at'),
+  refundedAt: timestamp('refunded_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// PAYMENT HOLDS
+// =======================
+export const paymentHolds = pgTable('payment_holds', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  paymentId: uuid('payment_id').notNull().references(() => payments.id, { onDelete: 'cascade' }),
+  amountCents: integer('amount_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+  holdStatus: holdStatusEnum('hold_status').default('active').notNull(),
+  reason: varchar('reason', { length: 255 }),
+  heldAt: timestamp('held_at').defaultNow().notNull(),
+  releaseableAt: timestamp('releaseable_at'),
+  refundedAt: timestamp('refunded_at'),
+  releasedAt: timestamp('released_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
+// FINANCIAL LEDGER
+// =======================
+export const financialLedger = pgTable('financial_ledger', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+  transactionType: transactionTypeEnum('transaction_type').notNull(),
+  amountCents: integer('amount_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+  status: varchar('status', { length: 32 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
 // WEBHOOK EVENTS
 // =======================
 export const webhookEvents = pgTable("webhook_events", {
@@ -292,6 +388,27 @@ export const webhookEvents = pgTable("webhook_events", {
   status: WebhookEventStatusEnum("status").notNull().default("pending"), 
   receivedAt: timestamp("received_at").defaultNow().notNull(), 
   processedAt: timestamp("processed_at"),            
+});
+
+// =======================
+// WEBHOOK LOGS - Multi-provider webhook tracking for monitoring & retries
+// =======================
+export const webhookLogs = pgTable("webhook_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: paymentProviderEnum("provider").notNull(), // tsara, stripe, paypal, flutterwave
+  eventType: text("event_type").notNull(), // payment.success, payment.failed, etc.
+  externalEventId: text("external_event_id"), // Event ID from payment provider
+  paymentId: uuid("payment_id").references(() => payments.id, { onDelete: 'set null' }),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: 'set null' }),
+  status: WebhookEventStatusEnum("status").notNull().default("pending"), // pending, processed, failed
+  errorMessage: text("error_message"), // Error details if failed
+  retryCount: integer("retry_count").notNull().default(0),
+  lastRetryAt: timestamp("last_retry_at"),
+  nextRetryAt: timestamp("next_retry_at"),
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // =======================
@@ -358,6 +475,8 @@ export const inventory = pgTable('inventory', {
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  buyerId: uuid('buyer_id').references(() => buyers.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }),
   type: notificationTypeEnum('type').notNull(),
   message: text('message').notNull(),
   isRead: boolean('is_read').default(false).notNull(),
@@ -371,15 +490,6 @@ export const reviews = pgTable('review', {
   listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
   rating: integer('rating').notNull(),
   comment: text('comment'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-export const emailOtps = pgTable('email_otps', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar('email', { length: 255 }).notNull(),
-  codeHash: varchar('code_hash', { length: 255 }).notNull(),
-  expiresAt: timestamp('expires_at').notNull(),
-  consumed: boolean('consumed').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -444,6 +554,113 @@ export const sellerAdditional = pgTable('seller_additional', {
 });
 
 // =======================
+// INVENTORY RESERVATIONS
+// =======================
+export const inventoryReservations = pgTable('inventory_reservations', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  inventoryId: uuid('inventory_id').notNull().references(() => inventory.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  quantity: integer('quantity').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('reserved'),
+  reservedAt: timestamp('reserved_at').defaultNow().notNull(),
+  releasedAt: timestamp('released_at'),
+  confirmedAt: timestamp('confirmed_at'),
+  expiresAt: timestamp('expires_at'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
+// ORDER STATE TRANSITIONS
+// =======================
+export const orderStateTransitions = pgTable('order_state_transitions', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  fromStatus: orderStatusEnum('from_status').notNull(),
+  toStatus: orderStatusEnum('to_status').notNull(),
+  reason: text('reason'),
+  triggeredBy: uuid('triggered_by').notNull(),
+  triggeredByRole: rolesEnum('triggered_by_role').notNull(),
+  metadata: text('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// CATEGORIES & SUBCATEGORIES
+// =======================
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar('name', { length: 255 }).notNull().unique(),
+  slug: varchar('slug', { length: 255 }).notNull().unique(),
+  description: text('description'),
+  image: text('image'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const subcategories = pgTable('subcategories', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 255 }).notNull(),
+  description: text('description'),
+  image: text('image'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
+// FOLLOWS
+// =======================
+export const follows = pgTable('follows', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  followerId: uuid('follower_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  followingId: uuid('following_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// MESSAGES & CONVERSATIONS
+// =======================
+export const conversations = pgTable('conversations', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  lastMessageAt: timestamp('last_message_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  senderId: uuid('sender_id').notNull(),
+  senderRole: rolesEnum('sender_role').notNull(),
+  content: text('content').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// SHIPPING RATES
+// =======================
+export const shippingRates = pgTable('shipping_rates', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  shippingZone: varchar('shipping_zone', { length: 255 }).notNull(),
+  minWeight: numeric('min_weight', { precision: 10, scale: 2 }).notNull(),
+  maxWeight: numeric('max_weight', { precision: 10, scale: 2 }).notNull(),
+  rateCents: integer('rate_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull(),
+  estimatedDays: integer('estimated_days').notNull(),
+  shippingType: shippingTypeEnum('shipping_type').notNull(),
+  active: boolean('active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
 // DISCOUNTS
 // =======================
 export const discounts = pgTable('discounts', {
@@ -453,6 +670,52 @@ export const discounts = pgTable('discounts', {
   amountOffCents: integer('amount_off_cents'),
   active: boolean('active').default(true).notNull(),
   expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// SUPPORT TICKETS
+// =======================
+export const supportTickets = pgTable('support_tickets', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  sellerId: uuid('seller_id').references(() => sellers.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  subject: varchar('subject', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  category: ticketCategoryEnum('category').notNull(),
+  priority: ticketPriorityEnum('priority').default('medium').notNull(),
+  status: ticketStatusEnum('status').default('open').notNull(),
+  assignedTo: uuid('assigned_to').references(() => sellers.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  resolvedAt: timestamp('resolved_at'),
+});
+
+export const supportTicketReplies = pgTable('support_ticket_replies', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: uuid('ticket_id').notNull().references(() => supportTickets.id, { onDelete: 'cascade' }),
+  senderId: uuid('sender_id').notNull(),
+  senderRole: rolesEnum('sender_role').notNull(),
+  message: text('message').notNull(),
+  attachmentUrl: text('attachment_url'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// LOYALTY NFTs
+// =======================
+export const loyaltyNFTs = pgTable('loyalty_nfts', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  tier: nftTierEnum('tier').notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  image: text('image').notNull(),
+  loyaltyPoints: integer('loyalty_points').notNull(),
+  earnedDate: timestamp('earned_date').defaultNow().notNull(),
+  rarity: varchar('rarity', { length: 50 }).notNull(),
+  property: varchar('property', { length: 100 }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -486,6 +749,7 @@ export const buyersRelations = relations(buyers, ({ one, many }) => ({
   payments: many(payments),
   sales: many(sales),
   reviews: many(reviews),
+  loyaltyNFTs: many(loyaltyNFTs),
 }));
 
 export const sellersRelations = relations(sellers, ({ one, many }) => ({
@@ -500,6 +764,7 @@ export const sellersRelations = relations(sellers, ({ one, many }) => ({
   notifications: many(notifications),
   sales: many(sales),
   brands: many(brands),
+  shippingRates: many(shippingRates),
 }));
 
 // Brands → Collections & Products
@@ -509,13 +774,14 @@ export const brandsRelations = relations(brands, ({ one, many }) => ({
   products: many(products),
 }));
 
-// Collections → Products
+// Collections → Products & Items
 export const collectionsRelations = relations(collections, ({ one, many }) => ({
   brand: one(brands),
   products: many(products),
+  items: many(collectionItems),
 }));
 
-// Products → Variants & Listings
+// Products → Collections, Variants, Listings, Images
 export const productsRelations = relations(products, ({ one, many }) => ({
   brand: one(brands),
   collection: one(collections),
@@ -523,6 +789,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   variants: many(productVariants),
   listings: many(listings),
   inventory: many(inventory),
+  collectionItems: many(collectionItems),
 }));
 
 // Product Variants → Inventory
@@ -531,10 +798,11 @@ export const productVariantsRelations = relations(productVariants, ({ one, many 
   inventory: many(inventory),
 }));
 
-// Inventory → Variants
-export const inventoryRelations = relations(inventory, ({ one }) => ({
+// Inventory → Variants & Reservations
+export const inventoryRelations = relations(inventory, ({ one, many }) => ({
   variant: one(productVariants),
   product: one(products),
+  reservations: many(inventoryReservations),
 }));
 
 // Listings → Seller & Product
@@ -556,17 +824,54 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   listing: one(listings),
   payments: many(payments),
   sales: many(sales),
+  reservations: many(inventoryReservations),
+  stateTransitions: many(orderStateTransitions),
 }));
 
 // Payments → Buyer, Listing, Order
-export const paymentsRelations = relations(payments, ({ one }) => ({
+export const paymentsRelations = relations(payments, ({ one, many }) => ({
   buyer: one(buyers),
   listing: one(listings),
   order: one(orders),
+  refunds: many(refunds),
+  holds: many(paymentHolds),
+}));
+
+// Refunds → Buyer, Seller, Order, Payment
+export const refundsRelations = relations(refunds, ({ one }) => ({
+  buyer: one(buyers),
+  seller: one(sellers),
+  order: one(orders),
+  payment: one(payments),
+}));
+
+// Payment Holds → Order, Payment
+export const paymentHoldsRelations = relations(paymentHolds, ({ one }) => ({
+  order: one(orders),
+  payment: one(payments),
+}));
+
+// Financial Ledger → Seller, Order, Payment
+export const financialLedgerRelations = relations(financialLedger, ({ one }) => ({
+  seller: one(sellers),
+  order: one(orders),
+  payment: one(payments),
 }));
 
 // Webhook Events → none
 export const webhookEventsRelations = relations(webhookEvents, ({}) => ({}));
+
+// Webhook Logs → Payments & Orders
+export const webhookLogsRelations = relations(webhookLogs, ({ one }) => ({
+  payment: one(payments, {
+    fields: [webhookLogs.paymentId],
+    references: [payments.id],
+  }),
+  order: one(orders, {
+    fields: [webhookLogs.orderId],
+    references: [orders.id],
+  }),
+}));
 
 // Sales → Buyer, Seller, Listing, Order
 export const salesRelations = relations(sales, ({ one }) => ({
@@ -606,6 +911,11 @@ export const buyerAccountDetailsRelations = relations(buyerAccountDetails, ({ on
   buyer: one(buyers),
 }));
 
+// Loyalty NFTs → Buyer
+export const loyaltyNFTsRelations = relations(loyaltyNFTs, ({ one }) => ({
+  buyer: one(buyers),
+}));
+
 // Buyer Shipping → Buyer
 export const buyerShippingRelations = relations(buyerShipping, ({ one }) => ({
   buyer: one(buyers),
@@ -635,5 +945,78 @@ export const productImagesRelations = relations(productImages, ({ one }) => ({
   product: one(products),
 }));
 
-// Email OTPs → none
-export const emailOtpsRelations = relations(emailOtps, ({}) => ({}));
+// Collection Items → Collection & Product
+export const collectionItemsRelations = relations(collectionItems, ({ one }) => ({
+  collection: one(collections),
+  product: one(products),
+}));
+
+// Support Tickets → Buyer, Seller, Order
+export const supportTicketsRelations = relations(supportTickets, ({ one, many }) => ({
+  buyer: one(buyers),
+  seller: one(sellers),
+  order: one(orders),
+  assignedToSeller: one(sellers, {
+    fields: [supportTickets.assignedTo],
+    references: [sellers.id],
+    relationName: 'assignedTickets',
+  }),
+  replies: many(supportTicketReplies),
+}));
+
+// Support Ticket Replies → Ticket
+export const supportTicketRepliesRelations = relations(supportTicketReplies, ({ one }) => ({
+  ticket: one(supportTickets),
+}));
+
+// Inventory Reservations → Inventory & Order
+export const inventoryReservationsRelations = relations(inventoryReservations, ({ one }) => ({
+  inventory: one(inventory),
+  order: one(orders),
+}));
+
+// Order State Transitions → Order
+export const orderStateTransitionsRelations = relations(orderStateTransitions, ({ one }) => ({
+  order: one(orders),
+}));
+
+// Shipping Rates → Seller
+export const shippingRatesRelations = relations(shippingRates, ({ one }) => ({
+  seller: one(sellers),
+}));
+
+// Categories → Subcategories
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  subcategories: many(subcategories),
+}));
+
+// Subcategories → Category
+export const subcategoriesRelations = relations(subcategories, ({ one }) => ({
+  category: one(categories),
+}));
+
+// Follows → Sellers
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(sellers, {
+    fields: [follows.followerId],
+    references: [sellers.id],
+    relationName: 'followers',
+  }),
+  following: one(sellers, {
+    fields: [follows.followingId],
+    references: [sellers.id],
+    relationName: 'following',
+  }),
+}));
+
+// Conversations → Buyer & Seller
+export const conversationsRelations = relations(conversations, ({ one, many }) => ({
+  buyer: one(buyers),
+  seller: one(sellers),
+  messages: many(messages),
+}));
+
+// Messages → Conversation
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations),
+}));

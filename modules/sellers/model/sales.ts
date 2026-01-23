@@ -6,7 +6,9 @@ export interface Sale {
   paymentMethod: string;
   amountCents: number;
   currency: string;
+  quantity: number;
+  shippingAddress?: string;
   payoutStatus: "in_escrow" | "processing" | "paid";
   deliveryStatus: "not_shipped" | "in_transit" | "delivered";
   orderStatus: "processing" | "shipped" | "delivered" | "canceled" | "returned";
-}
+}

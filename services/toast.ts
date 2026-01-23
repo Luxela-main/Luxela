@@ -7,6 +7,8 @@ export const toastSvc = {
     toast.error(msg, { hideProgressBar: true });
   },
 
+  info: (msg: string) => toast.info(msg, { hideProgressBar: true }),
+
   apiError: (error: any) => {
     let message = "An unexpected error occurred.";
 
@@ -25,4 +27,4 @@ export const toastSvc = {
       toast.error(message, { hideProgressBar: true });
     }
   },
-};
+};

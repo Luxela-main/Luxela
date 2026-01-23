@@ -25,5 +25,25 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   });
 });
 
+// ADMIN PROCEDURE
+// --------------------------------
+export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.user || ctx.user.role !== 'admin') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You must be an admin to access this route.',
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+      supabase: ctx.supabase,
+    },
+  });
+});
+
 // ROUTER EXPORT
 export const createTRPCRouter = t.router;
+export const router = t.router;

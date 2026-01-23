@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import React from "react";
 import withAuth from "../../../functions/hoc/withAuth";
@@ -27,4 +28,4 @@ function Dashboard() {
 }
 
 // Wrap the Dashboard component with withAuth before exporting
-export default withAuth(Dashboard);
+export default withAuth(Dashboard);

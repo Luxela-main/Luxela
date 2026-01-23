@@ -51,6 +51,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
     email?: string;
     name?: string;
     role?: string;
+    avatar_url?: string;
   } | null = null;
 
   if (token) {
@@ -63,6 +64,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           email: data.user.email ?? undefined,
           name: data.user.user_metadata?.full_name,
           role: data.user.user_metadata?.role,
+          avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
         };
       }
     } catch (err) {
@@ -82,4 +84,4 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
 
 // ---------- Type for tRPC context ----------
 export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;
-
+

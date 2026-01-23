@@ -410,7 +410,7 @@ export const cartRouter = createTRPCRouter({
               sellerId: sellerRow.id,
               listingId: listingRow.id,
               productTitle: listingRow.title,
-              productImage: listingRow.image,
+              productImage: listingRow.image || undefined,
               productCategory: listingRow.category!,
               customerName: accountDetails.fullName,
               customerEmail: accountDetails.email,

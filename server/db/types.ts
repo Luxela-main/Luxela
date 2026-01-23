@@ -3,18 +3,19 @@ import {
   // Schemas
   userSchema,
   buyerSchema,
+  profileSchema,
   buyerAccountDetailsSchema,
   buyerBillingAddressSchema,
   buyerShippingSchema,
   buyerFavoritesSchema,
-  cartsSchema,
-  cartItemsSchema,
   sellerSchema,
   sellerBusinessSchema,
-  sellerAdditionalSchema,
-  sellerPaymentSchema,
   sellerShippingSchema,
+  sellerPaymentSchema,
+  sellerAdditionalSchema,
+  brandsSchema,
   collectionsSchema,
+  collectionItemsSchema,
   productsSchema,
   productImagesSchema,
   productVariantsSchema,
@@ -22,79 +23,125 @@ import {
   listingsSchema,
   ordersSchema,
   paymentsSchema,
-  reviewsSchema,
-  notificationsSchema,
-  emailOtpsSchema,
-  discountSchema,
+  refundsSchema,
+  paymentHoldsSchema,
+  financialLedgerSchema,
   webhookEventsSchema,
+  webhookLogsSchema,
+  salesSchema,
+  cartsSchema,
+  cartItemsSchema,
+  notificationsSchema,
+  reviewsSchema,
+  discountSchema,
+  supportTicketsSchema,
+  supportTicketRepliesSchema,
+  inventoryReservationsSchema,
+  orderStateTransitionsSchema,
+  shippingRatesSchema,
+  categoriesSchema,
+  subcategoriesSchema,
+  followsSchema,
+  conversationsSchema,
+  messagesSchema,
+  emailOtpsSchema,
 } from "./zodSchemas";
 
-// --------------------------- TYPES ---------------------------
-
-// USERS
+// ===================== USER TYPES =====================
 export type User = z.infer<typeof userSchema>;
 
-// BUYERS
+// ===================== BUYER TYPES =====================
 export type Buyer = z.infer<typeof buyerSchema>;
+export type Profile = z.infer<typeof profileSchema>;
 export type BuyerAccountDetails = z.infer<typeof buyerAccountDetailsSchema>;
 export type BuyerBillingAddress = z.infer<typeof buyerBillingAddressSchema>;
 export type BuyerShipping = z.infer<typeof buyerShippingSchema>;
 export type Favorite = z.infer<typeof buyerFavoritesSchema>;
-export type Cart = z.infer<typeof cartsSchema>;
-export type CartItem = z.infer<typeof cartItemsSchema>;
 
-// SELLERS
+// ===================== SELLER TYPES =====================
 export type Seller = z.infer<typeof sellerSchema>;
 export type SellerBusiness = z.infer<typeof sellerBusinessSchema>;
-export type SellerAdditional = z.infer<typeof sellerAdditionalSchema>;
-export type SellerPayment = z.infer<typeof sellerPaymentSchema>;
 export type SellerShipping = z.infer<typeof sellerShippingSchema>;
+export type SellerPayment = z.infer<typeof sellerPaymentSchema>;
+export type SellerAdditional = z.infer<typeof sellerAdditionalSchema>;
 
-// COLLECTIONS & PRODUCTS
+// ===================== BRAND & COLLECTION TYPES =====================
+export type Brand = z.infer<typeof brandsSchema>;
 export type Collection = z.infer<typeof collectionsSchema>;
+export type CollectionItem = z.infer<typeof collectionItemsSchema>;
+
+// ===================== PRODUCT TYPES =====================
 export type Product = z.infer<typeof productsSchema>;
 export type ProductImage = z.infer<typeof productImagesSchema>;
 export type ProductVariant = z.infer<typeof productVariantsSchema>;
 export type Inventory = z.infer<typeof inventorySchema>;
 
-// LISTINGS
+// ===================== LISTING TYPES =====================
 export type Listing = z.infer<typeof listingsSchema>;
 
-// ORDERS & PAYMENTS
+// ===================== ORDER & PAYMENT TYPES =====================
 export type Order = z.infer<typeof ordersSchema>;
 export type Payment = z.infer<typeof paymentsSchema>;
+export type Refund = z.infer<typeof refundsSchema>;
+export type PaymentHold = z.infer<typeof paymentHoldsSchema>;
+export type FinancialLedger = z.infer<typeof financialLedgerSchema>;
+export type Sale = z.infer<typeof salesSchema>;
 
-// WEBHOOK EVENTS
-export type WebhookEvent = z.infer<typeof webhookEventsSchema>;
+// ===================== CART TYPES =====================
+export type Cart = z.infer<typeof cartsSchema>;
+export type CartItem = z.infer<typeof cartItemsSchema>;
 
-// DISCOUNTS
-export type Discount = z.infer<typeof discountSchema>;
-
-// REVIEWS
+// ===================== NOTIFICATION & REVIEW TYPES =====================
+export type Notification = z.infer<typeof notificationsSchema>;
 export type Review = z.infer<typeof reviewsSchema>;
 
-// NOTIFICATIONS
-export type Notification = z.infer<typeof notificationsSchema>;
+// ===================== DISCOUNT TYPES =====================
+export type Discount = z.infer<typeof discountSchema>;
 
-// EMAIL OTPS
+// ===================== SUPPORT TYPES =====================
+export type SupportTicket = z.infer<typeof supportTicketsSchema>;
+export type SupportTicketReply = z.infer<typeof supportTicketRepliesSchema>;
+
+// ===================== INVENTORY TYPES =====================
+export type InventoryReservation = z.infer<typeof inventoryReservationsSchema>;
+export type OrderStateTransition = z.infer<typeof orderStateTransitionsSchema>;
+
+// ===================== SHIPPING TYPES =====================
+export type ShippingRate = z.infer<typeof shippingRatesSchema>;
+
+// ===================== CATEGORY TYPES =====================
+export type Category = z.infer<typeof categoriesSchema>;
+export type Subcategory = z.infer<typeof subcategoriesSchema>;
+
+// ===================== SOCIAL TYPES =====================
+export type Follow = z.infer<typeof followsSchema>;
+export type Conversation = z.infer<typeof conversationsSchema>;
+export type Message = z.infer<typeof messagesSchema>;
+
+// ===================== WEBHOOK TYPES =====================
+export type WebhookEvent = z.infer<typeof webhookEventsSchema>;
+export type WebhookLog = z.infer<typeof webhookLogsSchema>;
+
+// ===================== AUTH TYPES =====================
 export type EmailOtp = z.infer<typeof emailOtpsSchema>;
 
-// Re-export zod schemas if consumers need runtime validation
+// ===================== RE-EXPORTS FOR RUNTIME VALIDATION =====================
 export {
   userSchema,
   buyerSchema,
+  profileSchema,
   buyerAccountDetailsSchema,
   buyerBillingAddressSchema,
   buyerShippingSchema,
   buyerFavoritesSchema,
-  cartsSchema,
-  cartItemsSchema,
   sellerSchema,
   sellerBusinessSchema,
-  sellerAdditionalSchema,
-  sellerPaymentSchema,
   sellerShippingSchema,
+  sellerPaymentSchema,
+  sellerAdditionalSchema,
+  brandsSchema,
   collectionsSchema,
+  collectionItemsSchema,
   productsSchema,
   productImagesSchema,
   productVariantsSchema,
@@ -102,9 +149,26 @@ export {
   listingsSchema,
   ordersSchema,
   paymentsSchema,
-  reviewsSchema,
-  notificationsSchema,
-  emailOtpsSchema,
-  discountSchema,
+  refundsSchema,
+  paymentHoldsSchema,
+  financialLedgerSchema,
   webhookEventsSchema,
+  webhookLogsSchema,
+  salesSchema,
+  cartsSchema,
+  cartItemsSchema,
+  notificationsSchema,
+  reviewsSchema,
+  discountSchema,
+  supportTicketsSchema,
+  supportTicketRepliesSchema,
+  inventoryReservationsSchema,
+  orderStateTransitionsSchema,
+  shippingRatesSchema,
+  categoriesSchema,
+  subcategoriesSchema,
+  followsSchema,
+  conversationsSchema,
+  messagesSchema,
+  emailOtpsSchema,
 };

@@ -37,5 +37,25 @@ export const useToggleNotificationStar = () => {
 };
 
 export const useStarredNotifications = () => {
-  return (trpc.notification as any).getStarred.useQuery();
+  return (trpc.notification as any).getStarred.useQuery({});
 };
+
+export const useDeleteNotification = () => {
+  const utils = trpc.useUtils();
+
+  return (trpc.notification as any).deleteNotification.useMutation({
+    onSuccess: () => {
+      (utils.notification as any).getAll.invalidate();
+    },
+  });
+};
+
+export const useDeleteAllNotifications = () => {
+  const utils = trpc.useUtils();
+
+  return (trpc.notification as any).deleteAll.useMutation({
+    onSuccess: () => {
+      (utils.notification as any).getAll.invalidate();
+    },
+  });
+};

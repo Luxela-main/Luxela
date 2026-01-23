@@ -1,56 +1,62 @@
-import { Search, Bell, ShoppingCart, ChevronDown } from "lucide-react";
-import Logo from "@/public/luxela.svg";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import Image from "next/image";
+'use client';
 
-export function Header() {
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/context/ProfileContext';
+import { useCallback } from 'react';
+
+export default function Header() {
+  const router = useRouter();
+  const { logout } = useAuth();
+  const { profile } = useProfile();
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    router.push('/login');
+  }, [logout, router]);
+
+  const handleProfileClick = useCallback(() => {
+    router.push('/buyer/profile');
+  }, [router]);
+
   return (
-    <header className="bg-[#0e0e0e] border-b border-[#212121] px-[40px] py-[20px]">
-      <div className="flex items-center justify-between">
-        <Link href="/sellers/dashboard" className="flex ">
-          <Image
-            src={Logo}
-            alt="LUXELA"
-            width={196.02}
-            height={32}
-            className="mr-2"
-          />
-        </Link>
+    <header className="bg-[#1a1a1a] border-b border-[#333333] px-6 py-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-white text-2xl font-bold">Dashboard</h1>
+        
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white p-[10px] bg-[#141414] border border-[#212121] rounded-[4px] hover:bg-[#1a1a1a]"
+          <button
+            onClick={handleProfileClick}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           >
-            <Search className="w-6 h-6" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white p-[10px] bg-[#141414] border border-[#212121] rounded-[4px] hover:bg-[#1a1a1a]"
-          >
-            <Bell className="w-6 h-6" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white p-[10px] bg-[#141414] border border-[#212121] rounded-[4px] hover:bg-[#1a1a1a]"
-          >
-            <ShoppingCart className="w-6 h-6" />
-          </Button>
+            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
+              {profile?.profilePicture ? (
+                <img
+                  key={profile.profilePicture}
+                  src={`${profile.profilePicture}?v=${Date.now()}`}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
+                  {profile?.name?.[0]?.toUpperCase() || 'U'}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white font-medium text-sm">
+                {profile?.name || 'User'}
+              </span>
+              <span className="text-gray-400 text-xs">Profile</span>
+            </div>
+          </button>
 
-          <div className="flex items-center gap-2 ml-2">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src="/placeholder.svg?height=32&width=32" />
-              <AvatarFallback className="bg-[#8451E126] text-[#8451E1] text-sm">
-                JD
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-white text-sm">jondoe64</span>
-            <ChevronDown className="w-4 h-4 text-white" />
-          </div>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </header>

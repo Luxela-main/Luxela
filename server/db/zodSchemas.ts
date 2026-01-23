@@ -1,21 +1,61 @@
 import { z } from "zod";
 
-// --------------------------- USERS ---------------------------
+// ========================== ENUMS ==========================
+
+const rolesEnum = z.enum(['buyer', 'seller', 'admin']);
+const businessTypeEnum = z.enum(['individual', 'sole_proprietorship', 'llc', 'corporation', 'partnership', 'cooperative', 'non_profit', 'trust', 'joint_venture']);
+const idTypeEnum = z.enum(['national_id', 'passport', 'drivers_license', 'voters_card', 'business_license', 'tax_id', 'business_registration']);
+const shippingTypeEnum = z.enum(['same_day', 'next_day', 'express', 'standard', 'domestic', 'international', 'both']);
+const shippingEtaEnum = z.enum(['same_day', 'next_day', '48hrs', '72hrs', '5_working_days', '1_2_weeks', '2_3_weeks', 'custom']);
+const refundPolicyEnum = z.enum(['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']);
+const preferredPayoutMethodEnum = z.enum(['fiat_currency', 'cryptocurrency', 'both']);
+const fiatPayoutMethodEnum = z.enum(['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'other']);
+const walletTypeEnum = z.enum(['phantom', 'solflare', 'backpack', 'wallet_connect', 'magic_eden', 'ledger_live']);
+const payoutTokenEnum = z.enum(['USDT', 'USDC', 'solana']);
+const productCategoryEnum = z.enum(['men_clothing', 'women_clothing', 'men_shoes', 'women_shoes', 'accessories', 'merch', 'others']);
+const targetAudienceEnum = z.enum(['male', 'female', 'unisex']);
+const localPricingEnum = z.enum(['fiat', 'cryptocurrency', 'both']);
+const socialMediaPlatformEnum = z.enum(['x', 'instagram', 'facebook', 'whatsapp', 'tiktok']);
+const listingTypeEnum = z.enum(['single', 'collection']);
+const supplyCapacityEnum = z.enum(['no_max', 'limited']);
+const limitedEditionBadgeEnum = z.enum(['show_badge', 'do_not_show']);
+const shippingOptionEnum = z.enum(['local', 'international', 'both']);
+const orderStatusEnum = z.enum(['processing', 'shipped', 'delivered', 'canceled', 'returned']);
+const payoutStatusEnum = z.enum(['in_escrow', 'processing', 'paid']);
+const ticketStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'closed']);
+const ticketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
+const ticketCategoryEnum = z.enum(['general_inquiry', 'technical_issue', 'payment_problem', 'order_issue', 'refund_request', 'account_issue', 'listing_help', 'other']);
+const deliveryStatusEnum = z.enum(['not_shipped', 'in_transit', 'delivered']);
+const paymentMethodEnum = z.enum(['card', 'bank_transfer', 'crypto', 'paypal', 'stripe', 'flutterwave', 'tsara']);
+const notificationTypeEnum = z.enum(['purchase', 'review', 'comment', 'reminder', 'order_confirmed', 'payment_failed', 'refund_issued', 'delivery_confirmed']);
+const paymentStatusEnum = z.enum(['pending', 'processing', 'completed', 'failed', 'refunded']);
+const webhookEventStatusEnum = z.enum(['pending', 'processed', 'failed']);
+const paymentProviderEnum = z.enum(['tsara', 'flutterwave', 'stripe', 'paypal']);
+const refundStatusEnum = z.enum(['pending', 'return_requested', 'return_approved', 'return_rejected', 'refunded', 'canceled']);
+const ledgerStatusEnum = z.enum(['pending', 'completed', 'failed', 'reversed']);
+const transactionTypeEnum = z.enum(['sale', 'refund', 'return_request', 'return_approved', 'refund_initiated', 'refund_completed', 'commission', 'payout']);
+const reservationStatusEnum = z.enum(['active', 'confirmed', 'released', 'expired']);
+const transitionTypeEnum = z.enum(['automatic', 'manual', 'system']);
+const refundTypeEnum = z.enum(['full', 'partial', 'store_credit']);
+const holdStatusEnum = z.enum(['active', 'released', 'refunded', 'expired']);
+const receivedConditionEnum = z.enum(['excellent', 'good', 'acceptable', 'poor']);
+
+// ========================== USERS ==========================
 export const userSchema = z.object({
   id: z.string().uuid().optional(),
   oauthId: z.string().nullable().optional(),
-  name: z.string(),
+  name: z.string().nullable().optional(),
   displayName: z.string().nullable().optional(),
   email: z.string().email(),
   password: z.string(),
   emailVerified: z.boolean().optional(),
   image: z.string().nullable().optional(),
-  role: z.enum(["buyer", "seller", "admin"]).default("buyer"),
+  role: rolesEnum.default('buyer'),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- BUYERS --------------------------
+// ========================== BUYERS ==========================
 export const buyerSchema = z.object({
   id: z.string().uuid().optional(),
   userId: z.string().uuid(),
@@ -23,7 +63,17 @@ export const buyerSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- BUYER ACCOUNT DETAILS ----------
+// ========================== PROFILES ==========================
+export const profileSchema = z.object({
+  id: z.string().uuid().optional(),
+  userId: z.string().uuid(),
+  displayName: z.string().nullable().optional(),
+  image: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== BUYER ACCOUNT DETAILS ==========================
 export const buyerAccountDetailsSchema = z.object({
   id: z.string().uuid().optional(),
   buyerId: z.string().uuid(),
@@ -39,38 +89,33 @@ export const buyerAccountDetailsSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- BUYER BILLING -------------------
+// ========================== BUYER BILLING ADDRESS ==========================
 export const buyerBillingAddressSchema = z.object({
   id: z.string().uuid().optional(),
   buyerId: z.string().uuid(),
   houseAddress: z.string(),
   city: z.string(),
-  state: z.string(),
-  country: z.string(),
-  postalCode: z.string().nullable().optional(),
+  postalCode: z.string(),
   isDefault: z.boolean().default(true),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- BUYER SHIPPING ------------------
+// ========================== BUYER SHIPPING ==========================
 export const buyerShippingSchema = z.object({
   id: z.string().uuid().optional(),
   buyerId: z.string().uuid(),
   fullName: z.string(),
   email: z.string(),
   phoneNumber: z.string(),
-  city: z.string(),
   state: z.string(),
-  country: z.string(),
+  city: z.string(),
   address: z.string(),
-  postalCode: z.string().nullable().optional(),
+  postalCode: z.string(),
   isDefault: z.boolean().default(true),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
 });
 
-// --------------------------- FAVORITES ----------------------
+// ========================== BUYER FAVORITES ==========================
 export const buyerFavoritesSchema = z.object({
   id: z.string().uuid().optional(),
   buyerId: z.string().uuid(),
@@ -78,47 +123,31 @@ export const buyerFavoritesSchema = z.object({
   createdAt: z.date().optional(),
 });
 
-// --------------------------- CART ---------------------------
-export const cartsSchema = z.object({
-  id: z.string().uuid().optional(),
-  buyerId: z.string().uuid(),
-  discountId: z.string().uuid().nullable().optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-});
-
-export const cartItemsSchema = z.object({
-  id: z.string().uuid().optional(),
-  cartId: z.string().uuid(),
-  listingId: z.string().uuid(),
-  quantity: z.number().int(),
-  unitPriceCents: z.number().int(),
-  currency: z.string(),
-});
-
-// --------------------------- SELLERS ------------------------
+// ========================== SELLERS ==========================
 export const sellerSchema = z.object({
   id: z.string().uuid().optional(),
   userId: z.string().uuid(),
+  brandId: z.string().uuid().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- SELLER BUSINESS ----------------
+// ========================== SELLER BUSINESS ==========================
 export const sellerBusinessSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
   brandName: z.string(),
-  businessType: z.enum(["individual", "business"]),
+  businessType: businessTypeEnum,
   businessAddress: z.string(),
   officialEmail: z.string(),
   phoneNumber: z.string(),
-  taxId: z.string().nullable().optional(),
+  countryCode: z.string().nullable().optional(),
   country: z.string(),
+  socialMediaPlatform: socialMediaPlatformEnum.nullable().optional(),
   socialMedia: z.string().nullable().optional(),
   fullName: z.string(),
-  idType: z.enum(["passport", "drivers_license", "voters_card", "national_id"]),
-  idNumber: z.string().optional(),
+  idType: idTypeEnum,
+  idNumber: z.string().nullable().optional(),
   idVerified: z.boolean().optional(),
   bio: z.string().nullable().optional(),
   storeDescription: z.string().nullable().optional(),
@@ -128,25 +157,7 @@ export const sellerBusinessSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- SELLER PAYMENT -----------------
-export const sellerPaymentSchema = z.object({
-  id: z.string().uuid().optional(),
-  sellerId: z.string().uuid(),
-  preferredPayoutMethod: z.enum(["fiat_currency", "cryptocurrency", "both"]),
-  fiatPayoutMethod: z.enum(["bank", "paypal", "stripe", "flutterwave"]).nullable().optional(),
-  bankCountry: z.string().nullable().optional(),
-  bankName: z.string().nullable().optional(),
-  accountName: z.string().nullable().optional(),
-  accountHolderName: z.string().nullable().optional(),
-  accountNumber: z.string().nullable().optional(),
-  walletType: z.enum(["phantom", "solflare", "backpack", "wallet_connect"]).nullable().optional(),
-  walletAddress: z.string().nullable().optional(),
-  preferredPayoutToken: z.enum(["USDT", "USDC", "solana"]).nullable().optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-});
-
-// --------------------------- SELLER SHIPPING ----------------
+// ========================== SELLER SHIPPING ==========================
 export const sellerShippingSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
@@ -154,36 +165,59 @@ export const sellerShippingSchema = z.object({
   city: z.string(),
   shippingAddress: z.string(),
   returnAddress: z.string(),
-  shippingMethod: z.string().nullable().optional(),
-  estimatedShippingTime: z.string().nullable().optional(),
-  refundPolicy: z.enum(["no_refunds", "accept_refunds"]).nullable().optional(),
-  refundPeriod: z.string().nullable().optional(),
+  shippingType: shippingTypeEnum,
+  estimatedShippingTime: shippingEtaEnum,
+  refundPolicy: refundPolicyEnum,
+  refundPeriod: shippingEtaEnum.nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- SELLER ADDITIONAL ------------
+// ========================== SELLER PAYMENT ==========================
+export const sellerPaymentSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  preferredPayoutMethod: preferredPayoutMethodEnum,
+  fiatPayoutMethod: fiatPayoutMethodEnum.nullable().optional(),
+  bankCountry: z.string().nullable().optional(),
+  bankName: z.string().nullable().optional(),
+  accountName: z.string().nullable().optional(),
+  accountHolderName: z.string().nullable().optional(),
+  accountNumber: z.string().nullable().optional(),
+  walletType: walletTypeEnum.nullable().optional(),
+  walletAddress: z.string().nullable().optional(),
+  preferredPayoutToken: payoutTokenEnum.nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== SELLER ADDITIONAL ==========================
 export const sellerAdditionalSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
-  productCategory: z.string(),
-  targetAudience: z.enum(["male", "female", "unisex"]),
-  localPricing: z.enum(["fiat", "cryptocurrency"]),
+  productCategory: productCategoryEnum.nullable().optional(),
+  targetAudience: targetAudienceEnum.nullable().optional(),
+  localPricing: localPricingEnum.nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- BRANDS -------------------------
+// ========================== BRANDS ==========================
 export const brandsSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
   name: z.string(),
+  slug: z.string(),
   description: z.string().nullable().optional(),
+  heroImage: z.string().nullable().optional(),
+  logoImage: z.string().nullable().optional(),
+  rating: z.string().nullable().optional(),
+  totalProducts: z.number().int().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- COLLECTIONS -------------------
+// ========================== COLLECTIONS ==========================
 export const collectionsSchema = z.object({
   id: z.string().uuid().optional(),
   brandId: z.string().uuid(),
@@ -194,7 +228,16 @@ export const collectionsSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- PRODUCTS ----------------------
+// ========================== COLLECTION ITEMS ==========================
+export const collectionItemsSchema = z.object({
+  id: z.string().uuid().optional(),
+  collectionId: z.string().uuid(),
+  productId: z.string().uuid(),
+  position: z.number().int().default(0),
+  createdAt: z.date().optional(),
+});
+
+// ========================== PRODUCTS ==========================
 export const productsSchema = z.object({
   id: z.string().uuid().optional(),
   brandId: z.string().uuid(),
@@ -202,9 +245,10 @@ export const productsSchema = z.object({
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable().optional(),
-  category: z.string().nullable().optional(),
-  price: z.number(),
-  currency: z.string(),
+  category: productCategoryEnum.nullable().optional(),
+  price: z.string(),
+  currency: z.string().default('SOL'),
+  type: z.string().nullable().optional(),
   sku: z.string(),
   inStock: z.boolean().optional(),
   shipsIn: z.string().nullable().optional(),
@@ -212,7 +256,7 @@ export const productsSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- PRODUCT IMAGES -----------------
+// ========================== PRODUCT IMAGES ==========================
 export const productImagesSchema = z.object({
   id: z.string().uuid().optional(),
   productId: z.string().uuid(),
@@ -220,7 +264,7 @@ export const productImagesSchema = z.object({
   position: z.number().int(),
 });
 
-// --------------------------- PRODUCT VARIANTS --------------
+// ========================== PRODUCT VARIANTS ==========================
 export const productVariantsSchema = z.object({
   id: z.string().uuid().optional(),
   productId: z.string().uuid(),
@@ -229,56 +273,47 @@ export const productVariantsSchema = z.object({
   colorHex: z.string(),
 });
 
-// --------------------------- INVENTORY ---------------------
+// ========================== INVENTORY ==========================
 export const inventorySchema = z.object({
   id: z.string().uuid().optional(),
   productId: z.string().uuid(),
   variantId: z.string().uuid(),
-  quantity: z.number().int(),
-  reservedQuantity: z.number().int(),
+  quantity: z.number().int().default(0),
+  reservedQuantity: z.number().int().default(0),
 });
 
-// --------------------------- LISTINGS ----------------------
+// ========================== LISTINGS ==========================
 export const listingsSchema = z.object({
   id: z.string().uuid().optional(),
+  collectionId: z.string().uuid().nullable().optional(),
+  productId: z.string().uuid(),
   sellerId: z.string().uuid(),
-  productId: z.string().uuid().optional(),
-  type: z.enum(["single", "collection"]),
+  type: listingTypeEnum,
   title: z.string(),
   description: z.string().nullable().optional(),
-  category: z.string().nullable().optional(),
+  category: productCategoryEnum.nullable().optional(),
   image: z.string().nullable().optional(),
-  priceCents: z.number().nullable().optional(),
+  priceCents: z.number().int().nullable().optional(),
   currency: z.string().nullable().optional(),
   sizesJson: z.string().nullable().optional(),
-  colorsAvailable: z.array(
-    z.object({
-      colorName: z.string(),
-      colorHex: z.string()
-    })
-  ).nullable().optional(),
-  supplyCapacity: z.enum(["no_max", "limited"]).nullable().optional(),
+  supplyCapacity: supplyCapacityEnum.nullable().optional(),
   quantityAvailable: z.number().int().nullable().optional(),
-  limitedEditionBadge: z.enum(["show_badge", "do_not_show"]).nullable().optional(),
-  releaseDuration: z.enum(["24hrs", "48hrs", "72hrs", "1week", "2weeks", "1month"]).nullable().optional(),
+  limitedEditionBadge: limitedEditionBadgeEnum.nullable().optional(),
+  releaseDuration: z.string().nullable().optional(),
   materialComposition: z.string().nullable().optional(),
-  additionalTargetAudience: z.enum(["male", "female", "unisex"]).nullable().optional(),
-  shippingOption: z.enum(["local", "international", "both"]).nullable().optional(),
-  etaDomestic: z.enum(["48hrs", "72hrs", "5_working_days", "1week"]).nullable().optional(),
-  etaInternational: z.enum(["custom", "days_7_to_14", "days_14_to_30"]).nullable().optional(),
-  itemsJson: z.array(
-    z.object({
-      title: z.string(),
-      priceCents: z.number(),
-      image: z.string().nullable(),
-      sizes: z.array(z.string()).nullable()
-    })
-  ).nullable().optional(),
+  colorsAvailable: z.string().nullable().optional(),
+  additionalTargetAudience: targetAudienceEnum.nullable().optional(),
+  shippingOption: shippingOptionEnum.nullable().optional(),
+  etaDomestic: shippingEtaEnum.nullable().optional(),
+  etaInternational: shippingEtaEnum.nullable().optional(),
+  refundPolicy: refundPolicyEnum.nullable().optional(),
+  localPricing: localPricingEnum.nullable().optional(),
+  itemsJson: z.string().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- ORDERS ------------------------
+// ========================== ORDERS ==========================
 export const ordersSchema = z.object({
   id: z.string().uuid().optional(),
   buyerId: z.string().uuid(),
@@ -286,24 +321,26 @@ export const ordersSchema = z.object({
   listingId: z.string().uuid(),
   productTitle: z.string(),
   productImage: z.string().nullable().optional(),
-  productCategory: z.string().nullable().optional(),
+  productCategory: productCategoryEnum,
   customerName: z.string(),
   customerEmail: z.string(),
   orderDate: z.date(),
-  paymentMethod: z.string(),
+  paymentMethod: paymentMethodEnum,
   amountCents: z.number().int(),
   currency: z.string(),
-  payoutStatus: z.enum(["in_escrow", "processing", "paid"]),
-  deliveryStatus: z.enum(["not_shipped", "in_transit", "delivered"]),
-  orderStatus: z.enum(["processing", "shipped", "delivered", "canceled", "returned"]),
+  payoutStatus: payoutStatusEnum.default('in_escrow'),
+  deliveryStatus: deliveryStatusEnum.default('not_shipped'),
+  orderStatus: orderStatusEnum.default('processing'),
   shippingAddress: z.string().nullable().optional(),
   trackingNumber: z.string().nullable().optional(),
   estimatedArrival: z.date().nullable().optional(),
   deliveredDate: z.date().nullable().optional(),
   recipientEmail: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
 
-// --------------------------- PAYMENTS ----------------------
+// ========================== PAYMENTS ==========================
 export const paymentsSchema = z.object({
   id: z.string().uuid().optional(),
   buyerId: z.string().uuid(),
@@ -311,11 +348,10 @@ export const paymentsSchema = z.object({
   orderId: z.string().uuid().nullable().optional(),
   amountCents: z.number().int(),
   currency: z.string(),
-  paymentMethod: z.string(),
-  provider: z.string(),
-  status: z.enum(["pending", "completed", "failed", "refunded"]),
+  paymentMethod: paymentMethodEnum,
+  provider: paymentProviderEnum,
+  status: paymentStatusEnum.default('pending'),
   transactionRef: z.string(),
-  transactionId: z.string().nullable().optional(),
   gatewayResponse: z.string().nullable().optional(),
   isRefunded: z.boolean().default(false),
   refundedAt: z.date().nullable().optional(),
@@ -323,48 +359,283 @@ export const paymentsSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// --------------------------- WEBHOOK EVENTS -----------------
+// ========================== REFUNDS ==========================
+export const refundsSchema = z.object({
+  id: z.string().uuid().optional(),
+  orderId: z.string().uuid(),
+  paymentId: z.string().uuid().nullable().optional(),
+  buyerId: z.string().uuid(),
+  sellerId: z.string().uuid(),
+  amountCents: z.number().int(),
+  currency: z.string(),
+  refundType: z.string(),
+  reason: z.string(),
+  refundStatus: refundStatusEnum.default('pending'),
+  description: z.string().nullable().optional(),
+  rmaNumber: z.string().nullable().optional(),
+  images: z.string().nullable().optional(),
+  sellerNote: z.string().nullable().optional(),
+  restockPercentage: z.number().int().nullable().optional(),
+  receivedCondition: receivedConditionEnum.nullable().optional(),
+  notes: z.string().nullable().optional(),
+  requestedAt: z.date().nullable().optional(),
+  processedAt: z.date().nullable().optional(),
+  refundedAt: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== PAYMENT HOLDS ==========================
+export const paymentHoldsSchema = z.object({
+  id: z.string().uuid().optional(),
+  orderId: z.string().uuid(),
+  paymentId: z.string().uuid(),
+  amountCents: z.number().int(),
+  currency: z.string(),
+  holdStatus: holdStatusEnum.default('active'),
+  reason: z.string().nullable().optional(),
+  refundedAt: z.date().nullable().optional(),
+  releasedAt: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== FINANCIAL LEDGER ==========================
+export const financialLedgerSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  orderId: z.string().uuid().nullable().optional(),
+  paymentId: z.string().uuid().nullable().optional(),
+  transactionType: transactionTypeEnum,
+  amountCents: z.number().int(),
+  currency: z.string(),
+  status: z.string(),
+  description: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== WEBHOOK EVENTS ==========================
 export const webhookEventsSchema = z.object({
   id: z.string().uuid().optional(),
   eventId: z.string(),
   eventType: z.string(),
-  status: z.enum(["pending", "processed", "failed"]).default("pending"),
+  status: webhookEventStatusEnum.default('pending'),
   receivedAt: z.date(),
   processedAt: z.date().nullable().optional(),
 });
 
-// --------------------------- DISCOUNTS ---------------------
-export const discountSchema = z.object({
+// ========================== WEBHOOK LOGS ==========================
+const paymentProviderEnumZod = z.enum(['tsara', 'stripe', 'paypal', 'flutterwave']);
+export const webhookLogsSchema = z.object({
   id: z.string().uuid().optional(),
-  code: z.string(),
-  percentage: z.number().int(),
-  expiresAt: z.date(),
-  createdAt: z.date().optional(),
+  provider: paymentProviderEnumZod,
+  eventType: z.string(),
+  externalEventId: z.string().nullable().optional(),
+  paymentId: z.string().uuid().nullable().optional(),
+  orderId: z.string().uuid().nullable().optional(),
+  status: webhookEventStatusEnum.default('pending'),
+  errorMessage: z.string().nullable().optional(),
+  retryCount: z.number().int().default(0),
+  lastRetryAt: z.date().nullable().optional(),
+  nextRetryAt: z.date().nullable().optional(),
+  receivedAt: z.date(),
+  processedAt: z.date().nullable().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-// --------------------------- REVIEWS -----------------------
-export const reviewsSchema = z.object({
+// ========================== SALES ==========================
+export const salesSchema = z.object({
   id: z.string().uuid().optional(),
-  buyerId: z.string().uuid().nullable().optional(),
+  orderId: z.string().uuid(),
+  sellerId: z.string().uuid(),
+  buyerId: z.string().uuid(),
   listingId: z.string().uuid(),
-  rating: z.number().int(),
-  comment: z.string().nullable().optional(),
+  quantity: z.number().int().default(1),
+  totalCents: z.number().int(),
+  currency: z.string(),
+  isRefunded: z.boolean().default(false),
+  refundedAt: z.date().nullable().optional(),
   createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
 
-// --------------------------- NOTIFICATIONS -----------------
+// ========================== CARTS ==========================
+export const cartsSchema = z.object({
+  id: z.string().uuid().optional(),
+  buyerId: z.string().uuid(),
+  discountId: z.string().uuid().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== CART ITEMS ==========================
+export const cartItemsSchema = z.object({
+  id: z.string().uuid().optional(),
+  cartId: z.string().uuid(),
+  listingId: z.string().uuid(),
+  quantity: z.number().int(),
+  unitPriceCents: z.number().int(),
+  currency: z.string(),
+});
+
+// ========================== NOTIFICATIONS ==========================
 export const notificationsSchema = z.object({
   id: z.string().uuid().optional(),
-  userId: z.string().uuid().nullable().optional(),
-  title: z.string().nullable().optional(),
-  type: z.string(),
+  sellerId: z.string().uuid(),
+  buyerId: z.string().uuid().nullable().optional(),
+  orderId: z.string().uuid().nullable().optional(),
+  type: notificationTypeEnum,
   message: z.string(),
   isRead: z.boolean().default(false),
   isStarred: z.boolean().default(false),
   createdAt: z.date().optional(),
 });
 
-// --------------------------- EMAIL OTPS --------------------
+// ========================== REVIEWS ==========================
+export const reviewsSchema = z.object({
+  id: z.string().uuid().optional(),
+  buyerId: z.string().uuid(),
+  listingId: z.string().uuid(),
+  rating: z.number().int(),
+  comment: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== DISCOUNTS ==========================
+export const discountSchema = z.object({
+  id: z.string().uuid().optional(),
+  code: z.string(),
+  percentOff: z.number().int().nullable().optional(),
+  amountOffCents: z.number().int().nullable().optional(),
+  active: z.boolean().default(true),
+  expiresAt: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== SUPPORT TICKETS ==========================
+export const supportTicketsSchema = z.object({
+  id: z.string().uuid().optional(),
+  buyerId: z.string().uuid(),
+  sellerId: z.string().uuid().nullable().optional(),
+  orderId: z.string().uuid().nullable().optional(),
+  subject: z.string(),
+  description: z.string(),
+  category: ticketCategoryEnum,
+  priority: ticketPriorityEnum.default('medium'),
+  status: ticketStatusEnum.default('open'),
+  assignedTo: z.string().uuid().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+  resolvedAt: z.date().nullable().optional(),
+});
+
+// ========================== SUPPORT TICKET REPLIES ==========================
+export const supportTicketRepliesSchema = z.object({
+  id: z.string().uuid().optional(),
+  ticketId: z.string().uuid(),
+  senderId: z.string().uuid(),
+  senderRole: rolesEnum,
+  message: z.string(),
+  attachmentUrl: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== INVENTORY RESERVATIONS ==========================
+export const inventoryReservationsSchema = z.object({
+  id: z.string().uuid().optional(),
+  inventoryId: z.string().uuid(),
+  orderId: z.string().uuid(),
+  quantity: z.number().int(),
+  status: z.string().default('reserved'),
+  reservedAt: z.date(),
+  releasedAt: z.date().nullable().optional(),
+  confirmedAt: z.date().nullable().optional(),
+  expiresAt: z.date().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+// ========================== ORDER STATE TRANSITIONS ==========================
+export const orderStateTransitionsSchema = z.object({
+  id: z.string().uuid().optional(),
+  orderId: z.string().uuid(),
+  fromStatus: orderStatusEnum,
+  toStatus: orderStatusEnum,
+  reason: z.string().nullable().optional(),
+  triggeredBy: z.string().uuid(),
+  triggeredByRole: rolesEnum,
+  metadata: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== SHIPPING RATES ==========================
+export const shippingRatesSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  shippingZone: z.string(),
+  minWeight: z.string(),
+  maxWeight: z.string(),
+  rateCents: z.number().int(),
+  currency: z.string(),
+  estimatedDays: z.number().int(),
+  shippingType: shippingTypeEnum,
+  active: z.boolean().default(true),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== CATEGORIES ==========================
+export const categoriesSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable().optional(),
+  image: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== SUBCATEGORIES ==========================
+export const subcategoriesSchema = z.object({
+  id: z.string().uuid().optional(),
+  categoryId: z.string().uuid(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable().optional(),
+  image: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== FOLLOWS ==========================
+export const followsSchema = z.object({
+  id: z.string().uuid().optional(),
+  followerId: z.string().uuid(),
+  followingId: z.string().uuid(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== CONVERSATIONS ==========================
+export const conversationsSchema = z.object({
+  id: z.string().uuid().optional(),
+  buyerId: z.string().uuid(),
+  sellerId: z.string().uuid(),
+  lastMessageAt: z.date(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== MESSAGES ==========================
+export const messagesSchema = z.object({
+  id: z.string().uuid().optional(),
+  conversationId: z.string().uuid(),
+  senderId: z.string().uuid(),
+  senderRole: rolesEnum,
+  content: z.string(),
+  isRead: z.boolean().default(false),
+  createdAt: z.date().optional(),
+});
+
+// ========================== EMAIL OTPS ==========================
 export const emailOtpsSchema = z.object({
   id: z.string().uuid().optional(),
   email: z.string().email(),

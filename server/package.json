@@ -6,7 +6,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "dev": "pnpm exec concurrently -n NEXT,SERVER,DB -c cyan,green,magenta \"pnpm run dev:next\" \"pnpm run dev:server\" \"ts-node-dev --respawn check-db.ts\"",
+    "dev": "pnpm exec concurrently -n NEXT,SERVER -c cyan,green \"pnpm run dev:next\" \"pnpm run dev:server\"",
     "dev:next": "next dev",
     "dev:server": "ts-node index.ts",
     "dev:check-db": "ts-node-dev --respawn check-db.ts",

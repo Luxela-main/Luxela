@@ -8,6 +8,8 @@ import {
   useMarkAllNotificationsAsRead,
   useToggleNotificationStar,
   useMarkNotificationAsRead,
+  useDeleteNotification,
+  useDeleteAllNotifications,
 } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ErrorState } from "@/components/sellers/ErrorState";
@@ -25,8 +27,8 @@ export default function Notifications() {
 
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
   const toggleStarMutation = useToggleNotificationStar();
-  // const deleteNotificationMutation = useDeleteNotification();
-  // const deleteAllMutation = useDeleteAllNotifications();
+  const deleteNotificationMutation = useDeleteNotification();
+  const deleteAllMutation = useDeleteAllNotifications();
   const markAsReadMutation = useMarkNotificationAsRead();
 
   if (isLoading) {
@@ -132,9 +134,8 @@ export default function Notifications() {
               </svg>
             </button>
             <button
+              onClick={() => deleteAllMutation.mutate()}
               className="flex items-center text-red-500 hover:text-red-400"
-              // onClick={handleDeleteAll}
-              // disabled={deleteAllMutation.isPending}
             >
               <span>Delete all</span>
               <Trash className="h-4 w-4 ml-2" />
@@ -185,8 +186,9 @@ export default function Notifications() {
                   className="text-red-500 hover:text-red-400"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // handleDelete(notification.id);
+                    deleteNotificationMutation.mutate({ notificationId: notification.id });
                   }}
+                  disabled={deleteNotificationMutation.isPending}
                 >
                   <Trash className="h-4 w-4" />
                 </button>
@@ -212,31 +214,3 @@ export default function Notifications() {
     </div>
   );
 }
-
-
-
-
-
-
-//       <div className="flex justify-between items-center mt-6 text-sm">
-//         <div className="text-gray-400">Result 1 - 10 of 20</div>
-//         <div className="flex space-x-2">
-//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
-//             <span className="mr-1">Previous</span>
-//           </button>
-//           <button className="bg-purple-600 text-white px-3 py-1 rounded-md">
-//             1
-//           </button>
-//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
-//             2
-//           </button>
-//           <button className="text-gray-400 px-3 py-1">...</button>
-//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
-//             4
-//           </button>
-//           <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
-//             <span className="mr-1">Next</span>
-//           </button>
-//         </div>
-//       </div>
-

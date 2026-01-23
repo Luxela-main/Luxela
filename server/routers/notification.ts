@@ -29,7 +29,9 @@ async function ensureSeller(userId: string) {
 const NotificationOutput = z.object({
   id: z.string().uuid(),
   sellerId: z.string().uuid(),
-  type: z.enum(["purchase", "review", "comment", "reminder"]),
+  buyerId: z.string().uuid().nullable(),
+  orderId: z.string().uuid().nullable(),
+  type: z.enum(["purchase", "review", "comment", "reminder", "order_confirmed", "payment_failed", "refund_issued", "delivery_confirmed"]),
   message: z.string(),
   isRead: z.boolean(),
   isStarred: z.boolean(),
@@ -192,4 +194,48 @@ export const notificationRouter = createTRPCRouter({
 
       return { success: true };
     }),
-});
+
+  deleteNotification: protectedProcedure
+    .meta({
+      openapi: {
+        method: "DELETE",
+        path: "/notifications/{notificationId}",
+        tags: ["Notifications"],
+        summary: "Delete a notification",
+      },
+    })
+    .input(z.object({ notificationId: z.string().uuid() }))
+    .output(z.object({ success: z.literal(true) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not logged in",
+        });
+
+      const seller = await ensureSeller(userId);
+
+      // Verify seller owns the notification
+      const existing = await db
+        .select()
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.id, input.notificationId),
+            eq(notifications.sellerId, seller.id)
+          )
+        );
+
+      if (!existing[0]) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Notification not found",
+        });
+      }
+
+      await db.delete(notifications).where(eq(notifications.id, input.notificationId));
+
+      return { success: true };
+    }),
+});

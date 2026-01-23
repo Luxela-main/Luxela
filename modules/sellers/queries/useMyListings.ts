@@ -38,13 +38,18 @@ export const useCreateCollectionListing = () => {
   });
 };
 
-// TODO: add Update listing from the server
 export const useUpdateListing = () => {
-  console.warn("⚠️ updateListing mutation is not supported by backend");
-  return {
-    mutate: () =>
-      toastSvc.error("Update listing is not implemented on the backend"),
-  };
+  const queryClient = useQueryClient();
+
+  return (trpc.listing as any).updateListing.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: sellersKeys.listings(),
+      });
+      toastSvc.success("Listing updated successfully");
+    },
+    onError: (error: any) => toastSvc.apiError(error),
+  });
 };
 
 export const useDeleteListing = () => {

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { payments, orders, listings, notifications, webhookEvents } from "@/server/db/schema";
+import { payments, orders, listings, notifications, webhookEvents, paymentHolds, financialLedger } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
+import { processLoyaltyRewards } from "@/server/services/loyaltyService";
 import "dotenv/config";
 
 async function verifyWebhookSignature(
@@ -143,7 +145,7 @@ export const POST = async (req: NextRequest) => {
               .update(orders)
               .set({
                 orderStatus: "processing",
-                payoutStatus: "processing"
+                payoutStatus: "in_escrow"
               })
               .where(eq(orders.id, payment.orderId));
           }
@@ -159,16 +161,55 @@ export const POST = async (req: NextRequest) => {
               .limit(1);
 
             if (listingRow[0]) {
+              const holdId = uuidv4();
+              const now = new Date();
+              const releaseableAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+              
+              // Create payment hold (30-day escrow)
+              await tx.insert(paymentHolds).values({
+                id: holdId,
+                paymentId: payment.id,
+                orderId: payment.orderId || uuidv4(),
+                sellerId: listingRow[0].sellerId,
+                amountCents: payment.amountCents,
+                currency: payment.currency,
+                holdStatus: "active",
+                heldAt: now,
+                releaseableAt,
+                createdAt: now
+              });
+              
+              // Create financial ledger entry
+              const ledgerId = uuidv4();
+              await tx.insert(financialLedger).values({
+                id: ledgerId,
+                sellerId: listingRow[0].sellerId,
+                orderId: payment.orderId || null,
+                transactionType: "sale",
+                amountCents: payment.amountCents,
+                currency: payment.currency,
+                status: "pending",
+                description: `Sale from listing "${listingRow[0].productTitle}" - Payment ${payment.id}`,
+                paymentId: payment.id,
+                createdAt: now
+              });
+              
+              // Notify seller
               await tx.insert(notifications).values({
                 sellerId: listingRow[0].sellerId,
                 type: "purchase",
-                message: `Payment received for "${listingRow[0].productTitle}" - $${(
+                message: `Payment received for "${listingRow[0].productTitle}" - ₦${(
                   payment.amountCents / 100
-                ).toFixed(2)}`,
+                ).toFixed(2)}. Funds held in escrow for 30 days.`,
                 isRead: false,
                 isStarred: false,
-                createdAt: new Date()
+                createdAt: now
               });
+              
+              // Process buyer loyalty rewards
+              if (payment.buyerId) {
+                await processLoyaltyRewards(payment.buyerId);
+              }
             }
           }
         }

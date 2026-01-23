@@ -56,7 +56,9 @@ const BuyerHeader = () => {
   const itemCount = cart?.items?.length || 0;
 
   const username = profile?.username || user?.email?.split("@")[0] || "User";
-  const userPicture = profile?.profilePicture || "/images/seller/sparkles.svg";
+  const userPicture = profile?.profilePicture 
+    ? `${profile.profilePicture}?t=${Date.now()}` 
+    : "/images/seller/sparkles.svg";
 
   const handleLogout = async () => {
     try {

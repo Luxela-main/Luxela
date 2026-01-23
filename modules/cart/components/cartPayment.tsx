@@ -30,7 +30,7 @@ export default function CartPaymentPage() {
   const activeAddress =
     billingData?.data.find((a: any) => a.isDefault) || billingData?.data[0];
   // 2. Tsara Payment Mutation
-  const createPaymentMutation = trpc.payment.createPayment.useMutation({
+  const initializePaymentMutation = trpc.checkout.initializePayment.useMutation({
     onSuccess: (data) => {
       if (data.paymentUrl) {
         // Redirect to Tsara's secure hosted page
@@ -42,7 +42,7 @@ export default function CartPaymentPage() {
     },
   });
 
-  const isProcessing = createPaymentMutation.isPending;
+  const isProcessing = initializePaymentMutation.isPending;
   const shippingFees = 160000;
   const finalTotal = total + shippingFees;
 
@@ -221,11 +221,23 @@ export default function CartPaymentPage() {
           </div>
 
           <Button
-            onClick={() => setShowTsaraModal(true)}
+            onClick={async () => {
+              // Step 1: Atomic checkout (creates orders + payments)
+              if (!profile?.email) {
+                toastSvc.error('Profile email not found');
+                return;
+              }
+              await (initializePaymentMutation as any).mutate({
+                customerName: profile?.name || 'Customer',
+                customerEmail: profile.email,
+                paymentMethod: paymentMethod,
+                currency: 'NGN',
+              });
+            }}
             disabled={isProcessing || billingLoading}
             className="w-full text-white py-7 rounded-xl text-base"
           >
-            {isProcessing ? "Opening Tsara..." : "Complete Payment"}
+            {isProcessing ? "Processing..." : "Complete Payment"}
           </Button>
 
           <div className="p-4 bg-white/5 rounded-lg border border-white/5">
@@ -259,4 +271,4 @@ export default function CartPaymentPage() {
       )}
     </div>
   );
-}
+}

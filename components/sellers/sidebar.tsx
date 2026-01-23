@@ -7,6 +7,7 @@ import {
   BarChart3,
   X,
   Menu,
+  DollarSign,
 } from "lucide-react";
 import { Bell, Clock, FileText, Headphones, Settings } from "lucide-react";
 import Image from "next/image";
@@ -236,6 +237,22 @@ export default function Sidebar() {
                 <span>Reports</span>
               </Link>
             </li>
+            <li>
+              <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
+                href="/sellers/payouts"
+                className={`flex items-center gap-3 px-3 py-2 rounded-md ${
+                  isActive("/sellers/payouts")
+                    ? "bg-[#1e1e1e]"
+                    : "hover:bg-[#1e1e1e]"
+                }`}
+              >
+                <DollarSign size={20} />
+                <span>Payouts</span>
+              </Link>
+            </li>
           </ul>
         </nav>
 
@@ -337,4 +354,4 @@ export default function Sidebar() {
       </div>
     </>
   );
-}
+}

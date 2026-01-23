@@ -10,7 +10,7 @@ export default function ReturnedOrdersPage() {
   return (
     <div>
       <Breadcrumb
-        items={[{ label: "Home", href: "/dashboard" }, { label: "Orders", href: "/dashboard/orders" }, { label: "Returned Orders" }]}
+        items={[{ label: "Home", href: "/buyer/dashboard" }, { label: "Orders", href: "/buyer/dashboard/orders" }, { label: "Returned Orders" }]}
       />
 
       <h1 className="text-white text-2xl font-semibold mb-8">Orders</h1>
@@ -38,7 +38,7 @@ export default function ReturnedOrdersPage() {
                 Returned
               </span>
             </div>
-            <Link href="/dashboard/orders/returned/NOB-134560" className="text-[#8451e1] text-sm hover:underline">
+            <Link href="/buyer/dashboard/orders/returned/NOB-134560" className="text-[#8451e1] text-sm hover:underline">
               View order details
             </Link>
           </div>
@@ -57,4 +57,4 @@ export default function ReturnedOrdersPage() {
       </div>
     </div>
   )
-}
+}

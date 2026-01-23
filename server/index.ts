@@ -2,12 +2,13 @@ import dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-import express, { Express } from "express";
+import express, { Express, Request } from "express";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { createTRPCContext } from "./trpc/context";
 import { createTRPCRouter } from "./trpc/trpc";
 import { eq } from "drizzle-orm";
+import type { Multer } from "multer";
 
 // Import additional tables for webhook processing
 import { orders, notifications } from "./db/schema";
@@ -21,9 +22,26 @@ import { notificationRouter } from "./routers/notification";
 import { reviewRouter } from "./routers/review";
 import { paymentRouter } from "./routers/payment";
 import { buyerRouter } from "./routers/buyer";
+import { collectionRouter } from "./routers/collection";
+import { supportRouter } from "./routers/support";
+import { productRouter } from "./routers/product";
+
+import { refundRouter } from "./routers/refund";
+import { inventoryRouter } from "./routers/inventory";
+import { paymentConfirmationRouter } from "./routers/paymentConfirmation";
+import { orderStatusRouter } from "./routers/orderStatus";
+import { shippingRouter } from "./routers/shipping";
+import { emailNotificationRouter } from "./routers/emailNotification";
+import { checkoutRouter } from "./routers/checkout";
+import { variantsRouter } from "./routers/variantsRouter";
+import { webhookRouter } from "./routers/webhook";
 
 // DB initializer
-import { startKeepAlive as initDB } from "./check-db";
+import { startKeepAlive as initDB } from "./db";
+
+// File upload utilities
+import multer from "multer";
+import { getSupabase } from "./services/supabase";
 
 export const appRouter = createTRPCRouter({
   seller: sellerRouter,
@@ -34,31 +52,130 @@ export const appRouter = createTRPCRouter({
   review: reviewRouter,
   payment: paymentRouter,
   buyer: buyerRouter,
+  collection: collectionRouter,
+  support: supportRouter,
+  product: productRouter,
+
+  refund: refundRouter,
+  inventory: inventoryRouter,
+  paymentConfirmation: paymentConfirmationRouter,
+  orderStatus: orderStatusRouter,
+  shipping: shippingRouter,
+  emailNotification: emailNotificationRouter,
+  checkout: checkoutRouter,
+  variants: variantsRouter,
+  webhooks: webhookRouter,
 });
 
 export type AppRouter = typeof appRouter;
 
 const app: Express = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+// File upload endpoint for profile pictures
+app.post("/api/upload/profile-picture", upload.single("file"), async (req: Request & { file?: Express.Multer.File }, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file provided" });
+    }
+
+    // Extract and verify bearer token manually
+    const authHeader = (req.headers.authorization || req.headers.Authorization) as string | undefined;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid authorization header" });
+    }
+
+    const token = authHeader.slice(7); // Remove "Bearer " prefix
+
+    // Verify token with Supabase
+    const { createClient } = await import("@supabase/supabase-js");
+    const authClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false } }
+    );
+
+    const { data: userData, error: authError } = await authClient.auth.getUser(token);
+    if (authError || !userData?.user?.id) {
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+
+    const userId = userData.user.id;
+
+    // Validate file
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: "Invalid file type" });
+    }
+
+    const sb = getSupabase();
+    if (!sb) {
+      return res.status(500).json({ error: "Storage not configured" });
+    }
+
+    const timestamp = Date.now();
+    const uniqueFileName = `${userId}/pfp/${timestamp}_${req.file.originalname}`;
+
+    const { data, error } = await sb.storage
+      .from("profile-pictures")
+      .upload(uniqueFileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Upload error:", error);
+      return res.status(500).json({ error: `Upload failed: ${error.message}` });
+    }
+
+    // Get public URL
+    const { data: urlData } = sb.storage
+      .from("profile-pictures")
+      .getPublicUrl(uniqueFileName);
+
+    // Update database
+    const { db } = await import("./db");
+    const { buyerAccountDetails } = await import("./db/schema");
+
+    await db
+      .update(buyerAccountDetails)
+      .set({
+        profilePicture: urlData.publicUrl,
+      })
+      .where(eq(buyerAccountDetails.buyerId, userId));
+
+    res.json({ url: urlData.publicUrl, success: true });
+  } catch (error: any) {
+    console.error("Profile picture upload error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // Webhook endpoint for Tsara payments (needs raw body for signature verification)
-app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (req, res) => {
+app.post("/webhooks/tsara", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    const signature = req.headers['x-tsara-signature'] as string;
+    const signature = req.headers["x-tsara-signature"] as string;
     const payload = req.body.toString();
 
     if (!signature) {
-      return res.status(400).json({ error: 'Missing signature' });
+      return res.status(400).json({ error: "Missing signature" });
     }
 
     // Import verifyWebhookSignature
-    const { verifyWebhookSignature } = await import('./services/tsara');
+    const { verifyWebhookSignature } = await import("./services/tsara");
 
     // Verify webhook signature
     const isValidSignature = verifyWebhookSignature(payload, signature);
     if (!isValidSignature) {
-      return res.status(401).json({ error: 'Invalid signature' });
+      return res.status(401).json({ error: "Invalid signature" });
     }
 
     const webhookData = JSON.parse(payload);
@@ -68,18 +185,18 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
     // Process webhook data
     const { event, data } = webhookData;
 
-    if (event === 'payment.updated' || event === 'payment_link.updated') {
+    if (event === "payment.updated" || event === "payment_link.updated") {
       // Import db and schema here to avoid circular dependencies
-      const { db } = await import('./db');
-      const { payments } = await import('./db/schema');
+      const { db } = await import("./db");
+      const { payments } = await import("./db/schema");
 
       // Map Tsara status to our database status
       const statusMap: Record<string, "pending" | "processing" | "completed" | "failed" | "refunded"> = {
-        "pending": "pending",
-        "processing": "processing",
-        "success": "completed",
-        "failed": "failed",
-        "refunded": "refunded"
+        pending: "pending",
+        processing: "processing",
+        success: "completed",
+        failed: "failed",
+        refunded: "refunded",
       };
 
       // Update payment status in database
@@ -99,19 +216,19 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
 
       if (updatedPayment.length === 0) {
         console.warn("Payment not found for reference:", data.reference);
-        return res.status(404).json({ error: 'Payment not found' });
+        return res.status(404).json({ error: "Payment not found" });
       }
 
       const payment = updatedPayment[0];
 
       // Business logic for payment status changes
-      if (data.status === 'success' || data.status === 'completed') {
+      if (data.status === "success" || data.status === "completed") {
         // Update order status if payment is linked to an order
         if (payment.orderId) {
           await db
             .update(orders)
             .set({
-              orderStatus: 'processing',
+              orderStatus: "processing",
             })
             .where(eq(orders.id, payment.orderId));
         }
@@ -119,7 +236,7 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
         // Create notification for seller
         if (payment.listingId) {
           // Get seller info from listing
-          const { listings, sellers } = await import('./db/schema');
+          const { listings, sellers } = await import("./db/schema");
           const listingData = await db
             .select({
               sellerId: listings.sellerId,
@@ -132,7 +249,7 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
           if (listingData[0]) {
             await db.insert(notifications).values({
               sellerId: listingData[0].sellerId,
-              type: 'purchase',
+              type: "purchase",
               message: `Payment received for "${listingData[0].productTitle}" - $${(payment.amountCents / 100).toFixed(2)}`,
               isRead: false,
               isStarred: false,
@@ -145,24 +262,24 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
           await db
             .update(orders)
             .set({
-              payoutStatus: 'processing',
+              payoutStatus: "processing",
             })
             .where(eq(orders.id, payment.orderId));
         }
-      } else if (data.status === 'failed') {
+      } else if (data.status === "failed") {
         // Handle failed payments
         if (payment.orderId) {
           await db
             .update(orders)
             .set({
-              orderStatus: 'canceled',
+              orderStatus: "canceled",
             })
             .where(eq(orders.id, payment.orderId));
         }
 
         // Notify seller of failed payment
         if (payment.listingId) {
-          const { listings, sellers } = await import('./db/schema');
+          const { listings, sellers } = await import("./db/schema");
           const listingData = await db
             .select({
               sellerId: listings.sellerId,
@@ -175,7 +292,7 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
           if (listingData[0]) {
             await db.insert(notifications).values({
               sellerId: listingData[0].sellerId,
-              type: 'purchase',
+              type: "purchase",
               message: `Payment failed for "${listingData[0].productTitle}"`,
               isRead: false,
               isStarred: false,
@@ -188,10 +305,10 @@ app.post("/webhooks/tsara", express.raw({ type: 'application/json' }), async (re
       // This would require email templates and buyer email lookup
     }
 
-    res.json({ success: true, message: 'Webhook processed successfully' });
+    res.json({ success: true, message: "Webhook processed successfully" });
   } catch (error: any) {
-    console.error('Webhook processing error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Webhook processing error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -220,10 +337,13 @@ app.use(
 );
 
 // TRPC Middleware
-app.use("/api/trpc", createExpressMiddleware({
-  router: appRouter,
-  createContext: createTRPCContext,
-}));
+app.use(
+  "/api/trpc",
+  createExpressMiddleware({
+    router: appRouter,
+    createContext: createTRPCContext,
+  })
+);
 
 // Basic Routes
 app.get("/", (_req, res) => {

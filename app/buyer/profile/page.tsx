@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = 'force-dynamic';
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -28,13 +29,18 @@ const ProfilePage = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"loyalty" | "purchase">("loyalty");
   const { user } = useAuth();
-  const { profile, loading: profileLoading, isInitialized } = useProfile(); 
+  const { profile, loading: profileLoading, isInitialized, refreshProfile } = useProfile(); 
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
-
-  
-
+  // Redirect to create profile if no profile exists (but wait for proper initialization)
+  useEffect(() => {
+    // Only redirect after we've confirmed the profile doesn't exist
+    // AND we're not currently loading
+    if (isInitialized && !profileLoading && !profile) {
+      router.push("/buyer/profile/create");
+    }
+  }, [profile, profileLoading, isInitialized, router]);
 
   async function compressImage(
     file: File,
@@ -95,6 +101,11 @@ const ProfilePage = () => {
   //     enabled: !!user && !!profile,
   //   });
 
+  // Fetch real loyalty NFT data - must be called unconditionally
+  const { data: loyaltyData, isLoading: loyaltyLoading } = trpc.buyer.getLoyaltyNFTs.useQuery(undefined, {
+    enabled: !!user && activeTab === "loyalty",
+  });
+
   const uploadProfilePicMutation =
     trpc.buyer.uploadProfilePicture.useMutation();
 
@@ -144,6 +155,7 @@ const ProfilePage = () => {
       if (result.success) {
         toastSvc.success("Profile picture updated successfully");
         await utils.buyer.getAccountDetails.invalidate();
+        await refreshProfile();
       }
     } catch (err: any) {
       toastSvc.error(err.message || "Failed to upload profile picture");
@@ -153,21 +165,32 @@ const ProfilePage = () => {
     }
   };
 
-
-  if (profileLoading || !isInitialized) {
+  // Show loading state while initializing
+  if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div>Loading profile...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400 mx-auto mb-4"></div>
+          <p className="text-gray-400">Initializing...</p>
+        </div>
       </div>
     );
   }
 
-  if (!profile) {
-    return null; 
+  // Show loading state while fetching profile
+  if (profileLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
   }
 
   const username =
-    profile.username ||
+    profile?.username ||
     user?.user_metadata?.full_name ||
     user?.email?.split("@")[0] ||
     "User";
@@ -176,11 +199,7 @@ const ProfilePage = () => {
     ? new Date(user.created_at).getFullYear()
     : "2023";
 
-  const nftItems = [
-    { id: 1, rarity: "Rare", property: "Digital Art" },
-    { id: 2, rarity: "Epic", property: "Collectible" },
-    { id: 3, rarity: "Common", property: "Avatar" },
-  ];
+  const nftItems = loyaltyData?.nfts || [];
 
   return (
     <div className="min-h-screen text-white px-6 py-10">
@@ -194,7 +213,8 @@ const ProfilePage = () => {
         >
           <div className="relative w-[60px] md:w-[120px] h-[60px] md:h-[120px] rounded-full bg-gradient-to-br from-gray-700 to-gray-900 overflow-hidden">
             <img
-              src={profile?.profilePicture || "/images/seller/sparkles.svg"}
+              key={profile?.id}
+              src={profile?.profilePicture ? `${profile.profilePicture}?v=${Date.now()}` : "/images/seller/sparkles.svg"}
               alt="Profile"
               className="w-full h-full object-cover"
             />

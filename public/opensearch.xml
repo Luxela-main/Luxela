@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Luxela Fashion</ShortName>
+  <Description>Search Luxela Fashion for trendy African clothing and accessories</Description>
+  <Url type="text/html" template="https://theluxela.com/buyer/search?q={searchTerms}"/>
+  <Url type="application/x-suggestions+json" template="https://theluxela.com/api/search/suggestions?q={searchTerms}"/>
+  <Contact>support@theluxela.com</Contact>
+  <Tags>fashion luxury clothing african trendy</Tags>
+  <Image height="16" width="16" type="image/x-icon">https://theluxela.com/favicon.ico</Image>
+  <Image height="64" width="64" type="image/png">https://theluxela.com/luxela-logo.png</Image>
+  <SyndicationRight>open</SyndicationRight>
+  <Developer>Luxela Fashion</Developer>
+  <Attribution>Luxela Fashion Search</Attribution>
+</OpenSearchDescription>

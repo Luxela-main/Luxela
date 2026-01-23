@@ -6,6 +6,9 @@ export interface FormData {
     title: string;
     priceCents: number;
     currency: string;
+    productId?: string; 
+    images?: (File | string)[]; 
+    image?: string;             
   }[];
 
   // Basic Information
@@ -35,9 +38,9 @@ export interface FormData {
   internationalMinutes: string;
 
   // Images
-  images: File[];
+  images: (File | string)[];
 
-  //Listing Type
+  // Listing Type
   type?: "single" | "collection";
 }
 

@@ -75,7 +75,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ targetAudience: "male" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.targetAudience === "male"
                   ? "bg-purple-700 border-[#333] text-white"
                   : "bg-transparent border-[#333] text-gray-500"
@@ -86,7 +86,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ targetAudience: "female" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.targetAudience === "female"
                   ? "bg-purple-700 border-[#333] text-white"
                   : "bg-transparent border-[#333] text-gray-500"
@@ -97,7 +97,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ targetAudience: "unisex" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.targetAudience === "unisex"
                   ? "bg-purple-700 border-[#333] text-white"
                   : "bg-transparent border-[#333] text-gray-500"
@@ -115,9 +115,9 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ shippingOption: "local" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.shippingOption === "local"
-                  ? "bg-purple-700border-purple-600"
+                  ? "bg-purple-700 border-purple-600"
                   : "bg-transparent border-[#333]"
               }`}
             >
@@ -139,9 +139,9 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ shippingOption: "international" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.shippingOption === "international"
-                  ? "bg-purple-700border-purple-600"
+                  ? "bg-purple-700 border-purple-600"
                   : "bg-transparent border-[#333]"
               }`}
             >
@@ -163,9 +163,9 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
             <button
               type="button"
               onClick={() => onFormChange({ shippingOption: "both" })}
-              className={`flex-1 px-6 py-3 rounded-lg border transition ${
+              className={`flex-1 px-6 py-3 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
                 formData.shippingOption === "both"
-                  ? "bg-purple-700border-purple-600"
+                  ? "bg-purple-700 border-purple-600"
                   : "bg-transparent border-[#333]"
               }`}
             >
@@ -204,13 +204,15 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
               onChange={(e) =>
                 handleInputChange("domesticDays", e.target.value)
               }
-              className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
+              className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white cursor-pointer hover:border-purple-500 transition"
             >
               <option value="">Select delivery time</option>
+              <option value="same_day">Same Day</option>
+              <option value="next_day">Next Day</option>
               <option value="48hrs">48 Hours</option>
               <option value="72hrs">72 Hours</option>
               <option value="5_working_days">5 Working Days</option>
-              <option value="1week">1 Week</option>
+              <option value="1_2_weeks">1-2 Weeks</option>
             </select>
           </div>
 
@@ -224,12 +226,12 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
               onChange={(e) =>
                 handleInputChange("internationalDays", e.target.value)
               }
-              className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
+              className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white cursor-pointer hover:border-purple-500 transition"
             >
               <option value="">Select delivery time</option>
+              <option value="2_3_weeks">2-3 Weeks</option>
+              <option value="1_2_weeks">1-2 Weeks</option>
               <option value="custom">Custom</option>
-              <option value="days_7_to_14">7-14 Days</option>
-              <option value="days_14_to_30">14-30 Days</option>
             </select>
           </div>
         </div>
@@ -239,14 +241,14 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
           <Button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3 bg-transparent hover:bg-transparent border border-[#333] rounded-lg hover:border-gray-600 transition"
+            className="px-8 py-3 bg-transparent hover:bg-transparent border border-[#333] rounded-lg hover:border-gray-600 transition cursor-pointer"
           >
             Cancel
           </Button>
           <Button
             type="button"
             onClick={onNext}
-            className="px-8 py-3 rounded-lg transition"
+            className="px-8 py-3 rounded-lg transition cursor-pointer hover:shadow-lg"
           >
             Save
           </Button>

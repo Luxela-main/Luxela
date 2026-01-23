@@ -16,6 +16,16 @@ import { toastSvc } from "@/services/toast";
 import { X } from "lucide-react";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { trpc } from "../_trpc/client";
+import {
+  BUSINESS_TYPES,
+  ID_TYPES,
+  SHIPPING_ETA_OPTIONS,
+  REFUND_POLICIES,
+  FIAT_PAYOUT_METHODS,
+  WALLET_TYPES,
+  PAYOUT_TOKENS,
+  SOCIAL_MEDIA_PLATFORMS,
+} from "./constants/formOptions";
 
 interface SellerSetupFormProps {
   initialData: SellerSetupFormData;
@@ -454,7 +464,7 @@ const handleNext = async () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 text-sm relative transition-colors ${activeTab === tab.id ? "text-purple-500" : "text-[#595959] hover:text-gray-300"}`}
+                className={`pb-3 text-sm relative transition-colors cursor-pointer ${activeTab === tab.id ? "text-purple-500" : "text-[#595959] hover:text-gray-300"}`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
@@ -507,8 +517,11 @@ const handleNext = async () => {
                       style={selectStyle}
                     >
                       <option value="">Enter your business type</option>
-                      <option value="individual">Individual</option>
-                      <option value="business">Business</option>
+                      {BUSINESS_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
                     </select>
                     {formik.touched.businessType &&
                       formik.errors.businessType && (
@@ -516,6 +529,11 @@ const handleNext = async () => {
                           {formik.errors.businessType}
                         </div>
                       )}
+                    {formik.values.businessType && (
+                      <p className="text-xs text-[#858585] mt-1">
+                        {BUSINESS_TYPES.find(t => t.value === formik.values.businessType)?.description}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm mb-2 text-[#dcdcdc]">
@@ -615,14 +633,29 @@ const handleNext = async () => {
                     <label className="block text-sm mb-2 text-[#dcdcdc]">
                       Social Media
                     </label>
-                    <input
-                      type="text"
-                      name="socialMedia"
-                      value={formik.values.socialMedia}
-                      onChange={formik.handleChange}
-                      placeholder="Enter your social media"
-                      className={inputClass}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      {SOCIAL_MEDIA_PLATFORMS.map((platform) => {
+                        const Icon = platform.icon;
+                        return (
+                          <div key={platform.value}>
+                            <label className="text-xs text-[#858585] mb-1 block">
+                              {platform.label}
+                            </label>
+                            <div className="flex items-center gap-2 bg-black border border-[#747474] rounded px-3 py-2.5">
+                              <Icon className="w-4 h-4" style={{color: platform.iconColor}} />
+                              <input
+                                type={platform.inputType}
+                                placeholder={platform.placeholder}
+                                value={formik.values.socialMedia || ""}
+                                onChange={(e) => formik.setFieldValue("socialMedia", e.target.value)}
+                                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-600"
+                              />
+                            </div>
+                            <p className="text-xs text-[#666] mt-0.5">{platform.description}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   
@@ -668,15 +701,21 @@ const handleNext = async () => {
         style={selectStyle}
       >
         <option value="">Select ID type</option>
-        <option value="national_id">National ID (NIN)</option>
-        <option value="passport">International Passport</option>
-        <option value="drivers_license">Driver's License</option>
-        <option value="voters_card">Voter's Card</option>
+        {ID_TYPES.filter(id => ['passport', 'drivers_license', 'voters_card', 'national_id'].includes(id.value)).map((idType) => (
+          <option key={idType.value} value={idType.value}>
+            {idType.label}
+          </option>
+        ))}
       </select>
       {formik.touched.idType && formik.errors.idType && (
         <div className="text-red-500 text-xs mt-1">
           {formik.errors.idType}
         </div>
+      )}
+      {formik.values.idType && (
+        <p className="text-xs text-[#858585] mt-1">
+          {ID_TYPES.find(id => id.value === formik.values.idType)?.description}
+        </p>
       )}
     </div>
 
@@ -856,10 +895,11 @@ const handleNext = async () => {
                         style={selectStyle}
                       >
                         <option value="">Select time</option>
-                        <option value="48hrs">48hrs</option>
-                        <option value="72hrs">72hrs</option>
-                        <option value="5_working_days">5 working days</option>
-                        <option value="1week">1 week</option>
+                        {SHIPPING_ETA_OPTIONS.filter(opt => ['same_day', 'next_day', '48hrs', '72hrs', '5_working_days', '1_2_weeks'].includes(opt.value)).map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -876,8 +916,11 @@ const handleNext = async () => {
                         style={selectStyle}
                       >
                         <option value="">Select refund policy</option>
-                        <option value="no_refunds">No Refunds</option>
-                        <option value="accept_refunds">Accept Refunds</option>
+                        {REFUND_POLICIES.filter(policy => ['no_refunds', 'accept_refunds'].includes(policy.value)).map((policy) => (
+                          <option key={policy.value} value={policy.value}>
+                            {policy.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -892,10 +935,11 @@ const handleNext = async () => {
                         style={selectStyle}
                       >
                         <option value="">Select period</option>
-                        <option value="48hrs">48hrs</option>
-                        <option value="72hrs">72hrs</option>
-                        <option value="5_working_days">5 working days</option>
-                        <option value="1week">1 week</option>
+                        {REFUND_POLICIES.filter(policy => ['24hrs', '48hrs', '72hrs', '5_working_days', '1week', '2weeks'].includes(policy.value)).map((policy) => (
+                          <option key={policy.value} value={policy.value}>
+                            {policy.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -973,10 +1017,11 @@ const handleNext = async () => {
                               style={selectStyle}
                             >
                               <option value="">Select payout option</option>
-                              <option value="bank">Bank Transfer</option>
-                              <option value="paypal">PayPal</option>
-                              <option value="stripe">Stripe</option>
-                              <option value="flutterwave">Flutterwave</option>
+                              {FIAT_PAYOUT_METHODS.filter(method => ['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'other'].includes(method.value)).map((method) => (
+                                <option key={method.value} value={method.value}>
+                                  {method.label}
+                                </option>
+                              ))}
                             </select>
                           </div>
                           <div>
@@ -1066,9 +1111,11 @@ const handleNext = async () => {
                               style={selectStyle}
                             >
                               <option value="">Select wallet type</option>
-                              <option value="phantom">Phantom</option>
-                              <option value="solflare">Solflare</option>
-                              <option value="backpack">Backpack</option>
+                              {WALLET_TYPES.filter(wallet => ['phantom', 'solflare', 'backpack', 'wallet_connect', 'magic_eden', 'ledger_live'].includes(wallet.value)).map((wallet) => (
+                                <option key={wallet.value} value={wallet.value}>
+                                  {wallet.label}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         </div>
@@ -1098,9 +1145,11 @@ const handleNext = async () => {
                               style={selectStyle}
                             >
                               <option value="">Select token</option>
-                              <option value="USDT">USDT</option>
-                              <option value="USDC">USDC</option>
-                              <option value="solana">Solana</option>
+                              {PAYOUT_TOKENS.filter(token => ['USDT', 'USDC', 'solana'].includes(token.value)).map((token) => (
+                                <option key={token.value} value={token.value}>
+                                  {token.label}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         </div>
@@ -1187,7 +1236,7 @@ const handleNext = async () => {
           <div className="flex justify-end gap-4 mt-8">
             <button
               type="button"
-              className="px-8 py-2.5 border border-[#747474] rounded text-sm hover:bg-[#1a1a1a] transition-colors"
+              className="px-8 py-2.5 border border-[#747474] rounded text-sm hover:bg-[#1a1a1a] transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -1195,7 +1244,7 @@ const handleNext = async () => {
               <button
                 type="button"
                                 onClick={handleNext}
-                className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors"
+                className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors cursor-pointer"
               >
                 Preview
               </button>
@@ -1216,4 +1265,4 @@ const handleNext = async () => {
   );
 };
 
-export default SellerSetupForm;
+export default SellerSetupForm;

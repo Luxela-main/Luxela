@@ -9,6 +9,7 @@ import {
   buyerAccountDetails,
   buyerBillingAddress,
   buyerFavorites,
+  loyaltyNFTs,
   orders,
   listings,
 } from "../db/schema";
@@ -128,9 +129,24 @@ export const buyerRouter = createTRPCRouter({
         phoneNumber: z.string().optional(),
         country: z.string(),
         state: z.string(),
+        profilePicture: z.string().optional(),
       })
     )
-    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .output(z.object({ 
+      success: z.boolean(), 
+      message: z.string().optional(),
+      profile: z.object({
+        id: z.string(),
+        username: z.string(),
+        fullName: z.string(),
+        email: z.string(),
+        profilePicture: z.string().nullable(),
+        dateOfBirth: z.string().nullable().optional(),
+        phoneNumber: z.string().nullable().optional(),
+        country: z.string(),
+        state: z.string(),
+      }).optional()
+    }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) {
@@ -149,27 +165,67 @@ export const buyerRouter = createTRPCRouter({
         });
       }
       try {
-        const existingBuyer = await db
+        // First, check if buyer profile (account details) already exists for this user
+        const existingAccountDetails = await db
           .select()
-          .from(buyers)
-          .where(eq(buyers.userId, userId));
+          .from(buyerAccountDetails)
+          .innerJoin(buyers, eq(buyers.id, buyerAccountDetails.buyerId))
+          .where(eq(buyers.userId, userId))
+          .limit(1);
 
-        if (existingBuyer.length > 0) {
+        console.log(`[DEBUG] Existing account details check result:`, existingAccountDetails.length);
+
+        if (existingAccountDetails.length > 0) {
+          console.log(`[ERROR] Account details already exist for user ${userId}`);
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Buyer profile already exists",
           });
         }
 
-        const buyerId = uuidv4();
-        await db.insert(buyers).values({
-          id: buyerId,
-          userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+        // Check if username is already taken
+        const existingUsername = await db
+          .select()
+          .from(buyerAccountDetails)
+          .where(eq(buyerAccountDetails.username, input.username))
+          .limit(1);
 
-        await db.insert(buyerAccountDetails).values({
+        if (existingUsername.length > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Username is already taken",
+          });
+        }
+
+        // Get or create buyer record
+        const existingBuyer = await db
+          .select()
+          .from(buyers)
+          .where(eq(buyers.userId, userId))
+          .limit(1);
+
+        let buyerId: string;
+
+        if (existingBuyer.length === 0) {
+          buyerId = uuidv4();
+          console.log(`[INFO] Creating new buyer record with ID: ${buyerId}`);
+          await db.insert(buyers).values({
+            id: buyerId,
+            userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        } else {
+          buyerId = existingBuyer[0].id;
+          console.log(`[INFO] Using existing buyer record with ID: ${buyerId}`);
+        }
+
+        // Get profile picture: use input if provided (uploaded during creation), otherwise fallback to OAuth
+        const profilePictureUrl = input.profilePicture || ctx.user?.avatar_url || null;
+        console.log(`[DEBUG] Using profile picture:`, profilePictureUrl ? 'from input/oauth' : 'none');
+        console.log(`[INFO] Inserting account details for buyerId: ${buyerId} with username: ${input.username}`);
+
+        const insertData = {
           id: uuidv4(),
           buyerId: buyerId,
           username: input.username,
@@ -177,16 +233,81 @@ export const buyerRouter = createTRPCRouter({
           email: ctx.user?.email || userEmail,
           country: input.country,
           state: input.state,
-          profilePicture: null,
+          profilePicture: profilePictureUrl,
           dateOfBirth: input.dateOfBirth || null,
           phoneNumber: input.phoneNumber || null,
           createdAt: new Date(),
           updatedAt: new Date(),
-        });
+        };
 
-        return { success: true, message: "Buyer profile created successfully" };
+        console.log(`[DEBUG] Attempting to insert account details with data:`, insertData);
+
+        const insertResult = await db.insert(buyerAccountDetails).values(insertData);
+        
+        console.log(`[DEBUG] Insert result:`, insertResult);
+        console.log("[SUCCESS] Buyer profile created for buyerId: " + buyerId);
+        
+        // Return the created profile data immediately
+        const createdAccountDetails = await db
+          .select()
+          .from(buyerAccountDetails)
+          .where(eq(buyerAccountDetails.buyerId, buyerId))
+          .limit(1);
+        
+        if (createdAccountDetails.length === 0) {
+          return { success: true, message: "Buyer profile created successfully" };
+        }
+        
+        const profile = createdAccountDetails[0];
+        return { 
+          success: true, 
+          message: "Buyer profile created successfully",
+          profile: {
+            id: profile.id,
+            username: profile.username,
+            fullName: profile.fullName,
+            email: profile.email,
+            profilePicture: profile.profilePicture,
+            dateOfBirth: profile.dateOfBirth?.toISOString() || null,
+            phoneNumber: profile.phoneNumber,
+            country: profile.country,
+            state: profile.state,
+          }
+        };
       } catch (err: any) {
-        console.error("Error creating buyer profile:", err);
+        console.error("[ERROR] Error creating buyer profile:", err);
+        console.error("[ERROR] Full error object:", JSON.stringify(err, null, 2));
+        console.error("[ERROR] Error code:", err?.code);
+        console.error("[ERROR] Error detail:", err?.detail);
+        console.error("[ERROR] Error stack:", err?.stack);
+        
+        // Don't wrap TRPCErrors again
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+        // Handle database constraint errors
+        if (err?.code === "23505") {
+          // Unique constraint violation
+          console.error("[ERROR] Unique constraint violation detected");
+          if (err?.detail?.includes("username")) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Username is already taken",
+            });
+          }
+          if (err?.detail?.includes("email")) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "An account with this email already exists",
+            });
+          }
+          if (err?.detail?.includes("buyer_id")) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Buyer profile already exists",
+            });
+          }
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to create buyer profile",
@@ -830,7 +951,7 @@ return {
               favoriteId: buyerFavorites.id,
               listingId: listings.id,
               title: listings.title,
-              image: listings.image,
+              image: listings.image || undefined,
               priceCents: listings.priceCents,
               currency: listings.currency,
               category: listings.category,
@@ -1057,7 +1178,7 @@ return {
           z.object({
             orderId: z.string(),
             productTitle: z.string(),
-            productImage: z.string().nullable(),
+            productImage: z.string().optional(),
             productCategory: z.string(),
             priceCents: z.number(),
             currency: z.string(),
@@ -1108,7 +1229,7 @@ return {
             .select({
               id: orders.id,
               productTitle: orders.productTitle,
-              productImage: orders.productImage,
+              productImage: orders.productImage || undefined,
               productCategory: orders.productCategory,
               amountCents: orders.amountCents,
               currency: orders.currency,
@@ -1133,7 +1254,7 @@ return {
           data: results.map((o) => ({
             orderId: o.id,
             productTitle: o.productTitle,
-            productImage: o.productImage,
+            productImage: o.productImage || undefined,
             productCategory: o.productCategory,
             priceCents: o.amountCents,
             currency: o.currency,
@@ -1170,7 +1291,7 @@ return {
       z.object({
         orderId: z.string(),
         productTitle: z.string(),
-        productImage: z.string().nullable(),
+        productImage: z.string().optional(),
         productCategory: z.string(),
         amountCents: z.number(),
         currency: z.string(),
@@ -1211,7 +1332,7 @@ return {
         return {
           orderId: o.id,
           productTitle: o.productTitle,
-          productImage: o.productImage,
+          productImage: o.productImage || undefined,
           productCategory: o.productCategory,
           amountCents: o.amountCents,
           currency: o.currency,
@@ -1263,7 +1384,7 @@ return {
           z.object({
             orderId: z.string(),
             productTitle: z.string(),
-            productImage: z.string().nullable(),
+            productImage: z.string().optional(),
             priceCents: z.number(),
             currency: z.string(),
             orderDate: z.date(),
@@ -1324,7 +1445,7 @@ return {
           data: results.map((o) => ({
             orderId: o.id,
             productTitle: o.productTitle,
-            productImage: o.productImage,
+            productImage: o.productImage || undefined,
             priceCents: o.amountCents,
             currency: o.currency,
             orderDate: o.orderDate,
@@ -1343,27 +1464,33 @@ return {
       }
     }),
 
-  // ============ ORDER STATISTICS ============
+  // ============ LOYALTY NFTs ============
 
-  getOrderStats: protectedProcedure
+  getLoyaltyNFTs: protectedProcedure
     .meta({
       openapi: {
         method: "GET",
-        path: "/buyer/orders/stats",
-        tags: ["Buyer - Orders"],
-        summary: "Get buyer order statistics",
-        description:
-          "Fetch summary statistics for buyer orders (total orders, total spent, status breakdown)",
+        path: "/buyer/loyalty-nfts",
+        tags: ["Buyer - Loyalty"],
+        summary: "Get buyer loyalty NFTs",
+        description: "Retrieve loyalty NFT rewards and points",
       },
     })
     .input(z.void())
     .output(
       z.object({
-        totalOrders: z.number(),
-        totalSpentCents: z.number(),
-        pendingOrders: z.number(),
-        deliveredOrders: z.number(),
-        canceledOrders: z.number(),
+        nfts: z.array(
+          z.object({
+            id: z.string(),
+            title: z.string(),
+            image: z.string(),
+            loyaltyPoints: z.number(),
+            earnedDate: z.date(),
+            rarity: z.string(),
+            property: z.string(),
+          })
+        ),
+        totalPoints: z.number(),
       })
     )
     .query(async ({ ctx }) => {
@@ -1374,12 +1501,106 @@ return {
 
       try {
         const buyer = await getBuyer(userId);
+        
+        // Fetch real NFTs from database
+        const nfts = await db
+          .select({
+            id: loyaltyNFTs.id,
+            title: loyaltyNFTs.title,
+            image: loyaltyNFTs.image,
+            loyaltyPoints: loyaltyNFTs.loyaltyPoints,
+            earnedDate: loyaltyNFTs.earnedDate,
+            rarity: loyaltyNFTs.rarity,
+            property: loyaltyNFTs.property,
+          })
+          .from(loyaltyNFTs)
+          .where(eq(loyaltyNFTs.buyerId, buyer.id));
+        
+        // Calculate total loyalty points from purchase history
+        const purchaseStats = await db
+          .select({
+            totalSpent: sql`COALESCE(SUM(${orders.amountCents}), 0)`,
+          })
+          .from(orders)
+          .where(eq(orders.buyerId, buyer.id));
 
-        // Fetch all orders for the buyer
+        const stats = purchaseStats[0] as any;
+        const totalPoints = Math.floor((Number(stats?.totalSpent) || 0) / 100);
+        
+        return {
+          nfts: nfts || [],
+          totalPoints,
+        };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to fetch loyalty NFTs",
+        });
+      }
+    }),
+
+  // ============ ORDER STATISTICS ============
+
+  getOrderStats: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/buyer/orders/stats",
+        tags: ["Buyer - Orders"],
+        summary: "Get buyer order statistics",
+        description:
+          "Fetch summary statistics for buyer orders (total orders, total spent, status breakdown) with optional date range filtering",
+      },
+    })
+    .input(
+      z.object({
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+      })
+    )
+    .output(
+      z.object({
+        totalOrders: z.number(),
+        totalSpentCents: z.number(),
+        pendingOrders: z.number(),
+        deliveredOrders: z.number(),
+        canceledOrders: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      try {
+        const buyer = await getBuyer(userId);
+
+        // Build where condition with optional date filtering
+        let whereCondition: any = eq(orders.buyerId, buyer.id);
+        
+        if (input.startDate && input.endDate) {
+          whereCondition = and(
+            whereCondition,
+            sql`${orders.orderDate} >= ${input.startDate} AND ${orders.orderDate} <= ${input.endDate}`
+          );
+        } else if (input.startDate) {
+          whereCondition = and(
+            whereCondition,
+            sql`${orders.orderDate} >= ${input.startDate}`
+          );
+        } else if (input.endDate) {
+          whereCondition = and(
+            whereCondition,
+            sql`${orders.orderDate} <= ${input.endDate}`
+          );
+        }
+
+        // Fetch all orders for the buyer (with optional date filter)
         const allOrders = await db
           .select()
           .from(orders)
-          .where(eq(orders.buyerId, buyer.id));
+          .where(whereCondition);
 
         // Calculate stats in application
         const totalOrders = allOrders.length;
@@ -1411,4 +1632,4 @@ return {
         });
       }
     }),
-});
+});

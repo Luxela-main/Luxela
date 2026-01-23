@@ -6,4 +6,5 @@ export const sellersKeys = {
   sales: (status?: string) => [...sellersKeys.all, 'sales', status ?? 'all'] as const,
   notifications: () => [...sellersKeys.all, 'notifications'] as const,
   dashboard: () => [...sellersKeys.all, 'dashboard'] as const,
-} as const;
+  support: () => [...sellersKeys.all, 'support'] as const,
+} as const;

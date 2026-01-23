@@ -8,13 +8,14 @@ export type SellerSetupFormData = {
   phoneNumber: string;
   countryCode: string;
   country: string;
+  socialMediaPlatform?: string;
   socialMedia: string;
   fullName: string;
   idType: string;
-  bio?: string; 
-  storeDescription?: string; 
-  storeLogo?: string; 
-  storeBanner?: string; 
+  bio?: string;
+  storeDescription?: string;
+  storeLogo?: string;
+  storeBanner?: string;
   logoPath?: string;
   bannerPath?: string;
 
@@ -40,9 +41,9 @@ export type SellerSetupFormData = {
   preferredPayoutToken: string;
 
   // Additional Information
-  productCategory:string;
+  productCategory: string;
   targetAudience: "male" | "female" | "unisex" | "";
   localPricing: string;
-    idNumber?: string;
+  idNumber?: string;
   idVerified?: boolean;
 };

@@ -4,12 +4,18 @@ import { Breadcrumb } from "@/components/buyer/dashboard/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, Check, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function NotificationsPage() {
   const [expandedItems, setExpandedItems] = useState<number[]>([])
+  const { toast } = useToast()
 
   const toggleExpand = (index: number) => {
     setExpandedItems((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]))
+  }
+
+  const handleDeleteAll = () => {
+    toast({ title: "Success", description: "All notifications deleted" })
   }
 
   const notifications = [
@@ -59,6 +65,7 @@ export default function NotificationsPage() {
           <Button
             variant="ghost"
             className="text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-transparent text-sm flex items-center gap-2"
+            onClick={handleDeleteAll}
           >
             Delete all
             <Trash2 className="w-4 h-4" />

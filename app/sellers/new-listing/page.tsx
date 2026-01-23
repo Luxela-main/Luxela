@@ -1,5 +1,5 @@
-"use client";
-import React, { useState } from "react";
+﻿"use client";
+import React, { useState, useRef, useEffect } from "react";
 import ProductListings from "@/components/sellers/NewListing/ProductListings";
 import TabsNav from "@/components/sellers/NewListing/TabsNav";
 import ProductInfoForm from "@/components/sellers/NewListing/ProductInfoForm";
@@ -10,47 +10,114 @@ import { FormData, ViewType, TabType, ListingType } from "@/types/newListing";
 import { uploadImage, validateImageFile } from "@/lib/upload-image";
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import CollectionForm from "@/components/sellers/NewListing/CollectionForm";
+import type { CollectionItem } from "@/components/sellers/NewListing/CollectionForm";
 import { createClient } from "@/utils/supabase/client";
+
+
+export const dynamic = 'force-dynamic';
 
 const NewListing: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams?.get("edit");
+  const lastValidationErrorsRef = useRef<string[]>([]);
+  const lastValidationTimeRef = useRef<number>(0);
+
+  // Fetch listings for edit mode
+  // Type assertion needed because API returns string image URLs but form expects File[]
+  const { data: listings = [] } = trpc.listing.getMyListings.useQuery()
 
   const [view, setView] = useState<ViewType>("empty");
   const [activeTab, setActiveTab] = useState<TabType>("product-info");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-   const [showListings, setShowListings] = useState(false);
+  const [showListings, setShowListings] = useState(false);
+  const [isLoadingExisting, setIsLoadingExisting] = useState(editId ? true : false);
 
   const [formData, setFormData] = useState<FormData>({
-    type: "single",
-    name: "",
-    price: "",
-    category: "",
-    description: "",
-    sizes: [],
-    releaseDate: "",
-    supplyCapacity: "no-max",
-    quantity: "",
-    showBadge: "do_not_show",
-    releaseDuration: "",
-    releaseDurationDays: "",
-    releaseDurationMinutes: "",
-    material: "",
-    colors: "",
-    targetAudience: "",
-    shippingOption: "",
-    domesticDays: "",
-    domesticMinutes: "",
-    internationalDays: "",
-    internationalMinutes: "",
-    images: [],
-    collectionTitle: "",
-    collectionDescription: "",
-    collectionItems: [],
-  });
+  type: "single",
+  name: "",
+  price: "",
+  category: "",
+  description: "",
+  sizes: [],
+  releaseDate: "",
+  supplyCapacity: "no-max",
+  quantity: "",
+  showBadge: "do_not_show",
+  releaseDuration: "",
+  releaseDurationDays: "",
+  releaseDurationMinutes: "",
+  material: "",
+  colors: "",
+  targetAudience: "",
+  shippingOption: "",
+  domesticDays: "",
+  domesticMinutes: "",
+  internationalDays: "",
+  internationalMinutes: "",
+  images: [],
+  collectionTitle: "",
+  collectionDescription: "",
+  collectionItems: [] as CollectionItem[],
+});
+
+
+  // Load existing listing if editing
+  useEffect(() => {
+    const loadExistingListing = async () => {
+      if (!editId || !listings || listings.length === 0) {
+        setIsLoadingExisting(false);
+        return;
+      }
+
+      try {
+        
+        const response = listings.find((l) => l.id === editId);
+        if (response) {
+          setFormData({
+            type: response.type || "single",
+            name: response.title || "",
+            price: response.priceCents ? (response.priceCents / 100).toString() : "",
+            category: response.category || "",
+            description: response.description || "",
+            sizes: response.sizesJson || [],
+            releaseDate: "",
+            supplyCapacity: response.supplyCapacity === "no_max" ? "no-max" : (response.supplyCapacity || "no-max"),
+            quantity: response.quantityAvailable?.toString() || "",
+            showBadge: (response.limitedEditionBadge === "show_badge" ? "show_badge" : "do_not_show"),
+            releaseDuration: response.releaseDuration || "",
+            releaseDurationDays: "",
+            releaseDurationMinutes: "",
+            material: response.materialComposition || "",
+            colors: (response.colorsAvailable && Array.isArray(response.colorsAvailable)) ? ((response.colorsAvailable as { colorName: string; colorHex: string; }[]).map((c: any) => String(c.colorName)).join(", ")) : "",
+            targetAudience: response.additionalTargetAudience || "",
+            shippingOption: response.shippingOption || "",
+            domesticDays: "",
+            domesticMinutes: "",
+            internationalDays: "",
+            internationalMinutes: "",
+            images: (response.image ? [response.image] : []) as (File | string)[],
+            collectionTitle: "",
+            collectionDescription: "",
+            collectionItems: Array.isArray(response.itemsJson) ? (response.itemsJson as any) : [],
+          });
+          setView(response.type || "empty");
+          toastSvc.success("Listing loaded successfully");
+        }
+      } catch (err) {
+        toastSvc.error("Failed to load listing");
+        console.error(err);
+      } finally {
+        setIsLoadingExisting(false);
+      }
+    };
+
+    loadExistingListing();
+  }, [editId]);
 
   // Validation functions
   const validateProductInfo = (): { valid: boolean; errors: string[] } => {
@@ -143,7 +210,15 @@ const handleBackToListings = () => {
     if (activeTab === "product-info") {
       const validation = validateProductInfo();
       if (!validation.valid) {
-        validation.errors.forEach((error) => toastSvc.error(error));
+        const now = Date.now();
+        const errorsChanged = JSON.stringify(validation.errors) !== JSON.stringify(lastValidationErrorsRef.current);
+        const debounceExpired = now - lastValidationTimeRef.current > 500;
+        
+        if (errorsChanged || debounceExpired) {
+          lastValidationErrorsRef.current = validation.errors;
+          lastValidationTimeRef.current = now;
+          validation.errors.forEach((error) => toastSvc.error(error));
+        }
         return;
       }
       setActiveTab("additional-info");
@@ -153,7 +228,15 @@ const handleBackToListings = () => {
     } else if (activeTab === "additional-info") {
       const validation = validateAdditionalInfo();
       if (!validation.valid) {
-        validation.errors.forEach((error) => toastSvc.error(error));
+        const now = Date.now();
+        const errorsChanged = JSON.stringify(validation.errors) !== JSON.stringify(lastValidationErrorsRef.current);
+        const debounceExpired = now - lastValidationTimeRef.current > 500;
+        
+        if (errorsChanged || debounceExpired) {
+          lastValidationErrorsRef.current = validation.errors;
+          lastValidationTimeRef.current = now;
+          validation.errors.forEach((error) => toastSvc.error(error));
+        }
         return;
       }
       setActiveTab("preview");
@@ -167,19 +250,32 @@ const handleBackToListings = () => {
     if (tab === "additional-info") {
       const validation = validateProductInfo();
       if (!validation.valid) {
-        validation.errors.forEach((error) => toastSvc.error(error));
+        const now = Date.now();
+        const errorsChanged = JSON.stringify(validation.errors) !== JSON.stringify(lastValidationErrorsRef.current);
+        const debounceExpired = now - lastValidationTimeRef.current > 500;
+        
+        if (errorsChanged || debounceExpired) {
+          lastValidationErrorsRef.current = validation.errors;
+          lastValidationTimeRef.current = now;
+          validation.errors.forEach((error) => toastSvc.error(error));
+        }
         return;
       }
     } else if (tab === "preview") {
       const productValidation = validateProductInfo();
       const additionalValidation = validateAdditionalInfo();
+      const allErrors = [...productValidation.errors, ...additionalValidation.errors];
 
-      if (!productValidation.valid) {
-        productValidation.errors.forEach((error) => toastSvc.error(error));
-        return;
-      }
-      if (!additionalValidation.valid) {
-        additionalValidation.errors.forEach((error) => toastSvc.error(error));
+      if (!productValidation.valid || !additionalValidation.valid) {
+        const now = Date.now();
+        const errorsChanged = JSON.stringify(allErrors) !== JSON.stringify(lastValidationErrorsRef.current);
+        const debounceExpired = now - lastValidationTimeRef.current > 500;
+        
+        if (errorsChanged || debounceExpired) {
+          lastValidationErrorsRef.current = allErrors;
+          lastValidationTimeRef.current = now;
+          allErrors.forEach((error) => toastSvc.error(error));
+        }
         return;
       }
     }
@@ -245,8 +341,8 @@ const handleSubmitSingle = async () => {
       additionalTargetAudience = "unisex";
 
     let colorsAvailable =
-      formData.colors || formData.colors
-        ? (formData.colors || formData.colors)
+      formData.colors
+        ? (formData.colors)
             .split(",")
             .map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
         : undefined;
@@ -261,14 +357,15 @@ const handleSubmitSingle = async () => {
     if (formData.images && formData.images.length > 0) {
       for (const imageFile of formData.images) {
         try {
-          const validation = validateImageFile(imageFile, 10);
+          if (typeof imageFile === 'string') continue;
+          const validation = validateImageFile(imageFile as File, 10);
           if (!validation.valid) {
             console.warn(`Skipping invalid image: ${validation.error}`);
             continue;
           }
 
           const uploadResult = await uploadImage(
-            imageFile,
+            imageFile as File,
             "store-assets",
             "product-images",
             true
@@ -445,7 +542,7 @@ const handleSubmitCollection = async () => {
       >
         <span>New Listing</span>
       </button>
-      <span>›</span>
+      <span>â€º</span>
       <span className="text-white">
         {view === "single" ? "Single Items" : "Collection"}
       </span>
@@ -470,7 +567,7 @@ const handleSubmitCollection = async () => {
         <ProductInfoForm
           formData={formData}
           onFormChange={handleFormChange}
-          images={formData.images}
+          images={formData.images.filter((img): img is File => img instanceof File)}
           onImagesChange={handleImagesChange}
           onNext={handleNext}
           onCancel={handleCancel}
@@ -501,7 +598,7 @@ const handleSubmitCollection = async () => {
         <AdditionalInfoForm
           formData={formData}
           onFormChange={handleFormChange}
-          images={formData.images}
+          images={formData.images.filter((img): img is File => img instanceof File)}
           onImagesChange={handleImagesChange}
           onNext={handleNext}
           onCancel={handleCancel}
@@ -524,3 +621,10 @@ const handleSubmitCollection = async () => {
 };
 
 export default NewListing;
+
+
+
+
+
+
+

@@ -1,41 +1,66 @@
-import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink } from "@trpc/client";
-import { createTRPCProxyClient } from "@trpc/client";
-import type { AppRouter } from "@/server";
+import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import type { AppRouter } from '@/server/trpc/router';
+import { createClient } from '@/utils/supabase/client';
 
-// Safely compute API URL
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL
-    ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
-    : "http://localhost:5000/api/trpc";
+// API URL resolver
+function getApiUrl() {
+  const base = process.env.NEXT_PUBLIC_API_URL;
+  
+  if (base) {
+    return `${base}/api/trpc`;
+  }
 
-export const trpc = createTRPCReact<AppRouter>();
+  return 'http://localhost:5000/api/trpc';
+}
 
-export function getTRPCClient() {
-  return trpc.createClient({
+export function getVanillaTRPCClient() {
+  return createTRPCClient<AppRouter>({
     links: [
       httpBatchLink({
-        url: API_URL,
-        fetch: (input, init) => {
-          return fetch(input, {
-            ...init,
-            credentials: "include",
-          });
+        url: getApiUrl(),
+        
+        // Async fetch function to get the current session token
+        async fetch(input, init) {
+          try {
+            const supabase = createClient();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+
+            return fetch(input, {
+              ...init,
+              credentials: 'include',
+              headers: {
+                ...(init?.headers || {}),
+                authorization: session?.access_token
+                  ? `Bearer ${session.access_token}`
+                  : '',
+                'Content-Type': 'application/json',
+              },
+            });
+          } catch (error) {
+            console.error('Error getting auth token:', error);
+            // Fallback to unauthenticated request
+            return fetch(input, {
+              ...init,
+              credentials: 'include',
+              headers: {
+                ...(init?.headers || {}),
+                'Content-Type': 'application/json',
+              },
+            });
+          }
         },
       }),
     ],
   });
 }
 
-export const vanillaTrpc = createTRPCProxyClient<AppRouter>({
-  links: [
-    httpBatchLink({
-      url: API_URL,
-      fetch: (input, init) =>
-        fetch(input, {
-          ...init,
-          credentials: "include",
-        }),
-    }),
-  ],
-});
+// Create a vanilla TRPC client instance for non-React contexts
+export const vanillaTrpc = getVanillaTRPCClient();
+
+// Alias for backwards compatibility
+export const getTRPCClient = getVanillaTRPCClient;
+
+// Re-export the React tRPC client for provider setup
+export { trpc } from '@/app/_trpc/client';

@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       setUser(session?.user ?? null);
       setLoading(false);
