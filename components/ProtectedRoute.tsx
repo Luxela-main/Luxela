@@ -27,7 +27,7 @@ export default function ProtectedRoute({
     );
   }
 
-  // ⭐ KEY CHANGE: Always render children, even if no user yet
+  // Always render children, even if no user yet
   // The useEffect will redirect if needed, but this allows the page
   // to render immediately after sign-in while auth state propagates
   return <>{children}</>;

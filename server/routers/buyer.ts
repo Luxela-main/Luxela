@@ -12,8 +12,9 @@ import {
   loyaltyNFTs,
   orders,
   listings,
+  notifications,
 } from "../db/schema";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -1460,6 +1461,109 @@ return {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to fetch orders by status",
+        });
+      }
+    }),
+
+  getNotifications: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/buyer/notifications",
+        tags: ["Buyer - Notifications"],
+        summary: "Get buyer notifications",
+        description: "Retrieve paginated list of buyer notifications",
+      },
+    })
+    .input(
+      z.object({
+        page: z.number().int().positive().default(1),
+        limit: z.number().int().min(5).max(50).default(10),
+      })
+    )
+    .output(
+      z.object({
+        data: z.array(
+          z.object({
+            id: z.string(),
+            title: z.string(),
+            message: z.string(),
+            type: z.enum([
+              "purchase",
+              "review",
+              "comment",
+              "reminder",
+              "order_confirmed",
+              "payment_failed",
+              "refund_issued",
+              "delivery_confirmed",
+            ]),
+            timestamp: z.string(),
+            isRead: z.boolean(),
+            isFavorited: z.boolean(),
+          })
+        ),
+        total: z.number(),
+        page: z.number(),
+        limit: z.number(),
+        totalPages: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      try {
+        const buyer = await getBuyer(userId);
+        const offset = (input.page - 1) * input.limit;
+
+        const [notifs, totalResult] = await Promise.all([
+          db
+            .select()
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.buyerId, buyer.id),
+                isNull(notifications.sellerId)
+              )
+            )
+            .orderBy(desc(notifications.createdAt))
+            .limit(input.limit)
+            .offset(offset),
+          db
+            .select({ count: (db as any).fn.count().as("count") })
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.buyerId, buyer.id),
+                isNull(notifications.sellerId)
+              )
+            ),
+        ]);
+
+        const total = totalResult[0]?.count || 0;
+
+        return {
+          data: notifs.map((n) => ({
+            id: n.id,
+            title: n.message.split("|")[0] || "Notification",
+            message: n.message,
+            type: n.type,
+            timestamp: n.createdAt.toISOString(),
+            isRead: n.isRead,
+            isFavorited: n.isStarred,
+          })),
+          total,
+          page: input.page,
+          limit: input.limit,
+          totalPages: Math.ceil(total / input.limit),
+        };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to fetch notifications",
         });
       }
     }),

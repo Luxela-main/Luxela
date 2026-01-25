@@ -1,219 +1,341 @@
 'use client';
 
-import { useState } from 'react';
-import { Package, CheckCircle, Clock, AlertCircle, DollarSign, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, CheckCircle, Clock, AlertCircle, DollarSign, Download, X, Send } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { useToast } from '@/hooks/use-toast';
+import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 
-export default function ReturnsAndRefundsPage() {
-  const [activeTab, setActiveTab] = useState<'returns' | 'refunds'>('returns');
+interface ReturnRequest {
+  id: string;
+  reason: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  date: string;
+}
 
-  const returns = [
-    {
-      id: 'RET001',
-      orderNumber: 'ORD-2024-001',
-      product: 'Premium Wireless Headphones',
-      status: 'approved',
-      requestDate: '2024-01-15',
-      reason: 'Not as described'
-    },
-    {
-      id: 'RET002',
-      orderNumber: 'ORD-2024-002',
-      product: 'Smart Watch Pro',
-      status: 'pending',
-      requestDate: '2024-01-20',
-      reason: 'Defective unit'
-    },
-    {
-      id: 'RET003',
-      orderNumber: 'ORD-2024-003',
-      product: 'USB-C Cable (5-pack)',
-      status: 'completed',
-      requestDate: '2024-01-10',
-      reason: 'Changed mind'
+interface Refund {
+  id: string;
+  orderId: string;
+  amount: number;
+  status: 'pending' | 'processing' | 'completed';
+  date: string;
+  receiptUrl?: string;
+}
+
+export default function ReturnsPage() {
+  const [tab, setTab] = useState<'returns' | 'refunds'>('returns');
+  const [returns, setReturns] = useState<ReturnRequest[]>([]);
+  const [refunds, setRefunds] = useState<Refund[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showInitiateModal, setShowInitiateModal] = useState(false);
+  const [formData, setFormData] = useState({ reason: '', description: '' });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { data: refundsData } = trpc.refund.getMyReturns.useQuery({ limit: 50, offset: 0 }, {
+    retry: 1,
+  });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (refundsData) {
+      const refundItems = refundsData.map((r) => ({
+        id: r.id,
+        orderId: r.orderId,
+        amount: r.amountCents / 100,
+        status: (r.refundStatus === 'return_requested'
+          ? 'pending'
+          : r.refundStatus === 'return_approved'
+            ? 'approved'
+            : r.refundStatus === 'refunded'
+              ? 'completed'
+              : 'pending') as 'pending' | 'processing' | 'completed',
+        date: r.requestedAt?.toString() || new Date().toISOString(),
+        receiptUrl: undefined,
+      }));
+      setRefunds(refundItems);
+      setIsLoading(false);
     }
-  ];
+  }, [refundsData]);
 
-  const refunds = [
-    {
-      id: 'REF001',
-      amount: '$129.99',
-      status: 'completed',
-      date: '2024-01-18',
-      reason: 'Return approved'
-    },
-    {
-      id: 'REF002',
-      amount: '$49.99',
-      status: 'processing',
-      date: '2024-01-22',
-      reason: 'Return in transit'
-    },
-    {
-      id: 'REF003',
-      amount: '$19.99',
-      status: 'completed',
-      date: '2024-01-12',
-      reason: 'Return received'
+  const handleInitiateReturn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.reason || !formData.description) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
+      });
+      return;
     }
-  ];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-      case 'completed':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'pending':
-      case 'processing':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'rejected':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
-      default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    try {
+      const newReturn: ReturnRequest = {
+        id: `RET-${Date.now()}`,
+        reason: formData.reason,
+        description: formData.description,
+        status: 'pending',
+        date: new Date().toISOString(),
+      };
+
+      setReturns([newReturn, ...returns]);
+      setFormData({ reason: '', description: '' });
+      setShowInitiateModal(false);
+
+      toast({
+        title: 'Return initiated',
+        description: 'Your return request has been submitted successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to initiate return',
+        variant: 'destructive',
+      });
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-      case 'completed':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'pending':
-      case 'processing':
-        return <Clock className="w-4 h-4" />;
-      case 'rejected':
-        return <AlertCircle className="w-4 h-4" />;
-      default:
-        return null;
+  const handleDownloadReceipt = (refundId: string) => {
+    try {
+      toast({
+        title: 'Downloading',
+        description: 'Receipt download started',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to download receipt',
+        variant: 'destructive',
+      });
     }
   };
+
+  const activeReturns = returns.filter(r => ['pending', 'approved'].includes(r.status)).length;
+  const totalRefunded = refunds.reduce((sum, r) => sum + (r.status === 'completed' ? r.amount : 0), 0);
+  const processingRefunds = refunds.filter(r => ['pending', 'processing'].includes(r.status));
+  const totalProcessing = processingRefunds.reduce((sum, r) => sum + r.amount, 0);
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-[#0e0e0e]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Breadcrumb items={[
+          { label: 'Dashboard', href: '/buyer/dashboard' },
+          { label: 'Returns & Refunds' },
+        ]} />
+
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Returns & Refunds</h1>
-          <p className="text-gray-400">Manage your returns and track refunds</p>
-        </div>
+          <h1 className="text-3xl font-bold text-white mb-6">Returns & Refunds</h1>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Active Returns</p>
-                <p className="text-2xl font-bold text-white">1</p>
-              </div>
-              <Package className="w-8 h-8 text-purple-500 opacity-50" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-[#1a1a1a] rounded-lg p-4">
+              <p className="text-gray-400 text-sm">Active Returns</p>
+              <p className="text-2xl font-bold text-white mt-2">{activeReturns}</p>
             </div>
-          </div>
-          <div className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Total Refunded</p>
-                <p className="text-2xl font-bold text-white">$199.97</p>
-              </div>
-              <DollarSign className="w-8 h-8 text-green-500 opacity-50" />
+            <div className="bg-[#1a1a1a] rounded-lg p-4">
+              <p className="text-gray-400 text-sm">Total Refunded</p>
+              <p className="text-2xl font-bold text-[#8451e1] mt-2">${totalRefunded.toFixed(2)}</p>
             </div>
-          </div>
-          <div className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Processing Refunds</p>
-                <p className="text-2xl font-bold text-white">$49.99</p>
-              </div>
-              <Clock className="w-8 h-8 text-yellow-500 opacity-50" />
+            <div className="bg-[#1a1a1a] rounded-lg p-4">
+              <p className="text-gray-400 text-sm">Processing Refunds</p>
+              <p className="text-2xl font-bold text-yellow-400 mt-2">${totalProcessing.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-6 border-b border-[#333333]">
+        <div className="flex gap-2 mb-6">
           <button
-            onClick={() => setActiveTab('returns')}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-              activeTab === 'returns'
-                ? 'text-purple-500 border-purple-500'
-                : 'text-gray-400 border-transparent hover:text-white'
+            onClick={() => setTab('returns')}
+            className={`px-4 py-2 rounded cursor-pointer transition font-medium ${
+              tab === 'returns'
+                ? 'bg-[#8451e1] text-white'
+                : 'bg-[#1a1a1a] text-gray-400 hover:bg-[#252525]'
             }`}
           >
-            Return Requests
+            Returns
           </button>
           <button
-            onClick={() => setActiveTab('refunds')}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-              activeTab === 'refunds'
-                ? 'text-purple-500 border-purple-500'
-                : 'text-gray-400 border-transparent hover:text-white'
+            onClick={() => setTab('refunds')}
+            className={`px-4 py-2 rounded cursor-pointer transition font-medium ${
+              tab === 'refunds'
+                ? 'bg-[#8451e1] text-white'
+                : 'bg-[#1a1a1a] text-gray-400 hover:bg-[#252525]'
             }`}
           >
-            Refund History
+            Refunds
           </button>
         </div>
 
-        {/* Content */}
-        {activeTab === 'returns' && (
-          <div className="space-y-4">
-            {returns.map((returnItem) => (
-              <div key={returnItem.id} className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:border-[#444444] transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-white font-semibold">{returnItem.product}</h3>
-                    <p className="text-gray-400 text-sm">Order: {returnItem.orderNumber}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getStatusColor(returnItem.status)}`}>
-                    {getStatusIcon(returnItem.status)}
-                    {returnItem.status.charAt(0).toUpperCase() + returnItem.status.slice(1)}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Reason</p>
-                    <p className="text-gray-300">{returnItem.reason}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Request Date</p>
-                    <p className="text-gray-300">{new Date(returnItem.requestDate).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <button className="mt-3 text-purple-500 hover:text-purple-400 text-sm font-medium">
-                  View Details →
-                </button>
-              </div>
-            ))}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin">
+              <Package className="text-[#8451e1]" size={32} />
+            </div>
           </div>
+        ) : tab === 'returns' ? (
+          <>
+            <div className="mb-6">
+              <button
+                onClick={() => setShowInitiateModal(true)}
+                className="bg-[#8451e1] hover:bg-[#7043d8] text-white px-6 py-3 rounded cursor-pointer transition font-medium"
+              >
+                Initiate Return
+              </button>
+            </div>
+
+            {returns.length === 0 ? (
+              <div className="bg-[#1a1a1a] rounded-lg p-12 text-center">
+                <Package className="mx-auto mb-4 text-gray-600" size={48} />
+                <p className="text-gray-400 text-lg">No returns yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {returns.map(ret => (
+                  <div key={ret.id} className="bg-[#1a1a1a] rounded-lg p-6 hover:bg-[#252525] transition">
+                    <div className="flex items-start justify-between mb-4 cursor-pointer" onClick={() => setExpandedId(expandedId === ret.id ? null : ret.id)}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          {ret.status === 'completed' && <CheckCircle className="text-green-500" size={20} />}
+                          {ret.status === 'approved' && <Clock className="text-blue-500" size={20} />}
+                          {ret.status === 'pending' && <AlertCircle className="text-yellow-500" size={20} />}
+                          {ret.status === 'rejected' && <X className="text-red-500" size={20} />}
+                          <h3 className="text-white font-semibold">{ret.reason}</h3>
+                          <span className="text-gray-400 text-sm ml-auto">{new Date(ret.date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {expandedId === ret.id && (
+                      <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
+                        <p className="text-gray-300 text-sm mb-4">{ret.description}</p>
+                        <span className={`inline-block px-3 py-1 rounded text-sm font-medium mb-4 ${
+                          ret.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                          ret.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
+                          ret.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {ret.status.charAt(0).toUpperCase() + ret.status.slice(1)}
+                        </span>
+                        <div className="flex gap-2 mt-4">
+                          <button className="text-[#8451e1] hover:text-[#7043d8] text-sm cursor-pointer transition flex items-center gap-1">
+                            <Download size={14} /> Print Label
+                          </button>
+                          <button className="text-gray-400 hover:text-white text-sm cursor-pointer transition">
+                            Contact Support
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {refunds.length === 0 ? (
+              <div className="bg-[#1a1a1a] rounded-lg p-12 text-center">
+                <DollarSign className="mx-auto mb-4 text-gray-600" size={48} />
+                <p className="text-gray-400 text-lg">No refunds yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {refunds.map(refund => (
+                  <div key={refund.id} className="bg-[#1a1a1a] rounded-lg p-6 hover:bg-[#252525] transition">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {refund.status === 'completed' && <CheckCircle className="text-green-500" size={20} />}
+                        {refund.status === 'processing' && <Clock className="text-blue-500" size={20} />}
+                        {refund.status === 'pending' && <AlertCircle className="text-yellow-500" size={20} />}
+                        <div>
+                          <h3 className="text-white font-semibold">Refund #{refund.id.slice(0, 8)}</h3>
+                          <p className="text-gray-400 text-sm">{new Date(refund.date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[#8451e1] font-bold text-lg">${refund.amount.toFixed(2)}</p>
+                        <span className={`text-xs font-medium ${
+                          refund.status === 'completed' ? 'text-green-400' :
+                          refund.status === 'processing' ? 'text-blue-400' :
+                          'text-yellow-400'
+                        }`}>
+                          {refund.status.charAt(0).toUpperCase() + refund.status.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
+                      <button
+                        onClick={() => handleDownloadReceipt(refund.id)}
+                        className="text-[#8451e1] hover:text-[#7043d8] text-sm cursor-pointer transition flex items-center gap-2"
+                      >
+                        <Download size={14} /> Download Receipt
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {activeTab === 'refunds' && (
-          <div className="space-y-4">
-            {refunds.map((refund) => (
-              <div key={refund.id} className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:border-[#444444] transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <p className="text-gray-400 text-sm">Refund ID: {refund.id}</p>
-                    <p className="text-2xl font-bold text-white">{refund.amount}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getStatusColor(refund.status)}`}>
-                    {getStatusIcon(refund.status)}
-                    {refund.status.charAt(0).toUpperCase() + refund.status.slice(1)}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                  <div>
-                    <p className="text-gray-500">Reason</p>
-                    <p className="text-gray-300">{refund.reason}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Date</p>
-                    <p className="text-gray-300">{new Date(refund.date).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <button className="flex items-center gap-2 text-purple-500 hover:text-purple-400 text-sm font-medium">
-                  <Download className="w-4 h-4" />
-                  Download Receipt
+        {showInitiateModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[#1a1a1a] rounded-lg p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Initiate Return</h2>
+                <button
+                  onClick={() => setShowInitiateModal(false)}
+                  className="text-gray-400 hover:text-white cursor-pointer transition"
+                >
+                  <X size={24} />
                 </button>
               </div>
-            ))}
+
+              <form onSubmit={handleInitiateReturn} className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Return Reason</label>
+                  <select
+                    value={formData.reason}
+                    onChange={e => setFormData({ ...formData, reason: e.target.value })}
+                    className="w-full bg-[#0e0e0e] border border-[#2a2a2a] rounded px-3 py-2 text-white cursor-pointer hover:border-[#8451e1] transition"
+                  >
+                    <option value="">Select a reason</option>
+                    <option value="Defective Product">Defective Product</option>
+                    <option value="Wrong Size">Wrong Size</option>
+                    <option value="Not As Described">Not As Described</option>
+                    <option value="Damaged in Transit">Damaged in Transit</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe the issue in detail..."
+                    className="w-full bg-[#0e0e0e] border border-[#2a2a2a] rounded px-3 py-2 text-white placeholder-gray-500 hover:border-[#8451e1] focus:border-[#8451e1] transition resize-none"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-[#8451e1] hover:bg-[#7043d8] text-white py-2 rounded cursor-pointer transition font-medium flex items-center justify-center gap-2"
+                  >
+                    <Send size={16} /> Submit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowInitiateModal(false)}
+                    className="flex-1 bg-[#252525] hover:bg-[#353535] text-white py-2 rounded cursor-pointer transition font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>
