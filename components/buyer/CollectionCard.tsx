@@ -27,7 +27,7 @@ export default function CollectionCard({ collection }: CollectionCardProps) {
           )}
         </div>
         
-        <button className="text-[#9872DD] text-sm font-medium hover:underline">
+        <button className="text-[#8451E1] text-sm font-medium hover:underline">
           View All
         </button>
       </div>

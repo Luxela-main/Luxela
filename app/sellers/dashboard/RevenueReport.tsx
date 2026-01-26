@@ -8,7 +8,7 @@ import { useState } from "react";
 export function RevenueReport() {
   const [timeframe, setTimeframe] = useState("Month");
   const { data: dashboardData } = useDashboardData();
-  const displayData = dashboardData || defaultDashboardData;
+  const displayData = (dashboardData || defaultDashboardData) as typeof defaultDashboardData;
   const { revenueReport } = displayData;
 
   const maxIncome = Math.max(...revenueReport.map((r) => r.income), 1);

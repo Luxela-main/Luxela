@@ -22,7 +22,7 @@ export default function ProductImageGallery({ product }: ProductImageGalleryProp
         />
         
         {product.limited_edition_badge === 'show_badge' && (
-          <div className="absolute top-4 left-4 bg-[#9872DD] px-3 py-1.5 rounded-lg">
+          <div className="absolute top-4 left-4 bg-[#8451E1] px-3 py-1.5 rounded-lg">
             <span className="text-white text-xs font-bold uppercase">Limited Edition</span>
           </div>
         )}

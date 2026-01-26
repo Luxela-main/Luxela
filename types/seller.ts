@@ -9,7 +9,8 @@ export type SellerSetupFormData = {
   countryCode: string;
   country: string;
   socialMediaPlatform?: string;
-  socialMedia: string;
+  socialMedia?: string;
+  socialMediaLinks?: Array<{ platform: string; username: string; url: string }>;
   fullName: string;
   idType: string;
   bio?: string;
@@ -42,6 +43,7 @@ export type SellerSetupFormData = {
 
   // Additional Information
   productCategory: string;
+  otherCategoryName?: string;
   targetAudience: "male" | "female" | "unisex" | "";
   localPricing: string;
   idNumber?: string;

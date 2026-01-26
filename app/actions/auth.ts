@@ -92,6 +92,44 @@ export async function resendVerificationAction(email: string) {
   }
 }
 
+export async function forgotPasswordAction(email: string) {
+  try {
+    const supabase = await createClient();
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+
+    if (error) return { success: false, error: mapAuthError(error) };
+
+    return { success: true, message: "Password reset email sent. Check your inbox." };
+  } catch (err: any) {
+    return { success: false, error: mapAuthError(err) };
+  }
+}
+
+export async function resetPasswordAction(password: string, token: string) {
+  try {
+    const supabase = await createClient();
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      type: "recovery",
+      token_hash: token,
+    });
+
+    if (verifyError) return { success: false, error: mapAuthError(verifyError) };
+
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+
+    if (updateError) return { success: false, error: mapAuthError(updateError) };
+
+    return { success: true, message: "Password updated successfully. Please sign in." };
+  } catch (err: any) {
+    return { success: false, error: mapAuthError(err) };
+  }
+}
+
 export async function signoutAction() {
   try {
     const supabase = await createClient();

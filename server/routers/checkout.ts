@@ -31,6 +31,12 @@ import {
 const CheckoutInput = z.object({
   customerName: z.string().min(2).max(255),
   customerEmail: z.string().email(),
+  customerPhone: z.string().optional(),
+  shippingAddress: z.string().optional(),
+  shippingCity: z.string().optional(),
+  shippingState: z.string().optional(),
+  shippingPostalCode: z.string().optional(),
+  shippingCountry: z.string().optional(),
   paymentMethod: z.enum(['card', 'bank_transfer', 'crypto']),
   currency: z.string().default('NGN'),
   redirectUrl: z.string().url().optional(),
@@ -230,10 +236,13 @@ export const checkoutRouter = createTRPCRouter({
 
       try {
         // Get buyer's cart
-        const [cart] = await db
+        const cartResult = await db
           .select()
           .from(carts)
-          .where(and(eq(carts.buyerId, userId)));
+          .where(eq(carts.buyerId, userId))
+          .limit(1);
+
+        const cart = cartResult[0];
 
         if (!cart) {
           throw new TRPCError({
@@ -277,8 +286,28 @@ export const checkoutRouter = createTRPCRouter({
         const transactionRef = `order_${orderId}`;
         const paymentId = uuidv4();
 
+        // Validate payment method
+        if (!['card', 'bank_transfer', 'crypto'].includes(input.paymentMethod)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid payment method',
+          });
+        }
+
         // Create Tsara payment link
         let paymentResponse;
+
+        const paymentMetadata = {
+          orderId,
+          buyerId: userId,
+          customerName: input.customerName,
+          customerEmail: input.customerEmail,
+          shippingAddress: input.shippingAddress || '',
+          shippingCity: input.shippingCity || '',
+          shippingState: input.shippingState || '',
+          shippingPostalCode: input.shippingPostalCode || '',
+          shippingCountry: input.shippingCountry || '',
+        };
 
         if (input.paymentMethod === 'crypto') {
           // Stablecoin payment via Solana
@@ -288,11 +317,7 @@ export const checkoutRouter = createTRPCRouter({
             network: 'solana',
             wallet_id: userId,
             description: `Fashion purchase - Order ${orderId}`,
-            metadata: {
-              orderId,
-              buyerId: userId,
-              customerEmail: input.customerEmail,
-            },
+            metadata: paymentMetadata,
           });
         } else {
           // Fiat payment (card or bank transfer)
@@ -304,11 +329,7 @@ export const checkoutRouter = createTRPCRouter({
               customer_id: userId,
               success_url: input.successUrl,
               cancel_url: input.cancelUrl,
-              metadata: {
-                orderId,
-                buyerId: userId,
-                customerEmail: input.customerEmail,
-              },
+              metadata: paymentMetadata,
             });
           } else {
             paymentResponse = await createFiatPaymentLink({
@@ -316,12 +337,8 @@ export const checkoutRouter = createTRPCRouter({
               currency: input.currency,
               description: `Fashion purchase - Order ${orderId}`,
               customer_id: userId,
-              redirect_url: input.redirectUrl,
-              metadata: {
-                orderId,
-                buyerId: userId,
-                customerEmail: input.customerEmail,
-              },
+              redirect_url: input.redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
+              metadata: paymentMetadata,
             });
           }
         }
@@ -346,7 +363,38 @@ export const checkoutRouter = createTRPCRouter({
           })
           .returning();
 
-        const paymentUrl = (paymentResponse.data as any).url || (paymentResponse.data as any).checkout_url;
+        // Extract payment URL from response
+        let paymentUrl: string;
+        if (typeof paymentResponse === 'string') {
+          paymentUrl = paymentResponse;
+        } else if (paymentResponse?.data) {
+          // Handle TsaraResponse wrapper
+          const data = paymentResponse.data;
+          if ('url' in data) {
+            // PaymentLink or StablecoinPaymentLink
+            paymentUrl = data.url;
+          } else if ('checkout_url' in data) {
+            // CheckoutSession
+            paymentUrl = data.checkout_url;
+          } else {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Failed to extract payment URL from provider response',
+            });
+          }
+        } else {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to generate payment URL from provider',
+          });
+        }
+
+        if (!paymentUrl || !paymentUrl.startsWith('http')) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Invalid payment URL received from provider',
+          });
+        }
 
         return {
           paymentId: payment.id,
@@ -358,8 +406,9 @@ export const checkoutRouter = createTRPCRouter({
       } catch (err: any) {
         console.error('Payment initialization error:', err);
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: err?.message || 'Payment initialization failed',
+          code: err?.code || 'BAD_REQUEST',
+          message: err?.message || 'Payment initialization failed. Please try again.',
+          cause: err,
         });
       }
     }),

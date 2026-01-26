@@ -103,6 +103,8 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
     try {
       await onSubmit(data);
     } catch (error) {
+      console.error('Error submitting form:', error);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -373,11 +375,37 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
                 editingSection === "business"
               )}
 
-              {renderInfoField(
-                "Social Media",
-                "socialMedia",
-                editingSection === "business"
-              )}
+              {/* Social Media Links */}
+              <div className="mb-6">
+                <label className="block text-sm text-gray-400 mb-2">Social Media</label>
+                {editingSection === "business" ? (
+                  <div className="space-y-3">
+                    {localData.socialMediaLinks && localData.socialMediaLinks.length > 0 ? (
+                      localData.socialMediaLinks.map((link, index) => (
+                        <div key={index} className="p-3 bg-[#1a1a1a] rounded border border-[#747474]">
+                          <p className="text-sm text-gray-300 capitalize">{link.platform}</p>
+                          <p className="text-xs text-gray-500 break-all">{link.url}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm">No social media links added</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {data.socialMediaLinks && data.socialMediaLinks.length > 0 ? (
+                      data.socialMediaLinks.map((link, index) => (
+                        <div key={index} className="text-sm">
+                          <p className="text-gray-400 capitalize">{link.platform}</p>
+                          <p className="text-gray-300 break-all">{link.url}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-300 text-sm">Not provided</p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Full Name */}
               {renderInfoField(
@@ -764,14 +792,14 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
         <div className="flex justify-end gap-4 mt-8">
           <button
             onClick={onBack}
-            className="px-8 py-2.5 border border-[#747474] rounded text-sm hover:bg-[#1a1a1a] transition-colors"
+            className="px-8 py-2.5 border border-[#747474] rounded text-sm hover:bg-[#1a1a1a] transition-colors cursor-pointer"
           >
             Back to Edit
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
           >
             {isSubmitting ? (
               <>
@@ -809,4 +837,4 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
   );
 };
 
-export default SellerAccountPreview;
+export default SellerAccountPreview;

@@ -139,7 +139,7 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
         </h2>
         <Link
           href="/buyer/brands"
-          className="text-sm text-[#9872DD] hover:text-[#8451E1] transition-colors flex items-center gap-1"
+          className="text-sm text-[#8451E1] hover:text-[#7240D0] transition-colors flex items-center gap-1"
         >
           See all →
         </Link>
@@ -175,7 +175,7 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
                 }}
                 className={`w-full text-left px-4 py-3 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
                   sortBy === option.value
-                    ? "bg-[#9872DD] text-white"
+                    ? "bg-[#8451E1] text-white"
                     : "text-gray-300 hover:bg-[#1f1f1f]"
                 }`}
               >
@@ -196,4 +196,4 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
   );
 };
 
-export default ExploreAllProducts;
+export default ExploreAllProducts;

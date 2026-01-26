@@ -4,27 +4,12 @@ import {
   publicProcedure,
 } from "../trpc/trpc";
 import { db } from "../db";
-import { notifications, sellers } from "../db/schema";
+import { notifications } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { v4 as uuidv4 } from "uuid";
-
-async function ensureSeller(userId: string) {
-  const seller = await db
-    .select()
-    .from(sellers)
-    .where(eq(sellers.userId, userId));
-
-  if (!seller[0]) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "You are not registered as a seller",
-    });
-  }
-
-  return seller[0];
-}
+import { getSeller } from "./utils";
 
 const NotificationOutput = z.object({
   id: z.string().uuid(),
@@ -57,7 +42,7 @@ export const notificationRouter = createTRPCRouter({
           message: "User not logged in",
         });
 
-      const seller = await ensureSeller(userId);
+      const seller = await getSeller(userId);
 
       const rows = await db
         .select()
@@ -85,24 +70,14 @@ export const notificationRouter = createTRPCRouter({
           message: "User not logged in",
         });
 
-      const seller = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-
-      if (!seller[0]) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You are not registered as a seller",
-        });
-      }
+      const seller = await getSeller(userId);
 
       const starred = await db
         .select()
         .from(notifications)
         .where(
           and(
-            eq(notifications.sellerId, seller[0].id),
+            eq(notifications.sellerId, seller.id),
             eq(notifications.isStarred, true)
           )
         );
@@ -148,7 +123,7 @@ export const notificationRouter = createTRPCRouter({
           message: "User not logged in",
         });
 
-      const seller = await ensureSeller(userId);
+      const seller = await getSeller(userId);
 
       await db
         .update(notifications)
@@ -214,7 +189,7 @@ export const notificationRouter = createTRPCRouter({
           message: "User not logged in",
         });
 
-      const seller = await ensureSeller(userId);
+      const seller = await getSeller(userId);
 
       // Verify seller owns the notification
       const existing = await db

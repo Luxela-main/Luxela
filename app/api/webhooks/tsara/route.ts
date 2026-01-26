@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
-import { payments, orders, listings, notifications, webhookEvents, paymentHolds, financialLedger } from "@/server/db/schema";
+import { payments, webhookEvents } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
-import { v4 as uuidv4 } from "uuid";
-import { processLoyaltyRewards } from "@/server/services/loyaltyService";
+import { handlePaymentSuccess, handlePaymentFailure } from "@/server/services/paymentFlowService";
 import "dotenv/config";
 
 async function verifyWebhookSignature(
@@ -22,23 +21,28 @@ async function verifyWebhookSignature(
     const expectedBuffer = Buffer.from(expectedSignature, "utf8");
 
     if (signatureBuffer.length !== expectedBuffer.length) {
-      console.error("Signature length mismatch:", { received: signatureBuffer.length, 
-      expected: expectedBuffer.length }); 
+      console.error("Signature length mismatch:", { 
+        received: signatureBuffer.length, 
+        expected: expectedBuffer.length 
+      }); 
       return false;
     }
 
     const isValid = crypto.timingSafeEqual(signatureBuffer, expectedBuffer); 
     
     if (!isValid) { 
-      console.error("Signature mismatch:", { received: signature, expected: expectedSignature 
-    });
-  } 
+      console.error("Signature mismatch:", { 
+        received: signature, 
+        expected: expectedSignature 
+      });
+    }
     
     return isValid; 
-  } catch (err) { console.error("Webhook signature verification error:", err); 
+  } catch (err) { 
+    console.error("Webhook signature verification error:", err); 
     return false;
-    }
   }
+}
 
 export const runtime = "nodejs";
 
@@ -68,7 +72,11 @@ export const POST = async (req: NextRequest) => {
 
     const rawBody = await req.text();
 
-    console.log("Webhook received:", { signature_length: signature.length, body_length: rawBody.length, body_preview: rawBody.substring(0, 100) });
+    console.log("Webhook received:", { 
+      signature_length: signature.length, 
+      body_length: rawBody.length, 
+      body_preview: rawBody.substring(0, 100) 
+    });
 
     const isValid = await verifyWebhookSignature(rawBody, signature, secret);
     if (!isValid) {
@@ -85,7 +93,7 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ error: "Missing event ID" }, { status: 400 });
     }
 
-    // Idempotency
+    // Idempotency check
     const existing = await db
       .select()
       .from(webhookEvents)
@@ -97,147 +105,124 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ success: true, idempotent: true });
     }
 
-    // Map external statuses to internal payment statuses
+    // Status mapping
     const statusMap = {
-      pending: "pending",
-      processing: "processing",
-      success: "completed",
-      failed: "failed",
-      refunded: "refunded"
-    } as const;
+      pending: "pending" as const,
+      processing: "processing" as const,
+      success: "completed" as const,
+      failed: "failed" as const,
+      refunded: "refunded" as const,
+    };
 
-    const mappedStatus =
-      statusMap[String(data.status) as keyof typeof statusMap] ?? "pending";
+    const mappedStatus = statusMap[String(data.status) as keyof typeof statusMap] ?? "pending";
 
+    // Find payment record
+    const paymentRecords = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.transactionRef, data.reference))
+      .limit(1);
+
+    if (!paymentRecords.length) {
+      console.warn(`Payment not found for reference ${data.reference}`);
+      // Still record the webhook event for audit
+      await db.insert(webhookEvents).values({
+        eventId,
+        eventType: event,
+        status: "failed",
+        receivedAt: new Date(),
+        processedAt: new Date(),
+      });
+      return NextResponse.json(
+        { success: false, message: "Payment not found" },
+        { status: 404 }
+      );
+    }
+
+    const payment = paymentRecords[0];
+
+    // Process within transaction
     await db.transaction(async (tx) => {
+      // Record webhook event
       await tx.insert(webhookEvents).values({
         eventId,
         eventType: event,
         status: "pending",
-        receivedAt: new Date()
+        receivedAt: new Date(),
       });
 
-      // Process payment or payment link updates
-      if (event === "payment.updated" || event === "payment_link.updated") {
-        const updatedPayment = await tx
-          .update(payments)
-          .set({
-            status: mappedStatus,
-            updatedAt: new Date(),
-            gatewayResponse: rawBody,
-            ...(mappedStatus === "refunded"
-              ? { isRefunded: true, refundedAt: new Date() }
-              : {})
-          })
-          .where(eq(payments.transactionRef, data.reference))
-          .returning();
+      // Update payment status
+      await tx
+        .update(payments)
+        .set({
+          status: mappedStatus,
+          updatedAt: new Date(),
+          gatewayResponse: rawBody,
+          ...(mappedStatus === "refunded"
+            ? { isRefunded: true, refundedAt: new Date() }
+            : {}),
+        })
+        .where(eq(payments.id, payment.id));
 
-        if (!updatedPayment.length) {
-          throw new Error("Payment not found");
-        }
+      console.log(
+        `Payment ${payment.id} status updated to ${mappedStatus} (event: ${event})`
+      );
 
-        const payment = updatedPayment[0];
-
-        // Notify seller and update orders if successful
-        if (["success", "completed"].includes(data.status)) {
-          if (payment.orderId) {
-            await tx
-              .update(orders)
-              .set({
-                orderStatus: "processing",
-                payoutStatus: "in_escrow"
-              })
-              .where(eq(orders.id, payment.orderId));
-          }
-
-          if (payment.listingId) {
-            const listingRow = await tx
-              .select({
-                sellerId: listings.sellerId,
-                productTitle: listings.title
-              })
-              .from(listings)
-              .where(eq(listings.id, payment.listingId))
-              .limit(1);
-
-            if (listingRow[0]) {
-              const holdId = uuidv4();
-              const now = new Date();
-              const releaseableAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-              
-              // Create payment hold (30-day escrow)
-              await tx.insert(paymentHolds).values({
-                id: holdId,
-                paymentId: payment.id,
-                orderId: payment.orderId || uuidv4(),
-                sellerId: listingRow[0].sellerId,
-                amountCents: payment.amountCents,
-                currency: payment.currency,
-                holdStatus: "active",
-                heldAt: now,
-                releaseableAt,
-                createdAt: now
-              });
-              
-              // Create financial ledger entry
-              const ledgerId = uuidv4();
-              await tx.insert(financialLedger).values({
-                id: ledgerId,
-                sellerId: listingRow[0].sellerId,
-                orderId: payment.orderId || null,
-                transactionType: "sale",
-                amountCents: payment.amountCents,
-                currency: payment.currency,
-                status: "pending",
-                description: `Sale from listing "${listingRow[0].productTitle}" - Payment ${payment.id}`,
-                paymentId: payment.id,
-                createdAt: now
-              });
-              
-              // Notify seller
-              await tx.insert(notifications).values({
-                sellerId: listingRow[0].sellerId,
-                type: "purchase",
-                message: `Payment received for "${listingRow[0].productTitle}" - ₦${(
-                  payment.amountCents / 100
-                ).toFixed(2)}. Funds held in escrow for 30 days.`,
-                isRead: false,
-                isStarred: false,
-                createdAt: now
-              });
-              
-              // Process buyer loyalty rewards
-              if (payment.buyerId) {
-                await processLoyaltyRewards(payment.buyerId);
-              }
-            }
-          }
-        }
-
-        // Failed notification
-        if (data.status === "failed" && payment.listingId) {
-          const listingRow = await tx
-            .select({
-              sellerId: listings.sellerId,
-              productTitle: listings.title
-            })
-            .from(listings)
-            .where(eq(listings.id, payment.listingId))
-            .limit(1);
-
-          if (listingRow[0]) {
-            await tx.insert(notifications).values({
-              sellerId: listingRow[0].sellerId,
-              type: "purchase",
-              message: `Payment failed for "${listingRow[0].productTitle}"`,
-              isRead: false,
-              isStarred: false,
-              createdAt: new Date()
-            });
-          }
+      // Handle payment success
+      if (["success", "completed"].includes(data.status)) {
+        try {
+          await handlePaymentSuccess({
+            id: payment.transactionRef,
+            reference: payment.transactionRef,
+            amount: payment.amountCents / 100,
+            currency: payment.currency || "NGN",
+            status: "success",
+            orderId: payment.orderId || undefined,
+            listingId: payment.listingId || undefined,
+            buyerId: payment.buyerId || undefined,
+          });
+          console.log(`Payment success flow processed for ${payment.id}`);
+        } catch (err: any) {
+          console.error(`Payment success flow failed for ${payment.id}:`, err);
+          throw err; // Transaction will rollback
         }
       }
 
+      // Handle payment failure
+      if (data.status === "failed") {
+        try {
+          await handlePaymentFailure({
+            id: payment.transactionRef,
+            reference: payment.transactionRef,
+            status: "failed",
+            orderId: payment.orderId || undefined,
+            listingId: payment.listingId || undefined,
+          });
+          console.log(`Payment failure flow processed for ${payment.id}`);
+        } catch (err: any) {
+          console.error(`Payment failure flow failed for ${payment.id}:`, err);
+          throw err; // Transaction will rollback
+        }
+      }
+
+      // Handle refund
+      if (mappedStatus === "refunded") {
+        try {
+          await handlePaymentFailure({
+            id: payment.transactionRef,
+            reference: payment.transactionRef,
+            status: "refunded",
+            orderId: payment.orderId || undefined,
+            listingId: payment.listingId || undefined,
+          });
+          console.log(`Refund flow processed for ${payment.id}`);
+        } catch (err: any) {
+          console.error(`Refund flow failed for ${payment.id}:`, err);
+          throw err; // Transaction will rollback
+        }
+      }
+
+      // Mark webhook as processed
       await tx
         .update(webhookEvents)
         .set({ status: "processed", processedAt: new Date() })
@@ -247,12 +232,14 @@ export const POST = async (req: NextRequest) => {
     console.log("Webhook processed successfully:", eventId);
     return NextResponse.json({
       success: true,
-      message: "Webhook processed"
+      message: "Webhook processed",
+      paymentId: payment.id,
+      status: mappedStatus,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Webhook processing error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: err?.message },
       { status: 500 }
     );
   }

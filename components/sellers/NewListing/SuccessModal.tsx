@@ -17,7 +17,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onView }) => {
           Product listed successfully!
         </h2>
 
-        <div className="cursor-pointer rounded-md text-white bg-linear-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] py-3 px-12">
+        <div className="cursor-pointer rounded-md text-white bg-linear-to-b from-[#8451E1] via-#8451E1] to-[#5C2EAF] py-3 px-12">
           <button
             onClick={onView}
             className="rounded-md w-full h-full flex items-center justify-center "

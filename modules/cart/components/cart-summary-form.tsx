@@ -43,13 +43,23 @@ export default function CartSummaryForm({
             </span>
           </div>
 
-          {/* Discount */}
+          {/* Tax */}
           <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-sm">Discount</span>
-            <span className="text-purple-500">
-              ${discount.toFixed(2)} {discount > 0 ? discount.toFixed(2) : "0.00"}
+            <span className="text-gray-400 text-sm">Tax (7.5%)</span>
+            <span className="text-white text-sm">
+              NGN {(subtotal * 0.075).toLocaleString()}.00
             </span>
           </div>
+
+          {/* Discount */}
+          {discount > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400 text-sm">Discount</span>
+              <span className="text-green-500">
+                -NGN {discount.toLocaleString()}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Discount Code Input */}

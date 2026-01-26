@@ -1,39 +1,70 @@
 "use client";
 
-import { BarChart3, TrendingUp } from "lucide-react";
+import { usePayoutStats, usePayoutHistory } from "@/modules/seller/queries";
+import { usePayoutRealtimeUpdates } from "@/modules/seller/hooks";
+import { BarChart3, TrendingUp, Loader } from "lucide-react";
 
 export function PayoutStats() {
-  // Sample data for the chart
-  const chartData = [
-    { month: "Jan", amount: 12000 },
-    { month: "Feb", amount: 19000 },
-    { month: "Mar", amount: 15000 },
-    { month: "Apr", amount: 25000 },
-    { month: "May", amount: 22000 },
-    { month: "Jun", amount: 28000 },
-  ];
+  const { isConnected } = usePayoutRealtimeUpdates({ enabled: true });
+  
+  const { data: payoutStats, isLoading: statsLoading } = usePayoutStats();
+  const { data: payoutHistory = [], isLoading: historyLoading } = usePayoutHistory();
 
-  const maxAmount = Math.max(...chartData.map((d) => d.amount));
+  const generateChartData = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const now = new Date();
+    const chartData = months.map((month, idx) => {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+      const monthTransactions = (payoutHistory || []).filter((tx) => {
+        const txDate = new Date(tx.date);
+        return txDate.getMonth() === monthDate.getMonth() && txDate.getFullYear() === monthDate.getFullYear();
+      });
+      const total = monthTransactions.reduce((sum, tx) => sum + (typeof tx.amount === 'string' ? parseFloat(tx.amount) : (tx as any).amountCents / 100), 0);
+      return { month, amount: total };
+    });
+    return chartData;
+  };
 
-  const revenueBreakdown = [
-    { name: "Product Sales", amount: "₦950,000", percentage: 65, color: "bg-purple-600" },
-    { name: "Digital Services", amount: "₦380,000", percentage: 26, color: "bg-blue-600" },
-    { name: "Consulting", amount: "₦120,000", percentage: 9, color: "bg-green-600" },
-  ];
+  const chartData = generateChartData();
+  const maxAmount = Math.max(...chartData.map((d) => d.amount), 1);
+
+  const calculateBreakdown = () => {
+    const breakdown: Record<string, number> = {};
+    (payoutHistory || []).forEach((tx) => {
+      const type = (tx as any).type || 'other';
+      const amount = typeof tx.amount === 'string' ? parseFloat(tx.amount) : (tx as any).amountCents / 100;
+      breakdown[type] = (breakdown[type] || 0) + amount;
+    });
+    const total = Object.values(breakdown).reduce((a, b) => a + b, 0) || 1;
+    return [
+      { name: "Sales", amount: `₦${(breakdown.income || 0).toLocaleString()}`, percentage: Math.round((breakdown.income || 0) / total * 100), color: "bg-purple-600" },
+      { name: "Refunds", amount: `₦${(breakdown.refund || 0).toLocaleString()}`, percentage: Math.round((breakdown.refund || 0) / total * 100), color: "bg-red-600" },
+      { name: "Adjustments", amount: `₦${(breakdown.adjustment || 0).toLocaleString()}`, percentage: Math.round((breakdown.adjustment || 0) / total * 100), color: "bg-blue-600" },
+    ];
+  };
+
+  const revenueBreakdown = calculateBreakdown();
 
   return (
     <div className="space-y-6">
-      {/* Earnings Chart */}
       <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white">Earnings Overview</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-white">Earnings Overview</h3>
+            {isConnected && <span className="text-xs px-2 py-1 bg-green-600/20 text-green-400 rounded-full">● Live</span>}
+          </div>
           <div className="flex items-center gap-2 text-green-400">
-            <TrendingUp size={20} />
-            <span className="text-sm font-medium">+15.3%</span>
+            {statsLoading || historyLoading ? (
+              <Loader size={20} className="animate-spin" />
+            ) : (
+              <>
+                <TrendingUp size={20} />
+                <span className="text-sm font-medium">{payoutStats?.monthlyGrowthPercentage ? `+${payoutStats.monthlyGrowthPercentage.toFixed(1)}%` : '0%'}</span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Chart */}
         <div className="mb-6">
           <div className="flex items-end justify-between gap-3 h-64">
             {chartData.map((data, index) => (
@@ -57,7 +88,6 @@ export function PayoutStats() {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="flex items-center gap-4 text-sm text-gray-400 pt-4 border-t border-[#2a2a2a]">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
@@ -66,7 +96,6 @@ export function PayoutStats() {
         </div>
       </div>
 
-      {/* Revenue Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
           <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
@@ -93,74 +122,72 @@ export function PayoutStats() {
           </div>
         </div>
 
-        {/* Performance Metrics */}
         <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Performance Metrics</h3>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-lg">
               <div>
-                <p className="text-sm text-gray-400">Average Order Value</p>
-                <p className="text-xl font-bold text-white mt-1">₦8,450</p>
+                <p className="text-sm text-gray-400">Available Balance</p>
+                <p className="text-xl font-bold text-white mt-1">₦{(payoutStats?.availableBalance || 0).toLocaleString()}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-green-400">↑ 12%</p>
+                <p className="text-xs text-green-400">Ready</p>
               </div>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-lg">
               <div>
-                <p className="text-sm text-gray-400">Total Orders</p>
-                <p className="text-xl font-bold text-white mt-1">342</p>
+                <p className="text-sm text-gray-400">Total Paid Out</p>
+                <p className="text-xl font-bold text-white mt-1">₦{(payoutStats?.totalPaidOut || 0).toLocaleString()}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-green-400">↑ 8%</p>
+                <p className="text-xs text-green-400">✓ Completed</p>
               </div>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-lg">
               <div>
-                <p className="text-sm text-gray-400">Conversion Rate</p>
-                <p className="text-xl font-bold text-white mt-1">3.2%</p>
+                <p className="text-sm text-gray-400">Pending Payouts</p>
+                <p className="text-xl font-bold text-white mt-1">₦{(payoutStats?.pendingPayouts || 0).toLocaleString()}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-red-400">↓ 2%</p>
+                <p className="text-xs text-yellow-400">⏳ Processing</p>
               </div>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-lg">
               <div>
-                <p className="text-sm text-gray-400">Refund Rate</p>
-                <p className="text-xl font-bold text-white mt-1">0.8%</p>
+                <p className="text-sm text-gray-400">Monthly Growth</p>
+                <p className="text-xl font-bold text-white mt-1">{payoutStats?.monthlyGrowthPercentage ? `+${payoutStats.monthlyGrowthPercentage.toFixed(1)}%` : '0%'}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-green-400">↓ 0.3%</p>
+                <p className="text-xs text-blue-400">📈 Trend</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Transactions Summary */}
       <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-6">Quick Summary</h3>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-4 bg-[#0a0a0a] rounded-lg">
-            <p className="text-xs text-gray-400 mb-2">This Month</p>
-            <p className="text-xl font-bold text-white">₦128,000</p>
+            <p className="text-xs text-gray-400 mb-2">Available</p>
+            <p className="text-xl font-bold text-white">₦{(payoutStats?.availableBalance || 0).toLocaleString()}</p>
           </div>
           <div className="p-4 bg-[#0a0a0a] rounded-lg">
-            <p className="text-xs text-gray-400 mb-2">Last Month</p>
-            <p className="text-xl font-bold text-white">₦115,000</p>
+            <p className="text-xs text-gray-400 mb-2">Pending</p>
+            <p className="text-xl font-bold text-white">₦{(payoutStats?.pendingPayouts || 0).toLocaleString()}</p>
           </div>
           <div className="p-4 bg-[#0a0a0a] rounded-lg">
-            <p className="text-xs text-gray-400 mb-2">This Year</p>
-            <p className="text-xl font-bold text-white">₦1.2M</p>
+            <p className="text-xs text-gray-400 mb-2">Paid Out</p>
+            <p className="text-xl font-bold text-white">₦{(payoutStats?.totalPaidOut || 0).toLocaleString()}</p>
           </div>
           <div className="p-4 bg-[#0a0a0a] rounded-lg">
-            <p className="text-xs text-gray-400 mb-2">All Time</p>
-            <p className="text-xl font-bold text-white">₦3.8M</p>
+            <p className="text-xs text-gray-400 mb-2">Total Earnings</p>
+            <p className="text-xl font-bold text-white">₦{((payoutStats?.availableBalance || 0) + (payoutStats?.pendingPayouts || 0) + (payoutStats?.totalPaidOut || 0)).toLocaleString()}</p>
           </div>
         </div>
       </div>

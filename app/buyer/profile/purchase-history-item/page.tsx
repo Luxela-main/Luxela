@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import React from 'react'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { ChevronRight } from 'lucide-react'
 import Image from 'next/image'

@@ -1,159 +1,147 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { User, ShoppingBag, Heart, Bell, Settings, LogOut, Menu, X, Package, HelpCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { useState } from "react"
-import { useAuth } from "@/context/AuthContext"
-import { useToast } from "@/hooks/use-toast"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogOverlay,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { User, ShoppingBag, Heart, Bell, Settings, LogOut, Menu, X, Package, HelpCircle, Ticket } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useState, useCallback } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface SidebarProps {
-  activeItem?: string
+  activeItem?: string;
 }
 
-export function Sidebar({ activeItem = "my-account" }: SidebarProps) {
-  const pathname = usePathname()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [open, setOpen] = useState(false)
-  const { logout } = useAuth()
-  const { toast } = useToast()
+export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { logout } = useAuth();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
-      await logout()
-      toast({ title: "Success", description: "You have been successfully logged out." })
+      await logout();
+      router.push('/login');
     } catch (err) {
-      toast({ title: "Error", description: "Something went wrong while logging out.", variant: "destructive" })
-    } finally {
-      setOpen(false)
+      console.error('Logout failed:', err);
+      setShowLogoutConfirm(false);
     }
-  }
+  }, [logout, router]);
 
-  const derivedActive = (() => {
-    if (!pathname) return activeItem
-    if (pathname === "/dashboard") return "my-account"
-    if (pathname.startsWith("/buyer/dashboard/orders")) return "orders"
-    if (pathname.startsWith("/buyer/dashboard/favorite-items")) return "favorite-items"
-    if (pathname.startsWith("/buyer/dashboard/notifications")) return "notifications"
-    if (pathname.startsWith("/buyer/dashboard/returns")) return "returns"
-    if (pathname.startsWith("/buyer/dashboard/help")) return "help"
-    if (pathname.startsWith("/buyer/dashboard/settings")) return "settings"
-    return activeItem
-  })()
+  const derivedActive = useCallback(() => {
+    if (!pathname) return activeItem;
+    if (pathname === '/buyer/dashboard') return 'my-account';
+    if (pathname.startsWith('/buyer/dashboard/orders')) return 'orders';
+    if (pathname.startsWith('/buyer/dashboard/favorite-items')) return 'favorite-items';
+    if (pathname.startsWith('/buyer/dashboard/notifications')) return 'notifications';
+    if (pathname.startsWith('/buyer/dashboard/returns')) return 'returns';
+    if (pathname.startsWith('/buyer/dashboard/help')) return 'help';
+    if (pathname.startsWith('/buyer/dashboard/support-tickets')) return 'support-tickets';
+    if (pathname.startsWith('/buyer/dashboard/settings')) return 'settings';
+    return activeItem;
+  }, [pathname, activeItem]);
+
+  const activeItemValue = derivedActive();
 
   const menuItems = [
-    { id: "my-account", label: "My Account", icon: User, href: "/buyer/dashboard" },
-    { id: "orders", label: "Orders", icon: ShoppingBag, href: "/buyer/dashboard/orders" },
-    { id: "favorite-items", label: "Favorite Items", icon: Heart, href: "/buyer/dashboard/favorite-items" },
-    { id: "notifications", label: "Notifications", icon: Bell, href: "/buyer/dashboard/notifications" },
-    { id: "returns", label: "Returns & Refunds", icon: Package, href: "/buyer/dashboard/returns" },
-    { id: "help", label: "Help Center", icon: HelpCircle, href: "/buyer/dashboard/help" },
-    { id: "settings", label: "Settings", icon: Settings, href: "/buyer/dashboard/settings" },
-  ]
+    { id: 'my-account', label: 'My Account', icon: User, href: '/buyer/dashboard' },
+    { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/buyer/dashboard/orders' },
+    { id: 'favorite-items', label: 'Favorite Items', icon: Heart, href: '/buyer/dashboard/favorite-items' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, href: '/buyer/dashboard/notifications' },
+    { id: 'returns', label: 'Returns & Refunds', icon: Package, href: '/buyer/dashboard/returns' },
+    { id: 'support-tickets', label: 'Support Tickets', icon: Ticket, href: '/buyer/dashboard/support-tickets' },
+    { id: 'help', label: 'Help Center', icon: HelpCircle, href: '/buyer/dashboard/help' },
+    { id: 'settings', label: 'Settings', icon: Settings, href: '/buyer/dashboard/settings' },
+  ];
 
-  const closeMobileMenu = () => setIsMobileMenuOpen(false)
+  const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), []);
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button - Fixed in header area */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="bg-[#1a1a1a] text-white hover:bg-[#222] cursor-pointer"
+          className="p-2 bg-[#1a1a1a] text-white hover:bg-[#222] rounded-lg transition-colors"
+          aria-label="Toggle menu"
         >
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        </button>
       </div>
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 cursor-pointer"
+          className="lg:hidden fixed inset-0 bg-black/70 z-30 top-16"
           onClick={closeMobileMenu}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Mobile drawer and desktop sidebar */}
       <aside
         className={cn(
-          "bg-[#0e0e0e] border-r border-[#212121] min-h-screen flex flex-col transition-transform duration-300 ease-in-out",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-          "fixed lg:relative top-0 left-0 z-40 w-[280px] lg:translate-x-0 lg:w-[240px]"
+          'bg-[#0e0e0e] border-r border-[#212121] min-h-screen flex flex-col',
+          'fixed lg:relative left-0 top-16 lg:top-0 w-64 lg:w-[240px]',
+          'transition-transform duration-300 ease-in-out z-40',
+          'lg:translate-x-0',
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <nav className="flex-1 px-6 py-[31px] gap-3">
+        {/* Navigation Items */}
+        <nav className="flex-1 px-4 py-6 space-y-2 lg:space-y-3 overflow-y-auto">
           {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = item.id === derivedActive
+            const Icon = item.icon;
+            const isActive = item.id === activeItemValue;
 
             return (
-              <Link key={item.id} href={item.href} onClick={closeMobileMenu}>
-                <Button
-                  variant="ghost"
+              <Link key={item.id} href={item.href} onClick={closeMobileMenu} className="block">
+                <button
                   className={cn(
-                    "w-full justify-start gap-3 text-[14px] mb-3 text-[#acacac] hover:text-white hover:bg-[#1a1a1a] cursor-pointer",
-                    isActive && "bg-[#8451E126] text-[14px] text-[#8451E1] hover:bg-[#8451e1] hover:text-white"
+                    'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all',
+                    'text-[#acacac] hover:text-white hover:bg-[#1a1a1a]',
+                    isActive && 'bg-[#8451E126] text-[#8451E1] hover:bg-[#8451e1] hover:text-white'
                   )}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </Button>
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </button>
               </Link>
-            )
+            );
           })}
         </nav>
 
-        <div className="p-4">
-          <AlertDialog open={open} onOpenChange={setOpen}>
-            <AlertDialogOverlay />
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-[#1a1a1a] cursor-pointer"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Log out</span>
-              </Button>
-            </AlertDialogTrigger>
-
-            <AlertDialogContent className="bg-[#0E0E0E] border border-[#2B2B2B] text-white">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
-                <AlertDialogDescription className="text-gray-400">
-                  Are you sure you want to log out of your account?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="bg-[#141414] text-white border border-[#2B2B2B] hover:bg-[#1a1a1a] cursor-pointer">
+        {/* Logout Button */}
+        <div className="border-t border-[#212121] p-4">
+          {showLogoutConfirm ? (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-400 mb-3">Confirm logout?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 px-3 py-2 bg-[#1a1a1a] text-white rounded-lg text-sm hover:bg-[#222] transition-colors"
+                >
                   Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
+                </button>
+                <button
                   onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-600 text-white cursor-pointer"
+                  className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
                 >
                   Log out
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-[#1a1a1a] transition-colors"
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span className="truncate">Log out</span>
+            </button>
+          )}
         </div>
       </aside>
     </>
-  )
+  );
 }

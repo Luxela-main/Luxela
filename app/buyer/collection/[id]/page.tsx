@@ -83,7 +83,7 @@ export default function CollectionDetailPage({
         )}
         <div className="flex items-center gap-4 mt-4">
           <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-[#9872DD]" />
+            <Package className="w-4 h-4 text-[#8451E1]" />
             <span className="text-gray-400">
               {items.length} {items.length === 1 ? "item" : "items"}
             </span>
@@ -105,7 +105,7 @@ export default function CollectionDetailPage({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
           {collection.limited_edition_badge === "show_badge" && (
-            <div className="absolute top-6 left-6 bg-[#9872DD] px-4 py-2 rounded-lg shadow-lg">
+            <div className="absolute top-6 left-6 bg-[#8451E1] px-4 py-2 rounded-lg shadow-lg">
               <span className="text-white text-xs font-black uppercase tracking-widest">
                 Limited Edition
               </span>
@@ -209,7 +209,7 @@ function CollectionItemCard({
         <div
           className={`group bg-[#161616] rounded-lg overflow-hidden border border-transparent ${
             productId
-              ? "hover:ring-2 hover:ring-[#9872DD]/50 cursor-pointer"
+              ? "hover:ring-2 hover:ring-[#8451E1]/50 cursor-pointer"
               : ""
           } transition-all duration-300 shadow-lg`}
         >
@@ -275,7 +275,7 @@ function CollectionItemCard({
                     ${
                       added
                         ? "bg-green-500 scale-105"
-                        : "bg-[#9872DD] hover:bg-[#8451E1] active:scale-95"
+                        : "bg-[#8451E1] hover:bg-[#7240D0] active:scale-95"
                     }
                     disabled:opacity-50
                   `}
@@ -331,4 +331,4 @@ function CollectionItemCard({
       </Dialog>
     </>
   );
-}
+}

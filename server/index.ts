@@ -35,9 +35,13 @@ import { emailNotificationRouter } from "./routers/emailNotification";
 import { checkoutRouter } from "./routers/checkout";
 import { variantsRouter } from "./routers/variantsRouter";
 import { webhookRouter } from "./routers/webhook";
+import { financeRouter } from "./routers/finance";
 
 // DB initializer
 import { startKeepAlive as initDB } from "./db";
+
+// Payment flow scheduler
+import { initializeScheduledTasks } from "./services/schedulerService";
 
 // File upload utilities
 import multer from "multer";
@@ -65,6 +69,7 @@ export const appRouter = createTRPCRouter({
   checkout: checkoutRouter,
   variants: variantsRouter,
   webhooks: webhookRouter,
+  finance: financeRouter,
 });
 
 export type AppRouter = typeof appRouter;
@@ -361,6 +366,14 @@ if (process.env.VERCEL !== "1") {
   app.listen(PORT, async () => {
     console.log(`Server running at http://localhost:${PORT}`);
     await initDB();
+    
+    // Initialize payment flow automation
+    try {
+      initializeScheduledTasks();
+      console.log('Payment flow automation tasks initialized');
+    } catch (err: any) {
+      console.error('Failed to initialize payment flow tasks:', err);
+    }
   });
 }
 

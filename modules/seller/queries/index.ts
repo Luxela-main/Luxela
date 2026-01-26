@@ -63,4 +63,6 @@ export { useFinancialLedger } from './useFinancialLedger';
 
 export { useInventoryReservations } from './useInventoryReservations';
 
+export { useSales, prefetchSales, type Sale } from './useSales';
+
 export { sellerQueryKeys, supportKeys, queryKeys } from './queryKeys';

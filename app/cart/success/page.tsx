@@ -95,7 +95,7 @@ export default function OrderSuccessPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-10">
             <Button
               onClick={() => router.push("/buyer")}
-              className="w-full bg-gradient-to-r from-[#8451E1] to-[#9872DD] hover:opacity-90 text-white font-medium h-10 rounded-xl shadow-lg shadow-purple-500/20"
+              className="w-full bg-gradient-to-r from-[#8451E1] to-[#8451E1] hover:opacity-90 text-white font-medium h-10 rounded-xl shadow-lg shadow-purple-500/20"
             >
               Continue Shopping
             </Button>

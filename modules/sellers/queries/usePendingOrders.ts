@@ -4,14 +4,24 @@ import { toastSvc } from "@/services/toast";
 import { Sale } from "../model/sales";
 import { getVanillaTRPCClient } from "@/lib/trpc";
 
-export const usePendingOrders = () => {
+export const usePendingOrders = (params?: { status?: string; limit?: number; offset?: number }, options?: any) => {
   return useQuery<Sale[]>({
     queryKey: sellersKeys.sales("pending"),
     queryFn: async () => {
       const client: any = getVanillaTRPCClient();
-      return await ((client.sales as any).getAllSales as any).query({ status: "pending" });
+      return await ((client.sales as any).getAllSales as any).query({
+        status: "pending",
+        ...params,
+      });
     },
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 5,
+    refetchInterval: 1000 * 30,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...options,
   });
 };
 

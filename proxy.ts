@@ -1,29 +1,36 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { jwtDecode } from "jwt-decode";
+
+// Decode JWT token from cookie without making API call (instant, no network delay)
+function getUserFromToken(token: string | undefined) {
+  if (!token) return null;
+  
+  try {
+    const decoded = jwtDecode(token) as any;
+    return {
+      id: decoded.sub,
+      email: decoded.email,
+      user_metadata: decoded.user_metadata || {},
+      app_metadata: decoded.app_metadata || {},
+    };
+  } catch (error) {
+    return null;
+  }
+}
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
-        },
-      },
-    }
-  );
+  // Get JWT token from cookies - Supabase stores it with dynamic name or as 'access_token'
+  const authToken =
+    request.cookies.get("sb-auth-token")?.value ||
+    request.cookies.get("access_token")?.value ||
+    // Try to find Supabase session token with dynamic project reference
+    Array.from(request.cookies.getAll())
+      .find((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"))?.value;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Decode user from JWT without making API call (instant, no Supabase API delay)
+  const user = getUserFromToken(authToken);
 
   const pathname = request.nextUrl.pathname;
 

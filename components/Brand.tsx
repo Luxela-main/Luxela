@@ -134,7 +134,7 @@ export default function Brand() {
 
                 <Link
                   href="/signup"
-                  className="hidden md:inline-flex cursor-pointer items-center justify-center mt-4 md:mt-6 h-[38px] md:h-[42px] bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5 md:px-6"
+                  className="hidden md:inline-flex cursor-pointer items-center justify-center mt-4 md:mt-6 h-[38px] md:h-[42px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5 md:px-6"
                 >
                   {brand.cta}
                 </Link>
@@ -159,7 +159,7 @@ export default function Brand() {
               {/* Mobile CTA */}
               <Link
                 href="/signup"
-                className="md:hidden w-full flex items-center justify-center mt-4 h-[38px] bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5"
+                className="md:hidden w-full flex items-center justify-center mt-4 h-[38px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5"
               >
                 {brand.cta}
               </Link>
@@ -169,4 +169,4 @@ export default function Brand() {
       </main>
     </section>
   );
-}
+}

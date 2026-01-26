@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useLocalStorage, useLocalStorageClear } from '@/lib/hooks/useLocalStorage';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, XCircle } from 'lucide-react';
 
 interface CheckoutFormData {
   firstName: string;
@@ -17,14 +17,35 @@ interface CheckoutFormData {
   postalCode: string;
   country: string;
   paymentMethod: 'card' | 'bank_transfer' | 'crypto';
+  agreeToTerms: boolean;
 }
+
+interface FieldErrors {
+  [key: string]: string;
+}
+
+interface PaymentStatus {
+  state: 'idle' | 'processing' | 'success' | 'error';
+  message: string;
+  retryCount: number;
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[0-9+\-\s()]{7,}$/;
+const POSTAL_CODE_REGEX = /^[a-zA-Z0-9\s\-]{3,}$/;
+const MAX_RETRY_ATTEMPTS = 3;
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string>('');
   const clearCheckoutData = useLocalStorageClear('checkout-form');
+  
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({
+    state: 'idle',
+    message: '',
+    retryCount: 0,
+  });
+  const [showTermsError, setShowTermsError] = useState(false);
 
   // Use localStorage for form data
   const [checkoutForm, setCheckoutForm] = useLocalStorage<CheckoutFormData>('checkout-form', {
@@ -38,6 +59,7 @@ export default function CheckoutPage() {
     postalCode: '',
     country: '',
     paymentMethod: 'card',
+    agreeToTerms: false,
   });
 
   // Get user's cart
@@ -51,57 +73,168 @@ export default function CheckoutPage() {
 
   const initializePayment = trpc.checkout.initializePayment.useMutation({
     onSuccess: (data) => {
-      // Clear checkout data on successful payment
+      setPaymentStatus({
+        state: 'success',
+        message: 'Payment initialized successfully',
+        retryCount: 0,
+      });
       clearCheckoutData();
-      // Redirect to Tsara payment page
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
       }
     },
     onError: (error) => {
-      setError(error.message || 'Payment initialization failed');
-      setIsProcessing(false);
+      setPaymentStatus({
+        state: 'error',
+        message: error.message || 'Payment initialization failed',
+        retryCount: paymentStatus.retryCount + 1,
+      });
     },
   });
 
+  // Field validation functions
+  const validateField = useCallback((name: string, value: string): string => {
+    const trimmedValue = value.trim();
+
+    switch (name) {
+      case 'firstName':
+      case 'lastName':
+        if (!trimmedValue) return 'This field is required';
+        if (trimmedValue.length < 2) return 'Must be at least 2 characters';
+        if (!/^[a-zA-Z\s'-]+$/.test(trimmedValue)) return 'Only letters, spaces, and hyphens allowed';
+        return '';
+      case 'email':
+        if (!trimmedValue) return 'Email is required';
+        if (!EMAIL_REGEX.test(trimmedValue)) return 'Please enter a valid email address';
+        return '';
+      case 'phone':
+        if (trimmedValue && !PHONE_REGEX.test(trimmedValue)) return 'Please enter a valid phone number';
+        return '';
+      case 'address':
+        if (!trimmedValue) return 'Address is required';
+        if (trimmedValue.length < 5) return 'Please enter a complete address';
+        return '';
+      case 'city':
+      case 'state':
+      case 'country':
+        if (!trimmedValue) return `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+        if (trimmedValue.length < 2) return 'Please enter a valid value';
+        return '';
+      case 'postalCode':
+        if (!trimmedValue) return 'Postal code is required';
+        if (!POSTAL_CODE_REGEX.test(trimmedValue)) return 'Please enter a valid postal code';
+        return '';
+      default:
+        return '';
+    }
+  }, []);
+
+  const validateForm = useCallback((): boolean => {
+    const errors: FieldErrors = {};
+    const requiredFields = ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'postalCode', 'country'];
+
+    requiredFields.forEach((field) => {
+      const error = validateField(field, checkoutForm[field as keyof CheckoutFormData] as string);
+      if (error) errors[field] = error;
+    });
+
+    if (checkoutForm.phone) {
+      const phoneError = validateField('phone', checkoutForm.phone);
+      if (phoneError) errors.phone = phoneError;
+    }
+
+    if (!checkoutForm.agreeToTerms) {
+      setShowTermsError(true);
+      return false;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [checkoutForm, validateField]);
+
+  const handleFieldChange = useCallback((field: keyof CheckoutFormData, value: any) => {
+    setCheckoutForm({ ...checkoutForm, [field]: value });
+    // Clear error when user starts typing
+    if (fieldErrors[field]) {
+      const newErrors = { ...fieldErrors };
+      delete newErrors[field];
+      setFieldErrors(newErrors);
+    }
+  }, [checkoutForm, fieldErrors, setCheckoutForm]);
+
+  const handleRetryPayment = useCallback(async () => {
+    if (!validateForm()) return;
+    if (paymentStatus.retryCount >= MAX_RETRY_ATTEMPTS) {
+      setPaymentStatus({
+        state: 'error',
+        message: 'Maximum retry attempts exceeded. Please contact support.',
+        retryCount: paymentStatus.retryCount,
+      });
+      return;
+    }
+    await handleCheckout({ preventDefault: () => {} } as React.FormEvent);
+  }, [validateForm, paymentStatus.retryCount]);
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!cart?.cart?.id) {
-      setError('Cart not found');
+
+    if (!validateForm()) {
+      setPaymentStatus({
+        state: 'error',
+        message: 'Please correct the errors below and try again.',
+        retryCount: 0,
+      });
       return;
     }
 
-    setIsProcessing(true);
-    setError('');
+    if (!cart?.cart?.id) {
+      setPaymentStatus({
+        state: 'error',
+        message: 'Cart not found. Please go back and try again.',
+        retryCount: 0,
+      });
+      return;
+    }
+
+    if (!prepareCheckout.data?.items || prepareCheckout.data.items.length === 0) {
+      setPaymentStatus({
+        state: 'error',
+        message: 'Your cart is empty.',
+        retryCount: 0,
+      });
+      return;
+    }
+
+    setPaymentStatus({
+      state: 'processing',
+      message: 'Processing your payment...',
+      retryCount: paymentStatus.retryCount,
+    });
 
     try {
-      // Validate form
-      if (!checkoutForm.firstName || !checkoutForm.lastName || !checkoutForm.email || !checkoutForm.address) {
-        setError('Please fill in all required fields');
-        return;
-      }
-
-      // Get buyer details from form
       const buyerInfo = {
-        customerName: `${checkoutForm.firstName} ${checkoutForm.lastName}`,
-        customerEmail: checkoutForm.email,
-        customerPhone: checkoutForm.phone,
-        shippingAddress: checkoutForm.address,
-        shippingCity: checkoutForm.city,
-        shippingState: checkoutForm.state,
-        shippingPostalCode: checkoutForm.postalCode,
-        shippingCountry: checkoutForm.country,
+        customerName: `${checkoutForm.firstName.trim()} ${checkoutForm.lastName.trim()}`,
+        customerEmail: checkoutForm.email.trim(),
+        customerPhone: checkoutForm.phone.trim() || undefined,
+        shippingAddress: checkoutForm.address.trim(),
+        shippingCity: checkoutForm.city.trim(),
+        shippingState: checkoutForm.state.trim(),
+        shippingPostalCode: checkoutForm.postalCode.trim(),
+        shippingCountry: checkoutForm.country.trim(),
       };
 
-      // Initialize payment
-      initializePayment.mutate({
-        ...buyerInfo,
+      await initializePayment.mutateAsync({
+        customerName: buyerInfo.customerName,
+        customerEmail: buyerInfo.customerEmail,
         paymentMethod: checkoutForm.paymentMethod,
       });
     } catch (err: any) {
-      setError(err.message || 'Checkout failed');
-      setIsProcessing(false);
+      const errorMessage = err?.message || 'Payment initialization failed. Please try again.';
+      setPaymentStatus({
+        state: 'error',
+        message: errorMessage,
+        retryCount: paymentStatus.retryCount + 1,
+      });
     }
   };
 
@@ -147,129 +280,220 @@ export default function CheckoutPage() {
             <h2 className="text-xl font-semibold mb-6">Shipping Address</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="firstName">
                   First Name *
                 </label>
                 <input
+                  id="firstName"
                   type="text"
                   name="firstName"
                   value={checkoutForm.firstName}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, firstName: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('firstName', e.target.value)}
+                  onBlur={(e) => validateField('firstName', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.firstName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="John"
-                  required
+                  aria-invalid={!!fieldErrors.firstName}
+                  aria-describedby={fieldErrors.firstName ? 'firstName-error' : undefined}
                 />
+                {fieldErrors.firstName && (
+                  <p id="firstName-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.firstName}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="lastName">
                   Last Name *
                 </label>
                 <input
+                  id="lastName"
                   type="text"
                   name="lastName"
                   value={checkoutForm.lastName}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, lastName: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('lastName', e.target.value)}
+                  onBlur={(e) => validateField('lastName', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.lastName ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="Doe"
-                  required
+                  aria-invalid={!!fieldErrors.lastName}
+                  aria-describedby={fieldErrors.lastName ? 'lastName-error' : undefined}
                 />
+                {fieldErrors.lastName && (
+                  <p id="lastName-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.lastName}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
                   Email *
                 </label>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   value={checkoutForm.email}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('email', e.target.value)}
+                  onBlur={(e) => validateField('email', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="john@example.com"
-                  required
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                 />
+                {fieldErrors.email && (
+                  <p id="email-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.email}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="phone">
                   Phone
                 </label>
                 <input
+                  id="phone"
                   type="tel"
                   name="phone"
                   value={checkoutForm.phone}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, phone: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('phone', e.target.value)}
+                  onBlur={(e) => validateField('phone', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="+234 123 456 7890"
+                  aria-invalid={!!fieldErrors.phone}
+                  aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
                 />
+                {fieldErrors.phone && (
+                  <p id="phone-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.phone}
+                  </p>
+                )}
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="address">
                   Address *
                 </label>
                 <input
+                  id="address"
                   type="text"
                   name="address"
                   value={checkoutForm.address}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, address: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('address', e.target.value)}
+                  onBlur={(e) => validateField('address', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.address ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="123 Main St"
-                  required
+                  aria-invalid={!!fieldErrors.address}
+                  aria-describedby={fieldErrors.address ? 'address-error' : undefined}
                 />
+                {fieldErrors.address && (
+                  <p id="address-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.address}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="city">
                   City *
                 </label>
                 <input
+                  id="city"
                   type="text"
                   name="city"
                   value={checkoutForm.city}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, city: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('city', e.target.value)}
+                  onBlur={(e) => validateField('city', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.city ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="Lagos"
-                  required
+                  aria-invalid={!!fieldErrors.city}
+                  aria-describedby={fieldErrors.city ? 'city-error' : undefined}
                 />
+                {fieldErrors.city && (
+                  <p id="city-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.city}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="state">
                   State/Province *
                 </label>
                 <input
+                  id="state"
                   type="text"
                   name="state"
                   value={checkoutForm.state}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, state: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('state', e.target.value)}
+                  onBlur={(e) => validateField('state', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.state ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="Lagos"
-                  required
+                  aria-invalid={!!fieldErrors.state}
+                  aria-describedby={fieldErrors.state ? 'state-error' : undefined}
                 />
+                {fieldErrors.state && (
+                  <p id="state-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.state}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="postalCode">
                   Postal Code *
                 </label>
                 <input
+                  id="postalCode"
                   type="text"
                   name="postalCode"
                   value={checkoutForm.postalCode}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, postalCode: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('postalCode', e.target.value)}
+                  onBlur={(e) => validateField('postalCode', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.postalCode ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="100001"
-                  required
+                  aria-invalid={!!fieldErrors.postalCode}
+                  aria-describedby={fieldErrors.postalCode ? 'postalCode-error' : undefined}
                 />
+                {fieldErrors.postalCode && (
+                  <p id="postalCode-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.postalCode}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="country">
                   Country *
                 </label>
                 <input
+                  id="country"
                   type="text"
                   name="country"
                   value={checkoutForm.country}
-                  onChange={(e) => setCheckoutForm({...checkoutForm, country: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleFieldChange('country', e.target.value)}
+                  onBlur={(e) => validateField('country', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    fieldErrors.country ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="Nigeria"
-                  required
+                  aria-invalid={!!fieldErrors.country}
+                  aria-describedby={fieldErrors.country ? 'country-error' : undefined}
                 />
+                {fieldErrors.country && (
+                  <p id="country-error" className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <XCircle className="w-4 h-4" /> {fieldErrors.country}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -309,20 +533,20 @@ export default function CheckoutPage() {
               <div className="border-t pt-6 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>₦{(summary?.subtotalCents || 0 / 100).toLocaleString()}</span>
+                  <span>₦{((summary?.subtotalCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tax (7.5%)</span>
-                  <span>₦{(summary?.taxCents || 0 / 100).toLocaleString()}</span>
+                  <span>₦{((summary?.taxCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span>₦{(summary?.shippingCents || 0 / 100).toLocaleString()}</span>
+                  <span>₦{((summary?.shippingCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t pt-2 mt-4">
                   <span>Total</span>
                   <span className="text-blue-600">
-                    ₦{(summary?.totalCents || 0 / 100).toLocaleString()}
+                    ₦{((summary?.totalCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -339,7 +563,7 @@ export default function CheckoutPage() {
                     name="paymentMethod"
                     value="card"
                     checked={checkoutForm.paymentMethod === 'card'}
-                    onChange={(e) => setCheckoutForm({...checkoutForm, paymentMethod: e.target.value as any})}
+                    onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
                     className="w-4 h-4"
                   />
                   <span className="ml-3">
@@ -354,7 +578,7 @@ export default function CheckoutPage() {
                     name="paymentMethod"
                     value="bank_transfer"
                     checked={checkoutForm.paymentMethod === 'bank_transfer'}
-                    onChange={(e) => setCheckoutForm({...checkoutForm, paymentMethod: e.target.value as any})}
+                    onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
                     className="w-4 h-4"
                   />
                   <span className="ml-3">
@@ -369,7 +593,7 @@ export default function CheckoutPage() {
                     name="paymentMethod"
                     value="crypto"
                     checked={checkoutForm.paymentMethod === 'crypto'}
-                    onChange={(e) => setCheckoutForm({...checkoutForm, paymentMethod: e.target.value as any})}
+                    onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
                     className="w-4 h-4"
                   />
                   <span className="ml-3">
@@ -389,36 +613,99 @@ export default function CheckoutPage() {
               </p>
             </div>
 
-            {/* Error Message */}
-            {error && (
+            {/* Payment Status Messages */}
+            {paymentStatus.state === 'error' && (
               <div className="px-6 py-4 bg-red-50 border-l-4 border-red-600">
-                <p className="text-sm text-red-800">{error}</p>
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-900">{paymentStatus.message}</p>
+                    {paymentStatus.retryCount > 0 && (
+                      <p className="text-xs text-red-700 mt-1">
+                        Retry attempt {paymentStatus.retryCount} of {MAX_RETRY_ATTEMPTS}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
+            {paymentStatus.state === 'processing' && (
+              <div className="px-6 py-4 bg-blue-50 border-l-4 border-blue-600">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <p className="text-sm text-blue-800">{paymentStatus.message}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Terms & Conditions */}
+            <div className="px-6 py-6 border-t border-gray-200">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checkoutForm.agreeToTerms}
+                  onChange={(e) => {
+                    handleFieldChange('agreeToTerms', e.target.checked);
+                    setShowTermsError(false);
+                  }}
+                  className="w-4 h-4 mt-1 accent-blue-600 cursor-pointer"
+                  aria-describedby="terms-error"
+                />
+                <span className="text-sm text-gray-700">
+                  I agree to the{' '}
+                  <a href="#" className="text-blue-600 hover:underline">
+                    Terms and Conditions
+                  </a>
+                  {' '}and{' '}
+                  <a href="#" className="text-blue-600 hover:underline">
+                    Privacy Policy
+                  </a>
+                </span>
+              </label>
+              {showTermsError && (
+                <p id="terms-error" className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                  <XCircle className="w-4 h-4" /> You must agree to the terms and conditions
+                </p>
+              )}
+            </div>
 
             {/* Action Buttons */}
             <div className="px-6 py-8 bg-gray-50 flex gap-4">
               <button
                 type="button"
                 onClick={() => router.push('/cart')}
-                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                disabled={paymentStatus.state === 'processing'}
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Go back to shopping cart"
               >
                 Back to Cart
               </button>
-              <button
-                type="submit"
-                disabled={isProcessing || initializePayment.isPending}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isProcessing || initializePayment.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>Proceed to Payment</>
-                )}
-              </button>
+              {paymentStatus.state === 'error' && paymentStatus.retryCount < MAX_RETRY_ATTEMPTS ? (
+                <button
+                  type="button"
+                  onClick={handleRetryPayment}
+                  className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                  aria-label="Retry payment"
+                >
+                  Retry Payment
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={paymentStatus.state === 'processing' || initializePayment.isPending}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                  aria-label="Proceed to payment"
+                >
+                  {paymentStatus.state === 'processing' || initializePayment.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>Proceed to Payment</>
+                  )}
+                </button>
+              )}
             </div>
           </form>
         </div>

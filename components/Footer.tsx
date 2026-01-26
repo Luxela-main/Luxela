@@ -71,7 +71,7 @@ export default function Footer() {
                 className="w-full pr-[120px] h-[42px] rounded-[10px] border border-[#2F2F2F] focused:ring-0 focus-visible:ring-0 bg-[#2B2B2B] text-[#ACACAC] text-sm "
               />
               <Button
-                className="absolute top-0 right-0 h-[42px] px-6 text-white bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] rounded-[10px] transition"
+                className="absolute top-0 right-0 h-[42px] px-6 text-white bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] rounded-[10px] transition"
               >
                 Subscribe
               </Button>

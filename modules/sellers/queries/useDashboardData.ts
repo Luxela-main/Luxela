@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { getVanillaTRPCClient } from "@/lib/trpc";
 const vanillaTrpc = getVanillaTRPCClient();
 import { sellersKeys } from "./queryKeys";
@@ -8,27 +9,23 @@ import { generateTopSellingProducts } from "../function/generateTSP";
 import { calculateStats } from "../function/generateRevStat";
 
 export const useDashboardData = () => {
-  return useQuery<DashboardData>({
+  const queryClient = useQueryClient();
+
+  const query = useQuery<DashboardData>({
     queryKey: sellersKeys.dashboard(),
-    queryFn: async () => {
+    queryFn: async (): Promise<DashboardData> => {
       const client = vanillaTrpc;
 
-      // const [sales, listings] = await Promise.all([
-      //   (client.sales as any).getAllSales.query(),
-      //   (client.listing as any).getMyListings.query(),
-      // ]);
-
       const [sales, listings] = await Promise.all([
-  ((client.sales as any).getAllSales as any).query({}),
-  ((client.listing as any).getMyListings as any).query(),
-]);
+        ((client.sales as any).getAllSales as any).query({}) || [],
+        ((client.listing as any).getMyListings as any).query() || [],
+      ]);
 
+      const stats = calculateStats(sales, listings);
+      const revenueReport = generateRevenueReport(sales) || [];
+      const topSellingProducts = generateTopSellingProducts(listings, sales) || [];
 
-      const stats = calculateStats(sales || [], listings || []);
-      const revenueReport = generateRevenueReport(sales);
-      const topSellingProducts = generateTopSellingProducts(listings, sales);
-
-      const visitorTraffic = [
+      const visitorTraffic: any[] = [
         { source: "Homepage Results", percentage: 30 },
         { source: "Category Browsing", percentage: 40 },
         { source: "Search Results", percentage: 20 },
@@ -40,8 +37,53 @@ export const useDashboardData = () => {
         revenueReport,
         visitorTraffic,
         topSellingProducts,
-      };
+      } as DashboardData;
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 5 * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: true,
+    refetchOnMount: true,
+    retry: 3,
+    retryDelay: (attemptIndex: number) =>
+      Math.min(1000 * 2 ** attemptIndex, 15000),
   });
-};
+
+  useEffect(() => {
+    if (!query.data) return;
+
+    const refreshInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: sellersKeys.dashboard(),
+      });
+    }, 5000);
+
+    return () => clearInterval(refreshInterval);
+  }, [query.data, queryClient]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        queryClient.invalidateQueries({
+          queryKey: sellersKeys.dashboard(),
+        });
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [queryClient]);
+
+  return {
+    ...query,
+    invalidate: () =>
+      queryClient.invalidateQueries({
+        queryKey: sellersKeys.dashboard(),
+      }),
+    refetch: query.refetch,
+  };
+};

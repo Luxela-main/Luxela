@@ -1643,6 +1643,147 @@ return {
       }
     }),
 
+  // ============ AUTHENTICATION ============
+
+  updatePassword: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: "/buyer/password",
+        tags: ["Buyer - Account"],
+        summary: "Update buyer password",
+        description: "Change buyer account password",
+      },
+    })
+    .input(
+      z.object({
+        currentPassword: z.string().min(8),
+        newPassword: z.string().min(8),
+      })
+    )
+    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const sb = getSupabase();
+        if (!sb) {
+          throw new Error("Supabase is not configured on the server");
+        }
+
+        // Update password through Supabase
+        const { error } = await sb.auth.admin.updateUserById(userId, {
+          password: input.newPassword,
+        });
+
+        if (error) {
+          throw new Error(`Password update failed: ${error.message}`);
+        }
+
+        return {
+          success: true,
+          message: "Password updated successfully",
+        };
+      } catch (err: any) {
+        console.error("Error updating password:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to update password",
+        });
+      }
+    }),
+
+  deleteAccount: protectedProcedure
+    .meta({
+      openapi: {
+        method: "DELETE",
+        path: "/buyer/account",
+        tags: ["Buyer - Account"],
+        summary: "Delete buyer account",
+        description: "Permanently delete buyer account and associated data",
+      },
+    })
+    .input(z.object({ password: z.string().min(8) }))
+    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const sb = getSupabase();
+        if (!sb) {
+          throw new Error("Supabase is not configured on the server");
+        }
+
+        // Get buyer record
+        const buyer = await getBuyer(userId);
+
+        // Delete all buyer-related data in transaction
+        await db.transaction(async (tx) => {
+          // Delete billing addresses
+          await tx
+            .delete(buyerBillingAddress)
+            .where(eq(buyerBillingAddress.buyerId, buyer.id));
+
+          // Delete favorites
+          await tx
+            .delete(buyerFavorites)
+            .where(eq(buyerFavorites.buyerId, buyer.id));
+
+          // Delete notifications
+          await tx
+            .delete(notifications)
+            .where(
+              and(
+                eq(notifications.buyerId, buyer.id),
+                isNull(notifications.sellerId)
+              )
+            );
+
+          // Delete loyalty NFTs
+          await tx
+            .delete(loyaltyNFTs)
+            .where(eq(loyaltyNFTs.buyerId, buyer.id));
+
+          // Delete account details
+          await tx
+            .delete(buyerAccountDetails)
+            .where(eq(buyerAccountDetails.buyerId, buyer.id));
+
+          // Delete buyer record
+          await tx.delete(buyers).where(eq(buyers.id, buyer.id));
+        });
+
+        // Delete Supabase user
+        const { error } = await sb.auth.admin.deleteUser(userId);
+        if (error) {
+          throw new Error(`User deletion failed: ${error.message}`);
+        }
+
+        return {
+          success: true,
+          message: "Account deleted successfully",
+        };
+      } catch (err: any) {
+        console.error("Error deleting account:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to delete account",
+        });
+      }
+    }),
+
   // ============ ORDER STATISTICS ============
 
   getOrderStats: protectedProcedure
@@ -1733,6 +1874,130 @@ return {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to fetch order statistics",
+        });
+      }
+    }),
+
+  updateNotificationPreferences: protectedProcedure
+    .meta({
+      openapi: {
+        method: "PATCH",
+        path: "/buyer/notification-preferences",
+        tags: ["Buyer - Preferences"],
+        summary: "Update notification preferences",
+        description: "Update buyer notification preferences for emails and alerts",
+      },
+    })
+    .input(
+      z.object({
+        orderUpdates: z.boolean().optional(),
+        promotionalEmails: z.boolean().optional(),
+        securityAlerts: z.boolean().optional(),
+      })
+    )
+    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const buyer = await getBuyer(userId);
+
+        const existing = await db
+          .select()
+          .from(buyerAccountDetails)
+          .where(eq(buyerAccountDetails.buyerId, buyer.id));
+
+        if (existing.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Buyer account details not found",
+          });
+        }
+
+        await db
+          .update(buyerAccountDetails)
+          .set({
+            orderUpdates:
+              input.orderUpdates !== undefined ? input.orderUpdates : existing[0].orderUpdates,
+            promotionalEmails:
+              input.promotionalEmails !== undefined ? input.promotionalEmails : existing[0].promotionalEmails,
+            securityAlerts:
+              input.securityAlerts !== undefined ? input.securityAlerts : existing[0].securityAlerts,
+            updatedAt: new Date(),
+          })
+          .where(eq(buyerAccountDetails.buyerId, buyer.id));
+
+        return {
+          success: true,
+          message: "Notification preferences updated successfully",
+        };
+      } catch (err: any) {
+        console.error("Error updating notification preferences:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to update notification preferences",
+        });
+      }
+    }),
+
+  getNotificationPreferences: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/buyer/notification-preferences",
+        tags: ["Buyer - Preferences"],
+        summary: "Get notification preferences",
+        description: "Retrieve buyer notification preferences",
+      },
+    })
+    .output(
+      z.object({
+        orderUpdates: z.boolean(),
+        promotionalEmails: z.boolean(),
+        securityAlerts: z.boolean(),
+      })
+    )
+    .query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const buyer = await getBuyer(userId);
+
+        const result = await db
+          .select()
+          .from(buyerAccountDetails)
+          .where(eq(buyerAccountDetails.buyerId, buyer.id));
+
+        if (result.length === 0) {
+          return {
+            orderUpdates: true,
+            promotionalEmails: true,
+            securityAlerts: true,
+          };
+        }
+
+        return {
+          orderUpdates: result[0].orderUpdates,
+          promotionalEmails: result[0].promotionalEmails,
+          securityAlerts: result[0].securityAlerts,
+        };
+      } catch (err: any) {
+        console.error("Error fetching notification preferences:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to fetch notification preferences",
         });
       }
     }),

@@ -37,16 +37,21 @@ export const sellerQueryKeys = {
       endDate?.toISOString(),
     ] as const,
   dashboard: () => [...sellerQueryKeys.all, 'dashboard'] as const,
-  sales: () => [...sellerQueryKeys.all, 'sales'] as const,
+  sales: (status?: string) =>
+    status
+      ? ([...sellerQueryKeys.all, 'sales', status] as const)
+      : ([...sellerQueryKeys.all, 'sales'] as const),
+  sale: (saleId: string) =>
+    [...sellerQueryKeys.all, 'sales', 'byId', saleId] as const,
   salesByStatus: (status: string, limit?: number, offset?: number) =>
-    [...sellerQueryKeys.sales(), 'byStatus', status, limit, offset] as const,
+    [...sellerQueryKeys.sales(status), 'byStatus', status, limit, offset] as const,
   inventory: () => [...sellerQueryKeys.all, 'inventory'] as const,
   inventoryByListing: (listingId: string) =>
     [...sellerQueryKeys.inventory(), listingId] as const,
   payouts: () => [...sellerQueryKeys.all, 'payouts'] as const,
   payoutStats: () => [...sellerQueryKeys.payouts(), 'stats'] as const,
-  payoutHistory: (filters?: { month?: string; year?: number }) =>
-    [...sellerQueryKeys.payouts(), 'history', filters?.month, filters?.year] as const,
+  payoutHistory: (month?: string, year?: number) =>
+    [...sellerQueryKeys.payouts(), 'history', month, year] as const,
   payoutMethods: () => [...sellerQueryKeys.payouts(), 'methods'] as const,
   returns: () => [...sellerQueryKeys.all, 'returns'] as const,
   returnsByStatus: (status: string, limit?: number, offset?: number) =>
@@ -56,6 +61,9 @@ export const sellerQueryKeys = {
   shippingSettings: () => [...sellerQueryKeys.all, 'shippingSettings'] as const,
   profile: () => [...sellerQueryKeys.all, 'profile'] as const,
   support: () => [...sellerQueryKeys.all, 'support'] as const,
+  financialLedger: () => [...sellerQueryKeys.all, 'financialLedger'] as const,
+  ledgerEntry: (entryId: string) =>
+    [...sellerQueryKeys.financialLedger(), entryId] as const,
 };
 
 export const supportKeys = {

@@ -140,7 +140,7 @@ const FeaturedBrands = ({ searchQuery = '' }: FeaturedBrandsProps) => {
           </button>
           <Link
             href="/buyer/brands"
-            className="text-sm text-[#9872DD] hover:text-[#8451E1] transition-colors flex items-center gap-1 ml-2"
+            className="text-sm text-[#8451E1] hover:text-[#8451E1] transition-colors flex items-center gap-1 ml-2"
           >
             See all →
           </Link>

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { BarChart3, TrendingUp, Calendar, Download, Filter } from "lucide-react"
+import { useState, useMemo } from "react"
+import { BarChart3, TrendingUp, Calendar, Download, Filter, Loader } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -12,24 +12,39 @@ import {
 } from "@/components/ui/select"
 import { trpc } from "@/lib/trpc"
 import { formatCurrency } from "@/lib/utils"
+import { LoadingState } from "@/components/sellers/LoadingState"
+import { ErrorState } from "@/components/sellers/ErrorState"
 
 interface SalesMetrics {
   totalSales: number
   totalRevenue: number
   averageOrderValue: number
   conversionRate: number
+  revenueGrowth?: number
+  salesGrowth?: number
 }
 
-const generateMetrics = (orders: any[]): SalesMetrics => {
+/**
+ * Calculate metrics from actual sales data
+ * This replaces hardcoded percentages with real calculations
+ */
+const generateMetrics = (orders: any[], previousOrders: any[]): SalesMetrics => {
   const totalSales = orders.length
   const totalRevenue = orders.reduce((sum, order) => sum + (order.amountCents || 0), 0)
   const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0
+
+  // Calculate real growth metrics from previous period
+  const previousRevenue = previousOrders.reduce((sum, order) => sum + (order.amountCents || 0), 0)
+  const revenueGrowth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0
+  const salesGrowth = previousOrders.length > 0 ? ((totalSales - previousOrders.length) / previousOrders.length) * 100 : 0
 
   return {
     totalSales,
     totalRevenue,
     averageOrderValue,
-    conversionRate: 0, // Would need visitor data
+    conversionRate: 0,
+    revenueGrowth: parseFloat(revenueGrowth.toFixed(1)),
+    salesGrowth: parseFloat(salesGrowth.toFixed(1)),
   }
 }
 
@@ -37,12 +52,49 @@ export default function Reports() {
   const [timeRange, setTimeRange] = useState("all")
   const [orderStatus, setOrderStatus] = useState("all")
 
-  // Fetch all sales data
-  const { data: allSalesData = [], isLoading } = (trpc.sales as any).getAllSales.useQuery({ status: "all" })
-  const { data: listingsData = [] } = (trpc.listing as any).getMyListings.useQuery({})
+  // Fetch all sales data with real-time updates
+  const { data: allSalesData = [], isLoading, error } = (trpc.sales as any).getAllSales.useQuery(
+    { status: "all" },
+    {
+      staleTime: 1000 * 30, // 30 seconds
+      gcTime: 1000 * 60 * 5, // 5 minutes
+      refetchInterval: 1000 * 60, // 1 minute - reports don't need frequent updates
+      refetchOnWindowFocus: true,
+    }
+  )
 
-  // Calculate metrics
-  const metrics = generateMetrics(allSalesData)
+  // Fetch listings with cache
+  const { data: listingsData = [] } = (trpc.listing as any).getMyListings.useQuery({}, {
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  })
+
+  // Calculate metrics with real data from database
+  const metrics = useMemo(() => {
+    const now = new Date()
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+
+    const currentMonthOrders = allSalesData.filter((o: any) => new Date(o.createdAt) >= currentMonth)
+    const previousMonthOrders = allSalesData.filter(
+      (o: any) => new Date(o.createdAt) >= previousMonth && new Date(o.createdAt) < currentMonth
+    )
+
+    return generateMetrics(currentMonthOrders, previousMonthOrders)
+  }, [allSalesData])
+
+  if (isLoading) {
+    return <LoadingState message="Loading reports..." />
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        message="Failed to load reports. Please try again."
+        onRetry={() => window.location.reload()}
+      />
+    )
+  }
 
   // Filter orders by status
   const filteredOrders = orderStatus === "all" ? allSalesData : allSalesData.filter((o: any) => o.orderStatus === orderStatus)
@@ -51,7 +103,7 @@ export default function Reports() {
   const getRevenueByDate = () => {
     const grouped: { [key: string]: number } = {}
     filteredOrders.forEach((order: any) => {
-      const date = new Date(order.orderDate).toLocaleDateString()
+      const date = new Date(order.createdAt).toLocaleDateString()
       grouped[date] = (grouped[date] || 0) + (order.amountCents || 0)
     })
     return Object.entries(grouped).map(([date, amount]) => ({ date, amount }))
@@ -113,22 +165,26 @@ export default function Reports() {
         </Button>
       </div>
 
-      {/* Key Metrics */}
+      {/* Key Metrics - Real Data */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Total Sales</p>
           <p className="text-3xl font-bold">{metrics.totalSales}</p>
-          <p className="text-xs text-green-400 mt-2">+12% from last month</p>
+          <p className={`text-xs mt-2 ${metrics.salesGrowth && metrics.salesGrowth > 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {metrics.salesGrowth !== undefined ? `${metrics.salesGrowth > 0 ? '+' : ''}${metrics.salesGrowth}% from last month` : 'No previous data'}
+          </p>
         </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Total Revenue</p>
           <p className="text-3xl font-bold">{formatCurrency(metrics.totalRevenue, "NGN")}</p>
-          <p className="text-xs text-green-400 mt-2">+8% from last month</p>
+          <p className={`text-xs mt-2 ${metrics.revenueGrowth && metrics.revenueGrowth > 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {metrics.revenueGrowth !== undefined ? `${metrics.revenueGrowth > 0 ? '+' : ''}${metrics.revenueGrowth}% from last month` : 'No previous data'}
+          </p>
         </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Avg Order Value</p>
           <p className="text-3xl font-bold">{formatCurrency(metrics.averageOrderValue, "NGN")}</p>
-          <p className="text-xs text-yellow-400 mt-2">-2% from last month</p>
+          <p className="text-xs text-gray-400 mt-2">Based on real data</p>
         </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Active Products</p>
@@ -206,6 +262,7 @@ export default function Reports() {
             { status: "shipped", label: "Shipped", color: "bg-blue-900/20 text-blue-400" },
             { status: "delivered", label: "Delivered", color: "bg-purple-900/20 text-purple-400" },
             { status: "canceled", label: "Canceled", color: "bg-red-900/20 text-red-400" },
+            { status: "pending", label: "Pending", color: "bg-yellow-900/20 text-yellow-400" },
           ].map((item) => {
             const count = allSalesData.filter((o: any) => o.orderStatus === item.status).length
             return (
@@ -219,4 +276,4 @@ export default function Reports() {
       </div>
     </div>
   )
-}
+}

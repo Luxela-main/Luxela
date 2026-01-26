@@ -22,7 +22,7 @@ export default function RelatedProducts({ products, brandName }: RelatedProducts
         {brandName && (
           <Link 
             href={`/buyer/brand/${brandSlug}`}
-            className="flex items-center gap-2 text-[#9872DD] hover:text-[#8451E1] text-sm font-medium transition-colors group"
+            className="flex items-center gap-2 text-[#8451E1] hover:text-[#8451E1] text-sm font-medium transition-colors group"
           >
             See all
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

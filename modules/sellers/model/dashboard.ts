@@ -49,4 +49,5 @@ export interface DashboardData {
   revenueReport: RevenueReport[];
   visitorTraffic: VisitorTraffic[];
   topSellingProducts: TopSellingProduct[];
+  lastUpdated?: string;
 }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { trpc } from '@/lib/trpc';
+import { getTRPCClient } from '@/lib/trpc';
 import { sellerQueryKeys } from './queryKeys';
 import { useToast } from '@/components/hooks/useToast';
 
@@ -7,7 +7,8 @@ export const usePayoutMethods = () => {
   return useQuery({
     queryKey: sellerQueryKeys.payoutMethods(),
     queryFn: async () => {
-      const methods = await ((trpc.sales as any).getPayoutMethods as any).query();
+      const client = getTRPCClient();
+      const methods = await ((client.sales as any).getPayoutMethod as any).query();
       return methods;
     },
     staleTime: 1000 * 60 * 10,
@@ -25,7 +26,8 @@ export const useAddPayoutMethod = () => {
       accountDetails: Record<string, string>;
       isDefault: boolean;
     }) => {
-      return await (trpc.sales as any).addPayoutMethod.mutate(data);
+      const client = getTRPCClient();
+      return await ((client.sales as any).addPayoutMethod as any).mutate(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -49,7 +51,8 @@ export const useUpdatePayoutMethod = () => {
       accountDetails?: Record<string, string>;
       isDefault?: boolean;
     }) => {
-      return await (trpc.sales as any).updatePayoutMethod.mutate(data);
+      const client = getTRPCClient();
+      return await ((client.sales as any).updatePayoutMethod as any).mutate(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -69,7 +72,8 @@ export const useDeletePayoutMethod = () => {
 
   return useMutation({
     mutationFn: async (methodId: string) => {
-      return await (trpc.sales as any).deletePayoutMethod.mutate({ methodId });
+      const client = getTRPCClient();
+      return await ((client.sales as any).deletePayoutMethod as any).mutate({ methodId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

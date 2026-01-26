@@ -147,7 +147,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
             {!brandSlug && (
               <a
                 href="#"
-                className="text-[#9872DD] hover:text-[#8451E1] text-sm transition-colors"
+                className="text-[#8451E1] hover:text-[#8451E1] text-sm transition-colors"
               >
                 See All
               </a>
@@ -158,7 +158,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
           <div className="mt-6 md:mt-0 relative">
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="flex items-center gap-2 bg-[#161616] text-white text-sm px-4 py-2 rounded-lg border border-gray-700 hover:border-[#9872DD] transition-colors"
+              className="flex items-center gap-2 bg-[#161616] text-white text-sm px-4 py-2 rounded-lg border border-gray-700 hover:border-[#8451E1] transition-colors"
             >
               <span>{sortBy}</span>
               <svg
@@ -177,7 +177,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
                   <button
                     key={option}
                     onClick={() => handleSort(option)}
-                    className={`w-full text-left px-4 py-3 text-sm hover:bg-[#222] transition-colors first:rounded-t-lg last:rounded-b-lg ${sortBy === option ? 'text-[#9872DD] bg-[#9872DD]/10' : 'text-white'
+                    className={`w-full text-left px-4 py-3 text-sm hover:bg-[#222] transition-colors first:rounded-t-lg last:rounded-b-lg ${sortBy === option ? 'text-[#8451E1] bg-[#8451E1]/10' : 'text-white'
                       }`}
                   >
                     {option}
@@ -200,7 +200,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
             >
               {/* Product Card */}
                             <Link key={product.id} href={`/buyer/product/${product.id}`}>
-                             <div className="bg-[#161616] rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.01] border border-gray-800 hover:border-[#9872DD]/30">
+                             <div className="bg-[#161616] rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.01] border border-gray-800 hover:border-[#8451E1]/30">
                 {/* Image Container */}
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <img
@@ -258,7 +258,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
                     </div>
 
                     {/* Add to Cart Button */}
-                    <button className="cursor-pointer bg-gradient-to-b text-sm from-[#9872DD] via-[#8451E1] to-[#5C2EAF]  hover:bg-[#8451E1] text-white px-4 py-2 rounded-lg transition-colors duration-200 group/cart">
+                    <button className="cursor-pointer bg-gradient-to-b text-sm from-[#8451E1] via-[#8451E1] to-[#5C2EAF]  hover:bg-[#8451E1] text-white px-4 py-2 rounded-lg transition-colors duration-200 group/cart">
                       <ShoppingCart size={16} className="inline-block " />
                     </button>
                   </div>
@@ -276,7 +276,7 @@ const ExploreAllProducts = ({ brandSlug }: ExploreAllProductsProps) => {
           <div className="flex justify-center mt-12">
             <button
               onClick={handleLoadMore}
-              className="bg-gradient-to-b text-sm from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white px-8 py-3 rounded-lg font-medium hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer"
+              className="bg-gradient-to-b text-sm from-[#8451E1] via-[#8451E1] to-[#5C2EAF] text-white px-8 py-3 rounded-lg font-medium hover:from-[#8451E1] hover:via-[#7240D0] hover:to-[#4A1E8F] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer"
             >
               Load More Products
             </button>

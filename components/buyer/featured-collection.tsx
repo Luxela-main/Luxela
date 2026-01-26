@@ -135,7 +135,7 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
             disabled={!canScrollLeft}
             className={`p-2 rounded-full transition-all ${
               canScrollLeft
-                ? "bg-[#9872DD] text-white hover:bg-[#8451E1]"
+                ? "bg-[#8451E1] text-white hover:bg-[#8451E1]"
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
@@ -148,7 +148,7 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
             disabled={!canScrollRight}
             className={`p-2 rounded-full transition-all ${
               canScrollRight
-                ? "bg-[#9872DD] text-white hover:bg-[#8451E1]"
+                ? "bg-[#8451E1] text-white hover:bg-[#8451E1]"
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
@@ -158,7 +158,7 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
           </button>
           <Link
             href="/buyer/collections"
-            className="text-sm text-[#9872DD] hover:text-[#8451E1] transition-colors flex items-center gap-1 ml-2"
+            className="text-sm text-[#8451E1] hover:text-[#8451E1] transition-colors flex items-center gap-1 ml-2"
           >
             See all →
           </Link>

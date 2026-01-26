@@ -3,17 +3,31 @@
   "dialect": "postgresql",
   "entries": [
     {
-      "idx": 0,
-      "version": "7",
-      "when": 1769009685049,
-      "tag": "0000_rapid_scorpion",
-      "breakpoints": true
-    },
-    {
       "idx": 1,
       "version": "7",
       "when": 1769099684467,
       "tag": "0001_curvy_zeigeist",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769364567667,
+      "tag": "0002_rich_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769378078865,
+      "tag": "0003_polite_nighthawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769417988556,
+      "tag": "0004_lovely_penance",
       "breakpoints": true
     }
   ]

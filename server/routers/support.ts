@@ -43,22 +43,6 @@ const TicketReplyOutput = z.object({
   createdAt: z.date(),
 });
 
-async function ensureSeller(userId: string) {
-  const seller = await db
-    .select()
-    .from(sellers)
-    .where(eq(sellers.userId, userId));
-
-  if (!seller[0]) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'You are not registered as a seller',
-    });
-  }
-
-  return seller[0];
-}
-
 export const supportRouter = createTRPCRouter({
   createTicket: protectedProcedure
     .meta({
@@ -86,8 +70,6 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const seller = await ensureSeller(userId);
-
       const ticketId = uuidv4();
       const now = new Date();
 
@@ -96,7 +78,7 @@ export const supportRouter = createTRPCRouter({
         .values({
           id: ticketId,
           buyerId: userId,
-          sellerId: seller.id,
+          sellerId: null,
           subject: input.subject,
           description: input.description,
           category: input.category,
@@ -131,7 +113,7 @@ export const supportRouter = createTRPCRouter({
         method: 'GET',
         path: '/support/tickets',
         tags: ['Support'],
-        summary: 'Get all support tickets for the current seller',
+        summary: 'Get all support tickets for the current user (buyer or seller)',
       },
     })
     .input(z.object({ status: TicketStatusEnum.optional() }))
@@ -144,9 +126,19 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const seller = await ensureSeller(userId);
+      // Check if user is a seller
+      const sellerResult = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.userId, userId));
+      
+      const seller = sellerResult[0];
 
-      const conditions: any[] = [eq(supportTickets.sellerId, seller.id)];
+      // Build conditions based on whether user is a seller or buyer
+      const conditions: any[] = seller
+        ? [eq(supportTickets.sellerId, seller.id)]
+        : [eq(supportTickets.buyerId, userId)];
+      
       if (input.status) {
         conditions.push(eq(supportTickets.status, input.status));
       }
@@ -190,17 +182,29 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const seller = await ensureSeller(userId);
+      // Check if user is a seller
+      const sellerResult = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.userId, userId));
+      
+      const seller = sellerResult[0];
+
+      // Build query conditions based on whether user is a seller or buyer
+      const conditions = seller
+        ? and(
+            eq(supportTickets.id, input.ticketId),
+            eq(supportTickets.sellerId, seller.id)
+          )
+        : and(
+            eq(supportTickets.id, input.ticketId),
+            eq(supportTickets.buyerId, userId)
+          );
 
       const ticket = await db
         .select()
         .from(supportTickets)
-        .where(
-          and(
-            eq(supportTickets.id, input.ticketId),
-            eq(supportTickets.sellerId, seller.id)
-          )
-        );
+        .where(conditions);
 
       if (!ticket[0]) {
         throw new TRPCError({
@@ -253,7 +257,20 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const seller = await ensureSeller(userId);
+      // Check if user is a seller
+      const sellerResult = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.userId, userId));
+      
+      const seller = sellerResult[0];
+
+      if (!seller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You are not registered as a seller',
+        });
+      }
 
       const [existing] = await db
         .select()
@@ -326,7 +343,19 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const seller = await ensureSeller(userId);
+      const sellerResult = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.userId, userId));
+      
+      const seller = sellerResult[0];
+
+      if (!seller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You are not registered as a seller',
+        });
+      }
 
       const [existing] = await db
         .select()
@@ -369,7 +398,19 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const seller = await ensureSeller(userId);
+      const sellerResult = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.userId, userId));
+      
+      const seller = sellerResult[0];
+
+      if (!seller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You are not registered as a seller',
+        });
+      }
 
       const ticket = await db
         .select()
@@ -600,7 +641,19 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const seller = await ensureSeller(userId);
+      const sellerResult = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.userId, userId));
+      
+      const seller = sellerResult[0];
+
+      if (!seller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You are not registered as a seller',
+        });
+      }
 
       const allTickets = await db
         .select()

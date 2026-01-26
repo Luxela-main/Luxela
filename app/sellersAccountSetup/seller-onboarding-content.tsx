@@ -108,33 +108,18 @@ const SellerOnboardingContentInner = () => {
         estimatedShippingTime: data.estimatedShippingTime as
           | "same_day"
           | "next_day"
-          | "48hrs"
-          | "72hrs"
-          | "5_working_days"
           | "1_2_weeks"
           | "2_3_weeks"
           | "custom",
-        refundPolicy: data.refundPolicy as
-          | "no_refunds"
-          | "accept_refunds"
-          | "14days"
-          | "30days"
-          | "60days"
-          | "store_credit",
+        refundPolicy: data.refundPolicy as "no_refunds" | "14days" | "30days" | "60days" | "store_credit",
         refundPeriod: data.periodUntilRefund as
-          | "same_day"
-          | "next_day"
           | "48hrs"
           | "72hrs"
           | "5_working_days"
-          | "1_2_weeks"
-          | "2_3_weeks"
           | "1week"
           | "14days"
           | "30days"
-          | "60days"
-          | "store_credit"
-          | "custom",
+          | "60days",
       });
 
       await updatePaymentMutation.mutateAsync({

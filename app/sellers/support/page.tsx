@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Headphones, ChevronDown, AlertCircle, CheckCircle, Clock } from "lucide-react"
+import Link from "next/link"
+import { Headphones, ChevronDown, MessageCircle, FileText, Search, Send, Ticket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -22,6 +23,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 
+interface FAQ {
+  id: number
+  question: string
+  answer: string
+}
+
 const CATEGORIES = [
   { value: "general_inquiry", label: "General Inquiry" },
   { value: "technical_issue", label: "Technical Issue" },
@@ -38,6 +45,59 @@ const PRIORITIES = [
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
   { value: "urgent", label: "Urgent" },
+]
+
+const SELLER_FAQS: FAQ[] = [
+  {
+    id: 1,
+    question: "How do I list a new product on Luxela?",
+    answer: "Click on 'New Listing' in the sidebar menu. Fill in the product details including title, description, images, price, and inventory. Add at least 3-5 high-quality images. Our guidelines recommend clear product photos with multiple angles and lifestyle shots. Once approved by our review team, your listing will go live."
+  },
+  {
+    id: 2,
+    question: "What are the commission rates?",
+    answer: "Commission rates vary by category but typically range from 8-15% of the sale price. Service fees of 2.9% + fixed amount apply to each transaction. You can view category-specific rates in your account settings. Premium sellers may qualify for reduced commissions."
+  },
+  {
+    id: 3,
+    question: "When and how do I get paid?",
+    answer: "Payments are processed every 7 days to your registered bank account or payment method. Funds are released after the order is delivered and the customer confirms receipt. You can track your earnings in the Payouts section."
+  },
+  {
+    id: 4,
+    question: "How do I handle returns and refunds?",
+    answer: "When a customer initiates a return, you'll receive a notification. Inspect the returned item and approve or reject the refund within 48 hours. Approved refunds are processed within 3-5 business days. Items in original condition with tags are eligible for full refunds."
+  },
+  {
+    id: 5,
+    question: "What happens if a customer disputes an order?",
+    answer: "We'll notify you immediately of any disputes. You have 48 hours to respond with evidence (tracking info, photos, etc.). Our support team will review both sides and make a fair decision. Most disputes are resolved within 5 business days."
+  },
+  {
+    id: 6,
+    question: "How can I improve my seller rating?",
+    answer: "Maintain a 4.5+ star rating by: providing accurate product descriptions, using high-quality images, shipping promptly, packaging well, and communicating clearly with customers. Respond to messages within 24 hours and resolve issues quickly to build trust."
+  },
+  {
+    id: 7,
+    question: "Can I edit a listing that's already live?",
+    answer: "Yes, you can edit product details, prices, and inventory at any time. However, once an order is placed, you cannot change the product specifications for that order. Major changes like category may require re-approval by our review team."
+  },
+  {
+    id: 8,
+    question: "What are the best practices for product descriptions?",
+    answer: "Write clear, detailed descriptions including dimensions, materials, care instructions, and unique features. Use simple language and highlight key benefits. Include shipping and handling information. Good descriptions reduce returns and inquiries from customers."
+  },
+  {
+    id: 9,
+    question: "How do I monitor my sales performance?",
+    answer: "Use the Sales and Reports section in your dashboard. Track metrics like total revenue, number of orders, conversion rates, and customer reviews. Export reports for detailed analysis. Our analytics help you identify trends and optimize your listings."
+  },
+  {
+    id: 10,
+    question: "What should I do if my account is suspended?",
+    answer: "Review the suspension notice for the specific reason. Common reasons include policy violations, low ratings, or suspicious activity. Contact our support team immediately with evidence of your compliance. You can appeal within 30 days of suspension."
+  }
 ]
 
 const STATUS_COLORS = {
@@ -58,6 +118,9 @@ export default function Support() {
   const [showForm, setShowForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
+  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [submitEmail, setSubmitEmail] = useState("")
   const [formData, setFormData] = useState({
     subject: "",
     description: "",
@@ -118,36 +181,114 @@ export default function Support() {
     setSelectedTicket({ ...selectedTicket, status: newStatus })
   }
 
+  const handleContactSupport = () => {
+    if (!submitEmail || !submitEmail.includes('@')) {
+      toastSvc.error("Please enter a valid email address")
+      return
+    }
+    toastSvc.success("Your message has been sent. We'll get back to you within 24 hours.")
+    setSubmitEmail("")
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "resolved":
-        return <CheckCircle className="h-4 w-4" />
+        return "✓"
       case "open":
-        return <AlertCircle className="h-4 w-4" />
+        return "!"
       case "in_progress":
-        return <Clock className="h-4 w-4" />
+        return "..."
       default:
         return null
     }
   }
 
+  const filteredFAQs = SELLER_FAQS.filter(faq =>
+    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <div className="pt-16 lg:pt-0 p-6">
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold">Support Tickets</h1>
-          <p className="text-gray-400 mt-1">
-            Create and manage your support tickets
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Seller Support Center</h1>
+          <p className="text-gray-400">Get help with selling, shipping, and account management</p>
         </div>
-        <Button
-          className="bg-purple-600 hover:bg-purple-700"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? "Cancel" : "New Ticket"}
-        </Button>
       </div>
 
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
+          <MessageCircle className="w-6 h-6 text-purple-500 mb-2 group-hover:scale-110 transition-transform" />
+          <p className="text-white font-semibold">Live Chat</p>
+          <p className="text-gray-400 text-sm">Chat with our support team</p>
+        </button>
+        <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
+          <FileText className="w-6 h-6 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
+          <p className="text-white font-semibold">Seller Guide</p>
+          <p className="text-gray-400 text-sm">Browse our documentation</p>
+        </button>
+        <Link href="/sellers/support-tickets">
+          <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full">
+            <Ticket className="w-6 h-6 text-green-500 mb-2 group-hover:scale-110 transition-transform" />
+            <p className="text-white font-semibold">Support Tickets</p>
+            <p className="text-gray-400 text-sm">View & create tickets</p>
+          </button>
+        </Link>
+        <button 
+          onClick={() => setShowForm(!showForm)}
+          className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
+          <Headphones className="w-6 h-6 text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
+          <p className="text-white font-semibold">Quick Support</p>
+          <p className="text-gray-400 text-sm">Submit quick ticket</p>
+        </button>
+      </div>
+
+      {/* Search FAQs */}
+      <div className="mb-8">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search FAQs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-[#1a1a1a] border border-[#333333] rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+      </div>
+
+      {/* FAQs */}
+      <div className="space-y-4 mb-12">
+        <h2 className="text-xl font-semibold text-white mb-4">Frequently Asked Questions</h2>
+        {filteredFAQs.map((faq) => (
+          <div
+            key={faq.id}
+            className="bg-[#1a1a1a] border border-[#333333] rounded-lg overflow-hidden hover:border-[#444444] transition-colors"
+          >
+            <button
+              onClick={() => setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-[#252525] transition-colors cursor-pointer"
+            >
+              <span className="text-white font-medium">{faq.question}</span>
+              <ChevronDown
+                className={`w-5 h-5 text-gray-400 transition-transform ${
+                  expandedFAQ === faq.id ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            {expandedFAQ === faq.id && (
+              <div className="px-4 pb-4 pt-0 border-t border-[#333333] bg-[#0f0f0f]">
+                <p className="text-gray-400">{faq.answer}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* New Ticket Form */}
       {showForm && (
         <div className="bg-[#1a1a1a] rounded-lg p-6 mb-6 border border-[#333]">
           <h2 className="text-lg font-semibold mb-4">Create Support Ticket</h2>
@@ -220,7 +361,7 @@ export default function Support() {
 
       {/* Tickets List */}
       <div className="space-y-4 mb-8">
-        <h2 className="text-lg font-semibold">Your Tickets</h2>
+        <h2 className="text-lg font-semibold">Your Support Tickets</h2>
         {isLoading ? (
           <div className="bg-[#1a1a1a] rounded-lg p-8 text-center text-gray-400">
             Loading tickets...
@@ -266,6 +407,28 @@ export default function Support() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Contact Support Section */}
+      <div className="mt-12 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-lg p-6">
+        <h3 className="text-xl font-semibold text-white mb-2 text-center">Need immediate assistance?</h3>
+        <p className="text-gray-400 mb-6 text-center">Our dedicated seller support team is ready to help</p>
+        <div className="flex flex-col sm:flex-row gap-3 items-center">
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={submitEmail}
+            onChange={(e) => setSubmitEmail(e.target.value)}
+            className="flex-1 bg-[#1a1a1a] border border-[#333333] rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+          />
+          <button
+            onClick={handleContactSupport}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap"
+          >
+            <Send className="w-4 h-4" />
+            Send Message
+          </button>
+        </div>
       </div>
 
       {/* Ticket Detail Dialog */}
@@ -327,142 +490,6 @@ export default function Support() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* FAQ Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-        <div className="bg-[#1a1a1a] rounded-lg p-6">
-          <h3 className="text-lg font-medium mb-4">
-            Frequently Asked Questions
-          </h3>
-          <div className="space-y-4">
-            <div className="border-b border-[#333] pb-4">
-              <h4 className="font-medium mb-2">
-                How do I add a new product?
-              </h4>
-              <p className="text-gray-400 text-sm">
-                You can add a new product by clicking on the "New Listing"
-                option in the sidebar menu, or by clicking the "Add Product"
-                button on the My Listings page.
-              </p>
-            </div>
-            <div className="border-b border-[#333] pb-4">
-              <h4 className="font-medium mb-2">How do I process an order?</h4>
-              <p className="text-gray-400 text-sm">
-                Orders can be processed from the Sales page. Click on the
-                order you want to process, then update the status as needed.
-              </p>
-            </div>
-            <div className="border-b border-[#333] pb-4">
-              <h4 className="font-medium mb-2">
-                When will I receive payment for my sales?
-              </h4>
-              <p className="text-gray-400 text-sm">
-                Payments are processed within 3-5 business days after an order
-                is marked as delivered and the customer has confirmed receipt.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">
-                How do I update my store information?
-              </h4>
-              <p className="text-gray-400 text-sm">
-                You can update your store information from the Settings page.
-                Click on the Settings option in the sidebar menu to access
-                your store settings.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#1a1a1a] rounded-lg p-6">
-          <h3 className="text-lg font-medium mb-4">Contact Information</h3>
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-[#222] rounded-full flex items-center justify-center mr-3">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-purple-600">
-                  <path
-                    d="M22 12C22 10.6868 21.7413 9.38647 21.2388 8.1731C20.7362 6.95996 19.9997 5.85742 19.0711 4.92896C18.1425 4.00024 17.0401 3.26367 15.8268 2.76123C14.6136 2.25854 13.3132 2 12 2C10.6868 2 9.38647 2.25854 8.1731 2.76123C6.95996 3.26367 5.85742 4.00024 4.92896 4.92896C3.26267 6.59552 2.25 8.88 2.25 11.25C2.25 13.62 2.94 15.33 4.13 16.5L7.5 19.5C8.75 20.5 9.5 21.5 9.5 23H14.5C14.5 21.5 15.25 20.5 16.5 19.5L19.87 16.5C21.06 15.33 21.75 13.62 21.75 11.25"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 11.5C12.8284 11.5 13.5 10.8284 13.5 10C13.5 9.17157 12.8284 8.5 12 8.5C11.1716 8.5 10.5 9.17157 10.5 10C10.5 10.8284 11.1716 11.5 12 11.5Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 11.5V14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <span className="text-gray-400">support@luxela.com</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-[#222] rounded-full flex items-center justify-center mr-3">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-purple-600">
-                  <path
-                    d="M22 16.92V19.92C22 20.4704 21.7893 20.9996 21.4142 21.3747C21.0391 21.7498 20.5099 21.9605 19.96 21.96C18.4 22.05 16.88 21.73 15.5 21.05C14.22 20.4194 13.0501 19.5535 12.06 18.5C11.0022 17.5172 10.1363 16.3473 9.50003 15.07C8.82003 13.68 8.50003 12.16 8.59003 10.6C8.58866 10.0505 8.79799 9.5213 9.17289 9.1462C9.5478 8.77111 10.0771 8.56016 10.63 8.56H13.63C14.0896 8.55581 14.5341 8.72156 14.8849 9.02824C15.2357 9.33491 15.4712 9.76275 15.55 10.22C15.6705 11.0559 15.8584 11.8762 16.11 12.67C16.2386 13.0429 16.2617 13.4444 16.1768 13.8311C16.0919 14.2178 15.9018 14.5731 15.63 14.85L14.63 15.85C15.1997 16.9387 15.9691 17.9122 16.9 18.72C17.7078 19.6509 18.6813 20.4203 19.77 20.99L20.77 19.99C21.0469 19.7182 21.4022 19.5281 21.7889 19.4432C22.1756 19.3583 22.5771 19.3814 22.95 19.51C23.7438 19.7616 24.5641 19.9495 25.4 20.07C25.8616 20.1494 26.2928 20.3879 26.6004 20.743C26.908 21.0981 27.0721 21.5474 27.06 22.01L22 16.92Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <span className="text-gray-400">+234 800 123 4567</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-[#222] rounded-full flex items-center justify-center mr-3">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-purple-600">
-                  <path
-                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 6V12L16 14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <span className="text-gray-400">
-                Support hours: 9am - 5pm (Mon-Fri)
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

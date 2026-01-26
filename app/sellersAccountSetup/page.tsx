@@ -72,6 +72,7 @@ const SellerOnboarding = () => {
 
   const handleFinalSubmit = async (data: SellerSetupFormData) => {
     try {
+      // Ensure seller profile exists (creates if doesn't exist, succeeds if exists)
       await createSellerMutation.mutateAsync();
 
       await updateBusinessMutation.mutateAsync({
@@ -80,10 +81,15 @@ const SellerOnboarding = () => {
         businessAddress: data.businessAddress,
         officialEmail: data.officialEmail,
         phoneNumber: data.phoneNumber,
+        countryCode: data.countryCode,
         country: data.country,
-        socialMedia: data.socialMedia,
+        socialMedia: data.socialMediaLinks
+          ? JSON.stringify(data.socialMediaLinks)
+          : undefined,
         fullName: data.fullName,
         idType: data.idType as "passport" | "drivers_license" | "voters_card" | "national_id",
+        idNumber: data.idNumber,
+        idVerified: data.idVerified,
         bio: data.bio,
         storeDescription: data.storeDescription,
         storeLogo: data.storeLogo,
@@ -97,7 +103,7 @@ const SellerOnboarding = () => {
         returnAddress: data.returnAddress,
         shippingType: "domestic",
         estimatedShippingTime: data.estimatedShippingTime as "48hrs" | "72hrs" | "5_working_days" | "1week",
-        refundPolicy: data.refundPolicy as "no_refunds" | "accept_refunds",
+        refundPolicy: (data.refundPolicy || data.periodUntilRefund || "no_refunds") as "no_refunds" | "48hrs" | "72hrs" | "5_working_days" | "1week" | "14days" | "30days" | "60days" | "store_credit",
         refundPeriod: data.periodUntilRefund as "48hrs" | "72hrs" | "5_working_days" | "1week",
       });
 
@@ -127,11 +133,12 @@ const SellerOnboarding = () => {
         localPricing: data.localPricing as "fiat" | "cryptocurrency",
       });
 
-      toastSvc.success("Seller account created successfully!");
+      toastSvc.success("Seller account setup completed successfully!");
       setTimeout(() => router.push("/sellers/dashboard"), 1500);
     } catch (error: any) {
-      console.error("Error creating seller account:", error);
-      toastSvc.error(error.message || "Failed to create seller account");
+      console.error("Error during seller account setup:", error);
+      const errorMsg = error?.message || error?.data?.message || "Failed to complete seller account setup";
+      toastSvc.error(errorMsg);
     }
   };
 

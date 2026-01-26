@@ -159,7 +159,7 @@ const FeaturedCollection = () => {
               disabled={!canScrollLeft}
               className={`p-2 rounded-full transition-all ${
                 canScrollLeft
-                  ? "bg-[#9872DD] text-white hover:bg-[#8451E1] shadow-lg"
+                  ? "bg-[#8451E1] text-white hover:bg-[#8451E1] shadow-lg"
                   : "bg-gray-800 text-gray-500 cursor-not-allowed"
               }`}
             >
@@ -182,7 +182,7 @@ const FeaturedCollection = () => {
               disabled={!canScrollRight}
               className={`p-2 rounded-full transition-all ${
                 canScrollRight
-                  ? "bg-[#9872DD] text-white hover:bg-[#8451E1] shadow-lg"
+                  ? "bg-[#8451E1] text-white hover:bg-[#8451E1] shadow-lg"
                   : "bg-gray-800 text-gray-500 cursor-not-allowed"
               }`}
             >

@@ -17,9 +17,22 @@ function AuthCallbackHandler() {
   const toast = useToast();
 
   const checkProfile = async (role: "buyer" | "seller") => {
-    const res = await fetch(`/api/profile/check?role=${role}`);
-    const data = await res.json();
-    return data?.exists === true;
+    try {
+      const res = await fetch(`/api/profile/check`);
+      if (!res.ok) {
+        console.error("Profile check failed:", res.status);
+        return { exists: false, profileComplete: false };
+      }
+      const data = await res.json();
+      return {
+        exists: data?.exists === true,
+        profileComplete: data?.profileComplete === true,
+        role: data?.role,
+      };
+    } catch (err) {
+      console.error("Profile check error:", err);
+      return { exists: false, profileComplete: false };
+    }
   };
 
   const redirectUser = async (user: any) => {
@@ -30,25 +43,37 @@ function AuthCallbackHandler() {
       return;
     }
 
-    const exists = await checkProfile(role);
+    const profileData = await checkProfile(role);
 
     // If buyer
     if (role === "buyer") {
-      if (exists) {
-        window.location.href = "/buyer/profile";
+      if (!profileData.exists) {
+        window.location.href = "/buyer/profile/create";
         return;
       }
-      window.location.href = "/buyer/profile/create";
+
+      if (!profileData.profileComplete) {
+        window.location.href = "/buyer/profile/create";
+        return;
+      }
+
+      window.location.href = "/buyer/dashboard";
       return;
     }
 
     // If seller
     if (role === "seller") {
-      if (exists) {
-        window.location.href = "/sellers/dashboard";
+      if (!profileData.exists) {
+        window.location.href = "/sellersAccountSetup";
         return;
       }
-      window.location.href = "/sellersAccountSetup";
+
+      if (!profileData.profileComplete) {
+        window.location.href = "/sellersAccountSetup";
+        return;
+      }
+
+      window.location.href = "/sellers/dashboard";
       return;
     }
 

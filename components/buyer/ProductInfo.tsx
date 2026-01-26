@@ -150,7 +150,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
             href={`/buyer/brand/${business?.brand_name
               ?.toLowerCase()
               .replace(/\s+/g, "-")}`}
-            className="text-[#9872DD] hover:text-[#8451E1] text-sm transition-colors"
+            className="text-[#8451E1] hover:text-[#8451E1] text-sm transition-colors"
           >
             {business?.brand_name}
           </Link>
@@ -168,7 +168,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
 
         <div className="flex gap-3">
           {product.limited_edition_badge === "show_badge" && (
-            <span className="px-3 py-1.5 bg-[#8451E1CC]/20 text-[#9872DD] text-xs font-medium rounded-full">
+            <span className="px-3 py-1.5 bg-[#8451E1CC]/20 text-[#8451E1] text-xs font-medium rounded-full">
               Limited Edition
             </span>
           )}
@@ -204,7 +204,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
                     onClick={() => setSelectedColor(index)}
                     className={`relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${
                       selectedColor === index
-                        ? "border-[#9872DD] scale-110"
+                        ? "border-[#8451E1] scale-110"
                         : "border-gray-800 hover:border-gray-600"
                     }`}
                     title={color.colorName}
@@ -278,7 +278,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
         ${
           quantity >= product.quantity_available
             ? "bg-zinc-800 opacity-50 cursor-not-allowed"
-            : "bg-[linear-gradient(180deg,#9872DD_0%,#8451E1_44.78%,#5C2EAF_90.62%)] hover:brightness-110 active:scale-95 shadow-[0_0_20px_rgba(132,81,225,0.4)]"
+            : "bg-[linear-gradient(180deg,#8451E1_0%,#8451E1_44.78%,#5C2EAF_90.62%)] hover:brightness-110 active:scale-95 shadow-[0_0_20px_rgba(132,81,225,0.4)]"
         }
       `}
             >

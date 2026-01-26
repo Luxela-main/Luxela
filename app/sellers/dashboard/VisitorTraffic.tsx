@@ -8,7 +8,7 @@ import { useState } from "react";
 export function VisitorTraffic() {
   const [visitorTimeframe, setVisitorTimeframe] = useState("Month");
   const { data: dashboardData } = useDashboardData();
-  const displayData = dashboardData || defaultDashboardData;
+  const displayData = (dashboardData || defaultDashboardData) as typeof defaultDashboardData;
   const { visitorTraffic } = displayData;
 
   const colors = ["bg-blue-500", "bg-[#B8A179]", "bg-gray-400", "bg-pink-200"];

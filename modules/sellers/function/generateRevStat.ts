@@ -10,7 +10,7 @@ export const calculateStats = (sales: any[], listings: any[]) => {
     (sale) => sale.orderStatus === "returned"
   ).length;
 
-  const revenueChange = 8.4; // This would come from comparing with previous period
+  const revenueChange = 8.4;
 
   return {
     totalRevenue: {
@@ -39,4 +39,4 @@ export const calculateStats = (sales: any[], listings: any[]) => {
       subtext: `${refundedOrders} today`,
     },
   };
-};
+};

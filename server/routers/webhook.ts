@@ -6,6 +6,12 @@ import { payments, orders, webhookEvents, notifications } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { createPaymentHold } from '../services/escrowService';
+import {
+  handlePaymentSuccess,
+  handlePaymentFailure,
+  handleOrderShipped,
+  handleOrderDelivered,
+} from '../services/paymentFlowService';
 
 /**
  * Unified Webhook Router
@@ -148,48 +154,49 @@ export const webhookRouter = createTRPCRouter({
         // Handle payment success
         if (newStatus === 'completed' && payment.orderId) {
           try {
-            // Get order details
-            const existingOrders = await db
-              .select()
-              .from(orders)
-              .where(eq(orders.id, payment.orderId));
-
-            if (existingOrders.length > 0) {
-              const order = existingOrders[0];
-
-              // Create payment hold (escrow)
-              await createPaymentHold(
-                payment.id,
-                order.id,
-                order.sellerId,
-                order.amountCents,
-                order.currency,
-                30 // 30-day hold period
-              );
-
-              console.log(
-                `Webhook: Created payment hold for order ${order.id}`
-              );
-
-              // TODO: Send notification to buyer
-              // TODO: Send notification to seller - order ready for fulfillment
-            }
+            await handlePaymentSuccess({
+              id: payment.transactionRef,
+              reference: payment.transactionRef,
+              amount: payment.amountCents / 100,
+              currency: payment.currency || 'NGN',
+              status: 'success',
+            });
+            console.log(
+              `Webhook: Payment flow processed for order ${payment.orderId}`
+            );
           } catch (err: any) {
             console.error(
-              `Webhook: Failed to create payment hold for order ${payment.orderId}:`,
+              `Webhook: Failed to process payment flow for order ${payment.orderId}:`,
               err
             );
           }
         }
 
         // Handle payment failure
-        if (newStatus === 'failed' || newStatus === 'refunded') {
+        if (newStatus === 'failed') {
           try {
-            console.log(`Webhook: Payment ${payment.id} failed/refunded`);
-            // TODO: Update order status to cancelled
-            // TODO: Send notification to buyer about payment failure
+            await handlePaymentFailure({
+              id: payment.transactionRef,
+              reference: payment.transactionRef,
+              status: 'failed',
+            });
+            console.log(`Webhook: Payment ${payment.id} failed`);
           } catch (err: any) {
             console.error(`Webhook: Failed to handle payment failure:`, err);
+          }
+        }
+        
+        // Handle payment refund
+        if (newStatus === 'refunded' && payment.orderId) {
+          try {
+            await handlePaymentFailure({
+              id: payment.transactionRef,
+              reference: payment.transactionRef,
+              status: 'refunded',
+            });
+            console.log(`Webhook: Payment ${payment.id} refunded`);
+          } catch (err: any) {
+            console.error(`Webhook: Failed to handle payment refund:`, err);
           }
         }
 

@@ -17,11 +17,24 @@ export default function PayoutsPage() {
   const [search, setSearch] = useState("");
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   
-  const { data: payoutStats, isLoading: statsLoading, error: statsError } = usePayoutStats();
-  const { data: payoutHistory, isLoading: historyLoading, error: historyError } = usePayoutHistory();
+  const { data: payoutStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = usePayoutStats();
+  const { data: payoutHistory, isLoading: historyLoading, error: historyError, refetch: refetchHistory } = usePayoutHistory();
   
   const isLoading = statsLoading || historyLoading;
   const error = (statsError as any)?.message || (historyError as any)?.message;
+
+  const handleRetry = () => {
+    refetchStats?.();
+    refetchHistory?.();
+    window.location.reload();
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+    }).format(amount);
+  };
 
   if (isLoading) {
     return <LoadingState message="Loading payout data..." />;
@@ -30,18 +43,11 @@ export default function PayoutsPage() {
   if (error) {
     return (
       <ErrorState
-        message={error}
-        onRetry={() => window.location.reload()}
+        message={error || 'Failed to load payout data'}
+        onRetry={handleRetry}
       />
     );
   }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(amount);
-  };
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "📊" },
@@ -78,7 +84,7 @@ export default function PayoutsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm font-medium">Available Balance</p>
-              <p className="text-2xl font-bold text-white mt-2">{formatCurrency(payoutStats?.availableBalance || 0)}</p>
+              <p className="text-2xl font-bold text-white mt-2">₦{((payoutStats as any)?.availableBalance || 0).toLocaleString()}</p>
             </div>
             <div className="bg-purple-600/20 p-3 rounded-lg">
               <DollarSign className="text-purple-400" size={24} />
@@ -90,7 +96,7 @@ export default function PayoutsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm font-medium">Total Paid Out</p>
-              <p className="text-2xl font-bold text-white mt-2">{formatCurrency(payoutStats?.totalPaidOut || 0)}</p>
+              <p className="text-2xl font-bold text-white mt-2">₦{((payoutStats as any)?.totalPaidOut || 0).toLocaleString()}</p>
             </div>
             <div className="bg-green-600/20 p-3 rounded-lg">
               <CheckCircle className="text-green-400" size={24} />
@@ -102,7 +108,7 @@ export default function PayoutsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm font-medium">Pending Payouts</p>
-              <p className="text-2xl font-bold text-white mt-2">{formatCurrency(payoutStats?.pendingPayouts || 0)}</p>
+              <p className="text-2xl font-bold text-white mt-2">₦{((payoutStats as any)?.pendingPayouts || 0).toLocaleString()}</p>
             </div>
             <div className="bg-blue-600/20 p-3 rounded-lg">
               <Clock className="text-blue-400" size={24} />
@@ -114,7 +120,7 @@ export default function PayoutsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm font-medium">Monthly Growth</p>
-              <p className="text-2xl font-bold text-white mt-2">+{(payoutStats?.monthlyGrowthPercentage || 0).toFixed(1)}%</p>
+              <p className="text-2xl font-bold text-white mt-2">+{((payoutStats as any)?.monthlyGrowthPercentage || 0).toFixed(1)}%</p>
             </div>
             <div className="bg-orange-600/20 p-3 rounded-lg">
               <TrendingUp className="text-orange-400" size={24} />

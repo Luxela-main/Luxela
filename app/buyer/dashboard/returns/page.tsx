@@ -29,12 +29,23 @@ export default function ReturnsPage() {
   const [refunds, setRefunds] = useState<Refund[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showInitiateModal, setShowInitiateModal] = useState(false);
-  const [formData, setFormData] = useState({ reason: '', description: '' });
+  const [formData, setFormData] = useState<{
+    reason: 'damaged' | 'defective' | 'not_as_described' | 'wrong_item' | 'changed_mind' | 'no_longer_needed' | '';
+    description: string;
+    orderId: string;
+  }>({
+    reason: '',
+    description: '',
+    orderId: '',
+  });
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data: refundsData } = trpc.refund.getMyReturns.useQuery({ limit: 50, offset: 0 }, {
     retry: 1,
   });
+
+  const createReturnMutation = trpc.refund.requestReturn.useMutation();
+  const utils = trpc.useUtils();
 
   const { toast } = useToast();
 
@@ -61,7 +72,7 @@ export default function ReturnsPage() {
 
   const handleInitiateReturn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.reason || !formData.description) {
+    if (!formData.reason || !formData.description || !formData.orderId) {
       toast({
         title: 'Error',
         description: 'Please fill in all fields',
@@ -71,26 +82,26 @@ export default function ReturnsPage() {
     }
 
     try {
-      const newReturn: ReturnRequest = {
-        id: `RET-${Date.now()}`,
-        reason: formData.reason,
+      // Call real API to create return request
+      await createReturnMutation.mutateAsync({
+        orderId: formData.orderId,
+        reason: formData.reason as 'damaged' | 'defective' | 'not_as_described' | 'wrong_item' | 'changed_mind' | 'no_longer_needed',
         description: formData.description,
-        status: 'pending',
-        date: new Date().toISOString(),
-      };
+      });
 
-      setReturns([newReturn, ...returns]);
-      setFormData({ reason: '', description: '' });
+      // Reset and refresh
+      setFormData({ reason: '', description: '', orderId: '' });
       setShowInitiateModal(false);
+      await utils.refund.getMyReturns.invalidate();
 
       toast({
         title: 'Return initiated',
         description: 'Your return request has been submitted successfully',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to initiate return',
+        description: error?.message || 'Failed to initiate return',
         variant: 'destructive',
       });
     }
@@ -296,15 +307,19 @@ export default function ReturnsPage() {
                   <label className="block text-gray-300 text-sm font-medium mb-2">Return Reason</label>
                   <select
                     value={formData.reason}
-                    onChange={e => setFormData({ ...formData, reason: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value as typeof formData.reason;
+                      setFormData({ ...formData, reason: value });
+                    }}
                     className="w-full bg-[#0e0e0e] border border-[#2a2a2a] rounded px-3 py-2 text-white cursor-pointer hover:border-[#8451e1] transition"
                   >
                     <option value="">Select a reason</option>
-                    <option value="Defective Product">Defective Product</option>
-                    <option value="Wrong Size">Wrong Size</option>
-                    <option value="Not As Described">Not As Described</option>
-                    <option value="Damaged in Transit">Damaged in Transit</option>
-                    <option value="Other">Other</option>
+                    <option value="defective">Defective Product</option>
+                    <option value="wrong_item">Wrong Item</option>
+                    <option value="not_as_described">Not As Described</option>
+                    <option value="damaged">Damaged in Transit</option>
+                    <option value="changed_mind">Changed Mind</option>
+                    <option value="no_longer_needed">No Longer Needed</option>
                   </select>
                 </div>
 

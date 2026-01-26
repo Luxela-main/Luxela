@@ -1,9 +1,23 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import {
+  processAutomaticPayouts,
+  getSellerPayoutBalance,
+  getSellerPayoutHistory,
+  requestManualPayout,
+  getSellerEarningsStats,
+} from '../services/automaticPayoutService';
+import {
+  handlePaymentSuccess,
+  handlePaymentFailure,
+  handleOrderShipped,
+  handleOrderDelivered,
+  handleRefundInitiated,
+  getPaymentFlowStatus,
+} from '../services/paymentFlowService';
 
 export const financeRouter = createTRPCRouter({
-  // Get all ledger entries with pagination
   getLedgerEntries: protectedProcedure
     .input(
       z.object({
@@ -44,7 +58,6 @@ export const financeRouter = createTRPCRouter({
       };
     }),
 
-  // Get ledger summary (total income, expenses, balance)
   getLedgerSummary: protectedProcedure
     .input(
       z.object({
@@ -97,7 +110,6 @@ export const financeRouter = createTRPCRouter({
       };
     }),
 
-  // Get specific ledger entry details
   getLedgerEntry: protectedProcedure
     .input(z.object({ entryId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -125,7 +137,6 @@ export const financeRouter = createTRPCRouter({
       return data;
     }),
 
-  // Record a new ledger entry
   createLedgerEntry: protectedProcedure
     .input(
       z.object({
@@ -168,7 +179,6 @@ export const financeRouter = createTRPCRouter({
       return data;
     }),
 
-  // Export ledger to CSV
   exportLedgerCSV: protectedProcedure
     .input(
       z.object({
@@ -197,7 +207,6 @@ export const financeRouter = createTRPCRouter({
         });
       }
 
-      // Generate CSV content
       const headers = ['Date', 'Type', 'Amount', 'Description', 'Reference'];
       const rows = (entries || []).map((entry) => [
         new Date(entry.created_at).toLocaleDateString(),
@@ -218,7 +227,6 @@ export const financeRouter = createTRPCRouter({
       };
     }),
 
-  // Get payout statistics (total pending, processed)
   getPayoutStats: protectedProcedure
     .query(async ({ ctx }) => {
       if (!ctx.user?.id) {
@@ -242,31 +250,47 @@ export const financeRouter = createTRPCRouter({
 
       const stats = (entries || []).reduce(
         (acc, entry) => {
-          if (entry.type === 'income') {
-            acc.totalPending += entry.amount;
-          } else if (entry.reference_type === 'payout') {
-            acc.totalProcessed += entry.amount;
+          if (entry.transaction_type === 'income' && entry.status !== 'paid_out') {
+            acc.availableBalance += entry.amount_cents / 100;
           }
-          return acc;
+          if (entry.status === 'paid_out') {
+            acc.totalPaidOut += entry.amount_cents / 100;
+          }
+          if (entry.status === 'pending_payout') {
+            acc.pendingPayouts += entry.amount_cents / 100;
+          }
         },
         {
-          totalPending: 0,
-          totalProcessed: 0,
-          totalEarnings: 0,
+          availableBalance: 0,
+          totalPaidOut: 0,
+          pendingPayouts: 0,
+          monthlyGrowthPercentage: 0,
         }
       );
 
-      stats.totalEarnings = stats.totalPending + stats.totalProcessed;
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
+      const thisMonthTotal = (entries || [])
+        .filter((e) => new Date(e.created_at) >= new Date(now.getFullYear(), now.getMonth(), 1))
+        .reduce((sum, e) => sum + (e.amount_cents / 100), 0);
+      const lastMonthTotal = (entries || [])
+        .filter((e) => {
+          const d = new Date(e.created_at);
+          return d >= lastMonth && d < new Date(now.getFullYear(), now.getMonth(), 1);
+        })
+        .reduce((sum, e) => sum + (e.amount_cents / 100), 0);
+
+      stats.monthlyGrowthPercentage = lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0;
 
       return stats;
     }),
 
-  // Get payout history with filters
   getPayoutHistory: protectedProcedure
     .input(
       z.object({
         month: z.string().optional(),
         year: z.number().optional(),
+        limit: z.number().default(20),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -281,7 +305,8 @@ export const financeRouter = createTRPCRouter({
         .from('financial_ledger')
         .select('*')
         .eq('seller_id', ctx.user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(input.limit);
 
       if (error) {
         throw new TRPCError({
@@ -301,13 +326,210 @@ export const financeRouter = createTRPCRouter({
       }
 
       const history = filtered.map((entry) => ({
+        id: entry.id,
         date: new Date(entry.created_at).toISOString().split('T')[0],
-        type: entry.type,
-        amount: entry.amount,
-        description: entry.description,
-        status: entry.reference_type === 'payout' ? 'processed' : 'pending',
+        type: entry.transaction_type,
+        amount: (entry.amount_cents / 100).toFixed(2),
+        amountCents: entry.amount_cents,
+        description: entry.description || 'Transaction',
+        status: entry.status,
+        currency: entry.currency,
+        method: 'Bank Transfer',
+        reference: entry.id.slice(0, 8).toUpperCase(),
       }));
 
       return history;
+    }),
+
+  getPayoutBalance: protectedProcedure
+    .input(
+      z.object({
+        currency: z.string().default('NGN'),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Must be logged in',
+        });
+      }
+
+      try {
+        const balance = await getSellerPayoutBalance(ctx.user.id, input.currency);
+        return {
+          available: balance.available,
+          pending: balance.pending,
+          total: balance.total,
+          currency: input.currency,
+        };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: err?.message || 'Failed to fetch payout balance',
+        });
+      }
+    }),
+
+  getEarningsStats: protectedProcedure
+    .input(
+      z.object({
+        currency: z.string().default('NGN'),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Must be logged in',
+        });
+      }
+
+      try {
+        const stats = await getSellerEarningsStats(ctx.user.id, input.currency);
+        return {
+          totalEarnings: stats.totalEarnings,
+          totalPayedOut: stats.totalPayedOut,
+          availableBalance: stats.availableBalance,
+          pendingBalance: stats.pendingBalance,
+          totalOrders: stats.totalOrders,
+          totalRefunds: stats.totalRefunds,
+          currency: input.currency,
+        };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: err?.message || 'Failed to fetch earnings statistics',
+        });
+      }
+    }),
+
+  requestPayout: protectedProcedure
+    .input(
+      z.object({
+        amount: z.number().min(50000),
+        currency: z.string().default('NGN'),
+        bankDetails: z.object({
+          accountName: z.string(),
+          accountNumber: z.string(),
+          bankCode: z.string(),
+        }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Must be logged in',
+        });
+      }
+
+      try {
+        const result = await requestManualPayout(
+          ctx.user.id,
+          input.amount,
+          input.currency,
+          input.bankDetails
+        );
+        return result;
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: err?.message || 'Failed to request payout',
+        });
+      }
+    }),
+
+  processPaymentSuccess: protectedProcedure
+    .input(
+      z.object({
+        reference: z.string(),
+        amount: z.number().optional(),
+        currency: z.string().optional(),
+        status: z.enum(['success', 'failed', 'pending', 'refunded']),
+        metadata: z.record(z.string(), z.any()).optional(),
+        timestamp: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Must be logged in',
+        });
+      }
+
+      try {
+        await handlePaymentSuccess({
+          id: input.reference,
+          reference: input.reference,
+          amount: input.amount,
+          currency: input.currency,
+          status: input.status,
+          metadata: input.metadata,
+          timestamp: input.timestamp,
+        });
+        return { success: true, message: 'Payment processed successfully' };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: err?.message || 'Failed to process payment',
+        });
+      }
+    }),
+
+  processOrderDelivered: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Must be logged in',
+        });
+      }
+
+      try {
+        await handleOrderDelivered(input.orderId);
+        return { success: true, message: 'Order marked as delivered' };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: err?.message || 'Failed to process delivery',
+        });
+      }
+    }),
+
+  getPaymentFlowDetails: protectedProcedure
+    .input(
+      z.object({
+        orderId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Must be logged in',
+        });
+      }
+
+      try {
+        const flowStatus = await getPaymentFlowStatus(input.orderId);
+        return {
+          order: flowStatus.order,
+          payment: flowStatus.payment,
+          hold: flowStatus.hold,
+          ledgerEntries: flowStatus.ledgerEntries,
+        };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: err?.message || 'Order not found',
+        });
+      }
     }),
 });

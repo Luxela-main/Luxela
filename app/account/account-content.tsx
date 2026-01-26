@@ -117,11 +117,11 @@ const AccountContent = () => {
           </button>
 
           <button
-            onClick={() => router.push("/buyer/dashboard/wishlist")}
+            onClick={() => router.push("/buyer/dashboard/favorite-items")}
             className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
             <div className="flex items-center space-x-2">
               <Store className="h-4 w-4" />
-              <span>Sales</span>
+              <span>Favorite Items</span>
             </div>
             <span className="text-zinc-400 text-sm">View</span>
           </button>
@@ -202,4 +202,4 @@ const AccountContent = () => {
   );
 };
 
-export default AccountContent;
+export default AccountContent;

@@ -10,6 +10,7 @@ import { paymentRouter } from "../routers/payment";
 import { reviewRouter } from "../routers/review";
 import { notificationRouter } from "../routers/notification";
 import { supportRouter } from "../routers/support";
+import { supportAdminRouter } from "../routers/support-admin";
 import { productRouter } from "../routers/product";
 
 import { refundRouter } from "../routers/refund";
@@ -44,6 +45,7 @@ export const appRouter = t.router({
   review: reviewRouter,
   notification: notificationRouter,
   support: supportRouter,
+  supportAdmin: supportAdminRouter,
   product: productRouter,
   refund: refundRouter,
   inventory: inventoryRouter,

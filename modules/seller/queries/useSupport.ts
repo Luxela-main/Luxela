@@ -5,8 +5,7 @@ import {
   UseQueryResult,
   UseMutationResult,
 } from '@tanstack/react-query';
-import { getVanillaTRPCClient } from '@/lib/trpc';
-const trpc = getVanillaTRPCClient();
+import { getTRPCClient } from '@/lib/trpc';
 import { supportKeys } from './queryKeys';
 
 // Types from backend
@@ -65,7 +64,8 @@ export function useGetTickets(
   return useQuery({
     queryKey: supportKeys.list(status),
     queryFn: async () => {
-      const result = await ((trpc.support as any).getTickets as any).query({ status });
+      const client = getTRPCClient();
+      const result = await ((client.support as any).getTickets as any).query({ status });
       return (result as any[]).map((t) => ({
         ...t,
         createdAt: new Date(t.createdAt),
@@ -88,7 +88,8 @@ export function useGetTicket(
   return useQuery({
     queryKey: supportKeys.detail(ticketId),
     queryFn: async () => {
-      const result = await ((trpc.support as any).getTicket as any).query({ ticketId });
+      const client = getTRPCClient();
+      const result = await ((client.support as any).getTicket as any).query({ ticketId });
       return {
         ...result,
         createdAt: new Date((result as any).createdAt),
@@ -120,7 +121,8 @@ export function useUpdateTicket(): UseMutationResult<
 
   return useMutation({
     mutationFn: async (data) => {
-      const result = await (trpc.support as any).updateTicket.mutate(data);
+      const client = getTRPCClient();
+      const result = await ((client.support as any).updateTicket as any).mutate(data);
       return {
         ...result,
         createdAt: new Date((result as any).createdAt),
@@ -148,7 +150,8 @@ export function useCloseTicket(): UseMutationResult<
 
   return useMutation({
     mutationFn: async ({ ticketId }) => {
-      const result = await (trpc.support as any).closeTicket.mutate({ ticketId });
+      const client = getTRPCClient();
+      const result = await ((client.support as any).closeTicket as any).mutate({ ticketId });
       return {
         ...result,
         createdAt: new Date((result as any).createdAt),
@@ -180,7 +183,8 @@ export function useReplyToTicket(): UseMutationResult<
 
   return useMutation({
     mutationFn: async (data) => {
-      const result = await (trpc.support as any).replyToTicket.mutate(data);
+      const client = getTRPCClient();
+      const result = await ((client.support as any).replyToTicket as any).mutate(data);
       return {
         ...result,
         createdAt: new Date((result as any).createdAt),
@@ -205,7 +209,8 @@ export function useGetTicketReplies(
   return useQuery({
     queryKey: supportKeys.replies(ticketId),
     queryFn: async () => {
-      const result = await ((trpc.support as any).getTicketReplies as any).query({ ticketId });
+      const client = getTRPCClient();
+      const result = await ((client.support as any).getTicketReplies as any).query({ ticketId });
       return (result as any[]).map((r) => ({
         ...r,
         createdAt: new Date(r.createdAt),
@@ -229,7 +234,8 @@ export function useDeleteReply(): UseMutationResult<
 
   return useMutation({
     mutationFn: async ({ replyId }) => {
-      const result = await (trpc.support as any).deleteReply.mutate({ replyId });
+      const client = getTRPCClient();
+      const result = await ((client.support as any).deleteReply as any).mutate({ replyId });
       return result as { success: boolean };
     },
     onSuccess: (_, { ticketId }) => {
@@ -247,7 +253,8 @@ export function useGetTicketsStats(): UseQueryResult<SupportStats, Error> {
   return useQuery({
     queryKey: supportKeys.stats(),
     queryFn: async () => {
-      const result = await ((trpc.support as any).getTicketsStats as any).query();
+      const client = getTRPCClient();
+      const result = await ((client.support as any).getTicketsStats as any).query();
       return result as SupportStats;
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -264,7 +271,8 @@ export function useTicketsByStatus(
   return useQuery({
     queryKey: supportKeys.list(status),
     queryFn: async () => {
-      const result = await ((trpc.support as any).getTickets as any).query({ status });
+      const client = getTRPCClient();
+      const result = await ((client.support as any).getTickets as any).query({ status });
       return (result as any[]).map((t) => ({
         ...t,
         createdAt: new Date(t.createdAt),
@@ -284,7 +292,8 @@ export function useUrgentTickets(): UseQueryResult<SupportTicket[], Error> {
   return useQuery({
     queryKey: [...supportKeys.list(), 'urgent'],
     queryFn: async () => {
-      const result = await ((trpc.support as any).getTickets as any).query({});
+      const client = getTRPCClient();
+      const result = await ((client.support as any).getTickets as any).query({});
       // Filter urgent tickets client-side
       return (result as any[]).map((t) => ({
         ...t,

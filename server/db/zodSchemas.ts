@@ -85,6 +85,9 @@ export const buyerAccountDetailsSchema = z.object({
   country: z.string(),
   state: z.string(),
   profilePicture: z.string().nullable().optional(),
+  orderUpdates: z.boolean().default(true),
+  promotionalEmails: z.boolean().default(true),
+  securityAlerts: z.boolean().default(true),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -143,6 +146,8 @@ export const sellerBusinessSchema = z.object({
   phoneNumber: z.string(),
   countryCode: z.string().nullable().optional(),
   country: z.string(),
+  state: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
   socialMediaPlatform: socialMediaPlatformEnum.nullable().optional(),
   socialMedia: z.string().nullable().optional(),
   fullName: z.string(),
@@ -643,5 +648,90 @@ export const emailOtpsSchema = z.object({
   codeHash: z.string().nullable().optional(),
   expiresAt: z.date(),
   consumed: z.boolean().default(false),
+  createdAt: z.date().optional(),
+});
+
+// ========================== ENTERPRISE SUPPORT ==========================
+const slaPriorityEnum = z.enum(['low', 'medium', 'high', 'critical']);
+const escalationStatusEnum = z.enum(['pending', 'triggered', 'resolved', 'cancelled']);
+
+export const supportTeamMembersSchema = z.object({
+  id: z.string().uuid().optional(),
+  userId: z.string().uuid(),
+  name: z.string(),
+  email: z.string().email(),
+  role: z.string(),
+  department: z.string().nullable().optional(),
+  status: z.string().default('active'),
+  maxCapacity: z.number().default(10),
+  currentLoadCount: z.number().default(0),
+  responseTimeAverage: z.number().nullable().optional(),
+  resolutionRate: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export const slaMetricsSchema = z.object({
+  id: z.string().uuid().optional(),
+  policyName: z.string(),
+  priority: slaPriorityEnum,
+  responseTimeMinutes: z.number(),
+  resolutionTimeMinutes: z.number(),
+  workingHoursOnly: z.boolean().default(false),
+  active: z.boolean().default(true),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export const slaTrackingSchema = z.object({
+  id: z.string().uuid().optional(),
+  ticketId: z.string().uuid(),
+  slaMetricId: z.string().uuid(),
+  responseDeadline: z.date(),
+  resolutionDeadline: z.date(),
+  responseBreached: z.boolean().default(false),
+  resolutionBreached: z.boolean().default(false),
+  breachNotificationSentAt: z.date().nullable().optional(),
+  actualResponseTime: z.number().nullable().optional(),
+  actualResolutionTime: z.number().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export const escalationRulesSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  trigger: z.string(),
+  triggerValue: z.string().nullable().optional(),
+  action: z.string(),
+  active: z.boolean().default(true),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export const supportAuditLogsSchema = z.object({
+  id: z.string().uuid().optional(),
+  ticketId: z.string().uuid().nullable().optional(),
+  actionType: z.string(),
+  performedBy: z.string().uuid(),
+  performedByRole: z.string(),
+  oldValue: z.string().nullable().optional(),
+  newValue: z.string().nullable().optional(),
+  metadata: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+export const supportAnalyticsSchema = z.object({
+  id: z.string().uuid().optional(),
+  date: z.date(),
+  totalTicketsCreated: z.number().default(0),
+  totalTicketsResolved: z.number().default(0),
+  totalTicketsOpen: z.number().default(0),
+  averageResponseTime: z.number().nullable().optional(),
+  averageResolutionTime: z.number().nullable().optional(),
+  slaBreachCount: z.number().default(0),
+  customerSatisfactionScore: z.string().nullable().optional(),
+  agentUtilization: z.string().nullable().optional(),
   createdAt: z.date().optional(),
 });

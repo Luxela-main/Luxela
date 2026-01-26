@@ -26,6 +26,17 @@ import {
   PAYOUT_TOKENS,
   SOCIAL_MEDIA_PLATFORMS,
 } from "./constants/formOptions";
+import {
+  COUNTRIES,
+  NIGERIAN_STATES,
+  NIGERIAN_CITIES,
+  SOCIAL_MEDIA_PLATFORMS as LOCATION_SOCIAL_PLATFORMS,
+  getCountryCode,
+  getStatesByCountry,
+  getCitiesByState,
+  getCountryPhoneCode,
+  COUNTRY_PHONE_CODES,
+} from "@/lib/constants/locations";
 
 interface SellerSetupFormProps {
   initialData: SellerSetupFormData;
@@ -42,10 +53,12 @@ const SellerSetupForm: React.FC<SellerSetupFormProps> = ({
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [idNumber, setIdNumber] = useState("");
-const [isVerified, setIsVerified] = useState(false);
-const [currentErrorIndex, setCurrentErrorIndex] = useState(0);
-
-// const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [currentErrorIndex, setCurrentErrorIndex] = useState(0);
+  const [availableStates, setAvailableStates] = useState<typeof NIGERIAN_STATES>([]);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [socialMediaLinks, setSocialMediaLinks] = useState<Array<{ platform: string; username: string; url: string }>>([]);
+  const isInitialLoadRef = useRef(true);
 
   const validationSchema = Yup.object({
     brandName: Yup.string().required("Brand name is required"),
@@ -66,46 +79,125 @@ const [currentErrorIndex, setCurrentErrorIndex] = useState(0);
     returnAddress: Yup.string().required("Return address is required"),
     preferredPayoutMethod: Yup.string().required("Payment method is required"),
     productCategory: Yup.string()
-  .required("Please select a category"),
-      targetAudience: Yup.string().required("Target audience is required"),
+      .required("Please select a category"),
+    targetAudience: Yup.string().required("Target audience is required"),
     localPricing: Yup.string().required("Local pricing is required"),
     refundPolicy: Yup.string().required('Refund policy is required when shipping type is selected'),
     periodUntilRefund: Yup.string().required('Period until refund is required when shipping type is selected'),
+    otherCategoryName: Yup.string().when('productCategory', {
+      is: 'others',
+      then: (schema) => schema.required('Please specify your product category'),
+      otherwise: (schema) => schema.optional(),
+    }),
   });
 
   const verifyMutation = trpc.seller.verifyId.useMutation({
-  onSuccess: (data) => {
-    if (data.success) {
-      setIsVerified(true);
-      toastSvc.success("ID Verified Successfully");
-    } else {
-      toastSvc.error(data.message || "Verification failed");
-    }
-  },
-  onError: (err: any) => {
-    toastSvc.error(err.message || "Failed to verify ID");
-  },
-});
+    onSuccess: (data) => {
+      if (data.success) {
+        setIsVerified(true);
+        toastSvc.success("ID Verified Successfully");
+      } else {
+        setIsVerified(false);
+        toastSvc.error(data.message || "Verification failed");
+      }
+    },
+    onError: (err: any) => {
+      setIsVerified(false);
+      toastSvc.error(err.message || "Failed to verify ID");
+    },
+  });
 
+  // Load saved form data from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedData = localStorage.getItem('sellerSetupFormData');
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          // Update formik with saved data
+          Object.keys(parsedData).forEach((key) => {
+            formik.setFieldValue(key, parsedData[key]);
+          });
+          
+          // Also populate available states and cities based on saved country/state
+          if (parsedData.country) {
+            const states = getStatesByCountry(parsedData.country);
+            setAvailableStates(states);
+            
+            // Populate cities if state is also saved
+            if (parsedData.shippingZone) {
+              const cities = getCitiesByState(parsedData.shippingZone, parsedData.country);
+              setAvailableCities(cities);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load saved form data:', error);
+        }
+      }
+      isInitialLoadRef.current = false;
+    }
+  }, []);
+
+  // Initialize formik BEFORE useEffect hooks
   const formik = useFormik({
     initialValues: initialData,
     validationSchema,
-  validateOnChange: false, 
-  validateOnBlur: true,    
-  validateOnMount: false,
+    validateOnChange: false,
+    validateOnBlur: true,
+    validateOnMount: false,
     onSubmit: (values) => {
-
-       const submissionData = {
-    ...values,
-    idNumber: idNumber,
-    idVerified: isVerified
-  };
-  
-  onPreview(submissionData);
-
-
+      const submissionData = {
+        ...values,
+        idNumber: idNumber,
+        idVerified: isVerified
+      };
+      clearSavedData();
+      onPreview(submissionData);
     },
   });
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isInitialLoadRef.current) {
+      const timerId = setTimeout(() => {
+        localStorage.setItem('sellerSetupFormData', JSON.stringify(formik.values));
+      }, 500); // Debounce saves by 500ms
+      return () => clearTimeout(timerId);
+    }
+  }, [formik.values]);
+
+  // Auto-populate country code when country changes
+  useEffect(() => {
+    if (formik.values.country) {
+      const phoneCode = getCountryPhoneCode(formik.values.country);
+      formik.setFieldValue('countryCode', phoneCode);
+    }
+  }, [formik.values.country]);
+
+  // Update available states when country changes
+  useEffect(() => {
+    const states = getStatesByCountry(formik.values.country);
+    setAvailableStates(states);
+    // Only reset cities/state if country actually changed and it's not the initial load
+    if (!isInitialLoadRef.current) {
+      setAvailableCities([]);
+      // Keep the saved shippingZone if it exists, only clear if country changed to empty
+      if (!formik.values.country) {
+        formik.setFieldValue('shippingZone', '');
+        formik.setFieldValue('cityTown', '');
+      }
+    }
+  }, [formik.values.country]);
+
+  // Update available cities when state changes
+  useEffect(() => {
+    const cities = getCitiesByState(formik.values.shippingZone, formik.values.country);
+    setAvailableCities(cities);
+    // Only reset cityTown if state changed and it's not the initial load
+    if (!isInitialLoadRef.current && !formik.values.shippingZone) {
+      formik.setFieldValue('cityTown', '');
+    }
+  }, [formik.values.shippingZone, formik.values.country]);
 
   const tabs = [
     { id: "business", label: "Business Information" },
@@ -124,117 +216,118 @@ const [currentErrorIndex, setCurrentErrorIndex] = useState(0);
     { label: "Others", value: "others" as const },
   ];
 
+  // Clear saved data on successful submission
+  const clearSavedData = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sellerSetupFormData');
+    }
+  };
+
   const audiences = [
     { label: "Male", value: "male" },
     { label: "Female", value: "female" },
     { label: "Unisex", value: "unisex" },
   ];
 
-const handleVerifyId = () => {
-  if (!formik.values.idType || !idNumber) {
-    toastSvc.error("Please select ID type and enter ID number");
-    return;
-  }
-
-  verifyMutation.mutate({
-    idType: formik.values.idType as any,
-    idNumber: idNumber
-  });
-};
-
-
-const fieldNameMap: Record<string, string> = {
-  brandName: "Brand Name",
-  businessType: "Business Type", 
-  businessAddress: "Business Address",
-  officialEmail: "Official Email",
-  phoneNumber: "Phone Number",
-  country: "Country",
-  fullName: "Full Name",
-  idType: "ID Type",
-  shippingZone: "Shipping Zone",
-  cityTown: "City/Town",
-  shippingAddress: "Shipping Address",
-  returnAddress: "Return Address",
-  preferredPayoutMethod: "Preferred Payout Method",
-  productCategory: "Product Category",
-  targetAudience: "Target Audience",
-  localPricing: "Local Pricing",
-  refundPolicy: "Refund Policy",
-  periodUntilRefund: "Period Until Refund",
-};
-
-
-const handleNext = async () => {
-  const errors = await formik.validateForm();
-  
-  const tabFields: Record<string, string[]> = {
-    business: ["brandName", "businessType", "businessAddress", "officialEmail", "phoneNumber", "country", "fullName", "idType"],
-    shipping: ["shippingZone", "cityTown", "shippingAddress", "returnAddress"],
-    payment: ["preferredPayoutMethod"],
-    additional: ["productCategory", "targetAudience", "localPricing"]
-  };
-  
-  const currentTabFields = tabFields[activeTab] || [];
-  const currentTabErrors = currentTabFields
-    .filter(field => errors[field as keyof typeof errors])
-    .map(field => ({
-      field,
-      name: fieldNameMap[field] || field,
-      message: errors[field as keyof typeof errors]
-    }));
-  
-  if (currentTabErrors.length > 0) {
-    const errorIndex = currentErrorIndex % currentTabErrors.length;
-    const error = currentTabErrors[errorIndex];
-    
-    toastSvc.error(`${error.message}`);
-    
-    const errorField = document.querySelector(`[name="${error.field}"]`);
-    if (errorField) {
-      errorField.scrollIntoView({ behavior: "smooth", block: "center" });
-      (errorField as HTMLElement).focus();
+  const handleVerifyId = () => {
+    if (!formik.values.idType || !idNumber) {
+      toastSvc.error("Please select ID type and enter ID number");
+      return;
     }
-    
-    setCurrentErrorIndex(prev => prev + 1);
-    
-    return;
-  }
-  
-  setCurrentErrorIndex(0);
 
-  if (activeTab === "additional") {
-    const submissionData = {
-      ...formik.values,
-      idNumber: idNumber,
-      idVerified: isVerified
+    verifyMutation.mutate({
+      idType: formik.values.idType as any,
+      idNumber: idNumber
+    });
+  };
+
+  const fieldNameMap: Record<string, string> = {
+    brandName: "Brand Name",
+    businessType: "Business Type",
+    businessAddress: "Business Address",
+    officialEmail: "Official Email",
+    phoneNumber: "Phone Number",
+    country: "Country",
+    fullName: "Full Name",
+    idType: "ID Type",
+    shippingZone: "Shipping Zone",
+    cityTown: "City/Town",
+    shippingAddress: "Shipping Address",
+    returnAddress: "Return Address",
+    preferredPayoutMethod: "Preferred Payout Method",
+    productCategory: "Product Category",
+    targetAudience: "Target Audience",
+    localPricing: "Local Pricing",
+    refundPolicy: "Refund Policy",
+    periodUntilRefund: "Period Until Refund",
+  };
+
+  const handleNext = async () => {
+    const errors = await formik.validateForm();
+
+    const tabFields: Record<string, string[]> = {
+      business: ["brandName", "businessType", "businessAddress", "officialEmail", "phoneNumber", "country", "fullName", "idType"],
+      shipping: ["shippingZone", "cityTown", "shippingAddress", "returnAddress"],
+      payment: ["preferredPayoutMethod"],
+      additional: ["productCategory", "targetAudience", "localPricing"]
     };
-    onPreview(submissionData);
-  } else {
-   const idx = tabs.findIndex((t) => t.id === activeTab);
-  if (idx < tabs.length - 1) {
-    setActiveTab(tabs[idx + 1].id);
-    // Scroll to top of the page
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-}
-};
 
+    const currentTabFields = tabFields[activeTab] || [];
+    const currentTabErrors = currentTabFields
+      .filter(field => errors[field as keyof typeof errors])
+      .map(field => ({
+        field,
+        name: fieldNameMap[field] || field,
+        message: errors[field as keyof typeof errors]
+      }));
 
+    if (currentTabErrors.length > 0) {
+      const errorIndex = currentErrorIndex % currentTabErrors.length;
+      const error = currentTabErrors[errorIndex];
+
+      toastSvc.error(`${error.message}`);
+
+      const errorField = document.querySelector(`[name="${error.field}"]`);
+      if (errorField) {
+        errorField.scrollIntoView({ behavior: "smooth", block: "center" });
+        (errorField as HTMLElement).focus();
+      }
+
+      setCurrentErrorIndex(prev => prev + 1);
+
+      return;
+    }
+
+    setCurrentErrorIndex(0);
+
+    if (activeTab === "additional") {
+      const submissionData = {
+        ...formik.values,
+        idNumber: idNumber,
+        idVerified: isVerified
+      };
+      onPreview(submissionData);
+    } else {
+      const idx = tabs.findIndex((t) => t.id === activeTab);
+      if (idx < tabs.length - 1) {
+        setActiveTab(tabs[idx + 1].id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
 
   const toggleCategory = (
-  value:
-    | "men_clothing"
-    | "women_clothing"
-    | "men_shoes"
-    | "women_shoes"
-    | "accessories"
-    | "merch"
-    | "others"
-) => {
-  formik.setFieldValue("productCategory", value);
-};
-
+    value:
+      | "men_clothing"
+      | "women_clothing"
+      | "men_shoes"
+      | "women_shoes"
+      | "accessories"
+      | "merch"
+      | "others"
+  ) => {
+    formik.setFieldValue("productCategory", value);
+  };
 
   const selectStyle = {
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
@@ -476,8 +569,7 @@ const handleNext = async () => {
         </div>
 
         <form onSubmit={formik.handleSubmit}>
-          {/* <div className="bg-[#0a0a0a] border border-[#747474] rounded-lg p-8"> */}
-            <div className="bg-[#0a0a0a] border border-[#747474] rounded-lg p-8">
+          <div className="bg-[#0a0a0a] border border-[#747474] rounded-lg p-8">
 
             {activeTab === "business" && (
               <div>
@@ -581,13 +673,23 @@ const handleNext = async () => {
                         Phone Number
                       </label>
                       <div className="flex flex-col md:flex-row gap-2 items-start">
-                        <input
-                          type="text"
+                        <select
                           name="countryCode"
-                          value={formik.values.countryCode}
+                          value={formik.values.countryCode || ""}
                           onChange={formik.handleChange}
-                          className="w-20 bg-black border border-[#747474] rounded px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                        />
+                          onBlur={formik.handleBlur}
+                          className="w-24 bg-black border border-[#747474] rounded px-2 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                        >
+                          <option value="">Code</option>
+                          {Object.entries(COUNTRY_PHONE_CODES).map(([code, phoneCode]) => {
+                            const country = COUNTRIES.find(c => c.code === code);
+                            return (
+                              <option key={code} value={phoneCode}>
+                                {country?.flag} {phoneCode}
+                              </option>
+                            );
+                          })}
+                        </select>
                         <input
                           type="tel"
                           name="phoneNumber"
@@ -618,9 +720,11 @@ const handleNext = async () => {
                         style={selectStyle}
                       >
                         <option value="">Select your country</option>
-                        <option value="nigeria">Nigeria</option>
-                        <option value="usa">United States</option>
-                        <option value="uk">United Kingdom</option>
+                        {COUNTRIES.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.flag} {country.name}
+                          </option>
+                        ))}
                       </select>
                       {formik.touched.country && formik.errors.country && (
                         <div className="text-red-500 text-xs mt-1">
@@ -631,144 +735,236 @@ const handleNext = async () => {
                   </div>
                   <div>
                     <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Social Media
+                      Social Media Links
                     </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      {SOCIAL_MEDIA_PLATFORMS.map((platform) => {
+                    
+                    {/* Add Social Media Platform */}
+                    <div className="mb-6 p-4 border border-[#747474] rounded-lg bg-[#0E0E0E]">
+                      <label className="text-xs text-[#858585] mb-2 block">Add Social Media Platform</label>
+                      <div className="flex gap-2">
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              const newLink = {
+                                platform: e.target.value,
+                                username: "",
+                                url: "",
+                              };
+                              const updatedLinks = [...(formik.values.socialMediaLinks || []), newLink];
+                              formik.setFieldValue("socialMediaLinks", updatedLinks);
+                              e.target.value = ""; // Reset dropdown
+                            }
+                          }}
+                          className={selectClass}
+                          style={selectStyle}
+                        >
+                          <option value="">Select a platform to add</option>
+                          {SOCIAL_MEDIA_PLATFORMS.map((platform) => {
+                            const isAdded = formik.values.socialMediaLinks?.some(
+                              (link) => link.platform === platform.value
+                            );
+                            return (
+                              <option key={platform.value} value={platform.value} disabled={isAdded}>
+                                {platform.label} {isAdded ? "(Added)" : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                      <p className="text-xs text-[#666] mt-2">Optional: Add your social media profiles to help verify your account</p>
+                    </div>
+                    
+                    {/* Display Added Social Media Links */}
+                    <div className="space-y-6">
+                      {formik.values.socialMediaLinks?.map((socialLink) => {
+                        const platform = SOCIAL_MEDIA_PLATFORMS.find(
+                          (p) => p.value === socialLink.platform
+                        );
+                        if (!platform) return null;
+                        
                         const Icon = platform.icon;
+
                         return (
-                          <div key={platform.value}>
-                            <label className="text-xs text-[#858585] mb-1 block">
-                              {platform.label}
-                            </label>
-                            <div className="flex items-center gap-2 bg-black border border-[#747474] rounded px-3 py-2.5">
-                              <Icon className="w-4 h-4" style={{color: platform.iconColor}} />
-                              <input
-                                type={platform.inputType}
-                                placeholder={platform.placeholder}
-                                value={formik.values.socialMedia || ""}
-                                onChange={(e) => formik.setFieldValue("socialMedia", e.target.value)}
-                                className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-600"
-                              />
+                          <div key={socialLink.platform} className="border border-[#747474] rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-5 h-5" style={{ color: platform.iconColor }} />
+                                <label className="text-sm font-medium text-[#f2f2f2]">
+                                  {platform.label}
+                                </label>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (formik.values.socialMediaLinks) {
+                                    const updatedLinks = formik.values.socialMediaLinks.filter(
+                                      (link) => link.platform !== socialLink.platform
+                                    );
+                                    formik.setFieldValue("socialMediaLinks", updatedLinks);
+                                  }
+                                }}
+                                className="text-red-500 hover:text-red-400 text-sm font-medium"
+                              >
+                                Remove
+                              </button>
                             </div>
-                            <p className="text-xs text-[#666] mt-0.5">{platform.description}</p>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-xs text-[#858585] mb-1 block">
+                                  Username/Handle
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder={platform.placeholder}
+                                  value={socialLink.username || ""}
+                                  onChange={(e) => {
+                                    const updatedLinks = (formik.values.socialMediaLinks || []).map((link) =>
+                                      link.platform === socialLink.platform
+                                        ? { ...link, username: e.target.value }
+                                        : link
+                                    );
+                                    formik.setFieldValue("socialMediaLinks", updatedLinks);
+                                  }}
+                                  className={inputClass}
+                                />
+                                <p className="text-xs text-[#666] mt-0.5">{platform.description}</p>
+                              </div>
+                              <div>
+                                <label className="text-xs text-[#858585] mb-1 block">
+                                  Profile URL
+                                </label>
+                                <input
+                                  type="url"
+                                  placeholder={`https://${platform.value}.com/...`}
+                                  value={socialLink.url || ""}
+                                  onChange={(e) => {
+                                    const updatedLinks = (formik.values.socialMediaLinks || []).map((link) =>
+                                      link.platform === socialLink.platform
+                                        ? { ...link, url: e.target.value }
+                                        : link
+                                    );
+                                    formik.setFieldValue("socialMediaLinks", updatedLinks);
+                                  }}
+                                  className={inputClass}
+                                />
+                                <p className="text-xs text-[#666] mt-0.5">Full profile URL</p>
+                              </div>
+                            </div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  
-
-
                   {/* Full Name */}
-<div>
-  <label className="text-sm mb-2 text-[#dcdcdc] flex justify-between">
-    Full name <span>Required</span>
-  </label>
-  <input
-    type="text"
-    name="fullName"
-    value={formik.values.fullName}
-    onChange={formik.handleChange}
-    onBlur={formik.handleBlur}
-    placeholder="Enter your full name"
-    className={inputClass}
-  />
-  {formik.touched.fullName && formik.errors.fullName && (
-    <div className="text-red-500 text-xs mt-1">
-      {formik.errors.fullName}
-    </div>
-  )}
-</div>
+                  <div>
+                    <label className="text-sm mb-2 text-[#dcdcdc] flex justify-between">
+                      Full name <span>Required</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formik.values.fullName}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      placeholder="Enter your full name"
+                      className={inputClass}
+                    />
+                    {formik.touched.fullName && formik.errors.fullName && (
+                      <div className="text-red-500 text-xs mt-1">
+                        {formik.errors.fullName}
+                      </div>
+                    )}
+                  </div>
 
-{/* ID Verification Section */}
-<div className="border-t border-[#747474] pt-6 mt-6">
-  <h3 className="text-base font-medium text-[#f2f2f2] mb-4">ID Verification</h3>
-  
-  <div className="grid grid-cols-2 gap-6 mb-4">
-    {/* ID Type */}
-    <div>
-      <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
-        ID Type <span>Required</span>
-      </label>
-      <select
-        name="idType"
-        value={formik.values.idType}
-        onChange={formik.handleChange}
-        onBlur={formik.handleBlur}
-        className={selectClass}
-        style={selectStyle}
-      >
-        <option value="">Select ID type</option>
-        {ID_TYPES.filter(id => ['passport', 'drivers_license', 'voters_card', 'national_id'].includes(id.value)).map((idType) => (
-          <option key={idType.value} value={idType.value}>
-            {idType.label}
-          </option>
-        ))}
-      </select>
-      {formik.touched.idType && formik.errors.idType && (
-        <div className="text-red-500 text-xs mt-1">
-          {formik.errors.idType}
-        </div>
-      )}
-      {formik.values.idType && (
-        <p className="text-xs text-[#858585] mt-1">
-          {ID_TYPES.find(id => id.value === formik.values.idType)?.description}
-        </p>
-      )}
-    </div>
+                  {/* ID Verification Section */}
+                  <div className="border-t border-[#747474] pt-6 mt-6">
+                    <h3 className="text-base font-medium text-[#f2f2f2] mb-4">ID Verification</h3>
 
-    {/* ID Number */}
-    <div>
-      <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
-        ID Number <span>Required</span>
-      </label>
-      <input
-        type="text"
-        value={idNumber}
-        onChange={(e) => setIdNumber(e.target.value)}
-        placeholder="Enter your ID number"
-        className={inputClass}
-      />
-    </div>
-  </div>
+                    <div className="grid grid-cols-2 gap-6 mb-4">
+                      {/* ID Type */}
+                      <div>
+                        <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
+                          ID Type <span>Required</span>
+                        </label>
+                        <select
+                          name="idType"
+                          value={formik.values.idType}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          className={selectClass}
+                          style={selectStyle}
+                        >
+                          <option value="">Select ID type</option>
+                          {ID_TYPES.filter(id => ['passport', 'drivers_license', 'voters_card', 'national_id'].includes(id.value)).map((idType) => (
+                            <option key={idType.value} value={idType.value}>
+                              {idType.label}
+                            </option>
+                          ))}
+                        </select>
+                        {formik.touched.idType && formik.errors.idType && (
+                          <div className="text-red-500 text-xs mt-1">
+                            {formik.errors.idType}
+                          </div>
+                        )}
+                        {formik.values.idType && (
+                          <p className="text-xs text-[#858585] mt-1">
+                            {ID_TYPES.find(id => id.value === formik.values.idType)?.description}
+                          </p>
+                        )}
+                      </div>
 
- {/* Verify Button */}
-<div className="flex items-center gap-4">
-  <button
-    type="button"
-    onClick={handleVerifyId}
-    disabled={!idNumber || !formik.values.idType || verifyMutation.isPending || isVerified}
-    className={`px-6 py-2.5 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
-      isVerified
-        ? "bg-green-600 hover:bg-green-700 text-white"
-        : "bg-purple-600 hover:bg-purple-700 text-white"
-    }`}
-  >
-    {verifyMutation.isPending ? (
-      <>
-        <Loader2 className="w-4 h-4 animate-spin" />
-        Verifying...
-      </>
-    ) : isVerified ? (
-      <>
-        <CheckCircle className="w-4 h-4" />
-        Verified
-      </>
-    ) : (
-      "Verify ID"
-    )}
-  </button>
-  
-  {isVerified && (
-    <span className="text-green-500 text-sm flex items-center gap-1">
-      <CheckCircle className="w-4 h-4" />
-      Verification Successful
-    </span>
-  )}
-</div>
-</div>
+                      {/* ID Number */}
+                      <div>
+                        <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
+                          ID Number <span>Required</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={idNumber}
+                          onChange={(e) => setIdNumber(e.target.value)}
+                          placeholder="Enter your ID number"
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Verify Button */}
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={handleVerifyId}
+                        disabled={!idNumber || !formik.values.idType || verifyMutation.isPending || isVerified}
+                        className={`px-6 py-2.5 rounded text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                          isVerified
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-purple-600 hover:bg-purple-700 text-white"
+                        }`}
+                      >
+                        {verifyMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : isVerified ? (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            Verified
+                          </>
+                        ) : (
+                          "Verify ID"
+                        )}
+                      </button>
+
+                      {isVerified && (
+                        <span className="text-green-500 text-sm flex items-center gap-1">
+                          <CheckCircle className="w-4 h-4" />
+                          Verification Successful
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -791,11 +987,18 @@ const handleNext = async () => {
                         onBlur={formik.handleBlur}
                         className={selectClass}
                         style={selectStyle}
+                        disabled={!formik.values.country}
                       >
                         <option value="">Select the state</option>
-                        <option value="lagos">Lagos</option>
-                        <option value="abuja">Abuja</option>
+                        {availableStates.map((state, index) => (
+                          <option key={`${state.name}-${index}`} value={state.name}>
+                            {state.name}
+                          </option>
+                        ))}
                       </select>
+                      {!formik.values.country && (
+                        <p className="text-xs text-[#858585] mt-1">Please select a country first</p>
+                      )}
                       {formik.touched.shippingZone &&
                         formik.errors.shippingZone && (
                           <div className="text-red-500 text-xs mt-1">
@@ -814,11 +1017,18 @@ const handleNext = async () => {
                         onBlur={formik.handleBlur}
                         className={selectClass}
                         style={selectStyle}
+                        disabled={!formik.values.shippingZone}
                       >
                         <option value="">Select city/town</option>
-                        <option value="ikeja">Ikeja</option>
-                        <option value="lekki">Lekki</option>
+                        {availableCities.map((city, index) => (
+                          <option key={`${city}-${index}`} value={city}>
+                            {city}
+                          </option>
+                        ))}
                       </select>
+                      {!formik.values.shippingZone && (
+                        <p className="text-xs text-[#858585] mt-1">Please select a state first</p>
+                      )}
                       {formik.touched.cityTown && formik.errors.cityTown && (
                         <div className="text-red-500 text-xs mt-1">
                           {formik.errors.cityTown}
@@ -916,16 +1126,21 @@ const handleNext = async () => {
                         style={selectStyle}
                       >
                         <option value="">Select refund policy</option>
-                        {REFUND_POLICIES.filter(policy => ['no_refunds', 'accept_refunds'].includes(policy.value)).map((policy) => (
+                        {REFUND_POLICIES.map((policy) => (
                           <option key={policy.value} value={policy.value}>
                             {policy.label}
                           </option>
                         ))}
                       </select>
+                      {formik.values.refundPolicy && (
+                        <p className="text-xs text-[#858585] mt-1">
+                          {formik.values.refundPolicy === 'no_refunds' ? 'No refunds will be offered after purchase' : 'Customers can request refunds within the specified period'}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm mb-2 text-[#dcdcdc]">
-                        Period Until refund
+                        Refund Period
                       </label>
                       <select
                         name="periodUntilRefund"
@@ -933,14 +1148,19 @@ const handleNext = async () => {
                         onChange={formik.handleChange}
                         className={selectClass}
                         style={selectStyle}
+                        disabled={formik.values.refundPolicy !== 'accept_refunds'}
                       >
-                        <option value="">Select period</option>
-                        {REFUND_POLICIES.filter(policy => ['24hrs', '48hrs', '72hrs', '5_working_days', '1week', '2weeks'].includes(policy.value)).map((policy) => (
-                          <option key={policy.value} value={policy.value}>
-                            {policy.label}
-                          </option>
-                        ))}
+                        <option value="">Select refund period</option>
+                        <option value="24hrs">24 Hours</option>
+                        <option value="48hrs">48 Hours</option>
+                        <option value="72hrs">72 Hours (3 Days)</option>
+                        <option value="5_working_days">5 Working Days</option>
+                        <option value="1week">1 Week</option>
+                        <option value="2weeks">2 Weeks</option>
                       </select>
+                      {formik.values.refundPolicy !== 'accept_refunds' && (
+                        <p className="text-xs text-[#858585] mt-1">Enable refunds to set a refund period</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1017,7 +1237,7 @@ const handleNext = async () => {
                               style={selectStyle}
                             >
                               <option value="">Select payout option</option>
-                              {FIAT_PAYOUT_METHODS.filter(method => ['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'other'].includes(method.value)).map((method) => (
+                              {FIAT_PAYOUT_METHODS.map((method) => (
                                 <option key={method.value} value={method.value}>
                                   {method.label}
                                 </option>
@@ -1036,8 +1256,11 @@ const handleNext = async () => {
                               style={selectStyle}
                             >
                               <option value="">Select country</option>
-                              <option value="nigeria">Nigeria</option>
-                              <option value="usa">United States</option>
+                              {COUNTRIES.map((country) => (
+                                <option key={country.code} value={country.code}>
+                                  {country.flag} {country.name}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         </div>
@@ -1111,7 +1334,7 @@ const handleNext = async () => {
                               style={selectStyle}
                             >
                               <option value="">Select wallet type</option>
-                              {WALLET_TYPES.filter(wallet => ['phantom', 'solflare', 'backpack', 'wallet_connect', 'magic_eden', 'ledger_live'].includes(wallet.value)).map((wallet) => (
+                              {WALLET_TYPES.map((wallet) => (
                                 <option key={wallet.value} value={wallet.value}>
                                   {wallet.label}
                                 </option>
@@ -1145,7 +1368,7 @@ const handleNext = async () => {
                               style={selectStyle}
                             >
                               <option value="">Select token</option>
-                              {PAYOUT_TOKENS.filter(token => ['USDT', 'USDC', 'solana'].includes(token.value)).map((token) => (
+                              {PAYOUT_TOKENS.map((token) => (
                                 <option key={token.value} value={token.value}>
                                   {token.label}
                                 </option>
@@ -1172,21 +1395,39 @@ const handleNext = async () => {
                     </h3>
                     <div className="grid grid-cols-3 gap-4">
                       {productCategory.map(({ label, value }) => (
-                       <button
-  key={value}
-  type="button"
-  onClick={() => toggleCategory(value)}
-  className={`px-6 py-3 rounded text-sm transition-colors ${
-    formik.values.productCategory === value
-      ? "bg-purple-600 text-white" 
-      : "bg-[#1a1a1a] text-[#858585] hover:bg-[#222]"
-  }`}
->
-  {label}
-</button>
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => toggleCategory(value)}
+                          className={`px-6 py-3 rounded text-sm transition-colors ${
+                            formik.values.productCategory === value
+                              ? "bg-purple-600 text-white"
+                              : "bg-[#1a1a1a] text-[#858585] hover:bg-[#222]"
+                          }`}
+                        >
+                          {label}
+                        </button>
                       ))}
                     </div>
-                
+                    {formik.values.productCategory === 'others' && (
+                      <div className="mt-6 p-4 bg-[#1a1a1a] rounded border border-[#747474]">
+                        <label className="block text-sm text-[#f2f2f2] mb-2">
+                          Specify your product category
+                        </label>
+                        <input
+                          type="text"
+                          name="otherCategoryName"
+                          value={formik.values.otherCategoryName || ''}
+                          onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
+                          placeholder="Enter your category"
+                          className="w-full px-4 py-2 bg-[#0E0E0E] text-[#f2f2f2] border border-[#747474] rounded focus:outline-none focus:border-purple-600"
+                        />
+                        {formik.touched.otherCategoryName && formik.errors.otherCategoryName && (
+                          <p className="text-red-500 text-sm mt-2">{formik.errors.otherCategoryName}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="border border-[#747474] rounded-lg p-6">
                     <h3 className="text-base mb-4 text-[#f2f2f2]">
@@ -1206,7 +1447,6 @@ const handleNext = async () => {
                         </button>
                       ))}
                     </div>
-                 
                   </div>
                   <div className="border border-[#747474] rounded-lg p-6">
                     <h3 className="text-base mb-4 text-[#f2f2f2]">
@@ -1226,7 +1466,6 @@ const handleNext = async () => {
                       <option value="fiat">Fiat</option>
                       <option value="cryptocurrency">Cryptocurrency</option>
                     </select>
-                   
                   </div>
                 </div>
               </div>
@@ -1243,7 +1482,7 @@ const handleNext = async () => {
             {activeTab === "additional" ? (
               <button
                 type="button"
-                                onClick={handleNext}
+                onClick={handleNext}
                 className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors cursor-pointer"
               >
                 Preview
@@ -1265,4 +1504,4 @@ const handleNext = async () => {
   );
 };
 
-export default SellerSetupForm;
+export default SellerSetupForm;

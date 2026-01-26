@@ -56,7 +56,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           <Star
             key={star}
             className={`${sizeClasses[size]} ${
-              star <= rating ? 'fill-[#9872DD] text-[#9872DD]' : 'fill-gray-700 text-gray-700'
+              star <= rating ? 'fill-[#8451E1] text-[#8451E1]' : 'fill-gray-700 text-gray-700'
             }`}
           />
         ))}
@@ -92,7 +92,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
                   </div>
                   <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-[#9872DD] rounded-full transition-all"
+                      className="h-full bg-[#8451E1] rounded-full transition-all"
                       style={{ width: `${item.percentage}%` }}
                     />
                   </div>
@@ -137,7 +137,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
               {/* Helpful Buttons */}
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 cursor-pointer text-sm text-gray-400 hover:text-[#9872DD] transition-colors">
+                <button className="flex items-center gap-2 cursor-pointer text-sm text-gray-400 hover:text-[#8451E1] transition-colors">
                   <ThumbsUp className="w-4 h-4 " />
                   <span>{review.helpful}</span>
                 </button>

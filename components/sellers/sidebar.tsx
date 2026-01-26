@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/hooks/useToast";
+import { useNotifications, usePendingOrders } from "@/modules/sellers";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,12 @@ export default function Sidebar() {
     const [open, setOpen] = useState(false);
     const { logout } = useAuth();
   
+  // Get notification and pending order counts
+  const { data: notifications = [] } = useNotifications();
+  const { data: pendingOrders = [] } = usePendingOrders();
+  
+  const unreadNotificationCount = notifications.filter((n: any) => !n.isRead).length;
+  const pendingOrderCount = pendingOrders.length;
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -197,9 +204,11 @@ export default function Sidebar() {
               >
                 <Bell size={20} />
                 <span>Notifications</span>
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  2
-                </span>
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                )}
               </Link>
             </li>
             <li>
@@ -216,9 +225,11 @@ export default function Sidebar() {
               >
                 <Clock size={20} />
                 <span>Pending orders</span>
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  10
-                </span>
+                {pendingOrderCount > 0 && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {pendingOrderCount > 99 ? '99+' : pendingOrderCount}
+                  </span>
+                )}
               </Link>
             </li>
             <li>

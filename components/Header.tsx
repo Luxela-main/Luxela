@@ -67,12 +67,12 @@ export default function Header() {
             </p>
 
             <div className='grid grid-cols-2 gap-5 w-full h-12 max-w-[338px] mx-auto'>
-              <Link href={'/buyer'} prefetch={true} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] p-0.5">
+              <Link href={'/buyer'} prefetch={true} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#8451E1] via-#8451E1] to-[#5C2EAF] p-0.5">
                 <div className='rounded-md w-full h-full flex items-center justify-center '>
                   <span>Shop Now</span>
                 </div>
               </Link>
-              <Link href={'/signin'} prefetch={true} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#9872DD] via-#8451E1] to-[#5C2EAF] p-0.5">
+              <Link href={'/signin'} prefetch={true} className="!cursor-pointer rounded-md text-white bg-gradient-to-b from-[#8451E1] via-#8451E1] to-[#5C2EAF] p-0.5">
                 <div className='rounded-md w-full h-full bg-[#0E0E0E] flex items-center justify-center '>
                   <span>Sell</span>
                 </div>
@@ -148,7 +148,7 @@ export default function Header() {
               {/* Navigation arrows */}
               {/* <button
                 onClick={() => setCurrentSlide((prev) => (prev - 1 + images.length) % images.length)}
-                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#8451E1] to-[#9872DD] flex items-center justify-center text-[#8451E1] hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#8451E1]/50"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#8451E1] to-[#8451E1] flex items-center justify-center text-[#8451E1] hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#8451E1]/50"
                 aria-label="Previous slide"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,7 +157,7 @@ export default function Header() {
               </button>
               <button
                 onClick={() => setCurrentSlide((prev) => (prev + 1) % images.length)}
-                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#8451E1] to-[#9872DD] flex items-center justify-center text-[#8451E1] hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#8451E1]/50"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#8451E1] to-[#8451E1] flex items-center justify-center text-[#8451E1] hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#8451E1]/50"
                 aria-label="Next slide"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

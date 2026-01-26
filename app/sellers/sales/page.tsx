@@ -23,6 +23,9 @@ export default function Sales() {
     refetch,
   } = useSales(getStatusFromTab(activeTab));
 
+  // Always call hooks at top level before any conditional returns
+  const { data: selectedOrderData } = useSaleById(selectedOrder || '');
+
   if (isLoading) {
     return <LoadingState message="Loading sales data..." />;
   }
@@ -37,8 +40,6 @@ export default function Sales() {
   }
 
   const sales = salesData || [];
-
-  const { data: selectedOrderData } = useSaleById(selectedOrder || "");
 
   const handleOrderClick = (orderId: string) => {
     setSelectedOrder(orderId);
@@ -393,4 +394,4 @@ export default function Sales() {
       )}
     </div>
   );
-}
+}

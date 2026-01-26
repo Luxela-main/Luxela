@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, uuid, integer, numeric, unique } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, uuid, integer, numeric, unique, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -46,6 +46,22 @@ export const refundTypeEnum = pgEnum('refund_type', ['full', 'partial', 'store_c
 export const holdStatusEnum = pgEnum('hold_status', ['active', 'released', 'refunded', 'expired']);
 export const receivedConditionEnum = pgEnum('received_condition', ['excellent', 'good', 'acceptable', 'poor']);
 export const nftTierEnum = pgEnum('nft_tier', ['bronze', 'silver', 'gold', 'platinum']);
+export const discountTypeEnum = pgEnum('discount_type', ['percentage', 'fixed_amount', 'buy_one_get_one', 'free_shipping']);
+export const discountStatusEnum = pgEnum('discount_status', ['active', 'inactive', 'expired']);
+export const paymentFrequencyEnum = pgEnum('payment_frequency', ['weekly', 'bi_weekly', 'monthly', 'quarterly']);
+export const payoutScheduleEnum = pgEnum('payout_schedule', ['immediate', 'daily', 'weekly', 'bi_weekly', 'monthly']);
+export const disputeStatusEnum = pgEnum('dispute_status', ['open', 'under_review', 'resolved', 'closed']);
+export const disputeResolutionEnum = pgEnum('dispute_resolution', ['refund_issued', 'case_closed', 'buyer_compensated', 'seller_warning']);
+export const inventoryAdjustmentReasonEnum = pgEnum('inventory_adjustment_reason', ['stock_take', 'damaged_goods', 'lost_items', 'theft', 'supplier_return', 'other']);
+export const transactionStatusEnum = pgEnum('transaction_status', ['pending', 'completed', 'failed', 'reversed']);
+export const auditActionEnum = pgEnum('audit_action', ['create', 'update', 'delete', 'login', 'logout', 'password_change', 'role_change']);
+export const auditEntityEnum = pgEnum('audit_entity', ['user', 'order', 'payment', 'refund', 'listing', 'brand', 'buyer', 'seller']);
+export const auditOutcomeEnum = pgEnum('audit_outcome', ['success', 'failure']);
+export const paymentChannelEnum = pgEnum('payment_channel', ['web', 'mobile', 'api', 'pos']);
+export const settlementStatusEnum = pgEnum('settlement_status', ['pending', 'completed', 'failed', 'in_review']);
+export const rolesInOrgEnum = pgEnum('roles_in_org', ['member', 'manager', 'admin', 'owner']);
+export const slaPriorityEnum = pgEnum('sla_priority', ['low', 'medium', 'high', 'critical']);
+export const escalationStatusEnum = pgEnum('escalation_status', ['pending', 'triggered', 'resolved', 'cancelled']);
 
 // =======================
 // DOMAIN TABLES
@@ -93,6 +109,9 @@ export const buyerAccountDetails = pgTable('buyer_account_details', {
   country: varchar('country', { length: 100 }).notNull(),
   state: varchar('state', { length: 100 }).notNull(),
   profilePicture: text('profile_picture'),
+  orderUpdates: boolean('order_updates').default(true).notNull(),
+  promotionalEmails: boolean('promotional_emails').default(true).notNull(),
+  securityAlerts: boolean('security_alerts').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -140,6 +159,13 @@ export const sellerBusiness = pgTable('seller_business', {
   idType: idTypeEnum('id_type').notNull(),
   idNumber: varchar('id_number', { length: 50 }),
   idVerified: boolean('id_verified').default(false).notNull(),
+  verificationStatus: varchar('verification_status', { length: 50 }).default('pending').notNull(),
+  firstName: varchar('verified_first_name', { length: 255 }),
+  lastName: varchar('verified_last_name', { length: 255 }),
+  dateOfBirth: varchar('verified_date_of_birth', { length: 20 }),
+  verificationCountry: varchar('verification_country', { length: 100 }),
+  verificationDate: timestamp('verification_date'),
+  dojahResponse: jsonb('dojah_response'),
   bio: text('bio'),
   storeDescription: text('store_description'),
   storeLogo: text('store_logo'),
@@ -703,6 +729,90 @@ export const supportTicketReplies = pgTable('support_ticket_replies', {
 });
 
 // =======================
+// ENTERPRISE SUPPORT
+// =======================
+export const supportTeamMembers = pgTable('support_team_members', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid('user_id').notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  role: varchar('role', { length: 100 }).notNull(),
+  department: varchar('department', { length: 100 }),
+  status: varchar('status', { length: 50 }).default('active').notNull(),
+  maxCapacity: integer('max_capacity').default(10).notNull(),
+  currentLoadCount: integer('current_load_count').default(0).notNull(),
+  responseTimeAverage: integer('response_time_average'),
+  resolutionRate: numeric('resolution_rate', { precision: 5, scale: 2 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const slaMetrics = pgTable('sla_metrics', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  policyName: varchar('policy_name', { length: 255 }).notNull(),
+  priority: slaPriorityEnum('priority').notNull(),
+  responseTimeMinutes: integer('response_time_minutes').notNull(),
+  resolutionTimeMinutes: integer('resolution_time_minutes').notNull(),
+  workingHoursOnly: boolean('working_hours_only').default(false).notNull(),
+  active: boolean('active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const slaTracking = pgTable('sla_tracking', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: uuid('ticket_id').notNull().references(() => supportTickets.id, { onDelete: 'cascade' }),
+  slaMetricId: uuid('sla_metric_id').notNull().references(() => slaMetrics.id, { onDelete: 'cascade' }),
+  responseDeadline: timestamp('response_deadline').notNull(),
+  resolutionDeadline: timestamp('resolution_deadline').notNull(),
+  responseBreached: boolean('response_breached').default(false).notNull(),
+  resolutionBreached: boolean('resolution_breached').default(false).notNull(),
+  breachNotificationSentAt: timestamp('breach_notification_sent_at'),
+  actualResponseTime: integer('actual_response_time'),
+  actualResolutionTime: integer('actual_resolution_time'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const escalationRules = pgTable('escalation_rules', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  trigger: varchar('trigger', { length: 100 }).notNull(),
+  triggerValue: varchar('trigger_value', { length: 255 }),
+  action: varchar('action', { length: 100 }).notNull(),
+  active: boolean('active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const supportAuditLogs = pgTable('support_audit_logs', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: uuid('ticket_id').references(() => supportTickets.id, { onDelete: 'cascade' }),
+  actionType: varchar('action_type', { length: 100 }).notNull(),
+  performedBy: uuid('performed_by').notNull(),
+  performedByRole: varchar('performed_by_role', { length: 50 }).notNull(),
+  oldValue: text('old_value'),
+  newValue: text('new_value'),
+  metadata: text('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const supportAnalytics = pgTable('support_analytics', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  date: timestamp('date').notNull(),
+  totalTicketsCreated: integer('total_tickets_created').default(0),
+  totalTicketsResolved: integer('total_tickets_resolved').default(0),
+  totalTicketsOpen: integer('total_tickets_open').default(0),
+  averageResponseTime: integer('average_response_time'),
+  averageResolutionTime: integer('average_resolution_time'),
+  slaBreachCount: integer('sla_breach_count').default(0),
+  customerSatisfactionScore: numeric('customer_satisfaction_score', { precision: 3, scale: 2 }),
+  agentUtilization: numeric('agent_utilization', { precision: 5, scale: 2 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
 // LOYALTY NFTs
 // =======================
 export const loyaltyNFTs = pgTable('loyalty_nfts', {
@@ -1019,4 +1129,33 @@ export const conversationsRelations = relations(conversations, ({ one, many }) =
 // Messages → Conversation
 export const messagesRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations),
-}));
+}));
+
+// =======================
+// ENTERPRISE SUPPORT - RELATIONS
+// =======================
+
+// Support Team Members → none
+export const supportTeamMembersRelations = relations(supportTeamMembers, ({}) => ({}));
+
+// SLA Metrics → SLA Tracking
+export const slaMetricsRelations = relations(slaMetrics, ({ many }) => ({
+  tracking: many(slaTracking),
+}));
+
+// SLA Tracking → Metrics & Tickets
+export const slaTrackingRelations = relations(slaTracking, ({ one }) => ({
+  slaMetric: one(slaMetrics),
+  ticket: one(supportTickets),
+}));
+
+// Escalation Rules → none
+export const escalationRulesRelations = relations(escalationRules, ({}) => ({}));
+
+// Support Audit Logs → Tickets
+export const supportAuditLogsRelations = relations(supportAuditLogs, ({ one }) => ({
+  ticket: one(supportTickets),
+}));
+
+// Support Analytics → none
+export const supportAnalyticsRelations = relations(supportAnalytics, ({}) => ({}));

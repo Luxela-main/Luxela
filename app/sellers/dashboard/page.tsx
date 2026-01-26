@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import withAuth from "@/functions/hoc/withAuth";
@@ -12,11 +14,9 @@ import { VisitorTraffic } from "./VisitorTraffic";
 import { TopSellingProducts } from "./TopSellingProducts";
 
 function Dashboard() {
-
   const [search, setSearch] = useState("");
   const { data: dashboardData } = useDashboardData();
-
-  const displayData = dashboardData || defaultDashboardData;
+  const displayData = (dashboardData || defaultDashboardData) as typeof defaultDashboardData;
 
   return (
     <div className="pt-16 px-6 md:pt-0">

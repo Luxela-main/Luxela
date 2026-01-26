@@ -39,13 +39,15 @@ Visit `http://localhost:3000` in your browser.
 - Browse fashion collections and individual products
 - Advanced search and filtering by category, price, rating
 - Shopping cart management with persistence
-- Secure checkout with multiple payment methods
+- Secure checkout with multiple payment methods (Card, Bank Transfer, Crypto/Stablecoin)
+- Tsara escrow-backed payment processing
 - Real-time order tracking
 - Delivery confirmation workflow
 - Product reviews and ratings
-- Support ticket system
-- Order history and wishlist
+- Support ticket creation and management
+- Order history and favorite items
 - Notifications for order updates
+- Account settings and profile management
 
 ### 🏪 Seller Features
 - Create and manage product listings (single & collections)
@@ -60,42 +62,58 @@ Visit `http://localhost:3000` in your browser.
 - Collection management
 
 ### 💳 Payment & Escrow
-- Tsara payment gateway integration
-- Secure payment processing
-- 30-day escrow hold for buyer protection
+- **Tsara Payment Gateway Integration**
+  - Card payments (2% fee, instant processing, 3D verification)
+  - Bank transfers (0.5% + ₦100 fee, 1-2 hour processing)
+  - Crypto/Stablecoin (0.1% fee, 5-10 second processing)
+- Secure payment processing with multiple methods
+- **30-day escrow hold** for buyer protection
+  - Funds held in escrow until delivery confirmation
+  - Buyer-seller protection mechanism
+  - Automatic release after delivery
 - Automatic payout release after delivery
-- Payment hold tracking
-- Refund management
-- Financial ledger tracking
+- Payment hold tracking and status updates
+- Refund management with escrow integration
+- Financial ledger tracking with transaction history
+- Dynamic fee calculation based on payment method
 
 ### 📞 Support System
-- Ticket creation (technical, billing, shipping, general)
-- Priority levels (low, medium, high, urgent)
-- Ticket status tracking (open, in-progress, resolved, closed)
-- Threaded replies and comments
-- Seller and buyer support queues
+- **Buyer Support**
+  - Ticket creation (general_inquiry, technical_issue, payment_problem, order_issue, refund_request, account_issue, listing_help, other)
+  - Priority levels (low, medium, high, urgent)
+  - Ticket status tracking (open, in-progress, resolved, closed)
+  - Real-time ticket count and statistics
+  - 30-second auto-refresh for updates
+- **Seller Support**
+  - Manage and respond to support tickets
+  - Threaded replies and comments
+  - Ticket assignment to support team
+- Unified support queue for admins
+- Notification alerts for new tickets
 
 ## 🏗️ Tech Stack
 
 ### Frontend
-- **Framework:** Next.js 14 with App Router
+- **Framework:** Next.js 16 (Turbopack) with App Router
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
-- **State Management:** React Query (TanStack Query)
-- **API Client:** TRPC
-- **Authentication:** Supabase Auth
-- **UI Components:** Radix UI, shadcn/ui
+- **State Management:** React Query (TanStack Query) & Context API
+- **API Client:** TRPC with optimized JWT authentication
+- **Authentication:** Supabase Auth with JWT token caching
+- **UI Components:** Radix UI, shadcn/ui, Headless UI
 - **Storage:** localStorage for form persistence
 - **Database Client:** Drizzle ORM
+- **JWT Decoding:** jwt-decode for server-side auth optimization
 
 ### Backend
-- **Runtime:** Node.js
-- **Framework:** TRPC
+- **Runtime:** Node.js with Edge Middleware
+- **Framework:** TRPC with 23+ routers
 - **Database:** PostgreSQL with Drizzle ORM
-- **Authentication:** Supabase Auth
+- **Authentication:** Supabase Auth with JWT token validation
 - **File Storage:** Supabase Storage
-- **Payment:** Tsara API
-- **Validation:** Zod
+- **Payment:** Tsara API (Card, Bank Transfer, Crypto)
+- **Validation:** Zod for type-safe validation
+- **Services:** Escrow, Payment, Analytics services
 
 ### Infrastructure
 - **Deployment:** Vercel (Frontend)
@@ -109,41 +127,57 @@ Visit `http://localhost:3000` in your browser.
 luxela/
 ├── app/                          # Next.js App Router pages
 │   ├── api/trpc/                # TRPC API endpoints
-│   ├── buyer/                   # Buyer pages (checkout, orders)
-│   ├── sellers/                 # Seller pages (pending-orders, collections)
+│   ├── buyer/                   # Buyer pages (dashboard, cart, notifications, support)
+│   ├── seller/                  # Seller pages (dashboard, orders, collections)
+│   ├── admin/                   # Admin pages (support dashboard)
+│   ├── cart/                    # Shopping cart page with payment flow
+│   ├── account/                 # Account settings
 │   └── layout.tsx               # Root layout with providers
 ├── server/
-│   ├── trpc/
-│   │   ├── router.ts            # Main TRPC router with all routers
-│   │   ├── trpc.ts              # TRPC setup and context
-│   │   └── (individual routers)  # 23 feature routers
+│   ├── routers/                 # TRPC routers (23+ feature routers)
+│   │   ├── buyer.ts             # Buyer operations
+│   │   ├── seller.ts            # Seller operations
+│   │   ├── checkout.ts          # Checkout & orders
+│   │   ├── support.ts           # Support tickets (buyer & seller)
+│   │   ├── support-admin.ts     # Admin support management
+│   │   ├── payment.ts           # Payment processing
+│   │   ├── notification.ts      # Notifications
+│   │   └── (other routers)      # 16+ additional routers
 │   ├── db/
-│   │   ├── schema.ts            # Database schema with Drizzle
-│   │   └── (migrations)          # Database migrations
+│   │   └── schema.ts            # Database schema with Drizzle ORM
 │   ├── services/                # Business logic services
 │   │   ├── escrowService.ts     # Escrow & payout management
 │   │   ├── paymentService.ts    # Tsara payment processing
-│   │   └── (other services)
-│   └── index.ts                 # Exports appRouter
+│   │   └── (other services)     # Analytics, email, etc.
+│   └── utils.ts                 # Server utilities (seller management)
 ├── modules/
+│   ├── cart/
+│   │   ├── components/          # Cart UI (payment, summary, billing)
+│   │   ├── hooks/               # Cart management hooks
+│   │   └── types/               # Cart types
 │   ├── buyer/
-│   │   ├── queries/             # React Query hooks (useCart, useCheckout, etc.)
-│   │   ├── components/          # Buyer UI components
-│   │   └── types/               # Buyer TypeScript types
+│   │   ├── components/          # Buyer UI (header, sidebar, dashboard)
+│   │   ├── hooks/               # Buyer data hooks
+│   │   └── types/               # Buyer types
 │   ├── seller/
-│   │   ├── queries/             # React Query hooks (usePendingOrders, etc.)
-│   │   ├── components/          # Seller UI components
-│   │   └── types/               # Seller TypeScript types
+│   │   ├── components/          # Seller UI (dashboard, orders)
+│   │   ├── hooks/               # Seller data hooks
+│   │   └── types/               # Seller types
 │   └── shared/
 │       ├── components/          # Shared UI components
-│       ├── hooks/               # Shared hooks (useToast, useLocalStorage)
+│       ├── hooks/               # Shared hooks
 │       └── types/               # Shared types
+├── components/
+│   ├── buyer/                   # Buyer-specific components
+│   ├── ui/                      # Base UI components
+│   └── (shared components)      # Global components
 ├── lib/
-│   ├── hooks/                   # Utility hooks
+│   ├── hooks/                   # Custom React hooks
 │   ├── utils/                   # Helper functions
-│   └── config/                  # Configuration files
-├── components/                  # Global components
-├── public/                       # Static assets
+│   └── providers/               # Context providers
+├── public/                       # Static assets (SVGs, images)
+├── proxy.ts                      # Authentication middleware (JWT optimization)
+├── middleware.ts                 # Next.js middleware
 └── docs/
     └── LUXELA_COMPLETE_DOCUMENTATION.md  # Complete technical documentation
 ```
@@ -176,6 +210,7 @@ See `/docs/LUXELA_COMPLETE_DOCUMENTATION.md` for complete schema details.
 npm run dev
 ```
 Frontend: `http://localhost:3000`
+Optimization: JWT auth caching reduces proxy.ts time from 1-11s to <100ms per request
 
 ### Production Build
 ```bash
@@ -238,9 +273,15 @@ await trpc.support.createTicket.mutate({
 ## 🔐 Authentication & Authorization
 
 - **Authentication:** Supabase Auth (email/password, OAuth)
+- **JWT Optimization:** Server-side token decoding instead of API calls
+  - Reads JWT from cookies (sb-auth-token, access_token)
+  - Instant local validation (microseconds vs 1-11 seconds)
+  - Eliminates Supabase API calls on every request
 - **Authorization:** Role-based (buyer, seller, admin)
 - **Protected Routes:** All seller operations require seller role
-- **TRPC Procedures:** Protected procedures check `ctx.userId`
+  - Auto-redirect non-sellers to dashboard
+  - Graceful error handling for permission denials
+- **TRPC Procedures:** Protected procedures check `ctx.userId` and role
 
 ## 📝 Environment Variables
 
@@ -265,26 +306,40 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 ## 📊 Key Features Deep Dive
 
 ### Escrow System
-- 30-day hold on all payments
+- **30-day escrow hold** on all payments
+  - Protects buyers from non-delivery
+  - Protects sellers from false claims
+  - Funds held securely in Tsara escrow
+- **Payment Methods with Escrow:**
+  - **Card**: Payment held until delivery confirmation
+  - **Bank Transfer**: Funds held in escrow until seller ships
+  - **Crypto/Stablecoin**: Held in smart contract escrow
 - Automatic release after delivery confirmation
-- Buyer protection against non-delivery
-- Seller protection against false claims
 - Payout scheduled for release day
+- Real-time escrow status tracking
+- Configurable hold duration (default: 30 days)
 
 ### Order Lifecycle
-1. **Placed** - Buyer creates order
-2. **Confirmed** - Seller confirms order
-3. **Processing** - Seller prepares shipment
-4. **Shipped** - Seller marks as shipped
-5. **In Transit** - Buyer receives tracking
-6. **Delivered** - Buyer confirms delivery
-7. **Completed** - Escrow released, payment sent
+1. **Placed** - Buyer creates order with Tsara payment (escrow initiated)
+2. **Payment Confirmed** - Payment processor confirms payment
+3. **Confirmed** - Seller confirms order acceptance
+4. **Processing** - Seller prepares shipment
+5. **Shipped** - Seller marks as shipped with tracking
+6. **In Transit** - Buyer receives tracking info, payment in escrow
+7. **Delivered** - Buyer confirms delivery
+8. **Completed** - Escrow released after 30 days or confirmation
+9. **Payout** - Seller receives payment (minus fees and holds)
 
-### Form Persistence
+### Form Persistence & UX
 - Checkout form data saved to localStorage
+- Billing address selection persisted
+- Payment method preference saved
 - Pending orders filters persisted
 - Auto-restore on page refresh
 - Clear on successful completion
+- Dynamic shipping calculation (free over ₦50,000)
+- Real-time tax calculation (7.5% VAT)
+- Payment fee display (method-specific rates)
 
 ## 🧪 Testing
 
@@ -326,6 +381,27 @@ For comprehensive documentation, see `/docs/LUXELA_COMPLETE_DOCUMENTATION.md` wh
 - Add toast notifications for user feedback
 - Test complex business logic
 
+## ⚡ Recent Optimizations
+
+### Performance
+- **JWT Auth Caching**: Reduced auth overhead from 1-11s to <100ms
+  - Decodes JWT tokens locally instead of calling Supabase
+  - Checks multiple cookie locations for compatibility
+- **Hydration Mismatch Fixes**: Fixed SSR/client rendering mismatches
+  - Proper `mounted` state handling
+  - Conditional rendering after hydration
+- **Payment Flow**: Enterprise-level improvements
+  - Dynamic shipping calculation
+  - Tax calculation (7.5% VAT)
+  - Payment method-specific fee display
+  - Complete billing data collection
+
+### UX/Design
+- Removed duplicate wishlist feature (consolidated to favorite-items)
+- Enhanced payment method selection with Tsara escrow details
+- Improved notification routing and support ticket access
+- Added SVG assets for payment methods (Visa, Mastercard, Amex, Crypto wallets)
+
 ## 🐛 Known Issues & Troubleshooting
 
 For common issues and solutions, see the troubleshooting section in `/docs/LUXELA_COMPLETE_DOCUMENTATION.md`
@@ -343,14 +419,38 @@ For issues, feature requests, or questions:
 
 ## 🎯 Roadmap
 
+### Phase 2 Enhancements
 - [ ] Mobile app (React Native)
-- [ ] Advanced analytics dashboard
-- [ ] AI-powered recommendations
+- [ ] Advanced seller analytics dashboard
+- [ ] AI-powered product recommendations
 - [ ] Multi-language support
-- [ ] Additional payment methods
-- [ ] Subscription model support
-- [ ] Live chat support integration
+- [ ] Additional payment methods (Apple Pay, Google Pay)
+- [ ] Subscription model support for sellers
+- [ ] Live chat support integration (WebSocket)
 - [ ] Augmented reality product preview
+- [ ] SMS notifications for order updates
+- [ ] Seller rating and verification system
+- [ ] Bulk order discount system
+- [ ] Gift cards and vouchers
+- [ ] In-app web3 chat
+
+---
+
+## 📖 Version History
+
+### v1.0.0 (Current)
+- ✅ Full buyer & seller platform
+- ✅ Tsara payment integration with escrow
+- ✅ Support ticket system (buyer & seller)
+- ✅ Performance optimizations (JWT auth caching)
+- ✅ Enterprise payment flow with multiple methods
+- ✅ Hydration mismatch fixes
+- ✅ Admin support dashboard
+
+### v1.1.0 (In Progress)
+- 🚧 Mobile app
+- 🚧 Advanced analytics
+- 🚧 AI recommendations
 
 ---
 

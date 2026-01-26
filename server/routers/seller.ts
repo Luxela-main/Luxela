@@ -13,7 +13,18 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { checkRateLimit, getCached, deleteCache, CacheKeys } from "../lib/redis";
 import { getSeller } from "./utils";
+import { verifyIdWithDojah, getCountryCode } from "../lib/dojah";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+let supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient | null {
+  if (supabase) return supabase;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  supabase = createClient(url, key);
+  return supabase;
+}
 
 export const sellerRouter = createTRPCRouter({
   createSellerProfile: protectedProcedure
@@ -44,10 +55,8 @@ export const sellerRouter = createTRPCRouter({
           .where(eq(sellers.userId, userId));
 
         if (existingSeller.length > 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller profile already exists",
-          });
+          // Profile already exists, just return success
+          return { success: true, message: "Seller profile already exists" };
         }
 
         await db.insert(sellers).values({
@@ -267,22 +276,31 @@ export const sellerRouter = createTRPCRouter({
         method: "POST",
         path: "/seller/verify-id",
         tags: ["Seller"],
-        summary: "Verify seller ID",
-        description: "Verify the seller's ID number using external API",
+        summary: "Verify seller ID with retry logic and multi-country support",
+        description: "Verify the seller's ID number using Dojah API with automatic retry, country detection, and comprehensive response validation",
       },
     })
     .input(
       z.object({
         idType: z.enum(["passport", "drivers_license", "voters_card", "national_id"]),
         idNumber: z.string().min(1, "ID number is required"),
+        country: z.string().optional().default("NG"), // Default to Nigeria
       })
     )
-  //   .output(
-  //     z.object({
-  //       success: z.boolean(),
-  //       message: z.string(),
-  //     })
-  //   )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string(),
+        personalInfo: z.object({
+          firstName: z.string().optional(),
+          lastName: z.string().optional(),
+          dateOfBirth: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().optional(),
+          address: z.string().optional(),
+        }).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) {
@@ -303,27 +321,28 @@ export const sellerRouter = createTRPCRouter({
           });
         }
 
-        // Call Dojah API for verification
-        const response = await fetch('https://api.dojah.io/api/v1/kyc/nigeria/identity', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.DOJAH_SECRET_KEY}`,
-            'AppId': process.env.DOJAH_APP_ID,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id_type: input.idType === 'national_id' ? 'nin' : input.idType === 'drivers_license' ? 'dl' : input.idType === 'voters_card' ? 'pvc' : 'passport',
-            id_number: input.idNumber,
-          }),
-        });
+        // Use enhanced Dojah verification with retry logic and validation
+        const result = await verifyIdWithDojah(input.idType, input.idNumber, input.country);
 
-        const data = await response.json() as any;
+        if (result.success && result.personalInfo) {
+          // Extract personal info from verified data
+          const verifiedPersonalInfo = result.personalInfo;
 
-        if (data.status && data.data) {
-          // Update idVerified to true
+          // Update seller with verification data
           await db
             .update(sellerBusiness)
-            .set({ idVerified: true, idNumber: input.idNumber, updatedAt: new Date() })
+            .set({
+              idVerified: true,
+              idNumber: input.idNumber,
+              idType: input.idType,
+              firstName: verifiedPersonalInfo.firstName,
+              lastName: verifiedPersonalInfo.lastName,
+              dateOfBirth: verifiedPersonalInfo.dateOfBirth || null,
+              verificationCountry: input.country,
+              verificationDate: new Date(),
+              dojahResponse: result.data || null,
+              updatedAt: new Date(),
+            })
             .where(eq(sellerBusiness.sellerId, seller.id));
 
           // Invalidate cache
@@ -331,19 +350,20 @@ export const sellerRouter = createTRPCRouter({
 
           return {
             success: true,
-            message: "ID verified successfully",
+            message: "ID verified successfully with personal information captured",
+            personalInfo: verifiedPersonalInfo,
           };
         } else {
           return {
             success: false,
-            message: "ID verification failed. Please check your details.",
+            message: result.message || "ID verification failed. Please check your details and try again.",
           };
         }
       } catch (err: any) {
         console.error("Error verifying ID:", err);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to verify ID",
+          message: err.message || "Failed to verify ID. Please try again later.",
         });
       }
     }),
@@ -377,7 +397,7 @@ export const sellerRouter = createTRPCRouter({
           "1week",
           "custom",
         ]),
-        refundPolicy: z.enum(["no_refunds", "accept_refunds", "14days", "30days", "60days", "store_credit"]),
+        refundPolicy: z.enum(["no_refunds", "48hrs", "72hrs", "5_working_days", "1week", "14days", "30days", "60days", "store_credit"]),
         refundPeriod: z.enum(["same_day", "next_day", "48hrs", "72hrs", "5_working_days", "1_2_weeks", "2_3_weeks", "1week", "14days", "30days", "60days", "store_credit", "custom"]),
       })
     )
@@ -662,4 +682,131 @@ export const sellerRouter = createTRPCRouter({
         });
       }
     }),
-});
+
+  updatePassword: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: "/seller/password",
+        tags: ["Seller"],
+        summary: "Update seller password",
+        description: "Change seller account password",
+      },
+    })
+    .input(
+      z.object({
+        currentPassword: z.string().min(8),
+        newPassword: z.string().min(8),
+      })
+    )
+    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const sb = getSupabase();
+        if (!sb) {
+          throw new Error("Supabase is not configured on the server");
+        }
+
+        // Update password through Supabase
+        const { error } = await sb.auth.admin.updateUserById(userId, {
+          password: input.newPassword,
+        });
+
+        if (error) {
+          throw new Error(`Password update failed: ${error.message}`);
+        }
+
+        return {
+          success: true,
+          message: "Password updated successfully",
+        };
+      } catch (err: any) {
+        console.error("Error updating password:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to update password",
+        });
+      }
+    }),
+
+  deleteAccount: protectedProcedure
+    .meta({
+      openapi: {
+        method: "DELETE",
+        path: "/seller/account",
+        tags: ["Seller"],
+        summary: "Delete seller account",
+        description: "Permanently delete seller account and associated data",
+      },
+    })
+    .input(z.object({ password: z.string().min(8) }))
+    .output(z.object({ success: z.boolean(), message: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const sb = getSupabase();
+        if (!sb) {
+          throw new Error("Supabase is not configured on the server");
+        }
+
+        // Get seller record
+        const seller = await getSeller(userId);
+
+        // Delete all seller-related data
+        await db
+          .delete(sellerBusiness)
+          .where(eq(sellerBusiness.sellerId, seller.id));
+
+        await db
+          .delete(sellerShipping)
+          .where(eq(sellerShipping.sellerId, seller.id));
+
+        await db
+          .delete(sellerPayment)
+          .where(eq(sellerPayment.sellerId, seller.id));
+
+        await db
+          .delete(sellerAdditional)
+          .where(eq(sellerAdditional.sellerId, seller.id));
+
+        // Delete seller profile
+        await db.delete(sellers).where(eq(sellers.id, seller.id));
+
+        // Delete Supabase auth user
+        const { error } = await sb.auth.admin.deleteUser(userId);
+
+        if (error) {
+          throw new Error(`Account deletion failed: ${error.message}`);
+        }
+
+        // Invalidate cache
+        await deleteCache(CacheKeys.sellerProfile(userId));
+
+        return {
+          success: true,
+          message: "Account deleted successfully",
+        };
+      } catch (err: any) {
+        console.error("Error deleting account:", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to delete account",
+        });
+      }
+    }),
+});

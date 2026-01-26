@@ -96,7 +96,7 @@ if (!user || !user.id) {
   return (
     <>
       <Link href={`/buyer/product/${product.id}`} className="block">
-        <div className="group bg-[#161616] rounded-lg overflow-hidden hover:ring-2 hover:ring-[#9872DD]/50 transition-all duration-300 shadow-lg relative">
+        <div className="group bg-[#161616] rounded-lg overflow-hidden hover:ring-2 hover:ring-[#8451E1]/50 transition-all duration-300 shadow-lg relative">
           {/* Image Section */}
           <div className="h-80 md:h-96 bg-[#222] relative overflow-hidden">
             {isValidImage ? (
@@ -192,7 +192,7 @@ if (!user || !user.id) {
     ${
       added
         ? "bg-green-500 scale-105"
-        : "bg-[linear-gradient(180deg,#9872DD_0%,#8451E1_44.78%,#5C2EAF_90.62%)] hover:brightness-110 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+        : "bg-[linear-gradient(180deg,#8451E1_0%,#8451E1_44.78%,#5C2EAF_90.62%)] hover:brightness-110 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
     }
     disabled:opacity-70 disabled:cursor-not-allowed
   `}

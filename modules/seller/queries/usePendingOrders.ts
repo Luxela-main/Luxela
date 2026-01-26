@@ -1,12 +1,10 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { sellerQueryKeys } from './queryKeys';
 
-/**
- * Order interface matching the seller's order structure
- */
 export interface PendingOrder {
   id: string;
   orderId: string;
@@ -30,9 +28,6 @@ export interface PendingOrder {
   updatedAt: Date;
 }
 
-/**
- * Filter options for pending orders query
- */
 export interface PendingOrdersFilters {
   status?: string;
   limit?: number;
@@ -40,58 +35,88 @@ export interface PendingOrdersFilters {
   search?: string;
 }
 
-/**
- * Hook to fetch pending orders for a seller
- * Supports filtering by status and pagination
- *
- * @param filters - Filter options (status, limit, offset)
- * @param options - React Query options
- * @returns Query result with pending orders data
- *
- * @example
- * const { data, isLoading, error } = usePendingOrders({
- *   status: 'pending',
- *   limit: 20,
- *   offset: 0
- * });
- */
 export function usePendingOrders(
   filters?: PendingOrdersFilters,
   options?: Omit<UseQueryOptions<PendingOrder[], Error>, 'queryKey' | 'queryFn'>
 ) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
     queryKey: sellerQueryKeys.pendingOrders(filters?.limit, filters?.offset),
     queryFn: async () => {
       try {
-        const result = await (trpc.orderStatus.getPendingOrders as any).query(
-          filters || {}
-        );
-        return result as any;
+        // Get current seller from the trpc context
+        const userResult = await (trpc.seller.getProfile as any).query() as any;
+        const sellerId = userResult?.seller?.id;
+        
+        if (!sellerId) {
+          throw new Error('User not authenticated');
+        }
+
+        const result = await (trpc.orderStatus.getPendingOrders as any).query({
+          sellerId,
+          limit: filters?.limit || 50,
+          offset: filters?.offset || 0,
+        });
+        // Extract orders array from response
+        return result?.orders || [] as PendingOrder[];
       } catch (err) {
         throw err;
       }
     },
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
+    staleTime: 3 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 5 * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: true,
+    refetchOnMount: true,
+    retry: 3,
+    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
     ...options,
   });
+
+  useEffect(() => {
+    if (!query.data || query.data.length === 0) return;
+
+    const pollInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: sellerQueryKeys.pendingOrders(filters?.limit, filters?.offset),
+      });
+    }, 5 * 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [query.data, filters?.limit, filters?.offset, queryClient]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        queryClient.invalidateQueries({
+          queryKey: sellerQueryKeys.pendingOrders(filters?.limit, filters?.offset),
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [filters?.limit, filters?.offset, queryClient]);
+
+  return {
+    ...query,
+    refetch: query.refetch,
+  };
 }
 
-/**
- * Hook to fetch orders by specific status
- * Supports all order statuses with pagination
- *
- * @param status - Order status to filter by
- * @param filters - Pagination options
- * @param options - React Query options
- * @returns Query result with orders matching the status
- */
 export function useOrdersByStatus(
   status: string,
   filters?: { limit?: number; offset?: number },
   options?: Omit<UseQueryOptions<PendingOrder[], Error>, 'queryKey' | 'queryFn'>
 ) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
     queryKey: sellerQueryKeys.ordersByStatus(status, filters?.limit, filters?.offset),
     queryFn: async () => {
       try {
@@ -106,24 +131,37 @@ export function useOrdersByStatus(
       }
     },
     enabled: !!status,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 3 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 5 * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: 'always',
+    retry: 2,
     ...options,
   });
+
+  useEffect(() => {
+    if (!query.data || query.data.length === 0 || !status) return;
+
+    const pollInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: sellerQueryKeys.ordersByStatus(status, filters?.limit, filters?.offset),
+      });
+    }, 5 * 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [query.data, status, filters?.limit, filters?.offset, queryClient]);
+
+  return query;
 }
 
-/**
- * Hook to fetch a single order by ID
- *
- * @param orderId - The order ID to fetch
- * @param options - React Query options
- * @returns Query result with the order data
- */
 export function useOrderById(
   orderId: string,
   options?: Omit<UseQueryOptions<PendingOrder, Error>, 'queryKey' | 'queryFn'>
 ) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
     queryKey: sellerQueryKeys.orderById(orderId),
     queryFn: async () => {
       try {
@@ -134,25 +172,37 @@ export function useOrderById(
       }
     },
     enabled: !!orderId,
-    staleTime: 60 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 2 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 3 * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    retry: 2,
     ...options,
   });
+
+  useEffect(() => {
+    if (!query.data || !orderId) return;
+
+    const pollInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: sellerQueryKeys.orderById(orderId),
+      });
+    }, 3 * 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [query.data, orderId, queryClient]);
+
+  return query;
 }
 
-/**
- * Hook to fetch order statistics
- * Includes counts by status, revenue data, etc.
- *
- * @param dateRange - Optional date range for stats
- * @param options - React Query options
- * @returns Query result with order statistics
- */
 export function useOrderStats(
   dateRange?: { startDate?: Date; endDate?: Date },
   options?: Omit<UseQueryOptions<any, Error>, 'queryKey' | 'queryFn'>
 ) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
     queryKey: sellerQueryKeys.orderStats(dateRange?.startDate, dateRange?.endDate),
     queryFn: async () => {
       try {
@@ -164,22 +214,30 @@ export function useOrderStats(
         throw err;
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    retry: 2,
     ...options,
   });
+
+  useEffect(() => {
+    if (!query.data) return;
+
+    const pollInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: sellerQueryKeys.orderStats(dateRange?.startDate, dateRange?.endDate),
+      });
+    }, 30 * 1000);
+
+    return () => clearInterval(pollInterval);
+  }, [query.data, dateRange?.startDate, dateRange?.endDate, queryClient]);
+
+  return query;
 }
 
-/**
- * Hook to confirm a pending order
- * Confirms the order and transitions it to processing
- *
- * @returns Mutation function and state
- *
- * @example
- * const { mutate, isPending } = useConfirmOrder();
- * mutate({ orderId: '123' });
- */
 export function useConfirmOrder() {
   const queryClient = useQueryClient();
 
@@ -187,7 +245,6 @@ export function useConfirmOrder() {
     mutationFn: async (data: { orderId: string }) => 
       await ((trpc.orderStatus.confirmOrder as any).mutate)(data),
     onSuccess: () => {
-      // Invalidate related queries to refresh data
       queryClient.invalidateQueries({
         queryKey: sellerQueryKeys.pendingOrders(),
       });
@@ -201,16 +258,6 @@ export function useConfirmOrder() {
   });
 }
 
-/**
- * Hook to cancel an order
- * Cancels the order with an optional reason
- *
- * @returns Mutation function and state
- *
- * @example
- * const { mutate, isPending } = useCancelOrder();
- * mutate({ orderId: '123', reason: 'out_of_stock' });
- */
 export function useCancelOrder() {
   const queryClient = useQueryClient();
 
@@ -231,12 +278,6 @@ export function useCancelOrder() {
   });
 }
 
-/**
- * Hook to update order status
- * Transitions order to next status (confirmed, shipped, delivered, etc.)
- *
- * @returns Mutation function and state
- */
 export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
 
@@ -244,12 +285,10 @@ export function useUpdateOrderStatus() {
     mutationFn: async (data: { orderId: string; status: string }) => 
       await ((trpc.orderStatus.updateOrderStatus as any).mutate)(data),
     onSuccess: (data: PendingOrder) => {
-      // Update specific order cache
       queryClient.setQueryData(
         sellerQueryKeys.orderById(data.orderId),
         data
       );
-      // Invalidate list queries
       queryClient.invalidateQueries({
         queryKey: sellerQueryKeys.orders(),
       });
@@ -260,12 +299,6 @@ export function useUpdateOrderStatus() {
   });
 }
 
-/**
- * Hook to ship an order
- * Updates order status to 'shipped' and initiates delivery tracking
- *
- * @returns Mutation function and state
- */
 export function useShipOrder() {
   const queryClient = useQueryClient();
 
@@ -284,14 +317,6 @@ export function useShipOrder() {
   });
 }
 
-/**
- * Prefetch pending orders for better performance
- * Call this before rendering the pending orders page
- *
- * @example
- * const queryClient = useQueryClient();
- * prefetchPendingOrders(queryClient, { limit: 20 });
- */
 export async function prefetchPendingOrders(
   queryClient: any,
   filters?: PendingOrdersFilters

@@ -45,6 +45,12 @@ import {
   conversationsSchema,
   messagesSchema,
   emailOtpsSchema,
+  supportTeamMembersSchema,
+  slaMetricsSchema,
+  slaTrackingSchema,
+  escalationRulesSchema,
+  supportAuditLogsSchema,
+  supportAnalyticsSchema,
 } from "./zodSchemas";
 
 // ===================== USER TYPES =====================
@@ -125,6 +131,14 @@ export type WebhookLog = z.infer<typeof webhookLogsSchema>;
 // ===================== AUTH TYPES =====================
 export type EmailOtp = z.infer<typeof emailOtpsSchema>;
 
+// ===================== ENTERPRISE SUPPORT TYPES =====================
+export type SupportTeamMember = z.infer<typeof supportTeamMembersSchema>;
+export type SLAMetrics = z.infer<typeof slaMetricsSchema>;
+export type SLATracking = z.infer<typeof slaTrackingSchema>;
+export type EscalationRules = z.infer<typeof escalationRulesSchema>;
+export type SupportAuditLogs = z.infer<typeof supportAuditLogsSchema>;
+export type SupportAnalytics = z.infer<typeof supportAnalyticsSchema>;
+
 // ===================== RE-EXPORTS FOR RUNTIME VALIDATION =====================
 export {
   userSchema,
@@ -171,4 +185,10 @@ export {
   conversationsSchema,
   messagesSchema,
   emailOtpsSchema,
+  supportTeamMembersSchema,
+  slaMetricsSchema,
+  slaTrackingSchema,
+  escalationRulesSchema,
+  supportAuditLogsSchema,
+  supportAnalyticsSchema,
 };

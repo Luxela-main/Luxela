@@ -46,7 +46,7 @@ export default function VendorDetails({
           <h3 className="font-semibold text-lg mb-1">{business.brand_name}</h3>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <Star className="w-4 h-4 fill-[#9872DD] text-[#9872DD]" />
+              <Star className="w-4 h-4 fill-[#8451E1] text-[#8451E1]" />
               <span className="text-sm font-medium">{vendorRating}</span>
             </div>
             <span className="text-gray-600">•</span>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Bell, ChevronDown, Search, ShoppingCart, Menu, X } from "lucide-react";
+import { Bell, ChevronDown, Search, ShoppingCart, Menu, X, ShoppingBag, Heart, Package, Ticket, Home, Users, FolderOpen, HelpCircle, User, FileText, Settings, LogOut, Bookmark } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearch } from "@/context/SearchContext";
@@ -39,10 +39,8 @@ const NAVLINKS = [
 
 const USER_DROPDOWN = [
   { name: "My Account", href: "/buyer/dashboard" },
-  { name: "Track Order", href: "/buyer/dashboard/orders" },
-  { name: "Return and Refund", href: "#" },
   { name: "Profile", href: "/buyer/profile" },
-  { name: "Help Centre", href: "#" },
+  { name: "Settings", href: "/buyer/dashboard/settings" },
 ];
 
 const BuyerHeader = () => {
@@ -50,10 +48,15 @@ const BuyerHeader = () => {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { profile, loading } = useProfile();
   const { cart } = useCartState();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
   const itemCount = cart?.items?.length || 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const username = profile?.username || user?.email?.split("@")[0] || "User";
   const userPicture = profile?.profilePicture 
@@ -93,7 +96,7 @@ const BuyerHeader = () => {
               <Link
                 key={link.name}
                 href={link.href}
-                className="text-[#DCDCDC] text-sm py-3 hover:transform hover:text-[#9872DD] hover:-translate-y-[1px] duration-300 ease-in-out whitespace-nowrap"
+                className="text-[#DCDCDC] text-sm py-3 hover:transform hover:text-[#8451E1] hover:-translate-y-[1px] duration-300 ease-in-out whitespace-nowrap"
               >
                 {link.name}
               </Link>
@@ -140,11 +143,30 @@ const BuyerHeader = () => {
                 )}
               </div>
 
-              <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
-                <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
-              </button>
+              {mounted ? (
+                <Link href={user ? "/buyer/dashboard/notifications" : "/signin?redirect=/buyer/dashboard/notifications"}>
+                  <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
+                    <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                  </button>
+                </Link>
+              ) : (
+                <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
+                  <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                </button>
+              )}
 
-              <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
+              {mounted ? (
+                <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
+                  <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group flex-shrink-0">
+                    <ShoppingCart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                    {itemCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-[#0E0E0E]">
+                        {itemCount}
+                      </span>
+                    )}
+                  </button>
+                </Link>
+              ) : (
                 <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group flex-shrink-0">
                   <ShoppingCart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
                   {itemCount > 0 && (
@@ -153,11 +175,22 @@ const BuyerHeader = () => {
                     </span>
                   )}
                 </button>
-              </Link>
+              )}
             </div>
 
             {/* Mobile: Cart Icon */}
-            <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
+            {mounted ? (
+              <Link href={user ? "/cart" : "/signin?redirect=/cart"}>
+                <button className="lg:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0">
+                  <ShoppingCart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full">
+                      {itemCount}
+                    </span>
+                  )}
+                </button>
+              </Link>
+            ) : (
               <button className="lg:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0">
                 <ShoppingCart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
                 {itemCount > 0 && (
@@ -166,10 +199,10 @@ const BuyerHeader = () => {
                   </span>
                 )}
               </button>
-            </Link>
+            )}
 
             {/* User Dropdown or Sign In */}
-            {user ? (
+            {mounted && user ? (
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <button className="flex cursor-pointer items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] px-2 lg:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] flex-shrink-0">
@@ -244,12 +277,14 @@ const BuyerHeader = () => {
                   </AlertDialog>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
+            ) : mounted ? (
               <Link href="/signin">
                 <Button className="flex cursor-pointer px-4 items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] lg:px-6 py-2 transition-colors duration-300 ease-in-out flex-shrink-0">
                   Sign In
                 </Button>
               </Link>
+            ) : (
+              <div className="w-20 h-10 bg-[#141414] rounded-[4px] animate-pulse" />
             )}
           </div>
         </div>
@@ -272,7 +307,7 @@ const BuyerHeader = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search..."
-                  className="w-full px-4 py-2 pl-10 bg-[#141414] border border-[#2B2B2B] rounded-[4px] text-[#DCDCDC] text-sm focus:outline-none focus:border-[#9872DD]"
+                  className="w-full px-4 py-2 pl-10 bg-[#141414] border border-[#2B2B2B] rounded-[4px] text-[#DCDCDC] text-sm focus:outline-none focus:border-[#8451E1]"
                 />
                 <Search 
                   stroke="#DCDCDC" 
@@ -288,17 +323,87 @@ const BuyerHeader = () => {
                 )}
               </div>
 
+              {/* Main Navigation */}
               <div className="space-y-4">
                 {NAVLINKS.map((link) => (
                   <Link
                     key={link.name}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block text-[#DCDCDC] text-sm py-2 hover:text-[#9872DD] transition-colors"
+                    className="block text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
                   >
                     {link.name}
                   </Link>
                 ))}
+              </div>
+
+              {/* Dashboard Links */}
+              {user && (
+                <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
+                  <h3 className="text-xs text-gray-500 uppercase tracking-wider">
+                    Dashboard
+                  </h3>
+                  <Link
+                    href="/buyer/dashboard/orders"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    Orders
+                  </Link>
+                  <Link
+                    href="/buyer/dashboard/favorite-items"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <Heart className="w-4 h-4" />
+                    Favorite Items
+                  </Link>
+                  <Link
+                    href="/buyer/dashboard/notifications"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <Bell className="w-4 h-4" />
+                    Notifications
+                  </Link>
+                  <Link
+                    href="/buyer/dashboard/returns"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <Package className="w-4 h-4" />
+                    Returns & Refunds
+                  </Link>
+                </div>
+              )}
+
+              {/* Shopping & Support */}
+              <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
+                <Link
+                  href="/cart"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  Shopping Cart
+                </Link>
+                <Link
+                  href="/buyer/dashboard/support-tickets"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                >
+                  <Ticket className="w-4 h-4" />
+                  Support Tickets
+                </Link>
+                <Link
+                  href="/help"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Help & Support
+                </Link>
               </div>
 
               {user && (
@@ -306,23 +411,41 @@ const BuyerHeader = () => {
                   <h3 className="text-xs text-gray-500 uppercase tracking-wider">
                     Account
                   </h3>
-                  {USER_DROPDOWN.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block text-[#DCDCDC] text-sm py-2 hover:text-[#9872DD] transition-colors"
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
+                  {USER_DROPDOWN.map((item) => {
+                    let icon;
+                    switch(item.name) {
+                      case 'My Account':
+                        icon = <User className="w-4 h-4" />;
+                        break;
+                      case 'Profile':
+                        icon = <FileText className="w-4 h-4" />;
+                        break;
+                      case 'Settings':
+                        icon = <Settings className="w-4 h-4" />;
+                        break;
+                      default:
+                        icon = null;
+                    }
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-2 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                      >
+                        {icon}
+                        {item.name}
+                      </Link>
+                    );
+                  })}
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
                       setOpen(true);
                     }}
-                    className="w-full text-left text-red-400 text-sm py-2 hover:text-red-300 transition-colors"
+                    className="flex items-center gap-2 w-full text-left text-red-400 text-sm py-2 hover:text-red-300 transition-colors"
                   >
+                    <LogOut className="w-4 h-4" />
                     Log out
                   </button>
                 </div>

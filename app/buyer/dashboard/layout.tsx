@@ -15,8 +15,8 @@ export default async function Layout({ children }: LayoutProps) {
       <div className="flex flex-1">
         <Sidebar />
 
-        {/* Responsive main content with proper spacing for mobile */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 w-full lg:w-auto">
+        {/* Responsive main content with proper spacing for mobile and desktop */}
+        <main className="flex-1 w-full overflow-auto lg:overflow-visible p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>

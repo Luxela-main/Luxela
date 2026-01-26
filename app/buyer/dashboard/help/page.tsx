@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, MessageCircle, FileText, AlertCircle, Search, Send } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { ChevronDown, MessageCircle, FileText, AlertCircle, Search, Send, Ticket } from 'lucide-react';
+import Link from 'next/link';
 
 interface FAQ {
   id: number;
@@ -14,7 +14,6 @@ export default function HelpCenterPage() {
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [submitEmail, setSubmitEmail] = useState('');
-  const { toast } = useToast();
 
   const defaultFaqs: FAQ[] = [
     {
@@ -61,14 +60,12 @@ export default function HelpCenterPage() {
 
   const handleContactSupport = async () => {
     if (!submitEmail || !submitEmail.includes('@')) {
-      toast({ title: 'Error', description: 'Please enter a valid email address', variant: 'destructive' });
       return;
     }
     try {
-      toast({ title: 'Success', description: 'Your message has been sent. We\'ll get back to you within 24 hours.' });
       setSubmitEmail('');
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
+      console.error('Failed to send message:', error);
     }
   }
 
@@ -89,7 +86,7 @@ export default function HelpCenterPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
             <MessageCircle className="w-6 h-6 text-purple-500 mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Live Chat</p>
@@ -100,6 +97,13 @@ export default function HelpCenterPage() {
             <p className="text-white font-semibold">Documentation</p>
             <p className="text-gray-400 text-sm">Browse our knowledge base</p>
           </button>
+          <Link href="/buyer/dashboard/support-tickets">
+            <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full">
+              <Ticket className="w-6 h-6 text-green-500 mb-2 group-hover:scale-110 transition-transform" />
+              <p className="text-white font-semibold">Support Tickets</p>
+              <p className="text-gray-400 text-sm">View & create tickets</p>
+            </button>
+          </Link>
           <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
             <AlertCircle className="w-6 h-6 text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Report Issue</p>
@@ -152,22 +156,14 @@ export default function HelpCenterPage() {
         {/* Contact Support */}
         <div className="mt-12 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-white mb-2 text-center">Didn't find what you need?</h3>
-          <p className="text-gray-400 mb-6 text-center">Our support team is here to help with any questions</p>
-          <div className="flex flex-col sm:flex-row gap-3 items-center">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={submitEmail}
-              onChange={(e) => setSubmitEmail(e.target.value)}
-              className="flex-1 bg-[#1a1a1a] border border-[#333333] rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
-            />
-            <button
-              onClick={handleContactSupport}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap"
-            >
-              <Send className="w-4 h-4" />
-              Send Message
-            </button>
+          <p className="text-gray-400 mb-6 text-center">Create a support ticket and our team will assist you</p>
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+            <Link href="/buyer/dashboard/support-tickets">
+              <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap">
+                <Ticket className="w-4 h-4" />
+                Create Support Ticket
+              </button>
+            </Link>
           </div>
         </div>
       </div>

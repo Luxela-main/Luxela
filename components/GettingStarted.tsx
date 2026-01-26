@@ -93,7 +93,7 @@ export default function GettingStarted() {
                 {started.href && (
                   <Link
                     href={started.href}
-                    className="mt-auto inline-flex items-center justify-center w-full h-[42px] bg-gradient-to-b from-[#9872DD] via-[#8451E1] to-[#5C2EAF] text-white font-medium rounded-[6px] hover:shadow-[0_0_20px_#8451E1]/30 transition"
+                    className="mt-auto inline-flex items-center justify-center w-full h-[42px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] text-white font-medium rounded-[6px] hover:shadow-[0_0_20px_#8451E1]/30 transition"
                   >
                     {started.cta}
                   </Link>
