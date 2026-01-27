@@ -87,6 +87,7 @@ export const sellerRouter = createTRPCRouter({
         tags: ["Seller"],
       },
     })
+    .input(z.void())
     .output(
       z.object({
         seller: z.object({

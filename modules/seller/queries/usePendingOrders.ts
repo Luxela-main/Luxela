@@ -1,8 +1,8 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useEffect, useMemo } from 'react';
+import { getTRPCClient } from '@/lib/trpc';
 import { sellerQueryKeys } from './queryKeys';
 
 export interface PendingOrder {
@@ -35,35 +35,67 @@ export interface PendingOrdersFilters {
   search?: string;
 }
 
+// First get the seller profile to get sellerId
+function useSellerProfile() {
+  return useQuery({
+    queryKey: sellerQueryKeys.sellerProfile(),
+    queryFn: async () => {
+      try {
+        const client = getTRPCClient();
+        const result = await ((client.seller as any).getProfile as any).query();
+        // The response contains { seller, business, shipping, payment, additional }
+        if (!result || !result.seller) {
+          throw new Error('No seller profile found');
+        }
+        return result.seller;
+      } catch (err) {
+        console.error('Failed to fetch seller profile:', err);
+        throw err;
+      }
+    },
+    staleTime: 60 * 1000, // Cache for 1 minute
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+  });
+}
+
 export function usePendingOrders(
   filters?: PendingOrdersFilters,
   options?: Omit<UseQueryOptions<PendingOrder[], Error>, 'queryKey' | 'queryFn'>
 ) {
   const queryClient = useQueryClient();
   
+  // Get seller profile first
+  const { data: sellerProfile, isLoading: isLoadingProfile, error: profileError } = useSellerProfile();
+  const sellerId = useMemo(() => sellerProfile?.id, [sellerProfile?.id]);
+  
   const query = useQuery({
     queryKey: sellerQueryKeys.pendingOrders(filters?.limit, filters?.offset),
     queryFn: async () => {
+      if (!sellerId) {
+        throw new Error('Seller ID not available. Please ensure you are logged in as a seller.');
+      }
+      
       try {
-        // Get current seller from the trpc context
-        const userResult = await (trpc.seller.getProfile as any).query() as any;
-        const sellerId = userResult?.seller?.id;
-        
-        if (!sellerId) {
-          throw new Error('User not authenticated');
-        }
-
-        const result = await (trpc.orderStatus.getPendingOrders as any).query({
+        const client = getTRPCClient();
+        const result = await ((client.orderStatus as any).getPendingOrders as any).query({
           sellerId,
           limit: filters?.limit || 50,
           offset: filters?.offset || 0,
         });
         // Extract orders array from response
-        return result?.orders || [] as PendingOrder[];
+        const orders = result?.orders || [];
+        if (!Array.isArray(orders)) {
+          console.warn('Unexpected response format from getPendingOrders:', result);
+          return [];
+        }
+        return orders as PendingOrder[];
       } catch (err) {
+        console.error('Failed to fetch pending orders:', err);
         throw err;
       }
     },
+    enabled: !!sellerId && !isLoadingProfile && !profileError, // Only query when we have sellerId and profile is loaded
     staleTime: 3 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchInterval: 5 * 1000,
@@ -103,8 +135,12 @@ export function usePendingOrders(
     };
   }, [filters?.limit, filters?.offset, queryClient]);
 
+  // If there's a profile error, bubble it up
+  const error = profileError || query.error;
+  
   return {
     ...query,
+    error,
     refetch: query.refetch,
   };
 }
@@ -120,7 +156,8 @@ export function useOrdersByStatus(
     queryKey: sellerQueryKeys.ordersByStatus(status, filters?.limit, filters?.offset),
     queryFn: async () => {
       try {
-        const result = await ((trpc.orderStatus.getOrdersByStatus as any).query)({
+        const client = getTRPCClient();
+        const result = await ((client.orderStatus as any).getOrdersByStatus as any).query({
           status,
           limit: filters?.limit || 20,
           offset: filters?.offset || 0,
@@ -165,7 +202,8 @@ export function useOrderById(
     queryKey: sellerQueryKeys.orderById(orderId),
     queryFn: async () => {
       try {
-        const result = await ((trpc.orderStatus.getOrderById as any).query)({ orderId });
+        const client = getTRPCClient();
+        const result = await ((client.orderStatus as any).getOrderById as any).query({ orderId });
         return result as PendingOrder;
       } catch (err) {
         throw err;
@@ -206,7 +244,8 @@ export function useOrderStats(
     queryKey: sellerQueryKeys.orderStats(dateRange?.startDate, dateRange?.endDate),
     queryFn: async () => {
       try {
-        const result = await ((trpc.orderStatus.getOrderStats as any).query)(
+        const client = getTRPCClient();
+        const result = await ((client.orderStatus as any).getOrderStats as any).query(
           dateRange || {}
         );
         return result;
@@ -242,8 +281,10 @@ export function useConfirmOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { orderId: string }) => 
-      await ((trpc.orderStatus.confirmOrder as any).mutate)(data),
+    mutationFn: async (data: { orderId: string }) => {
+      const client = getTRPCClient();
+      return await ((client.orderStatus as any).confirmOrder as any).mutate(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: sellerQueryKeys.pendingOrders(),
@@ -262,8 +303,10 @@ export function useCancelOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { orderId: string; reason?: string }) => 
-      await ((trpc.orderStatus.cancelOrder as any).mutate)(data),
+    mutationFn: async (data: { orderId: string; reason?: string }) => {
+      const client = getTRPCClient();
+      return await ((client.orderStatus as any).cancelOrder as any).mutate(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: sellerQueryKeys.pendingOrders(),
@@ -282,8 +325,10 @@ export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { orderId: string; status: string }) => 
-      await ((trpc.orderStatus.updateOrderStatus as any).mutate)(data),
+    mutationFn: async (data: { orderId: string; status: string }) => {
+      const client = getTRPCClient();
+      return await ((client.orderStatus as any).updateOrderStatus as any).mutate(data);
+    },
     onSuccess: (data: PendingOrder) => {
       queryClient.setQueryData(
         sellerQueryKeys.orderById(data.orderId),
@@ -303,8 +348,10 @@ export function useShipOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { orderId: string; trackingNumber?: string }) => 
-      await ((trpc.orderStatus.shipOrder as any).mutate)(data),
+    mutationFn: async (data: { orderId: string; trackingNumber?: string }) => {
+      const client = getTRPCClient();
+      return await ((client.orderStatus as any).shipOrder as any).mutate(data);
+    },
     onSuccess: (data: PendingOrder) => {
       queryClient.setQueryData(
         sellerQueryKeys.orderById(data.orderId),
@@ -324,7 +371,8 @@ export async function prefetchPendingOrders(
   await queryClient.prefetchQuery({
     queryKey: sellerQueryKeys.pendingOrders(filters?.limit, filters?.offset),
     queryFn: async () => {
-      return await ((trpc.orderStatus.getPendingOrders as any).query)(filters || {});
+      const client = getTRPCClient();
+      return await ((client.orderStatus as any).getPendingOrders as any).query(filters || {});
     },
   });
 }

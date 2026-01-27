@@ -1,6 +1,9 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { db } from '../db';
+import { sellers } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 export const orderStatusRouter = createTRPCRouter({
   // Get order status
@@ -95,16 +98,67 @@ export const orderStatusRouter = createTRPCRouter({
         offset: z.number().default(0),
       })
     )
+    .output(
+      z.object({
+        orders: z.array(
+          z.object({
+            id: z.string(),
+            orderId: z.string(),
+            buyerId: z.string(),
+            sellerId: z.string(),
+            listingId: z.string().nullable(),
+            productTitle: z.string(),
+            productImage: z.string().nullable(),
+            productCategory: z.string(),
+            quantity: z.number(),
+            amountCents: z.number(),
+            currency: z.string(),
+            orderStatus: z.string(),
+            deliveryStatus: z.string().nullable(),
+            payoutStatus: z.string().nullable(),
+            paymentMethod: z.string().nullable(),
+            buyerName: z.string().nullable(),
+            buyerEmail: z.string().nullable(),
+            shippingAddress: z.string().nullable(),
+            createdAt: z.date(),
+            updatedAt: z.date(),
+          })
+        ),
+        total: z.number(),
+        limit: z.number(),
+        offset: z.number(),
+        hasMore: z.boolean(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       try {
-        // Verify seller authorization
-        if (ctx.user?.id !== input.sellerId && ctx.user?.role !== 'admin') {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Not authorized to view these orders',
-          });
+        // Verify seller authorization using Drizzle ORM
+        if (ctx.user?.role !== 'admin') {
+          // Get the seller record from PostgreSQL via Drizzle
+          const sellerRecords = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.id, input.sellerId));
+
+          if (sellerRecords.length === 0) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Seller account not found',
+            });
+          }
+
+          const seller = sellerRecords[0];
+
+          // Verify the authenticated user owns this seller account
+          if (seller.userId !== ctx.user?.id) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Not authorized to view these orders',
+            });
+          }
         }
 
+        // Fetch pending orders for this seller
         const { data: orders, error, count } = await ctx.supabase
           .from('orders')
           .select('*', { count: 'exact' })
@@ -118,16 +172,25 @@ export const orderStatusRouter = createTRPCRouter({
         return {
           orders: (orders || []).map((order) => ({
             id: order.id,
+            orderId: order.id, // Map id to orderId for frontend
             buyerId: order.buyer_id,
             sellerId: order.seller_id,
-            status: order.order_status,
-            totalAmount: order.total_amount,
+            listingId: order.listing_id,
+            productTitle: order.product_title,
+            productImage: order.product_image,
+            productCategory: order.product_category,
+            quantity: 1, // Default to 1 if not available in current schema
+            amountCents: order.amount_cents,
             currency: order.currency || 'USD',
-            createdAt: order.created_at,
-            updatedAt: order.updated_at,
-            estimatedDelivery: order.estimated_arrival,
-            trackingNumber: order.tracking_number,
-            paymentStatus: order.payment_status,
+            orderStatus: order.order_status,
+            deliveryStatus: order.delivery_status,
+            payoutStatus: order.payout_status,
+            paymentMethod: order.payment_method,
+            buyerName: order.customer_name,
+            buyerEmail: order.customer_email,
+            shippingAddress: order.shipping_address,
+            createdAt: order.created_at ? new Date(order.created_at) : new Date(),
+            updatedAt: order.updated_at ? new Date(order.updated_at) : new Date(),
           })),
           total: count || 0,
           limit: input.limit,

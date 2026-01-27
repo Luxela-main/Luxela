@@ -60,6 +60,7 @@ export const sellerQueryKeys = {
   reviews: () => [...sellerQueryKeys.all, 'reviews'] as const,
   shippingSettings: () => [...sellerQueryKeys.all, 'shippingSettings'] as const,
   profile: () => [...sellerQueryKeys.all, 'profile'] as const,
+  sellerProfile: () => [...sellerQueryKeys.all, 'sellerProfile'] as const,
   support: () => [...sellerQueryKeys.all, 'support'] as const,
   financialLedger: () => [...sellerQueryKeys.all, 'financialLedger'] as const,
   ledgerEntry: (entryId: string) =>

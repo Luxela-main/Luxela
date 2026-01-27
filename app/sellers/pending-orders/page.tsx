@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo } from "react"
 import { Clock, CheckCircle, XCircle, AlertCircle, Loader } from "lucide-react"
 import Image from "next/image"
 import SearchBar from "@/components/search-bar"
@@ -101,6 +101,13 @@ export default function PendingOrders() {
     { refetchInterval: 30000 } // Auto-refetch every 30 seconds
   )
 
+  // Debug logging
+  React.useEffect(() => {
+    if (error) {
+      console.error('Pending orders error:', error);
+    }
+  }, [error])
+
   // Setup mutations with React Query automatic invalidation
   const confirmMutation = useConfirmOrder()
   const cancelMutation = useCancelOrder()
@@ -129,13 +136,25 @@ export default function PendingOrders() {
   }, [orders, search])
 
   if (error) {
+    let errorMessage = 'Unknown error';
+    
+    // TRPC errors have a different structure
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      // Try to extract message from TRPC error structure
+      const errorObj = error as any;
+      errorMessage = errorObj.message || errorObj.data?.message || JSON.stringify(error);
+    }
+    
+    console.error('Rendering error state:', { error, errorMessage });
     return (
       <div className="pt-16 px-6 md:pt-0">
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 flex items-center gap-3 text-red-200">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <div>
             <h3 className="font-semibold">Failed to load pending orders</h3>
-            <p className="text-sm text-red-200/80 mt-1">Please try refreshing the page or contact support.</p>
+            <p className="text-sm text-red-200/80 mt-1">{errorMessage || 'Please try refreshing the page or contact support.'}</p>
           </div>
         </div>
       </div>
