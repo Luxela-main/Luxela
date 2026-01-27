@@ -397,7 +397,7 @@ const BuyerHeader = () => {
                   Support Tickets
                 </Link>
                 <Link
-                  href="/help"
+                  href="/buyer/dashboard/help"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
                 >
