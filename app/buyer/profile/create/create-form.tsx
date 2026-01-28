@@ -53,7 +53,7 @@ export default function CreateBuyerProfileForm() {
         toastShownRef.current = true;
       }
     } catch (err) {
-      console.error('Failed to restore form data:', err);
+      // Silently fail
     } finally {
       setHydrated(true);
     }
@@ -100,7 +100,7 @@ export default function CreateBuyerProfileForm() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(formik.values));
     } catch (err) {
-      console.error('Failed to save form data:', err);
+      // Silently fail
     }
   }, [formik.values, hydrated]);
 
@@ -112,22 +112,19 @@ export default function CreateBuyerProfileForm() {
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (err) {
-        console.error('Failed to clear form data:', err);
+        // Silently fail
       }
       
       // Immediately set the created profile in context so page doesn't wait for server fetch
       if (response.profile) {
         setProfile(response.profile);
-        console.log('Profile set in context immediately');
       }
       
       // Invalidate the profile query cache for future refreshes
       await utils.buyer.getAccountDetails.invalidate();
-      console.log('Profile cache invalidated');
       
       // Redirect to profile page immediately
       setTimeout(() => {
-        console.log('Redirecting to /buyer/profile');
         router.push("/buyer/profile");
       }, 300);
     },
@@ -200,7 +197,6 @@ export default function CreateBuyerProfileForm() {
           formik.setFieldValue("profilePicture", result.url);
           toastSvc.success("Profile picture uploaded successfully");
         } catch (err: any) {
-          console.error("Upload error:", err);
           toastSvc.error(err.message || "Failed to upload picture");
         } finally {
           URL.revokeObjectURL(objectUrl);
@@ -216,7 +212,6 @@ export default function CreateBuyerProfileForm() {
       };
       img.src = objectUrl;
     } catch (err: any) {
-      console.error("Upload error:", err);
       toastSvc.error(err.message || "Failed to upload picture");
       setUploadingPicture(false);
       if (pictureInputRef.current) pictureInputRef.current.value = "";

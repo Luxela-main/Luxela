@@ -24,6 +24,7 @@ export interface Listing {
   title: string;
   description: string | null;
   image: string;
+  imagesJson?: string | null;
   price_cents: number;
   currency: string;
   category: string;
@@ -39,6 +40,8 @@ export interface Listing {
   additional_target_audience: string | null;
   supply_capacity: string | null;
   release_duration: string | null;
+  refund_policy: string | null;
+  local_pricing: string | null;
   items_json: string | null;
   created_at: string;
   updated_at: string;

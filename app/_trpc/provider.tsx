@@ -41,16 +41,32 @@ export function TRCProvider({ children }: TRPCProviderProps) {
               data: { session },
             } = await supabase.auth.getSession();
 
+            // Convert headers to plain object if it's a Headers instance
+            const initHeaders = init?.headers;
+            const headerObj: Record<string, string> = {};
+            
+            if (initHeaders instanceof Headers) {
+              initHeaders.forEach((value, key) => {
+                headerObj[key] = value;
+              });
+            } else if (typeof initHeaders === 'object' && initHeaders !== null) {
+              Object.assign(headerObj, initHeaders);
+            }
+
+            const headers: Record<string, string> = {
+              ...headerObj,
+              "Content-Type": "application/json",
+            };
+
+            // Only add authorization header if we have a valid token
+            if (session?.access_token) {
+              headers.authorization = `Bearer ${session.access_token}`;
+            }
+
             return fetch(input, {
               ...init,
-              credentials: "include", // FIXED: now in the correct place
-              headers: {
-                ...(init?.headers || {}),
-                authorization: session?.access_token
-                  ? `Bearer ${session.access_token}`
-                  : "",
-                "Content-Type": "application/json",
-              },
+              credentials: "include",
+              headers,
             });
           },
         }),

@@ -4,14 +4,19 @@ import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/hooks/useToast";
 
-export default function GoogleSignInButton() {
+interface GoogleSignInButtonProps {
+  redirectPath?: string; // Optional custom redirect path
+}
+
+export default function GoogleSignInButton({ redirectPath }: GoogleSignInButtonProps = {}) {
   const toast = useToast();
   const supabase = createClient();
 
   const handleGoogleSignIn = async () => {
     try {
-      // Redirect URL after OAuth
-      const redirectUrl = `${window.location.origin}/auth/callback`;
+      // Determine the correct callback URL
+      const callbackPath = redirectPath ? `/auth/callback?redirect=${encodeURIComponent(redirectPath)}` : `/auth/callback`;
+      const redirectUrl = `${window.location.origin}${callbackPath}`;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",

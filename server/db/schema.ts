@@ -25,7 +25,7 @@ export const listingTypeEnum = pgEnum('listing_type', ['single', 'collection']);
 export const supplyCapacityEnum = pgEnum('supply_capacity', ['no_max', 'limited']);
 export const limitedEditionBadgeEnum = pgEnum('limited_badge', ['show_badge', 'do_not_show']);
 export const shippingOptionEnum = pgEnum('shipping_option', ['local', 'international', 'both']);
-export const orderStatusEnum = pgEnum('order_status', ['processing', 'shipped', 'delivered', 'canceled', 'returned']);
+export const orderStatusEnum = pgEnum('order_status', ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'canceled', 'returned']);
 export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
 export const ticketStatusEnum = pgEnum('ticket_status', ['open', 'in_progress', 'resolved', 'closed']);
 export const ticketPriorityEnum = pgEnum('ticket_priority', ['low', 'medium', 'high', 'urgent']);
@@ -81,6 +81,8 @@ export const sellers = pgTable('sellers', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid('user_id').notNull(),
   brandId: uuid('brand_id'),
+  profilePhoto: text('profile_photo'),
+  payoutMethods: text('payout_methods'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -271,6 +273,7 @@ export const listings = pgTable('listings', {
   description: text('description'),
   category: productCategoryEnum('category'),
   image: text('image'),
+  imagesJson: text('images_json'),
   priceCents: integer('price_cents'),
   currency: varchar('currency', { length: 16 }),
   sizesJson: text('sizes_json'),
@@ -402,6 +405,26 @@ export const financialLedger = pgTable('financial_ledger', {
   status: varchar('status', { length: 32 }).notNull(),
   description: text('description'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
+// SCHEDULED PAYOUTS
+// =======================
+export const scheduledPayouts = pgTable('scheduled_payouts', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  amountCents: integer('amount_cents').notNull(),
+  currency: varchar('currency', { length: 16 }).notNull().default('NGN'),
+  payoutMethodId: varchar('payout_method_id', { length: 255 }).notNull(),
+  schedule: payoutScheduleEnum('schedule').notNull(),
+  scheduledDate: timestamp('scheduled_date'),
+  frequency: varchar('frequency', { length: 50 }),
+  status: varchar('status', { length: 32 }).notNull().default('pending'),
+  lastProcessedAt: timestamp('last_processed_at'),
+  nextScheduledAt: timestamp('next_scheduled_at'),
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // =======================
@@ -729,6 +752,27 @@ export const supportTicketReplies = pgTable('support_ticket_replies', {
 });
 
 // =======================
+// FAQs - DYNAMIC CONTENT
+// =======================
+export const faqs = pgTable('faqs', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  question: varchar('question', { length: 500 }).notNull(),
+  answer: text('answer').notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  userRole: rolesEnum('user_role').default('buyer').notNull(),
+  order: integer('order').default(0).notNull(),
+  active: boolean('active').default(true).notNull(),
+  views: integer('views').default(0).notNull(),
+  helpful: integer('helpful').default(0).notNull(),
+  notHelpful: integer('not_helpful').default(0).notNull(),
+  tags: text('tags'),
+  createdBy: uuid('created_by').notNull(),
+  updatedBy: uuid('updated_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
 // ENTERPRISE SUPPORT
 // =======================
 export const supportTeamMembers = pgTable('support_team_members', {
@@ -875,6 +919,7 @@ export const sellersRelations = relations(sellers, ({ one, many }) => ({
   sales: many(sales),
   brands: many(brands),
   shippingRates: many(shippingRates),
+  scheduledPayouts: many(scheduledPayouts),
 }));
 
 // Brands → Collections & Products
@@ -1155,6 +1200,11 @@ export const escalationRulesRelations = relations(escalationRules, ({}) => ({}))
 // Support Audit Logs → Tickets
 export const supportAuditLogsRelations = relations(supportAuditLogs, ({ one }) => ({
   ticket: one(supportTickets),
+}));
+
+// Scheduled Payouts → Seller
+export const scheduledPayoutsRelations = relations(scheduledPayouts, ({ one }) => ({
+  seller: one(sellers),
 }));
 
 // Support Analytics → none

@@ -60,7 +60,7 @@ export default function Sales() {
   ];
 
   return (
-    <div className="pt-16 px-6 md:pt-0 relative">
+    <div className="px-6 md:px-6 mt-4 md:mt-0 relative">
       <div className="mb-6">
         <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />
@@ -76,10 +76,10 @@ export default function Sales() {
           {tabs.map((tab) => (
             <button
               key={tab}
-              className={`px-4 py-2 ${
+              className={`px-4 py-2 cursor-pointer transition-colors ${
                 activeTab === tab
                   ? "bg-[#1a1a1a] border-b-2 border-purple-600 text-white"
-                  : "text-gray-400"
+                  : "text-gray-400 hover:text-white"
               }`}
               onClick={() => setActiveTab(tab)}
             >
@@ -88,11 +88,11 @@ export default function Sales() {
           ))}
         </div>
         <div className="flex space-x-2">
-          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center">
+          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center cursor-pointer hover:bg-[#222] transition">
             <Filter className="h-4 w-4 mr-2" />
             <span>Filter</span>
           </button>
-          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center">
+          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center cursor-pointer hover:bg-[#222] transition">
             <span>Sort by date</span>
             <svg
               width="20"
@@ -111,7 +111,7 @@ export default function Sales() {
               />
             </svg>
           </button>
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-md">
+          <button className="bg-purple-600 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-purple-700 transition">
             Export
           </button>
         </div>
@@ -196,7 +196,7 @@ export default function Sales() {
               </div>
               <div>
                 <button
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white cursor-pointer transition"
                   onClick={() => handleOrderClick(order.orderId)}
                 >
                   <MoreVertical className="h-5 w-5" />
@@ -210,20 +210,20 @@ export default function Sales() {
       <div className="flex justify-between items-center mt-6 text-sm">
         <div className="text-gray-400">Result 1 - 10 of 20</div>
         <div className="flex space-x-2">
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center disabled:opacity-50">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center cursor-pointer hover:bg-[#222] disabled:opacity-50 disabled:cursor-not-allowed transition">
             <span className="mr-1">Previous</span>
           </button>
-          <button className="bg-purple-600 text-white px-3 py-1 rounded-md">
+          <button className="bg-purple-600 text-white px-3 py-1 rounded-md cursor-pointer hover:bg-purple-700 transition">
             1
           </button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
+          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md cursor-pointer hover:bg-[#222] transition">
             2
           </button>
           <button className="text-gray-400 px-3 py-1">...</button>
-          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md">
+          <button className="border border-[#333] text-gray-400 px-3 py-1 rounded-md cursor-pointer hover:bg-[#222] transition">
             4
           </button>
-          <button onClick={() => setCurrentPage(p => p + 1)} className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center">
+          <button onClick={() => setCurrentPage(p => p + 1)} className="border border-[#333] text-gray-400 px-3 py-1 rounded-md flex items-center cursor-pointer hover:bg-[#222] transition">
             <span className="mr-1">Next</span>
           </button>
         </div>
@@ -240,7 +240,7 @@ export default function Sales() {
                 </div>
                 <button
                   onClick={closeOrderDetail}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white cursor-pointer transition"
                 >
                   <X className="h-5 w-5" />
                 </button>

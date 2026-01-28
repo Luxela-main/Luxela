@@ -29,15 +29,12 @@ import {
   usePendingOrders,
   useConfirmOrder,
   useCancelOrder,
-  type PendingOrder,
-} from "@/modules/seller/queries"
+} from "@/modules/sellers"
+import type { Sale } from "@/modules/sellers/model/sales"
 
-// Use PendingOrder type from queries module
-type OrderWithDetails = PendingOrder & {
-  product: string // Alias for productTitle
-  customer: string // Alias for buyerName
-  customerEmail: string // Alias for buyerEmail
-  orderDate: Date // Use createdAt from the actual data
+// Map Sale to OrderWithDetails
+type OrderWithDetails = Sale & {
+  customerEmail?: string
 }
 
 function getStatusColor(status: string): string {
@@ -97,8 +94,7 @@ export default function PendingOrders() {
 
   // Fetch pending orders
   const { data: orders = [], isLoading, error } = usePendingOrders(
-    { status: "pending", limit: 50, offset: 0 },
-    { refetchInterval: 30000 } // Auto-refetch every 30 seconds
+    { status: "pending", limit: 50, offset: 0 }
   )
 
   // Debug logging
@@ -127,11 +123,10 @@ export default function PendingOrders() {
 
   const filteredOrders = useMemo(() => {
     return orders.filter(
-      (order: PendingOrder) =>
+      (order: Sale) =>
         order.orderId?.toLowerCase().includes(search.toLowerCase()) ||
-        order.productTitle?.toLowerCase().includes(search.toLowerCase()) ||
-        order.buyerName?.toLowerCase().includes(search.toLowerCase()) ||
-        order.buyerEmail?.toLowerCase().includes(search.toLowerCase())
+        order.product?.toLowerCase().includes(search.toLowerCase()) ||
+        order.customer?.toLowerCase().includes(search.toLowerCase())
     )
   }, [orders, search])
 
@@ -149,7 +144,7 @@ export default function PendingOrders() {
     
     console.error('Rendering error state:', { error, errorMessage });
     return (
-      <div className="pt-16 px-6 md:pt-0">
+      <div className="px-6 mt-4 md:mt-0">
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 flex items-center gap-3 text-red-200">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <div>
@@ -162,7 +157,7 @@ export default function PendingOrders() {
   }
 
   return (
-    <div className="pt-16 px-4 md:pt-0 md:px-6">
+    <div className="px-4 md:px-6 mt-4 md:mt-0">
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-white">Pending Orders</h1>
@@ -203,7 +198,7 @@ export default function PendingOrders() {
         />
       ) : (
         <div className="space-y-3">
-          {filteredOrders.map((order: PendingOrder) => (
+          {filteredOrders.map((order: Sale) => (
             <div
               key={order.id}
               className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 hover:border-[#444] transition"
@@ -211,11 +206,11 @@ export default function PendingOrders() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Product Image */}
                 <div className="md:col-span-2">
-                  {order.productImage ? (
+                  {false ? (
                     <div className="relative h-24 w-24 bg-[#242424] rounded-lg overflow-hidden flex-shrink-0">
                       <Image
-                        src={order.productImage}
-                        alt={order.productTitle}
+                        src=""
+                        alt={order.product}
                         fill
                         className="object-cover"
                       />
@@ -235,12 +230,12 @@ export default function PendingOrders() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Product</p>
-                    <p className="text-sm font-semibold text-gray-200 line-clamp-1">{order.productTitle}</p>
+                    <p className="text-sm font-semibold text-gray-200 line-clamp-1">{order.product}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Customer</p>
-                    <p className="text-sm text-gray-300">{order.buyerName}</p>
-                    <p className="text-xs text-gray-500">{order.buyerEmail}</p>
+                    <p className="text-sm text-gray-300">{order.customer}</p>
+                    <p className="text-xs text-gray-500">{order.customerEmail || 'N/A'}</p>
                   </div>
                 </div>
 
@@ -264,7 +259,7 @@ export default function PendingOrders() {
                 <div className="md:col-span-3 flex flex-col gap-2">
                   <Button
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white w-full"
+                    className="bg-green-600 hover:bg-green-700 text-white w-full cursor-pointer disabled:cursor-not-allowed transition"
                     onClick={() => handleConfirmOrder(order.orderId)}
                     disabled={confirmMutation.isPending}
                   >
@@ -275,7 +270,7 @@ export default function PendingOrders() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-red-600 text-red-400 hover:bg-red-900/20 w-full"
+                    className="border-red-600 text-red-400 hover:bg-red-900/20 w-full cursor-pointer disabled:cursor-not-allowed transition"
                     onClick={() => {
                       setSelectedOrderId(order.orderId)
                       setSelectedOrder(order as any)
@@ -308,7 +303,7 @@ export default function PendingOrders() {
                 <p className="text-xs text-gray-500 uppercase">Product</p>
                 <p className="text-sm font-semibold text-gray-200 mt-1">{selectedOrder.product}</p>
                 <p className="text-xs text-gray-400 mt-2">
-                  <span className="font-medium">{selectedOrder.customer}</span> • {selectedOrder.customerEmail}
+                  <span className="font-medium">{selectedOrder.customer}</span> • {selectedOrder.customerEmail || 'N/A'}
                 </p>
               </div>
             )}
@@ -336,11 +331,12 @@ export default function PendingOrders() {
                 setFilters({ ...filters, cancelReason: "" })
               }}
               disabled={cancelMutation.isPending}
+              className="cursor-pointer disabled:cursor-not-allowed transition"
             >
               Close
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white cursor-pointer disabled:cursor-not-allowed transition"
               onClick={handleCancelOrder}
               disabled={cancelMutation.isPending || !filters.cancelReason}
             >

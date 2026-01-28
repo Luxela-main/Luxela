@@ -44,7 +44,7 @@ export default function ProductDetailPage({
   return (
     <div className="bg-black min-h-screen text-white lg:px-12">
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <Breadcrumb product={product} business={business} />
+        <Breadcrumb product={product as any} business={business} />
 
         <div className="grid lg:grid-cols-2 gap-8 mb-16">
           <ProductImageGallery product={product} />
@@ -72,4 +72,4 @@ export default function ProductDetailPage({
       </div>
     </div>
   );
-}
+}

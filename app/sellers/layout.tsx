@@ -9,7 +9,7 @@ export default function SellersLayout({
   return (
      <div className="flex flex-col lg:flex-row lg:min-h-screen">
       <Sidebar />
-      <main className="flex-1 ml-0 lg:min-h-screen">
+      <main className="flex-1 ml-0 lg:min-h-screen mt-10 lg:mt-0">
         <div className="p-4 md:p-6 lg:p-8">
           {children}
         </div>

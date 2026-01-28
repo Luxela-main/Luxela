@@ -31,7 +31,11 @@ async function runMigration() {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'seller_business' AND column_name = 'store_banner') THEN
           ALTER TABLE "seller_business" ADD COLUMN "store_banner" text;
         END IF;
-      END $$;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sellers' AND column_name = 'profile_photo') THEN
+          ALTER TABLE "sellers" ADD COLUMN "profile_photo" text;
+        END IF;
+      END $;
     `);
     
     console.log('Migration completed successfully.');
@@ -42,4 +46,4 @@ async function runMigration() {
   }
 }
 
-runMigration();
+runMigration();

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Headphones, ChevronDown, MessageCircle, FileText, Search, Send, Ticket } from "lucide-react"
+import { useOptimizedPolling } from "@/lib/hooks/useOptimizedPolling"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -24,9 +25,19 @@ import {
 } from "@/components/ui/dialog"
 
 interface FAQ {
-  id: number
+  id: string
   question: string
   answer: string
+  category: string
+  userRole: 'buyer' | 'seller' | 'admin'
+  order: number
+  active: boolean
+  views: number
+  helpful: number
+  notHelpful: number
+  tags: string | null
+  createdAt: Date
+  updatedAt: Date
 }
 
 const CATEGORIES = [
@@ -47,58 +58,9 @@ const PRIORITIES = [
   { value: "urgent", label: "Urgent" },
 ]
 
-const SELLER_FAQS: FAQ[] = [
-  {
-    id: 1,
-    question: "How do I list a new product on Luxela?",
-    answer: "Click on 'New Listing' in the sidebar menu. Fill in the product details including title, description, images, price, and inventory. Add at least 3-5 high-quality images. Our guidelines recommend clear product photos with multiple angles and lifestyle shots. Once approved by our review team, your listing will go live."
-  },
-  {
-    id: 2,
-    question: "What are the commission rates?",
-    answer: "Commission rates vary by category but typically range from 8-15% of the sale price. Service fees of 2.9% + fixed amount apply to each transaction. You can view category-specific rates in your account settings. Premium sellers may qualify for reduced commissions."
-  },
-  {
-    id: 3,
-    question: "When and how do I get paid?",
-    answer: "Payments are processed every 7 days to your registered bank account or payment method. Funds are released after the order is delivered and the customer confirms receipt. You can track your earnings in the Payouts section."
-  },
-  {
-    id: 4,
-    question: "How do I handle returns and refunds?",
-    answer: "When a customer initiates a return, you'll receive a notification. Inspect the returned item and approve or reject the refund within 48 hours. Approved refunds are processed within 3-5 business days. Items in original condition with tags are eligible for full refunds."
-  },
-  {
-    id: 5,
-    question: "What happens if a customer disputes an order?",
-    answer: "We'll notify you immediately of any disputes. You have 48 hours to respond with evidence (tracking info, photos, etc.). Our support team will review both sides and make a fair decision. Most disputes are resolved within 5 business days."
-  },
-  {
-    id: 6,
-    question: "How can I improve my seller rating?",
-    answer: "Maintain a 4.5+ star rating by: providing accurate product descriptions, using high-quality images, shipping promptly, packaging well, and communicating clearly with customers. Respond to messages within 24 hours and resolve issues quickly to build trust."
-  },
-  {
-    id: 7,
-    question: "Can I edit a listing that's already live?",
-    answer: "Yes, you can edit product details, prices, and inventory at any time. However, once an order is placed, you cannot change the product specifications for that order. Major changes like category may require re-approval by our review team."
-  },
-  {
-    id: 8,
-    question: "What are the best practices for product descriptions?",
-    answer: "Write clear, detailed descriptions including dimensions, materials, care instructions, and unique features. Use simple language and highlight key benefits. Include shipping and handling information. Good descriptions reduce returns and inquiries from customers."
-  },
-  {
-    id: 9,
-    question: "How do I monitor my sales performance?",
-    answer: "Use the Sales and Reports section in your dashboard. Track metrics like total revenue, number of orders, conversion rates, and customer reviews. Export reports for detailed analysis. Our analytics help you identify trends and optimize your listings."
-  },
-  {
-    id: 10,
-    question: "What should I do if my account is suspended?",
-    answer: "Review the suspension notice for the specific reason. Common reasons include policy violations, low ratings, or suspicious activity. Contact our support team immediately with evidence of your compliance. You can appeal within 30 days of suspension."
-  }
-]
+// FAQs are now fetched dynamically from the database
+// using TRPC with polling support
+// FAQs data removed - now using TRPC API
 
 const STATUS_COLORS = {
   open: "bg-yellow-900/30 text-yellow-200",
@@ -118,7 +80,7 @@ export default function Support() {
   const [showForm, setShowForm] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<any>(null)
-  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0)
+  const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [submitEmail, setSubmitEmail] = useState("")
   const [formData, setFormData] = useState({
@@ -128,8 +90,53 @@ export default function Support() {
     priority: "medium",
   })
 
-  // Fetch tickets
-  const { data: tickets = [], isLoading, refetch } = (trpc.support as any).getTickets.useQuery({})
+  // Fetch tickets with enterprise polling
+  const ticketsQuery = (trpc.support as any).getTickets.useQuery({}, {
+    staleTime: 5000,
+    gcTime: 10000,
+    refetchOnWindowFocus: 'always',
+  });
+
+  // Use optimized polling for ticket list
+  useOptimizedPolling(ticketsQuery, {
+    initialInterval: 15000,
+    maxInterval: 60000,
+    minInterval: 5000,
+    enableBackoff: true,
+    pauseWhenUnfocused: true,
+    maxFailedAttempts: 3,
+  });
+
+  const { data: tickets = [], isLoading, refetch } = ticketsQuery;
+
+  // Fetch seller FAQs with polling
+  const faqsQuery = trpc.faqs.getFAQsByRole.useQuery(
+    {
+      userRole: 'seller',
+      search: searchQuery || undefined,
+    },
+    {
+      staleTime: 5000,
+      gcTime: 10000,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // Use optimized polling for FAQ updates
+  useOptimizedPolling(faqsQuery, {
+    initialInterval: 30000, // 30 seconds for FAQ updates
+    maxInterval: 120000, // Max 2 minutes
+    minInterval: 15000, // Min 15 seconds
+    enableBackoff: true,
+    pauseWhenUnfocused: true,
+    maxFailedAttempts: 3,
+  });
+
+  const { data: sellerFaqs = [], isLoading: faqsLoading, refetch: refetchFaqs } = faqsQuery;
+
+  // Setup mutations for FAQ interactions
+  const trackViewMutation = trpc.faqs.trackView.useMutation();
+  const recordFeedbackMutation = trpc.faqs.recordFeedback.useMutation();
 
   // Create ticket mutation
   const createMutation = (trpc.support as any).createTicket.useMutation({
@@ -203,13 +210,37 @@ export default function Support() {
     }
   }
 
-  const filteredFAQs = SELLER_FAQS.filter(faq =>
+  const handleTrackFAQView = (faqId: string) => {
+    try {
+      trackViewMutation.mutate({ faqId });
+    } catch (error) {
+      console.error('Failed to track FAQ view:', error);
+    }
+  }
+
+  const handleFAQFeedback = (faqId: string, helpful: boolean) => {
+    try {
+      recordFeedbackMutation.mutate({ faqId, helpful }, {
+        onSuccess: () => {
+          toastSvc.success(helpful ? 'Thank you for the feedback!' : 'Thank you for your feedback.');
+          refetchFaqs();
+        },
+        onError: () => {
+          toastSvc.error('Failed to record feedback');
+        },
+      });
+    } catch (error) {
+      console.error('Failed to record FAQ feedback:', error);
+    }
+  }
+
+  const filteredFAQs = sellerFaqs.filter(faq =>
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
-    <div className="pt-16 lg:pt-0 p-6">
+    <div className="p-6 mt-4 lg:mt-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -263,29 +294,42 @@ export default function Support() {
       {/* FAQs */}
       <div className="space-y-4 mb-12">
         <h2 className="text-xl font-semibold text-white mb-4">Frequently Asked Questions</h2>
-        {filteredFAQs.map((faq) => (
-          <div
-            key={faq.id}
-            className="bg-[#1a1a1a] border border-[#333333] rounded-lg overflow-hidden hover:border-[#444444] transition-colors"
-          >
-            <button
-              onClick={() => setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id)}
-              className="w-full flex items-center justify-between p-4 text-left hover:bg-[#252525] transition-colors cursor-pointer"
-            >
-              <span className="text-white font-medium">{faq.question}</span>
-              <ChevronDown
-                className={`w-5 h-5 text-gray-400 transition-transform ${
-                  expandedFAQ === faq.id ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-            {expandedFAQ === faq.id && (
-              <div className="px-4 pb-4 pt-0 border-t border-[#333333] bg-[#0f0f0f]">
-                <p className="text-gray-400">{faq.answer}</p>
-              </div>
-            )}
+        {faqsLoading ? (
+          <div className="bg-[#1a1a1a] rounded-lg p-8 text-center text-gray-400">
+            Loading FAQs...
           </div>
-        ))}
+        ) : filteredFAQs.length === 0 ? (
+          <div className="bg-[#1a1a1a] rounded-lg p-8 text-center text-gray-400">
+            <p>No FAQs found</p>
+          </div>
+        ) : (
+          filteredFAQs.map((faq) => (
+            <div
+              key={faq.id}
+              className="bg-[#1a1a1a] border border-[#333333] rounded-lg overflow-hidden hover:border-[#444444] transition-colors"
+            >
+              <button
+                onClick={() => {
+                  handleTrackFAQView(faq.id);
+                  setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id);
+                }}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-[#252525] transition-colors cursor-pointer"
+              >
+                <span className="text-white font-medium">{faq.question}</span>
+                <ChevronDown
+                  className={`w-5 h-5 text-gray-400 transition-transform ${
+                    expandedFAQ === faq.id ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {expandedFAQ === faq.id && (
+                <div className="px-4 pb-4 pt-0 border-t border-[#333333] bg-[#0f0f0f]">
+                  <p className="text-gray-400">{faq.answer}</p>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* New Ticket Form */}

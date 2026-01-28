@@ -29,6 +29,27 @@
       "when": 1769417988556,
       "tag": "0004_lovely_penance",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769513593940,
+      "tag": "0005_thin_night_nurse",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769527435592,
+      "tag": "0006_ancient_rawhide_kid",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769556978475,
+      "tag": "0007_omniscient_naoko",
+      "breakpoints": true
     }
   ]
 }

@@ -50,9 +50,10 @@ export default function CollectionDetailPage({
 
   let items: any[] = [];
   try {
-    items = collection.items_json ? JSON.parse(collection.items_json) : [];
+    const itemsJsonData = collection.items_json;
+    items = itemsJsonData ? JSON.parse(itemsJsonData) : [];
   } catch (e) {
-    console.error("Error parsing items:", e);
+    // Silently handle parsing error
   }
 
   const business = collection.sellers?.seller_business?.[0];

@@ -48,6 +48,7 @@ const ListingOutput = z.object({
   description: z.string().nullable(),
   category: CategoryEnum.nullable(),
   image: z.string().nullable(),
+  imagesJson: z.string().nullable(),
   priceCents: z.number().int().nullable(),
   currency: z.string().nullable(),
   sizesJson: z.array(z.string()).nullable(),
@@ -92,6 +93,7 @@ const SingleListingInput = z.object({
   category: CategoryEnum.nullable().optional(),
   image: z.string().nullable().optional(),
   images: z.array(z.string()).optional(),
+  imagesJson: z.string().nullable().optional(),
   priceCents: z.number().int().nullable().optional(),
   currency: z.string().nullable().optional(),
   sizes: z.array(z.string()).optional(),
@@ -198,6 +200,7 @@ export const listingRouter = createTRPCRouter({
         description: input.description ?? null,
         category: input.category ?? null,
         image: input.image ?? null,
+        imagesJson: input.imagesJson ?? null,
         priceCents: input.priceCents ?? null,
         currency: input.currency ?? null,
         sizesJson: input.sizes ? JSON.stringify(input.sizes) : null,
@@ -238,6 +241,7 @@ export const listingRouter = createTRPCRouter({
         description: created.description,
         category: created.category,
         image: created.image,
+        imagesJson: created.imagesJson,
         priceCents: created.priceCents,
         currency: created.currency,
         sizesJson: created.sizesJson ? JSON.parse(created.sizesJson) : null,
@@ -363,6 +367,7 @@ export const listingRouter = createTRPCRouter({
       description: createdListing.description,
       category: createdListing.category,
       image: createdListing.image,
+      imagesJson: createdListing.imagesJson,
       priceCents: createdListing.priceCents,
       currency: createdListing.currency,
       sizesJson: createdListing.sizesJson ? JSON.parse(createdListing.sizesJson) : null,
@@ -406,6 +411,7 @@ export const listingRouter = createTRPCRouter({
         description: l.description,
         category: l.category,
         image: l.image,
+        imagesJson: l.imagesJson,
         priceCents: l.priceCents,
         currency: l.currency,
         sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
@@ -515,6 +521,7 @@ export const listingRouter = createTRPCRouter({
       category: CategoryEnum.nullable().optional(),
       image: z.string().nullable().optional(),
       images: z.array(z.string()).optional(),
+      imagesJson: z.string().nullable().optional(),
       priceCents: z.number().int().nullable().optional(),
       currency: z.string().nullable().optional(),
       sizes: z.array(z.string()).optional(),
@@ -554,6 +561,7 @@ export const listingRouter = createTRPCRouter({
       if (input.description !== undefined) updateData.description = input.description;
       if (input.category !== undefined) updateData.category = input.category;
       if (input.image !== undefined) updateData.image = input.image;
+      if (input.imagesJson !== undefined) updateData.imagesJson = input.imagesJson;
       if (input.priceCents !== undefined) updateData.priceCents = input.priceCents;
       if (input.currency !== undefined) updateData.currency = input.currency;
       if (input.sizes !== undefined) updateData.sizesJson = input.sizes ? JSON.stringify(input.sizes) : null;
@@ -591,6 +599,7 @@ export const listingRouter = createTRPCRouter({
         description: updated.description,
         category: updated.category,
         image: updated.image,
+        imagesJson: updated.imagesJson,
         priceCents: updated.priceCents,
         currency: updated.currency,
         sizesJson: updated.sizesJson ? JSON.parse(updated.sizesJson) : null,

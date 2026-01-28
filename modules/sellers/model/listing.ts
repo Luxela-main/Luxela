@@ -19,7 +19,9 @@ export interface Listing {
   shippingOption: string | null;
   etaDomestic: string | null;
   etaInternational: string | null;
+  refundPolicy: string | null;
+  localPricing: string | null;
   itemsJson: string | null;
   createdAt: Date;
   updatedAt: Date;
-}
+}

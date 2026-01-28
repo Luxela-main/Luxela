@@ -249,6 +249,111 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
             </div>
           )}
           <hr className="py-2 text-[#212121] w-full" />
+
+          {/* Material/Composition Dropdown */}
+          {product.material_composition && (
+            <div className="p-4">
+              <h3 className="text-sm font-medium mb-3 text-white">
+                Material Composition
+              </h3>
+              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
+                {product.material_composition}
+              </div>
+            </div>
+          )}
+
+          {/* Target Audience Display */}
+          {product.additional_target_audience && (
+            <div className="p-4">
+              <h3 className="text-sm font-medium mb-3 text-white">
+                Target Audience
+              </h3>
+              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
+                {product.additional_target_audience}
+              </div>
+            </div>
+          )}
+
+          {/* Shipping Options Dropdown */}
+          {product.shipping_option && (
+            <div className="p-4">
+              <h3 className="text-sm font-medium mb-3 text-white">
+                Shipping Available
+              </h3>
+              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
+                {product.shipping_option === "local"
+                  ? "Local Only"
+                  : product.shipping_option === "international"
+                  ? "International Only"
+                  : "Local & International"}
+              </div>
+              {/* Shipping ETA Information */}
+              <div className="mt-3 space-y-2 text-sm">
+                {product.eta_domestic && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>Domestic Delivery:</span>
+                    <span className="text-gray-300 capitalize">
+                      {product.eta_domestic.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                )}
+                {product.eta_international && product.shipping_option !== "local" && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>International Delivery:</span>
+                    <span className="text-gray-300 capitalize">
+                      {product.eta_international.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Refund Policy Display */}
+          {product.refund_policy && (
+            <div className="p-4">
+              <h3 className="text-sm font-medium mb-3 text-white flex items-center gap-2">
+                <span>✓</span> Refund Policy
+              </h3>
+              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300">
+                {product.refund_policy === "no_refunds"
+                  ? "No Refunds"
+                  : product.refund_policy === "48hrs"
+                  ? "48 Hours"
+                  : product.refund_policy === "72hrs"
+                  ? "72 Hours"
+                  : product.refund_policy === "5_working_days"
+                  ? "5 Working Days"
+                  : product.refund_policy === "1week"
+                  ? "1 Week"
+                  : product.refund_policy === "14days"
+                  ? "14 Days"
+                  : product.refund_policy === "30days"
+                  ? "30 Days"
+                  : product.refund_policy === "60days"
+                  ? "60 Days"
+                  : product.refund_policy === "store_credit"
+                  ? "Store Credit"
+                  : product.refund_policy}
+              </div>
+            </div>
+          )}
+
+          {/* Supply Capacity Display */}
+          {product.supply_capacity && (
+            <div className="p-4">
+              <h3 className="text-sm font-medium mb-3 text-white">
+                Availability
+              </h3>
+              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
+                {product.supply_capacity === "limited"
+                  ? "Limited Supply"
+                  : "Unlimited Supply"}
+              </div>
+            </div>
+          )}
+
+          <hr className="py-2 text-[#212121] w-full" />
         </section>
 
         {/* Quantity Selector */}
@@ -396,4 +501,4 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       </Dialog>
     </div>
   );
-}
+}

@@ -100,7 +100,7 @@ const NewListing: React.FC = () => {
             domesticMinutes: "",
             internationalDays: "",
             internationalMinutes: "",
-            images: (response.image ? [response.image] : []) as (File | string)[],
+            images: (response.imagesJson ? JSON.parse(response.imagesJson) : (response.image ? [response.image] : [])) as (File | string)[],
             collectionTitle: "",
             collectionDescription: "",
             collectionItems: Array.isArray(response.itemsJson) ? (response.itemsJson as any) : [],
@@ -110,7 +110,6 @@ const NewListing: React.FC = () => {
         }
       } catch (err) {
         toastSvc.error("Failed to load listing");
-        console.error(err);
       } finally {
         setIsLoadingExisting(false);
       }
@@ -360,7 +359,7 @@ const handleSubmitSingle = async () => {
           if (typeof imageFile === 'string') continue;
           const validation = validateImageFile(imageFile as File, 10);
           if (!validation.valid) {
-            console.warn(`Skipping invalid image: ${validation.error}`);
+            toastSvc.warning(`Skipping invalid image: ${validation.error}`);
             continue;
           }
 
@@ -375,7 +374,7 @@ const handleSubmitSingle = async () => {
             uploadedImageUrls.push(uploadResult.url);
           }
         } catch (uploadError) {
-          console.error("Failed to upload image:", uploadError);
+          toastSvc.error("Failed to upload image");
         }
       }
     }
@@ -385,6 +384,9 @@ const handleSubmitSingle = async () => {
       uploadedImageUrls.length > 0
         ? uploadedImageUrls[0]
         : LUXELA_PLACEHOLDER;
+
+    // Store all images as JSON
+    const allImages = uploadedImageUrls.length > 0 ? uploadedImageUrls : [LUXELA_PLACEHOLDER];
 
     const supabase = createClient();
     const {
@@ -408,6 +410,7 @@ const handleSubmitSingle = async () => {
       priceCents: Math.round(parseFloat(formData.price) * 100),
       currency: "NGN",
       image: mainImageUrl,
+      imagesJson: JSON.stringify(allImages),
       sizes,
       supplyCapacity,
       quantityAvailable: formData.quantity
@@ -426,7 +429,7 @@ const handleSubmitSingle = async () => {
     setIsSubmitting(false);
   } catch (error) {
     setIsSubmitting(false);
-    console.error("Error creating single listing:", error);
+    toastSvc.error("Failed to create listing");
   }
 };
 
@@ -443,7 +446,7 @@ const handleSubmitCollection = async () => {
     setIsSubmitting(false);
   } catch (error) {
     setIsSubmitting(false);
-    console.error("Error creating collection:", error);
+    toastSvc.error("Failed to create collection");
   }
 };
 
@@ -621,10 +624,3 @@ const handleSubmitCollection = async () => {
 };
 
 export default NewListing;
-
-
-
-
-
-
-

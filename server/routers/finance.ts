@@ -1,6 +1,9 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { db } from '../db';
+import { scheduledPayouts, sellers } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import {
   processAutomaticPayouts,
   getSellerPayoutBalance,
@@ -529,6 +532,109 @@ export const financeRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: err?.message || 'Order not found',
+        });
+      }
+    }),
+
+  schedulePayoutCreate: protectedProcedure
+    .input(
+      z.object({
+        amountCents: z.number().min(1000),
+        payoutMethodId: z.string(),
+        schedule: z.enum(['immediate', 'daily', 'weekly', 'bi_weekly', 'monthly']),
+        scheduledDate: z.date().optional(),
+        frequency: z.string().optional(),
+        note: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      try {
+        const sellerRow = await db.select().from(sellers).where(eq(sellers.userId, ctx.user.id));
+        const seller = sellerRow[0];
+        if (!seller) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Seller not found' });
+
+        const nextScheduledAt =
+          input.schedule === 'immediate'
+            ? new Date()
+            : input.schedule === 'daily'
+              ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+              : input.schedule === 'weekly'
+                ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                : input.schedule === 'bi_weekly'
+                  ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+                  : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        const [payout] = await db
+          .insert(scheduledPayouts)
+          .values({
+            sellerId: seller.id,
+            amountCents: input.amountCents,
+            payoutMethodId: input.payoutMethodId,
+            schedule: input.schedule,
+            scheduledDate: input.scheduledDate,
+            frequency: input.frequency || input.schedule,
+            status: 'pending',
+            nextScheduledAt,
+            note: input.note,
+          })
+          .returning();
+
+        return payout;
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: err?.message || 'Failed to schedule payout',
+        });
+      }
+    }),
+
+  scheduledPayoutsGet: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user?.id) throw new TRPCError({ code: 'UNAUTHORIZED' });
+    try {
+      const sellerRow = await db.select().from(sellers).where(eq(sellers.userId, ctx.user.id));
+      const seller = sellerRow[0];
+      if (!seller) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Seller not found' });
+
+      const payouts = await db.select().from(scheduledPayouts).where(eq(scheduledPayouts.sellerId, seller.id));
+
+      return payouts.map((p) => ({
+        id: p.id,
+        amountCents: p.amountCents,
+        amount: p.amountCents / 100,
+        currency: p.currency,
+        payoutMethodId: p.payoutMethodId,
+        schedule: p.schedule,
+        status: p.status,
+        nextScheduledAt: p.nextScheduledAt,
+        createdAt: p.createdAt,
+      }));
+    } catch (err: any) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: err?.message || 'Failed to fetch scheduled payouts',
+      });
+    }
+  }),
+
+  scheduledPayoutCancel: protectedProcedure
+    .input(z.object({ payoutId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user?.id) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      try {
+        const sellerRow = await db.select().from(sellers).where(eq(sellers.userId, ctx.user.id));
+        const seller = sellerRow[0];
+        if (!seller) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Seller not found' });
+
+        await db
+          .delete(scheduledPayouts)
+          .where(eq(scheduledPayouts.id, input.payoutId));
+
+        return { success: true };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: err?.message || 'Failed to cancel payout',
         });
       }
     }),

@@ -11,9 +11,7 @@ interface AddPayoutMethodModalProps {
 }
 
 export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethodModalProps) {
-  const [methodType, setMethodType] = useState<"bank" | "paypal" | "crypto" | "wise" | null>(
-    null
-  );
+  const [methodType, setMethodType] = useState<"bank" | "paypal" | "crypto" | "wise" | null>(null);
   const [formData, setFormData] = useState({
     bankName: "",
     accountNumber: "",
@@ -38,34 +36,38 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
     switch (methodType) {
       case "bank":
         newMethod = {
-          name: `${formData.bankName}`,
           type: "bank",
-          details: `${formData.bankName} • ****${formData.accountNumber.slice(-4)}`,
-          icon: <CreditCard className="text-purple-400" size={24} />,
+          accountDetails: {
+            bankName: formData.bankName,
+            accountNumber: formData.accountNumber,
+            accountName: formData.accountName,
+            sortCode: formData.sortCode,
+          },
         };
         break;
       case "paypal":
         newMethod = {
-          name: "PayPal Account",
           type: "paypal",
-          details: formData.paypalEmail,
-          icon: <Wallet className="text-blue-400" size={24} />,
+          accountDetails: {
+            email: formData.paypalEmail,
+          },
         };
         break;
       case "crypto":
         newMethod = {
-          name: `${formData.walletNetwork} Wallet`,
           type: "crypto",
-          details: `${formData.walletAddress.slice(0, 10)}...${formData.walletAddress.slice(-5)}`,
-          icon: <DollarSign className="text-green-400" size={24} />,
+          accountDetails: {
+            walletNetwork: formData.walletNetwork,
+            walletAddress: formData.walletAddress,
+          },
         };
         break;
       case "wise":
         newMethod = {
-          name: "Wise Account",
           type: "wise",
-          details: formData.wiseEmail,
-          icon: <Wallet className="text-amber-400" size={24} />,
+          accountDetails: {
+            email: formData.wiseEmail,
+          },
         };
         break;
       default:
@@ -95,7 +97,6 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-[#1a1a1a] rounded-lg max-w-2xl w-full p-6 border border-[#2a2a2a] max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold text-white">Add Payout Method</h2>
           <button
@@ -106,7 +107,6 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
           </button>
         </div>
 
-        {/* Method Selection */}
         {!methodType ? (
           <div className="space-y-3">
             <p className="text-gray-400 mb-4">Select a payment method type:</p>
@@ -164,7 +164,6 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
             </button>
           </div>
         ) : (
-          /* Form */
           <form onSubmit={handleSubmit} className="space-y-6">
             {methodType === "bank" && (
               <div className="space-y-4">
@@ -303,7 +302,6 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
               </div>
             )}
 
-            {/* Buttons */}
             <div className="flex gap-3 pt-6 border-t border-[#2a2a2a]">
               <Button
                 type="button"

@@ -6,8 +6,16 @@ import {
   sellerShipping,
   sellerPayment,
   sellerAdditional,
+  notifications,
+  conversations,
+  messages,
+  brands,
+  listings,
+  supportTickets,
+  supportTicketReplies,
+  profiles,
 } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -201,6 +209,7 @@ export const sellerRouter = createTRPCRouter({
         storeDescription: z.string().optional(),
         storeLogo: z.string().optional(),
         storeBanner: z.string().optional(),
+        profilePhoto: z.string().optional(),
       })
     )
     .output(
@@ -234,6 +243,7 @@ export const sellerRouter = createTRPCRouter({
 
       try {
         const seller = await getSeller(userId);
+        const { profilePhoto, ...businessData } = input;
 
         const existing = await db
           .select()
@@ -244,15 +254,23 @@ export const sellerRouter = createTRPCRouter({
           // Update existing
           await db
             .update(sellerBusiness)
-            .set({ ...(input as any), updatedAt: new Date() })
+            .set({ ...(businessData as any), updatedAt: new Date() })
             .where(eq(sellerBusiness.sellerId, seller.id));
         } else {
           // Create new
           await db.insert(sellerBusiness).values({
-            ...input,
+            ...businessData,
             id: uuidv4(),
             sellerId: seller.id,
           } as any);
+        }
+
+        // Update profilePhoto in sellers table if provided
+        if (profilePhoto) {
+          await db
+            .update(sellers)
+            .set({ profilePhoto, updatedAt: new Date() })
+            .where(eq(sellers.id, seller.id));
         }
 
         // Invalidate cache
@@ -745,7 +763,7 @@ export const sellerRouter = createTRPCRouter({
         path: "/seller/account",
         tags: ["Seller"],
         summary: "Delete seller account",
-        description: "Permanently delete seller account and associated data",
+        description: "Permanently delete seller account and all associated data (GDPR compliant)",
       },
     })
     .input(z.object({ password: z.string().min(8) }))
@@ -768,25 +786,90 @@ export const sellerRouter = createTRPCRouter({
         // Get seller record
         const seller = await getSeller(userId);
 
-        // Delete all seller-related data
-        await db
-          .delete(sellerBusiness)
-          .where(eq(sellerBusiness.sellerId, seller.id));
+        // Delete all seller-related data in transaction
+        await db.transaction(async (tx) => {
+          // Delete messaging & communications
+          const sellerConversations = await tx
+            .select()
+            .from(conversations)
+            .where(eq(conversations.sellerId, seller.id));
 
-        await db
-          .delete(sellerShipping)
-          .where(eq(sellerShipping.sellerId, seller.id));
+          for (const conv of sellerConversations) {
+            await tx
+              .delete(messages)
+              .where(eq(messages.conversationId, conv.id));
+          }
 
-        await db
-          .delete(sellerPayment)
-          .where(eq(sellerPayment.sellerId, seller.id));
+          await tx
+            .delete(conversations)
+            .where(eq(conversations.sellerId, seller.id));
 
-        await db
-          .delete(sellerAdditional)
-          .where(eq(sellerAdditional.sellerId, seller.id));
+          // Delete support tickets & replies
+          const sellerTickets = await tx
+            .select()
+            .from(supportTickets)
+            .where(eq(supportTickets.sellerId, seller.id));
 
-        // Delete seller profile
-        await db.delete(sellers).where(eq(sellers.id, seller.id));
+          for (const ticket of sellerTickets) {
+            await tx
+              .delete(supportTicketReplies)
+              .where(eq(supportTicketReplies.ticketId, ticket.id));
+          }
+
+          await tx
+            .delete(supportTickets)
+            .where(eq(supportTickets.sellerId, seller.id));
+
+          // Delete assigned support tickets
+          await tx
+            .delete(supportTickets)
+            .where(eq(supportTickets.assignedTo, seller.id));
+
+          // Delete all seller notifications
+          await tx
+            .delete(notifications)
+            .where(eq(notifications.sellerId, seller.id));
+
+          // Delete seller business details
+          await tx
+            .delete(sellerBusiness)
+            .where(eq(sellerBusiness.sellerId, seller.id));
+
+          // Delete seller shipping
+          await tx
+            .delete(sellerShipping)
+            .where(eq(sellerShipping.sellerId, seller.id));
+
+          // Delete seller payment methods
+          await tx
+            .delete(sellerPayment)
+            .where(eq(sellerPayment.sellerId, seller.id));
+
+          // Delete seller additional details
+          await tx
+            .delete(sellerAdditional)
+            .where(eq(sellerAdditional.sellerId, seller.id));
+
+          // Delete brands and all related cascading data
+          // (cascading delete will handle listings, orders, payments, etc.)
+          await tx
+            .delete(brands)
+            .where(eq(brands.sellerId, seller.id));
+
+          // Delete seller record (cascading delete for other relations)
+          await tx.delete(sellers).where(eq(sellers.id, seller.id));
+        });
+
+        // Delete profile if exists
+        const existingProfile = await db
+          .select()
+          .from(profiles)
+          .where(eq(profiles.userId, userId))
+          .limit(1);
+
+        if (existingProfile.length > 0) {
+          await db.delete(profiles).where(eq(profiles.userId, userId));
+        }
 
         // Delete Supabase auth user
         const { error } = await sb.auth.admin.deleteUser(userId);
@@ -800,7 +883,7 @@ export const sellerRouter = createTRPCRouter({
 
         return {
           success: true,
-          message: "Account deleted successfully",
+          message: "Account deleted successfully. All personal and business data has been removed.",
         };
       } catch (err: any) {
         console.error("Error deleting account:", err);
@@ -810,4 +893,4 @@ export const sellerRouter = createTRPCRouter({
         });
       }
     }),
-});
+});

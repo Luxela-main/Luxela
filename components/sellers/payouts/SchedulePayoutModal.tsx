@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { X, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/app/_trpc/client";
 
 interface SchedulePayoutModalProps {
   isOpen: boolean;
@@ -15,35 +16,77 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
     payoutMethod: "",
     scheduleType: "immediate",
     scheduleDate: "",
-    frequency: "once",
-    description: "",
+    frequency: "monthly",
   });
 
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const { mutate: createPayout, isPending: isCreating } = trpc.finance.schedulePayoutCreate.useMutation({
+    onSuccess: () => {
+      onClose();
+    },
+  });
+
+  const { data: methods, isLoading: methodsLoading } = trpc.sales.getPayoutMethod.useQuery() as any;
+  const { data: balanceData } = trpc.finance.getPayoutBalance.useQuery({ currency: 'NGN' }) as any;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Payout scheduled successfully!\nAmount: ${formData.amount}\nMethod: ${formData.payoutMethod}`);
-    onClose();
+    if (!formData.amount || !formData.payoutMethod) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await createPayout({
+        amountCents: Math.round(parseFloat(formData.amount) * 100),
+        payoutMethodId: formData.payoutMethod,
+        schedule: formData.scheduleType as any,
+        scheduledDate: formData.scheduleType === "scheduled" ? new Date(formData.scheduleDate) : undefined,
+        frequency: formData.frequency,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const availableMethods = [
-    { id: "bank", name: "Bank Transfer - First Bank (****3456)" },
-    { id: "paypal", name: "PayPal - seller@paypal.com" },
-    { id: "crypto", name: "USDT Wallet - 0x742d...f7e1" },
-  ];
+  const formattedMethods: Array<{ id: string; name: string }> = methods?.map((m: any) => {
+    if (m.type === "bank_transfer") {
+      return {
+        id: m.id,
+        name: `Bank Transfer - ${m.accountDetails?.accountName} (${m.accountDetails?.bankName})`,
+      };
+    }
+    if (m.type === "paypal") {
+      return {
+        id: m.id,
+        name: `PayPal - ${m.accountDetails?.email}`,
+      };
+    }
+    if (m.type === "crypto") {
+      return {
+        id: m.id,
+        name: `${m.accountDetails?.tokenType || "Crypto"} - ${m.accountDetails?.walletAddress?.slice(0, 10)}...${m.accountDetails?.walletAddress?.slice(-4)}`,
+      };
+    }
+    return {
+      id: m.id,
+      name: m.type,
+    };
+  }) || [];
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-[#1a1a1a] rounded-lg max-w-2xl w-full p-6 border border-[#2a2a2a] max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold text-white">Schedule Payout</h2>
           <button
@@ -54,7 +97,6 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
           </button>
         </div>
 
-        {/* Progress Steps */}
         <div className="flex gap-2 mb-8">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex-1 flex items-center gap-2">
@@ -78,14 +120,12 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
           ))}
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Step 1: Amount & Method */}
           {step === 1 && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Available Balance: ₦125,450.00
+                  Available Balance: ₦{(balanceData?.available || 0).toLocaleString()}
                 </label>
               </div>
 
@@ -101,15 +141,15 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                     value={formData.amount}
                     onChange={handleInputChange}
                     placeholder="0.00"
-                    min="0"
-                    max="125450"
-                    step="0.01"
+                    min="1000"
+                    max={balanceData?.available || 999999}
+                    step="100"
                     required
                     className="w-full pl-8 pr-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Minimum: ₦1,000 | Maximum: ₦125,450.00
+                  Minimum: ₦1,000 | Maximum: ₦{(balanceData?.available || 0).toLocaleString()}
                 </p>
               </div>
 
@@ -117,33 +157,37 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Payout Method *
                 </label>
-                <select
-                  name="payoutMethod"
-                  value={formData.payoutMethod}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600"
-                >
-                  <option value="">Select a payment method</option>
-                  {availableMethods.map((method) => (
-                    <option key={method.id} value={method.id}>
-                      {method.name}
-                    </option>
-                  ))}
-                </select>
+                {methodsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="animate-spin text-gray-400" size={20} />
+                  </div>
+                ) : (
+                  <select
+                    name="payoutMethod"
+                    value={formData.payoutMethod}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600"
+                  >
+                    <option value="">Select a payment method</option>
+                    {formattedMethods.map((method: { id: string; name: string }) => (
+                      <option key={method.id} value={method.id}>
+                        {method.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="bg-blue-600/10 border border-blue-600/20 rounded-lg p-4 flex gap-3">
                 <AlertCircle className="text-blue-400 flex-shrink-0 mt-0.5" size={20} />
                 <p className="text-sm text-blue-300">
-                  Payouts typically process within 1-3 business days depending on your payment
-                  method.
+                  Payouts typically process within 1-3 business days depending on your payment method.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Step 2: Schedule */}
           {step === 2 && (
             <div className="space-y-4">
               <div>
@@ -226,7 +270,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
-                    <option value="biweekly">Bi-weekly</option>
+                    <option value="bi_weekly">Bi-weekly</option>
                     <option value="monthly">Monthly</option>
                   </select>
                 </div>
@@ -234,7 +278,6 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
             </div>
           )}
 
-          {/* Step 3: Review & Confirm */}
           {step === 3 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white">Review Your Payout</h3>
@@ -242,13 +285,13 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
               <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg p-6 space-y-4">
                 <div className="flex justify-between items-center pb-4 border-b border-[#2a2a2a]">
                   <span className="text-gray-400">Amount</span>
-                  <span className="text-xl font-bold text-white">₦{formData.amount}</span>
+                  <span className="text-xl font-bold text-white">₦{parseFloat(formData.amount).toLocaleString()}</span>
                 </div>
 
                 <div className="flex justify-between items-center pb-4 border-b border-[#2a2a2a]">
                   <span className="text-gray-400">Payment Method</span>
-                  <span className="text-white">
-                    {availableMethods.find((m) => m.id === formData.payoutMethod)?.name}
+                  <span className="text-white text-sm">
+                    {formattedMethods.find((m) => m.id === formData.payoutMethod)?.name || "Not selected"}
                   </span>
                 </div>
 
@@ -258,7 +301,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                     {formData.scheduleType === "immediate"
                       ? "Immediate"
                       : formData.scheduleType === "scheduled"
-                        ? `${formData.scheduleDate}`
+                        ? formData.scheduleDate
                         : `${formData.frequency.charAt(0).toUpperCase() + formData.frequency.slice(1)}`}
                   </span>
                 </div>
@@ -278,7 +321,6 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
             </div>
           )}
 
-          {/* Buttons */}
           <div className="flex gap-3 pt-6 border-t border-[#2a2a2a]">
             {step > 1 && (
               <Button
@@ -286,6 +328,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                 onClick={() => setStep(step - 1)}
                 variant="outline"
                 className="flex-1 border-[#2a2a2a]"
+                disabled={isCreating || loading}
               >
                 Back
               </Button>
@@ -295,25 +338,31 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
               <Button
                 type="button"
                 onClick={() => {
-                  if (
-                    step === 1 &&
-                    (!formData.amount || !formData.payoutMethod)
-                  ) {
+                  if (step === 1 && (!formData.amount || !formData.payoutMethod)) {
                     alert("Please fill in all required fields");
                     return;
                   }
                   setStep(step + 1);
                 }}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                disabled={isCreating || loading}
               >
                 Next
               </Button>
             ) : (
               <Button
                 type="submit"
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                disabled={isCreating || loading}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
               >
-                Confirm Payout
+                {isCreating || loading ? (
+                  <>
+                    <Loader2 className="mr-2 animate-spin" size={16} />
+                    Processing...
+                  </>
+                ) : (
+                  "Confirm Payout"
+                )}
               </Button>
             )}
           </div>

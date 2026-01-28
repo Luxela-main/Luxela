@@ -20,7 +20,7 @@ const listingTypeEnum = z.enum(['single', 'collection']);
 const supplyCapacityEnum = z.enum(['no_max', 'limited']);
 const limitedEditionBadgeEnum = z.enum(['show_badge', 'do_not_show']);
 const shippingOptionEnum = z.enum(['local', 'international', 'both']);
-const orderStatusEnum = z.enum(['processing', 'shipped', 'delivered', 'canceled', 'returned']);
+const orderStatusEnum = z.enum(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'canceled', 'returned']);
 const payoutStatusEnum = z.enum(['in_escrow', 'processing', 'paid']);
 const ticketStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'closed']);
 const ticketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
@@ -39,6 +39,10 @@ const transitionTypeEnum = z.enum(['automatic', 'manual', 'system']);
 const refundTypeEnum = z.enum(['full', 'partial', 'store_credit']);
 const holdStatusEnum = z.enum(['active', 'released', 'refunded', 'expired']);
 const receivedConditionEnum = z.enum(['excellent', 'good', 'acceptable', 'poor']);
+const nftTierEnum = z.enum(['bronze', 'silver', 'gold', 'platinum']);
+const discountTypeEnum = z.enum(['percentage', 'fixed_amount', 'buy_one_get_one', 'free_shipping']);
+const discountStatusEnum = z.enum(['active', 'inactive', 'expired']);
+const payoutScheduleEnum = z.enum(['immediate', 'daily', 'weekly', 'bi_weekly', 'monthly']);
 
 // ========================== USERS ==========================
 export const userSchema = z.object({
@@ -131,6 +135,7 @@ export const sellerSchema = z.object({
   id: z.string().uuid().optional(),
   userId: z.string().uuid(),
   brandId: z.string().uuid().nullable().optional(),
+  payoutMethods: z.string().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -298,6 +303,7 @@ export const listingsSchema = z.object({
   description: z.string().nullable().optional(),
   category: productCategoryEnum.nullable().optional(),
   image: z.string().nullable().optional(),
+  imagesJson: z.string().nullable().optional(),
   priceCents: z.number().int().nullable().optional(),
   currency: z.string().nullable().optional(),
   sizesJson: z.string().nullable().optional(),
@@ -400,6 +406,24 @@ export const paymentHoldsSchema = z.object({
   reason: z.string().nullable().optional(),
   refundedAt: z.date().nullable().optional(),
   releasedAt: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== SCHEDULED PAYOUTS ==========================
+export const scheduledPayoutsSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  amountCents: z.number().int(),
+  currency: z.string().default('NGN'),
+  payoutMethodId: z.string(),
+  schedule: payoutScheduleEnum,
+  scheduledDate: z.date().nullable().optional(),
+  frequency: z.string().nullable().optional(),
+  status: z.string().default('pending'),
+  lastProcessedAt: z.date().nullable().optional(),
+  nextScheduledAt: z.date().nullable().optional(),
+  note: z.string().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -514,6 +538,40 @@ export const discountSchema = z.object({
   amountOffCents: z.number().int().nullable().optional(),
   active: z.boolean().default(true),
   expiresAt: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== FAQs ==========================
+export const faqsSchema = z.object({
+  id: z.string().uuid().optional(),
+  question: z.string(),
+  answer: z.string(),
+  category: z.string(),
+  userRole: rolesEnum.default('buyer'),
+  order: z.number().int().default(0),
+  active: z.boolean().default(true),
+  views: z.number().int().default(0),
+  helpful: z.number().int().default(0),
+  notHelpful: z.number().int().default(0),
+  tags: z.string().nullable().optional(),
+  createdBy: z.string().uuid(),
+  updatedBy: z.string().uuid(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== LOYALTY NFTs ==========================
+export const loyaltyNFTsSchema = z.object({
+  id: z.string().uuid().optional(),
+  buyerId: z.string().uuid(),
+  tier: nftTierEnum,
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  image: z.string(),
+  loyaltyPoints: z.number().int(),
+  earnedDate: z.date(),
+  rarity: z.string(),
+  property: z.string(),
   createdAt: z.date().optional(),
 });
 

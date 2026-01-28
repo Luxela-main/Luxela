@@ -26,6 +26,7 @@ import {
   refundsSchema,
   paymentHoldsSchema,
   financialLedgerSchema,
+  scheduledPayoutsSchema,
   webhookEventsSchema,
   webhookLogsSchema,
   salesSchema,
@@ -51,6 +52,8 @@ import {
   escalationRulesSchema,
   supportAuditLogsSchema,
   supportAnalyticsSchema,
+  faqsSchema,
+  loyaltyNFTsSchema,
 } from "./zodSchemas";
 
 // ===================== USER TYPES =====================
@@ -91,6 +94,7 @@ export type Payment = z.infer<typeof paymentsSchema>;
 export type Refund = z.infer<typeof refundsSchema>;
 export type PaymentHold = z.infer<typeof paymentHoldsSchema>;
 export type FinancialLedger = z.infer<typeof financialLedgerSchema>;
+export type ScheduledPayout = z.infer<typeof scheduledPayoutsSchema>;
 export type Sale = z.infer<typeof salesSchema>;
 
 // ===================== CART TYPES =====================
@@ -139,6 +143,10 @@ export type EscalationRules = z.infer<typeof escalationRulesSchema>;
 export type SupportAuditLogs = z.infer<typeof supportAuditLogsSchema>;
 export type SupportAnalytics = z.infer<typeof supportAnalyticsSchema>;
 
+// ===================== FAQ & LOYALTY TYPES =====================
+export type FAQ = z.infer<typeof faqsSchema>;
+export type LoyaltyNFT = z.infer<typeof loyaltyNFTsSchema>;
+
 // ===================== RE-EXPORTS FOR RUNTIME VALIDATION =====================
 export {
   userSchema,
@@ -166,6 +174,7 @@ export {
   refundsSchema,
   paymentHoldsSchema,
   financialLedgerSchema,
+  scheduledPayoutsSchema,
   webhookEventsSchema,
   webhookLogsSchema,
   salesSchema,
@@ -191,4 +200,6 @@ export {
   escalationRulesSchema,
   supportAuditLogsSchema,
   supportAnalyticsSchema,
+  faqsSchema,
+  loyaltyNFTsSchema,
 };

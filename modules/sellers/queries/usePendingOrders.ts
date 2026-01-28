@@ -8,11 +8,18 @@ export const usePendingOrders = (params?: { status?: string; limit?: number; off
   return useQuery<Sale[]>({
     queryKey: sellersKeys.sales("pending"),
     queryFn: async () => {
-      const client: any = getVanillaTRPCClient();
-      return await ((client.sales as any).getAllSales as any).query({
-        status: "pending",
-        ...params,
-      });
+      try {
+        const client: any = getVanillaTRPCClient();
+        const response = await ((client.sales as any).getAllSales as any).query({
+          status: "pending",
+          ...params,
+        });
+        console.log('Pending orders fetched:', response);
+        return response;
+      } catch (error) {
+        console.error('Failed to fetch pending orders:', error);
+        throw error;
+      }
     },
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 5,

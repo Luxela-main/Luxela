@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, createTRPCRouter } from "../trpc/trpc";
-const router = createTRPCRouter;
 import { TRPCError } from "@trpc/server";
 
-export const paymentConfirmationRouter = router({
+export const paymentConfirmationRouter = createTRPCRouter({
   // Create payment confirmation intent
   createPaymentIntent: protectedProcedure
     .input(

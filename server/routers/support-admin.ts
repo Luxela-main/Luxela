@@ -27,9 +27,15 @@ import { v4 as uuidv4 } from 'uuid';
  * - Audit logging
  */
 
-async function ensureAdmin(userId: string) {
-  // Check if user is admin (would be from context.user.role)
-  return true; // TODO: Implement actual admin check
+async function ensureAdmin(userId: string, userRole?: string) {
+  // Check if user has admin role from Supabase metadata
+  if (!userRole || userRole !== 'admin') {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Only administrators can access this resource',
+    });
+  }
+  return true;
 }
 
 export const supportAdminRouter = createTRPCRouter({
@@ -68,7 +74,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       // Get all tickets
       const allTickets = await db.select().from(supportTickets);
@@ -157,7 +163,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       // Check if team member exists and has capacity
       const teamMember = await db.select().from(supportTeamMembers).where(eq(supportTeamMembers.id, input.assignToId));
@@ -201,7 +207,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       // Get ticket to find assigned member
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
@@ -257,7 +263,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       const existing = await db.select().from(slaMetrics)
         .where(and(
@@ -307,7 +313,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       const policies = await db.select().from(slaMetrics);
       return policies.map(p => ({
@@ -341,7 +347,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       await db.insert(escalationRules).values({
         name: input.name,
@@ -372,7 +378,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       const rules = await db.select().from(escalationRules);
       return rules.map(r => ({
@@ -407,7 +413,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       const existing = await db.select().from(supportTeamMembers)
         .where(eq(supportTeamMembers.userId, input.userId));
@@ -454,7 +460,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       const members = await db.select().from(supportTeamMembers);
       return members.map(m => ({
@@ -497,7 +503,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId);
+      await ensureAdmin(userId, ctx.user?.role);
 
       let query = db.select().from(supportAuditLogs);
       if (input.ticketId) {

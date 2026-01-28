@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { Listing } from "@/types/listing";
-import { ShoppingCart, Images, Check, Loader2, LogIn } from "lucide-react";
+import { ShoppingCart, Images, Check, Loader2, LogIn, Star, Shield, Zap } from "lucide-react";
 import { useCartState } from "@/modules/cart/context";
 import { useAuth } from "@/context/AuthContext";
 import { toastSvc } from "@/services/toast";
@@ -122,15 +122,37 @@ if (!user || !user.id) {
 
           {/* Content Section */}
           <div className="p-4 bg-black">
+            {/* Category & Seller Verification Row */}
+            <div className="flex items-center justify-between mb-2">
+              {product.category && (
+                <span className="text-[#8451E1] text-[9px] font-bold uppercase tracking-widest bg-[#8451E1]/10 px-2 py-1 rounded-full">
+                  {product.category}
+                </span>
+              )}
+              {product.is_verified && (
+                <div className="flex items-center gap-1">
+                  <Shield className="w-3 h-3 text-green-500" />
+                  <span className="text-[9px] text-green-500 font-medium">Verified</span>
+                </div>
+              )}
+            </div>
+
             <p className="text-[#acacac] text-[11px] font-medium uppercase tracking-wider mb-1">
               {business?.brand_name || "Luxela Exclusive"}
             </p>
 
-            {/* Title & Colors */}
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-[#f2f2f2] capitalize font-medium text-base line-clamp-2 leading-snug h-10 flex-1">
-                {product.title}
-              </h3>
+            {/* Title, Description & Colors */}
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex-1">
+                <h3 className="text-[#f2f2f2] capitalize font-medium text-base line-clamp-2 leading-snug h-10">
+                  {product.title}
+                </h3>
+                {product.description && (
+                  <p className="text-[#acacac] text-[12px] line-clamp-1 mt-1">
+                    {product.description.substring(0, 100)}{product.description.length > 100 ? '...' : ''}
+                  </p>
+                )}
+              </div>
 
               {colors.length > 0 && (
                 <div className="flex items-center -space-x-1.5">
@@ -169,6 +191,40 @@ if (!user || !user.id) {
               )}
             </div>
 
+            {/* Rating & Sales Row */}
+            {(product.rating || product.sales_count) && (
+              <div className="flex items-center gap-4 mb-3 text-[11px]">
+                {product.rating && product.rating > 0 && (
+                  <div className="flex items-center gap-1">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3 h-3 ${
+                            i < Math.round(product.rating || 0)
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-gray-600'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[#acacac]">
+                      {product.rating.toFixed(1)}
+                      {product.review_count && (
+                        <span className="ml-1">({product.review_count})</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+                {product.sales_count && product.sales_count > 0 && (
+                  <span className="text-[#acacac] flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-orange-500" />
+                    {product.sales_count} sold
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Price & Quick Add */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
@@ -176,12 +232,16 @@ if (!user || !user.id) {
                   {product.currency}{" "}
                   {(product.price_cents / 100).toLocaleString()}
                 </span>
-                {product.quantity_available <= 5 &&
-                  product.quantity_available > 0 && (
-                    <span className="text-orange-500 text-[10px] font-medium">
-                      Only {product.quantity_available} left
-                    </span>
-                  )}
+                {product.supply_capacity === 'limited' && product.quantity_available <= 5 && product.quantity_available > 0 && (
+                  <span className="text-orange-500 text-[10px] font-medium">
+                    ⚠️ Only {product.quantity_available} left
+                  </span>
+                )}
+                {product.quantity_available === 0 && (
+                  <span className="text-red-500 text-[10px] font-medium">
+                    Out of Stock
+                  </span>
+                )}
               </div>
 
               <button

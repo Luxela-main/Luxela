@@ -2,13 +2,13 @@
 
 export const dynamic = 'force-dynamic';
 
-
 import React, { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Loader } from "@/components/loader/loader";
 import { useToast } from "@/components/hooks/useToast";
 import { useAuth } from "@/context/AuthContext";
+import { checkAdminStatus } from "@/app/actions/admin";
 
 function AuthCallbackHandler() {
   const router = useRouter();
@@ -37,6 +37,13 @@ function AuthCallbackHandler() {
 
   const redirectUser = async (user: any) => {
     const role = user?.user_metadata?.role as "buyer" | "seller" | undefined;
+    const customRedirect = searchParams.get("redirect");
+
+    // If custom redirect is specified (e.g., from admin signin with Google)
+    if (customRedirect) {
+      window.location.href = customRedirect;
+      return;
+    }
 
     if (!role) {
       window.location.href = "/select-role";
@@ -129,6 +136,14 @@ function AuthCallbackHandler() {
 
         if (session?.user) {
           setUser(session.user);
+          
+          // Check if this is admin signin (by looking at custom redirect param)
+          const customRedirect = searchParams.get("redirect");
+          if (customRedirect?.includes("/admin")) {
+            await redirectUser(session.user);
+            return;
+          }
+
           await redirectUser(session.user);
           return;
         }

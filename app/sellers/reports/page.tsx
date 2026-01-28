@@ -127,7 +127,7 @@ export default function Reports() {
   const topProducts = getTopProducts()
 
   return (
-    <div className="pt-16 px-6 md:pt-0">
+    <div className="px-6 mt-4 md:mt-0">
       {/* Header */}
       <div className="mb-6 md:max-lg:pt-10">
         <h1 className="text-2xl font-semibold">Reports & Analytics</h1>

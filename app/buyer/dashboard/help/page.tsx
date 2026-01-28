@@ -3,78 +3,98 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, MessageCircle, FileText, AlertCircle, Search, Send, Ticket } from 'lucide-react';
 import Link from 'next/link';
+import { trpc } from '@/lib/trpc';
+import { useOptimizedPolling } from '@/lib/hooks/useOptimizedPolling';
+import { toastSvc } from '@/services/toast';
 
 interface FAQ {
-  id: number;
+  id: string;
   question: string;
   answer: string;
+  category: string;
+  userRole: 'buyer' | 'seller' | 'admin';
+  order: number;
+  active: boolean;
+  views: number;
+  helpful: number;
+  notHelpful: number;
+  tags: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export default function HelpCenterPage() {
-  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0);
+  const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [submitEmail, setSubmitEmail] = useState('');
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
 
-  const defaultFaqs: FAQ[] = [
+  // Fetch FAQs for buyer role with polling
+  const faqQuery = trpc.faqs.getFAQsByRole.useQuery(
     {
-      id: 1,
-      question: 'How do I place an order?',
-      answer: 'Browse our collections, select your desired items, check size and color options, add to cart, and proceed to checkout. Follow the payment instructions to complete your purchase securely.'
+      userRole: 'buyer',
+      search: searchQuery || undefined,
     },
     {
-      id: 2,
-      question: 'What is your return and exchange policy?',
-      answer: 'We offer 30-day returns and exchanges for most items in original condition with tags attached. Visit the Returns & Refunds section to initiate a return. Original shipping costs are non-refundable.'
-    },
-    {
-      id: 3,
-      question: 'How can I track my order?',
-      answer: 'Once your order ships, you\'ll receive a tracking number via email. You can also check your order status in the Orders section of your dashboard for real-time updates.'
-    },
-    {
-      id: 4,
-      question: 'Do you offer international shipping?',
-      answer: 'Yes, we ship to most countries worldwide. Shipping costs and delivery times vary by location. International orders may have customs and import duties applied by your country.'
-    },
-    {
-      id: 5,
-      question: 'How do I find my correct size?',
-      answer: 'Each product includes a detailed size chart. We recommend measuring according to our guidelines. If unsure, contact our support team for personalized sizing recommendations.'
-    },
-    {
-      id: 6,
-      question: 'What payment methods do you accept?',
-      answer: 'We accept credit cards (Visa, Mastercard, Amex), debit cards, PayPal, and other digital payment methods depending on your location. All payments are securely processed.'
-    },
-    {
-      id: 7,
-      question: 'How long does delivery take?',
-      answer: 'Standard delivery typically takes 5-7 business days within the country. Express shipping options are available at checkout. International orders may take 2-3 weeks depending on destination.'
-    },
-    {
-      id: 8,
-      question: 'Can I cancel or modify my order?',
-      answer: 'You can cancel or modify your order within 24 hours of placement. After that, your order enters fulfillment and cannot be changed. Contact support if you need assistance.'
+      staleTime: 5000,
+      gcTime: 10000,
+      refetchOnWindowFocus: false,
     }
-  ];
+  );
+
+  // Use optimized polling for FAQ updates
+  useOptimizedPolling(faqQuery, {
+    initialInterval: 30000, // 30 seconds for FAQ updates
+    maxInterval: 120000, // Max 2 minutes
+    minInterval: 15000, // Min 15 seconds
+    enableBackoff: true,
+    pauseWhenUnfocused: true,
+    maxFailedAttempts: 3,
+  });
+
+  const { data: fetchedFaqs = [], isLoading, refetch } = faqQuery;
+
+  // Setup mutation for tracking FAQ views
+  const trackViewMutation = trpc.faqs.trackView.useMutation();
+
+  useEffect(() => {
+    const convertedFaqs = fetchedFaqs.map(faq => ({
+      ...faq,
+      createdAt: typeof faq.createdAt === 'string' ? new Date(faq.createdAt) : faq.createdAt,
+      updatedAt: typeof faq.updatedAt === 'string' ? new Date(faq.updatedAt) : faq.updatedAt,
+    }));
+    setFaqs(convertedFaqs);
+  }, [fetchedFaqs]);
 
   const handleContactSupport = async () => {
     if (!submitEmail || !submitEmail.includes('@')) {
+      toastSvc.error('Please enter a valid email address');
       return;
     }
     try {
+      toastSvc.success('Your message has been sent. We will get back to you within 24 hours.');
       setSubmitEmail('');
     } catch (error) {
-      console.error('Failed to send message:', error);
+      toastSvc.error('Failed to send message');
     }
   }
 
-  const faqs = defaultFaqs;
+  const handleTrackView = (faqId: string) => {
+    try {
+      trackViewMutation.mutate({ faqId });
+    } catch (error) {
+      toastSvc.error('Failed to track FAQ view');
+    }
+  };
 
   const filteredFAQs = faqs.filter(faq =>
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleFAQClick = (faqId: string) => {
+    handleTrackView(faqId);
+  };
 
   return (
     <div className="min-h-screen bg-[#0e0e0e] p-6">
@@ -128,29 +148,42 @@ export default function HelpCenterPage() {
         {/* FAQs */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-white mb-4">Frequently Asked Questions</h2>
-          {filteredFAQs.map((faq) => (
-            <div
-              key={faq.id}
-              className="bg-[#1a1a1a] border border-[#333333] rounded-lg overflow-hidden hover:border-[#444444] transition-colors"
-            >
-              <button
-                onClick={() => setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id)}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-[#252525] transition-colors cursor-pointer"
-              >
-                <span className="text-white font-medium">{faq.question}</span>
-                <ChevronDown
-                  className={`w-5 h-5 text-gray-400 transition-transform ${
-                    expandedFAQ === faq.id ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-              {expandedFAQ === faq.id && (
-                <div className="px-4 pb-4 pt-0 border-t border-[#333333] bg-[#0f0f0f]">
-                  <p className="text-gray-400">{faq.answer}</p>
-                </div>
-              )}
+          {isLoading ? (
+            <div className="bg-[#1a1a1a] rounded-lg p-8 text-center text-gray-400">
+              Loading FAQs...
             </div>
-          ))}
+          ) : filteredFAQs.length === 0 ? (
+            <div className="bg-[#1a1a1a] rounded-lg p-8 text-center text-gray-400">
+              <p>No FAQs found</p>
+            </div>
+          ) : (
+            filteredFAQs.map((faq) => (
+              <div
+                key={faq.id}
+                className="bg-[#1a1a1a] border border-[#333333] rounded-lg overflow-hidden hover:border-[#444444] transition-colors"
+              >
+                <button
+                  onClick={() => {
+                    handleFAQClick(faq.id);
+                    setExpandedFAQ(expandedFAQ === faq.id ? null : faq.id);
+                  }}
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-[#252525] transition-colors cursor-pointer"
+                >
+                  <span className="text-white font-medium">{faq.question}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-400 transition-transform ${
+                      expandedFAQ === faq.id ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {expandedFAQ === faq.id && (
+                  <div className="px-4 pb-4 pt-0 border-t border-[#333333] bg-[#0f0f0f]">
+                    <p className="text-gray-400">{faq.answer}</p>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Contact Support */}
@@ -158,10 +191,24 @@ export default function HelpCenterPage() {
           <h3 className="text-xl font-semibold text-white mb-2 text-center">Didn't find what you need?</h3>
           <p className="text-gray-400 mb-6 text-center">Create a support ticket and our team will assist you</p>
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={submitEmail}
+              onChange={(e) => setSubmitEmail(e.target.value)}
+              className="flex-1 bg-[#1a1a1a] border border-[#333333] rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+            />
+            <button
+              onClick={handleContactSupport}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap"
+            >
+              <Send className="w-4 h-4" />
+              Send Message
+            </button>
             <Link href="/buyer/dashboard/support-tickets">
-              <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap">
+              <button className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap">
                 <Ticket className="w-4 h-4" />
-                Create Support Ticket
+                Create Ticket
               </button>
             </Link>
           </div>

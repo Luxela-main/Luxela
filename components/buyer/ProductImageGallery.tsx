@@ -8,7 +8,19 @@ interface ProductImageGalleryProps {
 }
 
 export default function ProductImageGallery({ product }: ProductImageGalleryProps) {
-  const images = [product.image, product.image, product.image, product.image]
+  // Parse multiple images from imagesJson if available
+  const getImages = (): string[] => {
+    try {
+      if (product.imagesJson) {
+        const parsed = JSON.parse(product.imagesJson)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch (e) {
+      console.error('Failed to parse images:', e)
+    }
+    return product.image ? [product.image] : []
+  }
+  const images = getImages()
   const [selectedImage, setSelectedImage] = useState(0)
 
   return (
@@ -50,4 +62,4 @@ export default function ProductImageGallery({ product }: ProductImageGalleryProp
       </div>
     </div>
   )
-}
+}

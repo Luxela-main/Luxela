@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { trpc } from '@/lib/_trpc/client';
+import { useOptimizedPolling } from '@/lib/hooks/useOptimizedPolling';
 import { AlertCircle, TrendingUp, Clock, AlertTriangle, Users, BarChart3 } from 'lucide-react';
 import { useToast } from '@/components/hooks/useToast';
 
@@ -25,65 +26,70 @@ export default function SupportAdminDashboard() {
   const [wsConnected, setWsConnected] = useState(false);
 
   const metricsQuery = trpc.supportAdmin.getDashboardMetrics.useQuery(undefined, {
-    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 5000,
+    gcTime: 10000,
+    refetchOnWindowFocus: 'always',
   });
 
+  const pollingMetrics = useOptimizedPolling(metricsQuery, {
+    initialInterval: 10000,
+    maxInterval: 60000,
+    minInterval: 3000,
+    enableBackoff: true,
+    pauseWhenUnfocused: true,
+    maxFailedAttempts: 3,
+    circuitBreakerTimeout: 30000,
+  });
+
+  const { data: metricsData, isLoading, isError } = metricsQuery;
+
   useEffect(() => {
-    if (metricsQuery.data) {
+    if (metricsData) {
       setMetrics({
-        ...metricsQuery.data,
-        urgentTickets: metricsQuery.data.urgentTickets.map(ticket => ({
+        ...metricsData,
+        urgentTickets: metricsData.urgentTickets.map(ticket => ({
           ...ticket,
           createdAt: typeof ticket.createdAt === 'string' ? new Date(ticket.createdAt) : ticket.createdAt
         }))
       });
       setLoading(false);
+    } else if (isError) {
+      setLoading(false);
     }
-  }, [metricsQuery.data]);
+  }, [metricsData, isError]);
 
-  // Setup WebSocket for real-time updates
   useEffect(() => {
-    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080'}`);
+    setWsConnected(!pollingMetrics.isCircuitBroken && pollingMetrics.failureCount < 2);
+  }, [pollingMetrics.isCircuitBroken, pollingMetrics.failureCount]);
 
-    ws.onopen = () => {
-      setWsConnected(true);
-      ws.send(JSON.stringify({ type: 'subscribe', userId: 'admin' }));
-    };
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      handleWsMessage(message);
-    };
 
-    ws.onclose = () => setWsConnected(false);
-    ws.onerror = () => toast.error('WebSocket connection failed');
 
-    return () => ws.close();
-  }, []);
 
-  const handleWsMessage = (message: any) => {
-    switch (message.type) {
-      case 'ticket_created':
-        toast.success(`New ticket created: ${message.data.subject}`);
-        metricsQuery.refetch();
-        break;
-
-      case 'sla_breached':
-        toast.error(`⚠️ SLA Breach: ${message.data.subject}`);
-        break;
-
-      case 'escalated':
-        toast.warning(`Ticket escalated to level ${message.data.escalationLevel}`);
-        break;
-
-      case 'notification':
-        toast.info(message.message);
-        break;
-    }
-  };
-
-  if (loading) {
+  if (loading || isLoading) {
     return <div className="p-8 text-center">Loading dashboard...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-[#0E0E0E] text-white flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Failed to load dashboard</h2>
+          <p className="text-[#808080] mb-4">Please refresh the page or try again later.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-[#8451E1] text-white rounded hover:bg-[#7040d1] transition-colors"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return <div className="p-8 text-center">No data available</div>;
   }
 
   const getStatusColor = (percentage: number) => {
@@ -94,25 +100,24 @@ export default function SupportAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      {/* Header */}
       <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b border-[#2B2B2B] p-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-4xl font-bold">Support Dashboard</h1>
             <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${wsConnected ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-              <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              {wsConnected ? 'Connected' : 'Disconnected'}
+              <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+              <span className="text-sm">
+                {wsConnected ? 'Connected' : 'Disconnected'}
+                {pollingMetrics.isFocused && <span className="ml-2 text-xs opacity-70">({pollingMetrics.refetchCount} updates)</span>}
+              </span>
             </div>
           </div>
           <p className="text-[#DCDCDC]">Real-time support metrics and team management</p>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="p-8 max-w-7xl mx-auto">
-        {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Tickets */}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 hover:border-[#8451E1] transition-colors">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -124,7 +129,6 @@ export default function SupportAdminDashboard() {
             <p className="text-xs text-[#808080]">All-time total</p>
           </div>
 
-          {/* Open Tickets */}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 hover:border-blue-500 transition-colors">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -136,7 +140,6 @@ export default function SupportAdminDashboard() {
             <p className="text-xs text-[#808080]">Awaiting response</p>
           </div>
 
-          {/* In Progress */}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 hover:border-yellow-500 transition-colors">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -148,7 +151,6 @@ export default function SupportAdminDashboard() {
             <p className="text-xs text-[#808080]">Being worked on</p>
           </div>
 
-          {/* SLA Breaches */}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 hover:border-red-500 transition-colors">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -163,9 +165,7 @@ export default function SupportAdminDashboard() {
           </div>
         </div>
 
-        {/* Performance Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Response Time */}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6">
             <p className="text-[#808080] text-sm mb-4">Avg Response Time</p>
             <p className="text-2xl font-bold mb-2">{metrics?.averageResponseTime || 0} min</p>
@@ -178,7 +178,6 @@ export default function SupportAdminDashboard() {
             <p className="text-xs text-[#808080] mt-2">Target: &lt; 60 minutes</p>
           </div>
 
-          {/* Resolution Time */}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6">
             <p className="text-[#808080] text-sm mb-4">Avg Resolution Time</p>
             <p className="text-2xl font-bold mb-2">{metrics?.averageResolutionTime || 0} min</p>
@@ -191,7 +190,6 @@ export default function SupportAdminDashboard() {
             <p className="text-xs text-[#808080] mt-2">Target: &lt; 8 hours</p>
           </div>
 
-          {/* Team Utilization */}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6">
             <p className="text-[#808080] text-sm mb-4">Team Utilization</p>
             <p className={`text-2xl font-bold mb-2 ${getStatusColor(metrics?.teamUtilization || 0)}`}>
@@ -212,7 +210,6 @@ export default function SupportAdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Top Categories */}
           <div className="lg:col-span-1 bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6">
             <h3 className="text-lg font-bold mb-4">Top Categories</h3>
             <div className="space-y-3">
@@ -225,7 +222,6 @@ export default function SupportAdminDashboard() {
             </div>
           </div>
 
-          {/* Urgent Tickets */}
           <div className="lg:col-span-2 bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <AlertTriangle size={20} className="text-red-500" />

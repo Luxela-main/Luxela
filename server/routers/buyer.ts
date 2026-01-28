@@ -13,6 +13,16 @@ import {
   orders,
   listings,
   notifications,
+  conversations,
+  messages,
+  supportTickets,
+  supportTicketReplies,
+  reviews,
+  sales,
+  buyerShipping,
+  carts,
+  cartItems,
+  profiles,
 } from "../db/schema";
 import { and, eq, desc, sql, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
@@ -1706,7 +1716,7 @@ return {
         path: "/buyer/account",
         tags: ["Buyer - Account"],
         summary: "Delete buyer account",
-        description: "Permanently delete buyer account and associated data",
+        description: "Permanently delete buyer account and all associated data (GDPR compliant)",
       },
     })
     .input(z.object({ password: z.string().min(8) }))
@@ -1730,11 +1740,77 @@ return {
         const buyer = await getBuyer(userId);
 
         // Delete all buyer-related data in transaction
+        // Note: Cascading deletes will handle orders, payments, refunds, etc.
         await db.transaction(async (tx) => {
+          // Delete messaging & communications
+          // First delete messages, then conversations
+          const buyerConversations = await tx
+            .select()
+            .from(conversations)
+            .where(eq(conversations.buyerId, buyer.id));
+
+          for (const conv of buyerConversations) {
+            await tx
+              .delete(messages)
+              .where(eq(messages.conversationId, conv.id));
+          }
+
+          await tx
+            .delete(conversations)
+            .where(eq(conversations.buyerId, buyer.id));
+
+          // Delete support tickets & replies
+          const buyerTickets = await tx
+            .select()
+            .from(supportTickets)
+            .where(eq(supportTickets.buyerId, buyer.id));
+
+          for (const ticket of buyerTickets) {
+            await tx
+              .delete(supportTicketReplies)
+              .where(eq(supportTicketReplies.ticketId, ticket.id));
+          }
+
+          await tx
+            .delete(supportTickets)
+            .where(eq(supportTickets.buyerId, buyer.id));
+
+          // Delete reviews
+          await tx
+            .delete(reviews)
+            .where(eq(reviews.buyerId, buyer.id));
+
+          // Delete sales records (financial history)
+          await tx
+            .delete(sales)
+            .where(eq(sales.buyerId, buyer.id));
+
+          // Delete shipping addresses
+          await tx
+            .delete(buyerShipping)
+            .where(eq(buyerShipping.buyerId, buyer.id));
+
           // Delete billing addresses
           await tx
             .delete(buyerBillingAddress)
             .where(eq(buyerBillingAddress.buyerId, buyer.id));
+
+          // Delete cart items first (FK constraint)
+          const buyerCarts = await tx
+            .select()
+            .from(carts)
+            .where(eq(carts.buyerId, buyer.id));
+
+          for (const cart of buyerCarts) {
+            await tx
+              .delete(cartItems)
+              .where(eq(cartItems.cartId, cart.id));
+          }
+
+          // Delete carts
+          await tx
+            .delete(carts)
+            .where(eq(carts.buyerId, buyer.id));
 
           // Delete favorites
           await tx
@@ -1761,11 +1837,22 @@ return {
             .delete(buyerAccountDetails)
             .where(eq(buyerAccountDetails.buyerId, buyer.id));
 
-          // Delete buyer record
+          // Delete buyer record (cascading deletes orders, payments, refunds)
           await tx.delete(buyers).where(eq(buyers.id, buyer.id));
         });
 
-        // Delete Supabase user
+        // Delete profile if exists
+        const existingProfile = await db
+          .select()
+          .from(profiles)
+          .where(eq(profiles.userId, userId))
+          .limit(1);
+
+        if (existingProfile.length > 0) {
+          await db.delete(profiles).where(eq(profiles.userId, userId));
+        }
+
+        // Delete Supabase user (handles auth)
         const { error } = await sb.auth.admin.deleteUser(userId);
         if (error) {
           throw new Error(`User deletion failed: ${error.message}`);
@@ -1773,7 +1860,7 @@ return {
 
         return {
           success: true,
-          message: "Account deleted successfully",
+          message: "Account deleted successfully. All personal data has been removed.",
         };
       } catch (err: any) {
         console.error("Error deleting account:", err);

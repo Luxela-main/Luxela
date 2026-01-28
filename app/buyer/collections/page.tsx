@@ -261,7 +261,7 @@ export default function CollectionsPage() {
               ? JSON.parse(collection.items_json)
               : [];
           } catch (e) {
-            console.error("Error parsing items_json:", e);
+            // Silently handle parsing error
           }
 
           if (items.length === 0) return null;

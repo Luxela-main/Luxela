@@ -67,7 +67,7 @@ export default function Notifications() {
     });
 
   return (
-    <div className="pt-16 px-6 md:pt-0">
+    <div className="px-6 mt-4 md:mt-0">
       <div className="mb-6">
         <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
           <SearchBar search={search} setSearch={setSearch} />

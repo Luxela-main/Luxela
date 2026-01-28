@@ -1,11 +1,10 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
-const router = createTRPCRouter;
 import { z } from 'zod';
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { productVariants, listings } from '../db/schema';
 
-export const variantsRouter = router({
+export const variantsRouter = createTRPCRouter({
   getVariants: protectedProcedure
     .query(async ({ ctx }) => {
       const variants = await db

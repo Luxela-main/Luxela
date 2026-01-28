@@ -56,9 +56,9 @@ export default function PayoutsPage() {
   ];
 
   return (
-    <div className="pt-16 px-6 md:pt-0 relative">
+    <div className="relative">
       {/* Header Section */}
-      <div className="mb-8">
+      <div className="mb-8 mt-12 md:mt-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Payouts</h1>

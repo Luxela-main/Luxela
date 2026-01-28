@@ -19,15 +19,15 @@ function getAdminClient(): SupabaseClient {
 function extractAuthorizationHeader(req: any): string | null {
   if (!req) return null;
 
-  // Local Node/Express-style (req.headers.authorization)
+  // Fetch API style (req: Request with Headers object)
+  if (typeof req.headers?.get === "function") {
+    const header = req.headers.get("authorization");
+    if (header && typeof header === "string") return header;
+  }
+
+  // Local Node/Express-style (req.headers.authorization as string)
   const header1 = req.headers?.authorization;
   if (header1 && typeof header1 === "string") return header1;
-
-  // Vercel Serverless Fetch API style (req: Request)
-  if (typeof req.headers?.get === "function") {
-    const header2 = req.headers.get("authorization");
-    if (header2 && typeof header2 === "string") return header2;
-  }
 
   return null;
 }

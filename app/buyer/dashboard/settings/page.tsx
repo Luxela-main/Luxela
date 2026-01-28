@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Lock, Bell, Trash2, LogOut, Eye, EyeOff, Check, X } from 'lucide-react';
+import { toastSvc } from '@/services/toast';
 
 export const dynamic = 'force-dynamic';
 
@@ -205,11 +206,10 @@ export default function SettingsPage() {
       // Call tRPC to delete account
       await deleteAccountMutation.mutateAsync({ password: deleteAccountPassword });
 
-      alert('Account deleted successfully');
-      router.push('/signin');
+      toastSvc.success('Account deleted successfully. Redirecting...');
+      setTimeout(() => router.push('/signin'), 1500);
     } catch (error) {
-      console.error('Failed to delete account:', error);
-      alert('Failed to delete account');
+      toastSvc.error('Failed to delete account');
     } finally {
       setDeleteAccountPassword('');
       setShowDeleteDialog(false);
@@ -322,8 +322,7 @@ export default function SettingsPage() {
               <CardContent>
                 <Button
                   onClick={() => setShowDeleteDialog(true)}
-                  variant="destructive"
-                  className="w-full"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
                 >
                   Delete Account
                 </Button>

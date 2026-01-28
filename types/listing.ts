@@ -12,6 +12,7 @@ export interface Listing {
   title: string
   description: string | null
   image: string
+  imagesJson?: string | null
   price_cents: number
   currency: string
   category: string
@@ -27,11 +28,21 @@ export interface Listing {
   additional_target_audience: string | null
   supply_capacity: string | null
   release_duration: string | null
+  refund_policy: string | null
+  local_pricing: string | null
   items_json: string | null
   created_at: string
   updated_at: string
   seller_id: string
   product_id: string | null
+  rating?: number
+  review_count?: number
+  sales_count?: number
+  return_rate?: number
+  seller_response_time?: number
+  is_verified?: boolean
+  views?: number
+  favorites_count?: number
   sellers: {
     id: string
     seller_business: SellerBusiness[]
@@ -45,4 +56,4 @@ interface ListingsContextType {
   refetchListings: () => Promise<void>
   getListingById: (id: string) => Listing | undefined
   getListingsByBrand: (brandName: string) => Listing[]
-}
+}

@@ -120,7 +120,6 @@ export default function BuyerSupportTicketsPage() {
   useEffect(() => {
     if (ticketsQuery.error) {
       toast.error("Failed to load support tickets");
-      console.error(ticketsQuery.error);
     }
   }, [ticketsQuery.error, toast]);
 
@@ -178,7 +177,6 @@ export default function BuyerSupportTicketsPage() {
       ticketsQuery.refetch();
     } catch (error) {
       toast.error("Failed to create support ticket");
-      console.error(error);
     }
   };
 
@@ -197,7 +195,6 @@ export default function BuyerSupportTicketsPage() {
       ticketsQuery.refetch();
     } catch (error) {
       toast.error("Failed to send reply");
-      console.error(error);
     }
   };
 

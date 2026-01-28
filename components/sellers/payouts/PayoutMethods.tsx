@@ -4,77 +4,46 @@ import { useState } from "react";
 import { Edit2, Trash2, Plus, Check, CreditCard, Wallet, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddPayoutMethodModal } from "./AddPayoutMethodModal";
+import { usePayoutMethods, useDeletePayoutMethod, useAddPayoutMethod, useUpdatePayoutMethod } from "@/modules/seller/queries/usePayoutMethods";
 
-interface PayoutMethod {
-  id: string;
-  name: string;
-  type: "bank" | "paypal" | "crypto" | "wise";
-  details: string;
-  isDefault: boolean;
-  isVerified: boolean;
-  icon: React.ReactNode;
-}
+const getMethodIcon = (type: string) => {
+  switch (type) {
+    case "bank":
+      return <CreditCard className="text-purple-400" size={24} />;
+    case "paypal":
+      return <Wallet className="text-blue-400" size={24} />;
+    case "crypto":
+      return <DollarSign className="text-green-400" size={24} />;
+    case "wise":
+      return <Wallet className="text-orange-400" size={24} />;
+    default:
+      return <CreditCard className="text-gray-400" size={24} />;
+  }
+};
 
 export function PayoutMethods() {
-  const [methods, setMethods] = useState<PayoutMethod[]>([
-    {
-      id: "1",
-      name: "Primary Bank Account",
-      type: "bank",
-      details: "First Bank • ****3456",
-      isDefault: true,
-      isVerified: true,
-      icon: <CreditCard className="text-purple-400" size={24} />,
-    },
-    {
-      id: "2",
-      name: "PayPal Account",
-      type: "paypal",
-      details: "seller@paypal.com",
-      isDefault: false,
-      isVerified: true,
-      icon: <Wallet className="text-blue-400" size={24} />,
-    },
-    {
-      id: "3",
-      name: "USDT Wallet",
-      type: "crypto",
-      details: "0x742d35Cc6634C0532925a3b844Bc9e7595f.....",
-      isDefault: false,
-      isVerified: false,
-      icon: <DollarSign className="text-green-400" size={24} />,
-    },
-  ]);
-
+  const { data: payoutMethods = [], isLoading, error, refetch } = usePayoutMethods();
+  const deleteMutation = useDeletePayoutMethod();
+  const addMutation = useAddPayoutMethod();
+  const updateMutation = useUpdatePayoutMethod();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingMethod, setEditingMethod] = useState<PayoutMethod | null>(null);
+  const [editingMethod, setEditingMethod] = useState<any | null>(null);
 
   const handleDeleteMethod = (id: string) => {
     if (confirm("Are you sure you want to delete this payment method?")) {
-      setMethods(methods.filter((m) => m.id !== id));
+      deleteMutation.mutate(id);
     }
   };
 
   const handleSetDefault = (id: string) => {
-    setMethods(
-      methods.map((m) => ({
-        ...m,
-        isDefault: m.id === id,
-      }))
-    );
+    updateMutation.mutate({
+      methodId: id,
+      isDefault: true,
+    });
   };
 
   const handleAddMethod = (newMethod: any) => {
-    setMethods([
-      ...methods,
-      {
-        id: Date.now().toString(),
-        ...newMethod,
-        isDefault: false,
-        isVerified: false,
-        icon: newMethod.icon,
-      },
-    ]);
+    addMutation.mutate(newMethod);
     setIsAddModalOpen(false);
   };
 
@@ -93,9 +62,31 @@ export function PayoutMethods() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-12 bg-[#1a1a1a] rounded-lg animate-pulse" />
+        <div className="h-32 bg-[#1a1a1a] rounded-lg animate-pulse" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-600/10 border border-red-600/20 rounded-lg p-4">
+        <p className="text-red-400">Failed to load payment methods</p>
+        <Button
+          onClick={() => refetch()}
+          className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header with Add Button */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold text-white">Payment Methods</h3>
@@ -110,26 +101,25 @@ export function PayoutMethods() {
         </Button>
       </div>
 
-      {/* Methods List */}
       <div className="space-y-4">
-        {methods.length > 0 ? (
-          methods.map((method) => (
+        {payoutMethods.length > 0 ? (
+          payoutMethods.map((method: any) => (
             <div
               key={method.id}
               className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6 hover:border-purple-600/50 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4 flex-1">
-                  <div className="bg-[#0a0a0a] p-3 rounded-lg">{method.icon}</div>
+                  <div className="bg-[#0a0a0a] p-3 rounded-lg">{getMethodIcon(method.type)}</div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-white text-lg">{method.name}</h4>
-                      {method.isDefault && (
+                      <h4 className="font-semibold text-white text-lg">{method.accountDetails?.accountName || method.name}</h4>
+                      {method.is_default && (
                         <span className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs font-medium rounded-full">
                           Default
                         </span>
                       )}
-                      {method.isVerified ? (
+                      {method.is_verified ? (
                         <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
                           <Check size={14} />
                           Verified
@@ -140,7 +130,13 @@ export function PayoutMethods() {
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-400 text-sm mt-1">{method.details}</p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      {method.type === "bank"
+                        ? `${method.accountDetails?.bankName} • ****${method.accountDetails?.accountNumber?.slice(-4)}`
+                        : method.type === "paypal"
+                        ? method.accountDetails?.email
+                        : method.accountDetails?.walletAddress?.slice(0, 10) + "..." + method.accountDetails?.walletAddress?.slice(-5)}
+                    </p>
                     <p className="text-gray-500 text-xs mt-2">
                       {getMethodTypeLabel(method.type)}
                     </p>
@@ -148,7 +144,7 @@ export function PayoutMethods() {
                 </div>
 
                 <div className="flex gap-2">
-                  {!method.isDefault && (
+                  {!method.is_default && (
                     <button
                       onClick={() => handleSetDefault(method.id)}
                       className="p-2 hover:bg-[#0a0a0a] rounded-lg transition-colors text-gray-400 hover:text-white"
@@ -165,7 +161,7 @@ export function PayoutMethods() {
                   </button>
                   <button
                     onClick={() => handleDeleteMethod(method.id)}
-                    disabled={method.isDefault}
+                    disabled={method.is_default || deleteMutation.isPending}
                     className="p-2 hover:bg-[#0a0a0a] rounded-lg transition-colors text-gray-400 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 size={18} />
@@ -176,7 +172,7 @@ export function PayoutMethods() {
           ))
         ) : (
           <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-12 text-center">
-            <p className="text-gray-400 mb-4">No payment methods added yet</p>
+            <p className="text-gray-400 mb-4">No payment methods available</p>
             <Button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
@@ -188,7 +184,6 @@ export function PayoutMethods() {
         )}
       </div>
 
-      {/* Info Box */}
       <div className="bg-purple-600/10 border border-purple-600/20 rounded-lg p-4">
         <h4 className="font-semibold text-purple-400 mb-2">💡 Tip</h4>
         <p className="text-sm text-gray-300">
@@ -197,7 +192,6 @@ export function PayoutMethods() {
         </p>
       </div>
 
-      {/* Add Method Modal */}
       {isAddModalOpen && (
         <AddPayoutMethodModal
           isOpen={isAddModalOpen}
@@ -206,7 +200,6 @@ export function PayoutMethods() {
         />
       )}
 
-      {/* Edit Modal would go here */}
       {editingMethod && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-[#1a1a1a] rounded-lg max-w-md w-full p-6 border border-[#2a2a2a]">

@@ -6,36 +6,15 @@ import express, { Express, Request } from "express";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { createTRPCContext } from "./trpc/context";
-import { createTRPCRouter } from "./trpc/trpc";
 import { eq } from "drizzle-orm";
 import type { Multer } from "multer";
 
 // Import additional tables for webhook processing
 import { orders, notifications } from "./db/schema";
 
-// Routers
-import { sellerRouter } from "./routers/seller";
-import { listingRouter } from "./routers/listing";
-import { salesRouter } from "./routers/sales";
-import { cartRouter } from "./routers/cart";
-import { notificationRouter } from "./routers/notification";
-import { reviewRouter } from "./routers/review";
-import { paymentRouter } from "./routers/payment";
-import { buyerRouter } from "./routers/buyer";
-import { collectionRouter } from "./routers/collection";
-import { supportRouter } from "./routers/support";
-import { productRouter } from "./routers/product";
-
-import { refundRouter } from "./routers/refund";
-import { inventoryRouter } from "./routers/inventory";
-import { paymentConfirmationRouter } from "./routers/paymentConfirmation";
-import { orderStatusRouter } from "./routers/orderStatus";
-import { shippingRouter } from "./routers/shipping";
-import { emailNotificationRouter } from "./routers/emailNotification";
-import { checkoutRouter } from "./routers/checkout";
-import { variantsRouter } from "./routers/variantsRouter";
-import { webhookRouter } from "./routers/webhook";
-import { financeRouter } from "./routers/finance";
+// Import the consolidated TRPC router
+import { appRouter } from "./trpc/router";
+import type { AppRouter } from "./trpc/router";
 
 // DB initializer
 import { startKeepAlive as initDB } from "./db";
@@ -47,32 +26,8 @@ import { initializeScheduledTasks } from "./services/schedulerService";
 import multer from "multer";
 import { getSupabase } from "./services/supabase";
 
-export const appRouter = createTRPCRouter({
-  seller: sellerRouter,
-  listing: listingRouter,
-  sales: salesRouter,
-  cart: cartRouter,
-  notification: notificationRouter,
-  review: reviewRouter,
-  payment: paymentRouter,
-  buyer: buyerRouter,
-  collection: collectionRouter,
-  support: supportRouter,
-  product: productRouter,
-
-  refund: refundRouter,
-  inventory: inventoryRouter,
-  paymentConfirmation: paymentConfirmationRouter,
-  orderStatus: orderStatusRouter,
-  shipping: shippingRouter,
-  emailNotification: emailNotificationRouter,
-  checkout: checkoutRouter,
-  variants: variantsRouter,
-  webhooks: webhookRouter,
-  finance: financeRouter,
-});
-
-export type AppRouter = typeof appRouter;
+// Router exported from server/trpc/router.ts
+export { appRouter, type AppRouter };
 
 const app: Express = express();
 
@@ -341,11 +296,11 @@ app.use(
   })
 );
 
-// TRPC Middleware
+// TRPC Middleware (uses appRouter from trpc/router.ts)
 app.use(
   "/api/trpc",
   createExpressMiddleware({
-    router: appRouter,
+    router: appRouter as any,
     createContext: createTRPCContext,
   })
 );
