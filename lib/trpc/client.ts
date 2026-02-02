@@ -7,7 +7,8 @@ function getApiUrl() {
   if (base) {
     return `${base}/api/trpc`;
   }
-  return 'http://localhost:5000/api/trpc';
+  // Default to Next.js API route (serverless on Vercel, local dev server otherwise)
+  return '/api/trpc';
 }
 
 export function getVanillaTRPCClient() {

@@ -100,7 +100,7 @@ export default function SupportAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b border-[#2B2B2B] p-8">
+      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b border-[#2B2B2B] p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-4xl font-bold">Support Dashboard</h1>
@@ -116,8 +116,8 @@ export default function SupportAdminDashboard() {
         </div>
       </div>
 
-      <div className="p-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 hover:border-[#8451E1] transition-colors">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -233,7 +233,7 @@ export default function SupportAdminDashboard() {
                   <a
                     key={ticket.id}
                     href={`/admin/support/tickets/${ticket.id}`}
-                    className="block p-3 bg-[#0E0E0E] hover:bg-[#1a1a1a] rounded border border-[#2B2B2B] hover:border-red-500 transition-all group"
+                    className="block p-3 bg-[#0E0E0E] hover:bg-[#1a1a1a] rounded border border-[#2B2B2B] hover:border-red-500 transition-all group cursor-pointer"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

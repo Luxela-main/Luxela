@@ -43,6 +43,7 @@ const nftTierEnum = z.enum(['bronze', 'silver', 'gold', 'platinum']);
 const discountTypeEnum = z.enum(['percentage', 'fixed_amount', 'buy_one_get_one', 'free_shipping']);
 const discountStatusEnum = z.enum(['active', 'inactive', 'expired']);
 const payoutScheduleEnum = z.enum(['immediate', 'daily', 'weekly', 'bi_weekly', 'monthly']);
+const listingReviewStatusEnum = z.enum(['pending', 'approved', 'rejected', 'revision_requested']);
 
 // ========================== USERS ==========================
 export const userSchema = z.object({
@@ -320,6 +321,14 @@ export const listingsSchema = z.object({
   refundPolicy: refundPolicyEnum.nullable().optional(),
   localPricing: localPricingEnum.nullable().optional(),
   itemsJson: z.string().nullable().optional(),
+  status: listingReviewStatusEnum.default('pending'),
+  // Enterprise-level fields
+  sku: z.string().nullable().optional(),
+  slug: z.string().nullable().optional(),
+  metaDescription: z.string().nullable().optional(),
+  barcode: z.string().nullable().optional(),
+  views: z.number().int().default(0),
+  conversions: z.number().int().default(0),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -791,5 +800,33 @@ export const supportAnalyticsSchema = z.object({
   slaBreachCount: z.number().default(0),
   customerSatisfactionScore: z.string().nullable().optional(),
   agentUtilization: z.string().nullable().optional(),
+  createdAt: z.date().optional(),
+});
+
+// ========================== LISTING REVIEWS ==========================
+export const listingReviewSchema = z.object({
+  id: z.string().uuid().optional(),
+  listingId: z.string().uuid(),
+  sellerId: z.string().uuid(),
+  reviewedBy: z.string().uuid().optional(),
+  status: z.enum(['pending', 'approved', 'rejected', 'revision_requested']),
+  comments: z.string().nullable().optional(),
+  rejectionReason: z.string().nullable().optional(),
+  revisionRequests: z.record(z.string(), z.any()).nullable().optional(),
+  reviewedAt: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== LISTING ACTIVITY LOG ==========================
+export const listingActivityLogSchema = z.object({
+  id: z.string().uuid().optional(),
+  listingId: z.string().uuid(),
+  action: z.string(),
+  performedBy: z.string().uuid().optional(),
+  performedByRole: z.enum(['seller', 'buyer', 'admin']).optional(),
+  oldStatus: z.enum(['draft', 'pending_review', 'approved', 'rejected', 'archived']).nullable().optional(),
+  newStatus: z.enum(['draft', 'pending_review', 'approved', 'rejected', 'archived']).nullable().optional(),
+  details: z.record(z.string(), z.any()).nullable().optional(),
   createdAt: z.date().optional(),
 });

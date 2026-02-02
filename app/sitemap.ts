@@ -24,11 +24,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     productPages = rows.map(product => ({
       url: `${SITE_URL}/buyer/product/${product.id}`,
       lastModified: product.updatedAt ?? new Date(),
-      changeFrequency: "weekly",
+      changeFrequency: "weekly" as const,
       priority: 0.9,
-      images: product.image
-        ? [product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image}`]
-        : undefined,
+      images: product.image ? [product.image.startsWith("http") ? product.image : `${SITE_URL}${product.image}`] : undefined,
     }));
   } catch (error) {
     console.error("Failed to generate product sitemap:", error);

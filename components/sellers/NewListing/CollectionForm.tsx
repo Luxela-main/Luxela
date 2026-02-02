@@ -9,6 +9,8 @@ export interface CollectionItem {
   title: string;
   priceCents: number;
   currency: string;
+  description?: string;
+  category?: string;
   productId?: string;
   image?: string;
   imagesJson?: string;
@@ -20,9 +22,23 @@ export interface CollectionItem {
 interface CollectionFormProps {
   title: string;
   description: string;
+  sku?: string;
+  slug?: string;
+  metaDescription?: string;
+  barcode?: string;
+  videoUrl?: string;
+  careInstructions?: string;
+  refundPolicy?: string;
   items: CollectionItem[];
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
+  onSkuChange?: (sku: string) => void;
+  onSlugChange?: (slug: string) => void;
+  onMetaDescriptionChange?: (metaDescription: string) => void;
+  onBarcodeChange?: (barcode: string) => void;
+  onVideoUrlChange?: (videoUrl: string) => void;
+  onCareInstructionsChange?: (careInstructions: string) => void;
+  onRefundPolicyChange?: (refundPolicy: string) => void;
   onItemsChange: (items: CollectionItem[]) => void;
   onSubmit: () => void;
   onNext?: () => void;
@@ -34,20 +50,50 @@ const AVAILABLE_COLORS = [
   { name: "Black", hex: "#000000" },
   { name: "White", hex: "#FFFFFF" },
   { name: "Red", hex: "#FF0000" },
+  { name: "Crimson", hex: "#DC143C" },
   { name: "Blue", hex: "#0000FF" },
+  { name: "Navy", hex: "#000080" },
+  { name: "Royal Blue", hex: "#4169E1" },
+  { name: "Sky Blue", hex: "#87CEEB" },
   { name: "Green", hex: "#00AA00" },
+  { name: "Forest Green", hex: "#228B22" },
+  { name: "Lime", hex: "#00FF00" },
   { name: "Yellow", hex: "#FFFF00" },
-  { name: "Purple", hex: "#800080" },
+  { name: "Gold", hex: "#FFD700" },
   { name: "Orange", hex: "#FFA500" },
+  { name: "Purple", hex: "#800080" },
+  { name: "Violet", hex: "#EE82EE" },
+  { name: "Magenta", hex: "#FF00FF" },
+  { name: "Pink", hex: "#FFC0CB" },
+  { name: "Hot Pink", hex: "#FF69B4" },
+  { name: "Brown", hex: "#8B4513" },
+  { name: "Maroon", hex: "#800000" },
   { name: "Gray", hex: "#808080" },
+  { name: "Silver", hex: "#C0C0C0" },
+  { name: "Slate", hex: "#708090" },
+  { name: "Tan", hex: "#D2B48C" },
 ];
 
 const CollectionForm: React.FC<CollectionFormProps> = ({
   title,
   description,
+  sku,
+  slug,
+  metaDescription,
+  barcode,
+  videoUrl,
+  careInstructions,
+  refundPolicy,
   items,
   onTitleChange,
   onDescriptionChange,
+  onSkuChange,
+  onSlugChange,
+  onMetaDescriptionChange,
+  onBarcodeChange,
+  onVideoUrlChange,
+  onCareInstructionsChange,
+  onRefundPolicyChange,
   onItemsChange,
   onSubmit,
   onNext,
@@ -62,6 +108,8 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
         title: "",
         priceCents: 0,
         currency: "NGN",
+        description: "",
+        category: "",
         images: [],
         sizes: [],
         colors: [],
@@ -156,6 +204,98 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             rows={4}
             className="w-full bg-[#0a0a0a] border placeholder:text-sm border-[#333] rounded-md px-4 py-2 focus:outline-none focus:border-purple-500"
           />
+        </div>
+
+        {/* Collection Enterprise Fields */}
+        <div className="border-t border-[#333] pt-6">
+          <h3 className="text-sm font-semibold mb-4">Collection Details (Enterprise)</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {/* SKU */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">SKU</label>
+              <input
+                type="text"
+                value={sku || ""}
+                onChange={(e) => onSkuChange?.(e.target.value)}
+                placeholder="e.g., COLL-001"
+                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* Slug */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Slug</label>
+              <input
+                type="text"
+                value={slug || ""}
+                onChange={(e) => onSlugChange?.(e.target.value)}
+                placeholder="e.g., summer-collection"
+                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* Meta Description */}
+            <div className="col-span-2">
+              <label className="block text-xs text-gray-400 mb-2">Meta Description</label>
+              <textarea
+                value={metaDescription || ""}
+                onChange={(e) => onMetaDescriptionChange?.(e.target.value.slice(0, 160))}
+                placeholder="Brief SEO description (max 160 chars)"
+                rows={2}
+                maxLength={160}
+                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">{metaDescription?.length || 0}/160</p>
+            </div>
+
+            {/* Barcode */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Barcode</label>
+              <input
+                type="text"
+                value={barcode || ""}
+                onChange={(e) => onBarcodeChange?.(e.target.value)}
+                placeholder="e.g., 123456789"
+                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* Video URL */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Video URL</label>
+              <input
+                type="url"
+                value={videoUrl || ""}
+                onChange={(e) => onVideoUrlChange?.(e.target.value)}
+                placeholder="e.g., https://example.com/video.mp4"
+                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* Care Instructions */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Care Instructions</label>
+              <textarea
+                value={careInstructions || ""}
+                onChange={(e) => onCareInstructionsChange?.(e.target.value)}
+                placeholder="e.g., Wash in cold water"
+                rows={2}
+                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* Refund Policy */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Refund Policy</label>
+              <textarea
+                value={refundPolicy || ""}
+                onChange={(e) => onRefundPolicyChange?.(e.target.value)}
+                placeholder="e.g., 30-day money-back guarantee"
+                rows={2}
+                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Items Section */}
@@ -279,6 +419,45 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                         </div>
                       </div>
 
+                      {/* Item Description */}
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-2">
+                          Description
+                        </label>
+                        <textarea
+                          value={item.description || ""}
+                          onChange={(e) =>
+                            updateItem(index, "description", e.target.value)
+                          }
+                          placeholder="Describe this item"
+                          rows={2}
+                          className="w-full placeholder:text-sm bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+
+                      {/* Item Category */}
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-2">
+                          Category
+                        </label>
+                        <select
+                          value={item.category || ""}
+                          onChange={(e) =>
+                            updateItem(index, "category", e.target.value)
+                          }
+                          className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                        >
+                          <option value="">Select category (optional)</option>
+                          <option value="men_clothing">Men's Clothing</option>
+                          <option value="women_clothing">Women's Clothing</option>
+                          <option value="men_shoes">Men's Shoes</option>
+                          <option value="women_shoes">Women's Shoes</option>
+                          <option value="accessories">Accessories</option>
+                          <option value="merch">Merchandise</option>
+                          <option value="others">Others</option>
+                        </select>
+                      </div>
+
                       {/* Image Upload */}
                       <div>
                         <label className="block text-xs text-gray-400 mb-2">
@@ -367,29 +546,41 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
 
                       {/* Colors Selector */}
                       <div>
-                        <label className="block text-xs text-gray-400 mb-2">
+                        <label className="block text-xs text-gray-400 mb-3">
                           Available Colors
                         </label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-5 gap-3 mb-4">
                           {AVAILABLE_COLORS.map((color) => (
                             <button
                               key={color.name}
                               type="button"
                               onClick={() => toggleColor(index, color.name)}
-                              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center gap-2 ${
+                              className={`relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition ${
                                 item.colors?.includes(color.name)
-                                  ? "bg-purple-600 text-white"
-                                  : "bg-[#1a1a1a] border border-[#333] text-gray-400 hover:border-purple-500"
+                                  ? "border-[#8451E1] bg-[#8451E1]/10"
+                                  : "border-[#333] bg-[#1a1a1a] hover:border-[#8451E1]/50"
                               }`}
                             >
-                              <span
-                                className="w-3 h-3 rounded-full border border-current"
+                              <div
+                                className="w-10 h-10 rounded-lg shadow-lg border border-gray-300"
                                 style={{ backgroundColor: color.hex }}
                               />
-                              {color.name}
+                              <span className="text-xs font-medium text-gray-300 text-center">
+                                {color.name}
+                              </span>
+                              {item.colors?.includes(color.name) && (
+                                <div className="absolute top-2 right-2 w-4 h-4 bg-[#8451E1] rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xs">✓</span>
+                                </div>
+                              )}
                             </button>
                           ))}
                         </div>
+                        {item.colors && item.colors.length > 0 && (
+                          <p className="text-xs text-[#8451E1] font-medium">
+                            Selected: {item.colors.join(", ")}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -403,8 +594,9 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
         <div className="flex justify-end pt-4 border-t border-[#333]">
           <Button
             onClick={onSubmit}
-            disabled={!title || items.length === 0 || isSubmitting}
+            disabled={!title || items.length === 0 || items.some(item => !item.title || item.priceCents <= 0) || isSubmitting}
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={items.some(item => item.priceCents <= 0) ? "All items must have a price greater than 0" : ""}
           >
             {isSubmitting ? "Creating Collection..." : "Create Collection"}
           </Button>

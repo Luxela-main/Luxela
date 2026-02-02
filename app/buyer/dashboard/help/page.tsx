@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ChevronDown, MessageCircle, FileText, AlertCircle, Search, Send, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
@@ -57,14 +57,19 @@ export default function HelpCenterPage() {
   // Setup mutation for tracking FAQ views
   const trackViewMutation = trpc.faqs.trackView.useMutation();
 
-  useEffect(() => {
-    const convertedFaqs = fetchedFaqs.map(faq => ({
+  // Memoize converted FAQs to avoid infinite loops
+  const convertedFaqs = useMemo(() => 
+    fetchedFaqs.map(faq => ({
       ...faq,
       createdAt: typeof faq.createdAt === 'string' ? new Date(faq.createdAt) : faq.createdAt,
       updatedAt: typeof faq.updatedAt === 'string' ? new Date(faq.updatedAt) : faq.updatedAt,
-    }));
+    })),
+    [fetchedFaqs]
+  );
+
+  useEffect(() => {
     setFaqs(convertedFaqs);
-  }, [fetchedFaqs]);
+  }, [convertedFaqs]);
 
   const handleContactSupport = async () => {
     if (!submitEmail || !submitEmail.includes('@')) {

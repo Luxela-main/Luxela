@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState, useRef, useEffect } from "react";
 import ProductListings from "@/components/sellers/NewListing/ProductListings";
 import TabsNav from "@/components/sellers/NewListing/TabsNav";
@@ -24,47 +24,97 @@ const NewListing: React.FC = () => {
   const editId = searchParams?.get("edit");
   const lastValidationErrorsRef = useRef<string[]>([]);
   const lastValidationTimeRef = useRef<number>(0);
+  const isInitialLoadRef = useRef(true);
+  const STORAGE_KEY = 'luxela_listing_form_draft';
 
   // Fetch listings for edit mode
   // Type assertion needed because API returns string image URLs but form expects File[]
   const { data: listings = [] } = trpc.listing.getMyListings.useQuery()
 
-  const [view, setView] = useState<ViewType>("empty");
+  // Helper to get initial form data from localStorage or defaults
+  const getInitialFormData = (): FormData => {
+    if (typeof window !== 'undefined' && !editId) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          // Don't restore images as File objects (they can't be serialized)
+          return { ...parsed, images: [] };
+        }
+      } catch (e) {
+        console.error('Failed to load saved form data:', e);
+      }
+    }
+    return {
+      type: "single",
+      name: "",
+      price: "",
+      category: "",
+      description: "",
+      sizes: [],
+      releaseDate: "",
+      supplyCapacity: "no-max",
+      quantity: "",
+      showBadge: "do_not_show",
+      releaseDuration: "",
+      releaseDurationDays: "",
+      releaseDurationMinutes: "",
+      material: "",
+      colors: "",
+      targetAudience: "",
+      shippingOption: "",
+      domesticDays: "",
+      domesticMinutes: "",
+      internationalDays: "",
+      internationalMinutes: "",
+      images: [],
+      collectionTitle: "",
+      collectionDescription: "",
+      collectionSku: "",
+      collectionSlug: "",
+      collectionMetaDescription: "",
+      collectionBarcode: "",
+      collectionVideoUrl: "",
+      collectionCareInstructions: "",
+      collectionRefundPolicy: "",
+      collectionItems: [] as CollectionItem[],
+      sku: "",
+      slug: "",
+      metaDescription: "",
+      barcode: "",
+      videoUrl: "",
+      careInstructions: "",
+      refundPolicy: "",
+    };
+  };
+
+  const [view, setView] = useState<ViewType>(editId ? "single" : "empty");
   const [activeTab, setActiveTab] = useState<TabType>("product-info");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showListings, setShowListings] = useState(false);
+  const [showListings, setShowListings] = useState(!editId);
   const [isLoadingExisting, setIsLoadingExisting] = useState(editId ? true : false);
 
-  const [formData, setFormData] = useState<FormData>({
-  type: "single",
-  name: "",
-  price: "",
-  category: "",
-  description: "",
-  sizes: [],
-  releaseDate: "",
-  supplyCapacity: "no-max",
-  quantity: "",
-  showBadge: "do_not_show",
-  releaseDuration: "",
-  releaseDurationDays: "",
-  releaseDurationMinutes: "",
-  material: "",
-  colors: "",
-  targetAudience: "",
-  shippingOption: "",
-  domesticDays: "",
-  domesticMinutes: "",
-  internationalDays: "",
-  internationalMinutes: "",
-  images: [],
-  collectionTitle: "",
-  collectionDescription: "",
-  collectionItems: [] as CollectionItem[],
-});
+  const [formData, setFormData] = useState<FormData>(getInitialFormData());
 
+
+  // Auto-save form data to localStorage whenever it changes (but not images)
+  useEffect(() => {
+    if (!editId && isInitialLoadRef.current === false && view !== "empty") {
+      try {
+        const { images, ...dataWithoutImages } = formData;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataWithoutImages));
+      } catch (e) {
+        console.error('Failed to save form data:', e);
+      }
+    }
+  }, [formData, editId, view]);
+
+  // Mark initial load as complete after first render
+  useEffect(() => {
+    isInitialLoadRef.current = false;
+  }, []);
 
   // Load existing listing if editing
   useEffect(() => {
@@ -103,10 +153,24 @@ const NewListing: React.FC = () => {
             images: (response.imagesJson ? JSON.parse(response.imagesJson) : (response.image ? [response.image] : [])) as (File | string)[],
             collectionTitle: "",
             collectionDescription: "",
+            collectionSku: "",
+            collectionSlug: "",
+            collectionMetaDescription: "",
+            collectionBarcode: "",
+            collectionVideoUrl: "",
+            collectionCareInstructions: "",
+            collectionRefundPolicy: "",
             collectionItems: Array.isArray(response.itemsJson) ? (response.itemsJson as any) : [],
+            sku: response.sku || "",
+            slug: response.slug || "",
+            metaDescription: response.metaDescription || "",
+            barcode: response.barcode || "",
+            videoUrl: response.videoUrl || "",
+            careInstructions: response.careInstructions || "",
+            refundPolicy: response.refundPolicy || "",
           });
-          setView(response.type || "empty");
-          toastSvc.success("Listing loaded successfully");
+          setView(response.type || "single");
+          setShowListings(false);
         }
       } catch (err) {
         toastSvc.error("Failed to load listing");
@@ -116,7 +180,7 @@ const NewListing: React.FC = () => {
     };
 
     loadExistingListing();
-  }, [editId]);
+  }, [editId, listings]);
 
   // Validation functions
   const validateProductInfo = (): { valid: boolean; errors: string[] } => {
@@ -339,12 +403,48 @@ const handleSubmitSingle = async () => {
     if (!allowedAudiences.includes(additionalTargetAudience))
       additionalTargetAudience = "unisex";
 
-    let colorsAvailable =
-      formData.colors
-        ? (formData.colors)
-            .split(",")
-            .map((c: string) => ({ colorName: c.trim(), colorHex: "" }))
-        : undefined;
+    let colorsAvailable = undefined;
+    if (formData.colors) {
+      // Convert comma-separated color names to array of objects with colorName and colorHex
+      // Color palette matching AdditionalInfoForm
+      const COLOR_PALETTE: { [key: string]: string } = {
+        Black: "#000000",
+        White: "#FFFFFF",
+        Red: "#FF0000",
+        Crimson: "#DC143C",
+        Blue: "#0000FF",
+        "Navy Blue": "#000080",
+        "Royal Blue": "#4169E1",
+        "Sky Blue": "#87CEEB",
+        Green: "#00AA00",
+        "Dark Green": "#006400",
+        Olive: "#808000",
+        Yellow: "#FFFF00",
+        Gold: "#FFD700",
+        Orange: "#FFA500",
+        "Dark Orange": "#FF8C00",
+        Purple: "#800080",
+        Violet: "#EE82EE",
+        Magenta: "#FF00FF",
+        Pink: "#FFC0CB",
+        "Hot Pink": "#FF69B4",
+        Brown: "#8B4513",
+        Tan: "#D2B48C",
+        Gray: "#808080",
+        "Light Gray": "#D3D3D3",
+        Beige: "#F5F5DC",
+      };
+
+      colorsAvailable = (formData.colors)
+        .split(",")
+        .map((c: string) => {
+          const colorName = c.trim();
+          return {
+            colorName,
+            colorHex: COLOR_PALETTE[colorName] || "#808080" // Default to gray if not found
+          };
+        });
+    }
 
     let sizes =
       formData.sizes && formData.sizes.length > 0
@@ -404,7 +504,6 @@ const handleSubmitSingle = async () => {
     await createSingleMutation.mutateAsync({
       sellerId,
       title: formData.name,
-      type: formData.type,
       description: formData.description,
       category,
       priceCents: Math.round(parseFloat(formData.price) * 100),
@@ -424,6 +523,13 @@ const handleSubmitSingle = async () => {
       shippingOption,
       etaDomestic: formData.domesticDays,
       etaInternational: formData.internationalDays,
+      refundPolicy: formData.refundPolicy || undefined,
+      videoUrl: formData.videoUrl || undefined,
+      careInstructions: formData.careInstructions || undefined,
+      sku: formData.sku || undefined,
+      slug: formData.slug || undefined,
+      metaDescription: formData.metaDescription || undefined,
+      barcode: formData.barcode || undefined,
     });
     
     setIsSubmitting(false);
@@ -453,30 +559,7 @@ const handleSubmitCollection = async () => {
   const handleCancel = (): void => {
     setView("empty");
     setActiveTab("product-info");
-    setFormData({
-      name: "",
-      price: "",
-      category: "",
-      description: "",
-      sizes: [],
-      releaseDate: "",
-      supplyCapacity: "no-max",
-      quantity: "",
-      showBadge: "do_not_show",
-      releaseDuration: "",
-      releaseDurationDays: "",
-      releaseDurationMinutes: "",
-      material: "",
-      colors: "",
-      targetAudience: "",
-      shippingOption: "",
-      domesticDays: "",
-      domesticMinutes: "",
-      internationalDays: "",
-      internationalMinutes: "",
-      images: [],
-      type: "single",
-    });
+    // Form data is preserved in localStorage - user will have it if they navigate back
   };
 
   const handleViewListings = () => {
@@ -486,6 +569,10 @@ const handleSubmitCollection = async () => {
   const createSingleMutation = (trpc.listing as any).createSingle.useMutation({
     onSuccess: () => {
       toastSvc.success("Single listing created successfully!");
+      // Clear saved form data after successful submission
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY);
+      }
       setShowSuccessModal(true);
     },
     onError: (error: any) => {
@@ -510,6 +597,10 @@ const handleSubmitCollection = async () => {
   ).createCollection.useMutation({
     onSuccess: () => {
       toastSvc.success("Collection created successfully!");
+      // Clear saved form data after successful submission
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY);
+      }
       setShowSuccessModal(true);
     },
     onError: (error: any) => {
@@ -529,13 +620,24 @@ const handleSubmitCollection = async () => {
     },
   });
 
-  if (view === "empty") {
+  // If loading edit mode listing, show loading state
+  if (isLoadingExisting) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Loading listing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show listings browser if no active view
+  if (view === "empty" || showListings) {
     return <ProductListings onAddProduct={handleAddProduct} />;
   }
-   if (showListings) {
-  return <ProductListings onAddProduct={handleAddProduct} />;
-}
 
+  // Show creation/editing form
   return (
     <div className="min-h-screen bg-black text-white px-2 lg:px-6 pt-10">
     <div className="flex items-center gap-2 text-sm mb-6 text-gray-400">
@@ -545,7 +647,7 @@ const handleSubmitCollection = async () => {
       >
         <span>New Listing</span>
       </button>
-      <span>â€º</span>
+      <span>›</span>
       <span className="text-white">
         {view === "single" ? "Single Items" : "Collection"}
       </span>

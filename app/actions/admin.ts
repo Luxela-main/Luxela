@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient as createServerClient } from "@/utils/supabase/server";
+import { createClient as createServerClient, createAdminClient } from "@/utils/supabase/server";
 
 export async function setAdminRole(email: string, adminPassword: string) {
   try {
@@ -97,8 +97,9 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
       };
     }
 
-    // Get the target user by email using admin API
-    const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+    // Get the target user by email using admin API (requires service role key)
+    const adminClient = createAdminClient();
+    const { data: users, error: listError } = await adminClient.auth.admin.listUsers();
 
     if (listError) {
       return {
@@ -116,8 +117,8 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
       };
     }
 
-    // Update the target user's metadata
-    const { error: updateError } = await supabase.auth.admin.updateUserById(targetUser.id, {
+    // Update the target user's metadata using admin client
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(targetUser.id, {
       user_metadata: { role: "admin" },
     });
 

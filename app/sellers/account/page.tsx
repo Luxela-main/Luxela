@@ -17,10 +17,38 @@ import { PaymentAccount } from "./components/PaymentAccount";
 
 export default function Account() {
   const [activeTab, setActiveTab] = useState("Profile");
-  const { data: profileData, isLoading } = useSellerProfile();
+  const { data: profileData, isLoading, error } = useSellerProfile();
 
   if (isLoading) {
     return <LoadingState message="Loading account..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="pt-16 lg:pt-0 p-6">
+        <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-red-400 mb-2">Error Loading Profile</h2>
+          <p className="text-gray-400 mb-4">{error?.message || "Failed to load your profile data. Please try refreshing the page."}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profileData || !profileData.seller) {
+    return (
+      <div className="pt-16 lg:pt-0 p-6">
+        <div className="bg-yellow-900/20 border border-yellow-500/50 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-yellow-400 mb-2">Profile Not Found</h2>
+          <p className="text-gray-400">Your profile data could not be loaded. Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -70,10 +98,10 @@ export default function Account() {
           </div>
         </div>
 
-        <div className="flex-1">
-          {activeTab === "Profile" && <ProfileAccount initialData={profileData} />}
-          {activeTab === "Store" && <StoreAccount initialData={profileData} />}
-          {activeTab === "Payment" && <PaymentAccount initialData={profileData} />}
+        <div className="flex-1 min-h-[500px]">
+          {activeTab === "Profile" && profileData && <ProfileAccount initialData={profileData} />}
+          {activeTab === "Store" && profileData && <StoreAccount initialData={profileData} />}
+          {activeTab === "Payment" && profileData && <PaymentAccount initialData={profileData} />}
         </div>
       </div>
     </div>

@@ -11,6 +11,8 @@ import * as Yup from "yup";
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { LoadingState } from "@/components/sellers/LoadingState";
+import { useAuth } from "@/context/AuthContext";
+import { uploadImage, validateImageFile } from "@/lib/upload-image";
 
 interface ProfileAccountProps {
   initialData: any;
@@ -30,21 +32,39 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // Safely handle undefined or null data
+  if (!initialData || !initialData.seller) {
+    return (
+      <div className="bg-[#1a1a1a] rounded-lg p-6 flex items-center justify-center min-h-[500px]">
+        <div className="text-center">
+          <p className="text-gray-400 mb-4">Loading profile data...</p>
+        </div>
+      </div>
+    );
+  }
+
   const profileData = initialData;
   const hasProfile = !!profileData?.seller;
 
   const [idType, setIdType] = useState(profileData?.business?.idType || "national_id");
   const [idNumber, setIdNumber] = useState(profileData?.business?.idNumber || "");
   const [isVerified, setIsVerified] = useState(profileData?.business?.idVerified || false);
-  const [profilePhoto, setProfilePhoto] = useState(profileData?.seller?.profilePhoto || "");
+  const [profilePhoto, setProfilePhoto] = useState<string>(
+    profileData?.seller?.profilePhoto || ""
+  );
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setIdType(profileData?.business?.idType || "national_id");
-    setIdNumber(profileData?.business?.idNumber || "");
-    setIsVerified(profileData?.business?.idVerified || false);
-    setProfilePhoto(profileData?.seller?.profilePhoto || "");
-  }, [profileData]);
+    if (profileData?.seller) {
+      setIdType(profileData?.business?.idType || "national_id");
+      setIdNumber(profileData?.business?.idNumber || "");
+      setIsVerified(profileData?.business?.idVerified || false);
+      if (profileData?.seller?.profilePhoto) {
+        setProfilePhoto(profileData?.seller?.profilePhoto);
+      }
+    }
+  }, [profileData?.business, profileData?.seller]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -70,70 +90,51 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
     reader.readAsDataURL(file);
   };
 
+  const { supabase } = useAuth();
+
+  const uploadPhotoMutation = trpc.seller.uploadProfilePicture.useMutation({
+    onSuccess: (data) => {
+      setProfilePhoto(data.url);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      toastSvc.success("Photo uploaded successfully");
+      utils.seller.getProfile.invalidate();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    onError: (err: any) => {
+      toastSvc.error(err?.message || "Failed to upload photo");
+    },
+  });
+
   const handleUploadPhoto = async () => {
     if (!selectedFile) return;
 
     setIsUploadingPhoto(true);
     try {
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error("Supabase configuration missing");
+      // Validate image file locally first
+      const validation = validateImageFile(selectedFile, 5);
+      if (!validation.valid) {
+        toastSvc.error(validation.error || "Invalid image file");
+        setIsUploadingPhoto(false);
+        return;
       }
 
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      // Get current session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
-        throw new Error("Authentication required");
-      }
-
-      // Generate unique filename
-      const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const sellerId = profileData?.seller?.id || "default";
-      const filePath = `${sellerId}/${fileName}`;
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from("seller-profiles")
-        .upload(filePath, selectedFile, {
-          upsert: true,
-          contentType: selectedFile.type,
+      // Convert file to base64 for transmission
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = (reader.result as string).split(',')[1];
+        uploadPhotoMutation.mutate({
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+          base64Data: base64Data,
         });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Get public URL
-      const { data: publicData } = supabase.storage
-        .from("seller-profiles")
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicData?.publicUrl;
-
-      if (!publicUrl) {
-        throw new Error("Failed to get public URL");
-      }
-
-      // Update profile with new photo
-      setProfilePhoto(publicUrl);
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      toastSvc.success("Photo uploaded successfully");
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      };
+      reader.readAsDataURL(selectedFile);
     } catch (err: any) {
       console.error("Upload error:", err);
       toastSvc.error(err?.message || "Failed to upload photo");
-    } finally {
       setIsUploadingPhoto(false);
     }
   };
@@ -141,19 +142,24 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
   const createProfileMutation = trpc.seller.createSellerProfile.useMutation({
     onSuccess: () => {
       toastSvc.success("Profile created successfully");
+      setIsSaving(false);
+      utils.seller.getProfile.invalidate();
       window.location.reload();
     },
     onError: (err: any) => {
+      setIsSaving(false);
       toastSvc.error(err.message || "Failed to create profile");
     },
   });
 
   const updateProfileMutation = trpc.seller.updateSellerBusiness.useMutation({
     onSuccess: () => {
+      setIsSaving(false);
       toastSvc.success("Profile updated successfully");
       utils.seller.getProfile.invalidate();
     },
     onError: (err: any) => {
+      setIsSaving(false);
       toastSvc.error(err.message || "Failed to update profile");
     },
   });
@@ -188,26 +194,35 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
-      if (!hasProfile) {
-        await createProfileMutation.mutateAsync();
-        return;
-      }
+      setIsSaving(true);
+      try {
+        if (!hasProfile) {
+          await createProfileMutation.mutateAsync();
+          return;
+        }
 
-      await updateProfileMutation.mutateAsync({
-        fullName: `${values.firstName} ${values.lastName}`.trim(),
-        officialEmail: values.email,
-        phoneNumber: values.phone,
-        bio: values.bio,
-        brandName: profileData.business?.brandName || "My Store",
-        businessType: profileData.business?.businessType || "individual",
-        businessAddress:
-          profileData.business?.businessAddress || "Not provided",
-        country: profileData.business?.country || "Nigeria",
-        idType: idType,
-        idNumber: idNumber,
-        idVerified: isVerified,
-        storeLogo: profilePhoto,
-      });
+        const result = await updateProfileMutation.mutateAsync({
+          fullName: `${values.firstName} ${values.lastName}`.trim(),
+          officialEmail: values.email,
+          phoneNumber: values.phone,
+          bio: values.bio,
+          brandName: profileData.business?.brandName || "My Store",
+          businessType: profileData.business?.businessType || "individual",
+          businessAddress:
+            profileData.business?.businessAddress || "Not provided",
+          country: profileData.business?.country || "Nigeria",
+          idType: idType,
+          idNumber: idNumber,
+          idVerified: isVerified,
+          profilePhoto: profilePhoto,
+        });
+        if (profilePhoto && !previewUrl) {
+          setProfilePhoto(profilePhoto);
+        }
+      } catch (error) {
+        setIsSaving(false);
+        toastSvc.error("An error occurred while saving. Please try again.");
+      }
     },
   });
 
@@ -444,9 +459,9 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
           <Button
             type="submit"
             className="bg-purple-600 hover:bg-purple-700 cursor-pointer disabled:cursor-not-allowed transition"
-            disabled={updateProfileMutation.isPending || !formik.isValid}
+            disabled={updateProfileMutation.isPending || createProfileMutation.isPending || isSaving || !formik.isValid}
           >
-            {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+            {isSaving || updateProfileMutation.isPending || createProfileMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </form>

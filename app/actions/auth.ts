@@ -142,3 +142,40 @@ export async function signoutAction() {
     return { success: false, error: mapAuthError(err) };
   }
 }
+
+export async function checkEmailRegistration(email: string) {
+  try {
+    const supabase = await createClient();
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check Supabase auth users first (faster)
+    const {
+      data: { users },
+      error: authError,
+    } = await supabase.auth.admin.listUsers();
+
+    if (!authError && users) {
+      const existingUser = users.find(
+        (u) => u.email?.toLowerCase() === normalizedEmail
+      );
+
+      if (existingUser) {
+        const role = existingUser.user_metadata?.role as
+          | "buyer"
+          | "seller"
+          | undefined;
+
+        return {
+          exists: true,
+          role: role || "user",
+          message: `This email is already registered as a ${role || "user"}. Please sign in instead.`,
+        };
+      }
+    }
+
+    return { exists: false };
+  } catch (err: any) {
+    console.error("Email registration check error:", err);
+    return { exists: null, error: "Failed to check email availability" };
+  }
+}

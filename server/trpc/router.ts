@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createTRPCContext } from "./context";
 import { listingRouter } from "../routers/listing";
 import { sellerRouter } from "../routers/seller";
+import { sellerOrdersRouter } from "../routers/sellerOrders";
 import { buyerRouter } from "../routers/buyer";
 import { salesRouter } from "../routers/sales";
 import { cartRouter } from "../routers/cart";
@@ -27,6 +28,9 @@ import { supportSubscriptionsRouter } from "../routers/supportSubscriptions";
 import { payoutSubscriptionsRouter } from "../routers/payoutSubscriptions";
 import { faqsRouter } from "../routers/faqs";
 import { productsRouter } from "../routers/products";
+import { adminListingReviewRouter } from "../routers/admin-listing-review";
+import { sellerListingNotificationsRouter } from "../routers/seller-listing-notifications";
+import { buyerListingsCatalogRouter } from "../routers/buyer-listings-catalog";
 
 const t = initTRPC.context<ReturnType<typeof createTRPCContext>>().create();
 
@@ -44,6 +48,7 @@ export const appRouter = t.router({
   hello: helloRouter.hello,
   listing: listingRouter,
   seller: sellerRouter,
+  sellers: sellerOrdersRouter,
   buyer: buyerRouter,
   sales: salesRouter,
   cart: cartRouter,
@@ -68,6 +73,9 @@ export const appRouter = t.router({
   payoutSubscriptions: payoutSubscriptionsRouter,
   faqs: faqsRouter,
   products: productsRouter,
+  adminListingReview: adminListingReviewRouter,
+  sellerListingNotifications: sellerListingNotificationsRouter,
+  buyerListingsCatalog: buyerListingsCatalogRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -20,8 +20,8 @@ function Dashboard() {
 
   return (
     <div className="px-6 mt-4 md:mt-0">
-      <div className="mb-6">
-        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
+      <div className="mb-6 flex justify-end">
+        <div className="w-60 lg:w-80">
           <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>

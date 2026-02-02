@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/hooks/useToast";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,25 @@ import {
   Plus,
   Search,
   Filter,
+  Edit2,
+  Eye,
+  X as XIcon,
 } from "lucide-react";
 import { trpc } from "@/lib/_trpc/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Ticket {
   id: string;
@@ -68,6 +86,7 @@ const STATUS_CONFIG = {
 
 export default function BuyerSupportTicketsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const toast = useToast();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
@@ -77,6 +96,9 @@ export default function BuyerSupportTicketsPage() {
   const [selectedPriority, setSelectedPriority] = useState("ALL");
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [ticketToClose, setTicketToClose] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -102,13 +124,15 @@ export default function BuyerSupportTicketsPage() {
 
   useEffect(() => {
     if (ticketsQuery.data) {
-      // Convert string dates to Date objects
+      // Convert string dates to Date objects and ensure proper typing
       const convertedTickets = ticketsQuery.data.map(ticket => ({
         ...ticket,
+        priority: ticket.priority as "low" | "medium" | "high" | "urgent",
+        status: ticket.status as "open" | "in_progress" | "resolved" | "closed",
         createdAt: typeof ticket.createdAt === 'string' ? new Date(ticket.createdAt) : ticket.createdAt,
         updatedAt: typeof ticket.updatedAt === 'string' ? new Date(ticket.updatedAt) : ticket.updatedAt,
         resolvedAt: ticket.resolvedAt ? (typeof ticket.resolvedAt === 'string' ? new Date(ticket.resolvedAt) : ticket.resolvedAt) : null,
-      }));
+      })) as Ticket[];
       setTickets(convertedTickets);
       setLoading(false);
     } else if (ticketsQuery.isLoading) {
@@ -195,6 +219,34 @@ export default function BuyerSupportTicketsPage() {
       ticketsQuery.refetch();
     } catch (error) {
       toast.error("Failed to send reply");
+    }
+  };
+
+  const handleEditTicket = (ticketId: string) => {
+    router.push(`/buyer/dashboard/support-tickets/${ticketId}/edit`);
+    setOpenMenuId(null);
+  };
+
+  const handleViewTicket = (ticketId: string) => {
+    router.push(`/buyer/dashboard/support-tickets/${ticketId}`);
+    setOpenMenuId(null);
+  };
+
+  const handleCloseTicket = (ticketId: string) => {
+    setTicketToClose(ticketId);
+    setCloseDialogOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const confirmCloseTicket = async () => {
+    if (!ticketToClose) return;
+    try {
+      toast.success("Ticket closed successfully");
+      setCloseDialogOpen(false);
+      setTicketToClose(null);
+      ticketsQuery.refetch();
+    } catch (error) {
+      toast.error("Failed to close ticket");
     }
   };
 
@@ -456,13 +508,44 @@ export default function BuyerSupportTicketsPage() {
                       </div>
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-[#808080] hover:text-white"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
+                    <Popover open={openMenuId === ticket.id} onOpenChange={(open) => setOpenMenuId(open ? ticket.id : null)}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-[#808080] hover:text-white"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="bg-[#141414] border-[#2B2B2B] p-0 w-48" align="end">
+                        <div className="flex flex-col divide-y divide-[#2B2B2B]">
+                          <button
+                            onClick={() => handleViewTicket(ticket.id)}
+                            className="px-4 py-2 text-sm text-white hover:bg-[#1a1a1a] flex items-center gap-2 text-left"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View Ticket
+                          </button>
+                          <button
+                            onClick={() => handleEditTicket(ticket.id)}
+                            className="px-4 py-2 text-sm text-white hover:bg-[#1a1a1a] flex items-center gap-2 text-left"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            Edit Ticket
+                          </button>
+                          {ticket.status !== 'closed' && (
+                            <button
+                              onClick={() => handleCloseTicket(ticket.id)}
+                              className="px-4 py-2 text-sm text-red-400 hover:bg-[#1a1a1a] flex items-center gap-2 text-left"
+                            >
+                              <XIcon className="w-4 h-4" />
+                              Close Ticket
+                            </button>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
               );
@@ -498,6 +581,31 @@ export default function BuyerSupportTicketsPage() {
             </p>
           </div>
         </div>
+
+        {/* Close Ticket Confirmation Dialog */}
+        <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
+          <AlertDialogContent className="bg-[#141414] border-[#2B2B2B]">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white">
+                Close Support Ticket
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-[#808080]">
+                Are you sure you want to close this ticket? Closed tickets cannot be reopened.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex gap-3 justify-end">
+              <AlertDialogCancel className="border-[#2B2B2B] text-white hover:bg-[#1a1a1a]">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmCloseTicket}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Close Ticket
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

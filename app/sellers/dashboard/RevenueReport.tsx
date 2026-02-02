@@ -3,13 +3,31 @@
 import { useDashboardData } from "@/modules/sellers";
 import { defaultDashboardData } from "./dashboardDataStats";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export function RevenueReport() {
   const [timeframe, setTimeframe] = useState("Month");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: dashboardData } = useDashboardData();
   const displayData = (dashboardData || defaultDashboardData) as typeof defaultDashboardData;
   const { revenueReport } = displayData;
+
+  const timeframeOptions = ["Month", "Quarter", "Year"];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isDropdownOpen]);
 
   const maxIncome = Math.max(...revenueReport.map((r) => r.income), 1);
   const step = maxIncome / 10;
@@ -23,28 +41,53 @@ export function RevenueReport() {
             <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
             <span className="text-sm text-gray-400">Income</span>
           </div>
-          <Button
-            variant="outline"
-            className="bg-[#222] border-[#333] text-white hover:bg-[#333] hover:text-white"
-          >
-            {timeframe}
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="ml-2"
+          <div className="relative" ref={dropdownRef}>
+            <Button
+              variant="outline"
+              className="bg-[#222] border-[#333] text-white hover:bg-[#333] hover:text-white"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
-              <path
-                d="M6 9L12 15L18 9"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Button>
+              {timeframe}
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={`ml-2 transform transition-transform ${
+                  isDropdownOpen ? "rotate-180" : ""
+                }`}
+              >
+                <path
+                  d="M6 9L12 15L18 9"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Button>
+            {isDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-32 bg-[#222] border border-[#333] rounded-lg shadow-lg z-10">
+                {timeframeOptions.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      setTimeframe(option);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`block w-full text-left px-4 py-2 text-sm ${
+                      timeframe === option
+                        ? "bg-blue-500 text-white"
+                        : "text-gray-400 hover:bg-[#333] hover:text-white"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="h-64 relative">

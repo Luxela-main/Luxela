@@ -46,7 +46,6 @@
   "exclude": [
     "node_modules",
     "dist",
-    ".next",
-    "server/websocket/**/*"
+    ".next"
   ]
 }

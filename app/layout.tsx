@@ -7,6 +7,10 @@ import "./globals.css";
 import { spaceGrotesk } from "@/public/fonts";
 import ClientProviders from "./ClientProviders";
 import { SITE } from "@/lib/seo/config";
+import {
+  generateOrganizationSchema,
+  generateWebSiteSchema,
+} from "@/lib/seo/structured-data";
 import type { Metadata } from "next";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "";
@@ -72,7 +76,43 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Google Analytics (GA4) */}
+        {/* Organization & Website Schema */}
+        <Script
+          id="org-schema"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              generateOrganizationSchema({
+                name: "Luxela Fashion",
+                url: SITE.url,
+                logo: `${SITE.url}/logo.png`,
+                description: "African Trendy Clothing Store",
+                socialProfiles: [
+                  "https://www.instagram.com/luxela",
+                  "https://www.twitter.com/luxela",
+                  "https://www.facebook.com/luxela",
+                ],
+              })
+            ),
+          }}
+          strategy="afterInteractive"
+        />
+
+        <Script
+          id="website-schema"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              generateWebSiteSchema({
+                name: "Luxela Fashion",
+                url: SITE.url,
+              })
+            ),
+          }}
+          strategy="afterInteractive"
+        />
+
+        {/* GA4 */}
         {GA_ID && (
           <>
             <Script
@@ -80,29 +120,30 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
             />
             <Script
-              id="gtag-init"
+              id="gtag-config"
               strategy="afterInteractive"
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${GA_ID}', { page_path: window.location.pathname });
-                `,
-              }}
+              src="/scripts/gtag-init.js"
+              data-ga-id={GA_ID}
             />
           </>
         )}
-        {/* Robots meta for search engines */}
+
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href={SITE.url} />
-        {/* Sitemap reference */}
-        <link rel="sitemap" type="application/xml" href={`${SITE.url}/sitemap.xml`} />
+        <link
+          rel="sitemap"
+          type="application/xml"
+          href={`${SITE.url}/sitemap.xml`}
+        />
       </head>
 
       <body suppressHydrationWarning className={spaceGrotesk.className}>
+        {/* Client Providers */}
         <ClientProviders>{children}</ClientProviders>
+
+        {/* Analytics */}
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

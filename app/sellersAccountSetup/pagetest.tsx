@@ -462,7 +462,7 @@ const SellerAccountSetup = () => {
                     >
                       <option value="">Select refund policy</option>
                       <option value="no_refunds">No Refunds</option>
-                      <option value="accept_refunds">Accept Refunds</option>
+                      
                     </select>
                   </div>
                   <div>
@@ -790,3 +790,4 @@ const SellerAccountSetup = () => {
 };
 
 export default SellerAccountSetup;
+

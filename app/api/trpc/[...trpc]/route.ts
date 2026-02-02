@@ -1,16 +1,27 @@
-import { appRouter } from "@/server/index";
-import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { createTRPCContext } from "@/server/trpc/context";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { appRouter } from "@/app/api/lib/trpc/router";
+import { createTRPCContext } from "@/app/api/lib/trpc/context";
 
-// Next.js Route Handler for tRPC
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
-const handler = (req: Request) =>
-  fetchRequestHandler({
-    endpoint: '/api/trpc',
+export async function GET(req: Request) {
+  const contextData = await createTRPCContext({ req });
+  
+  return fetchRequestHandler({
+    endpoint: "/api/trpc",
     req,
     router: appRouter,
-    createContext: () => createTRPCContext({ req, res: undefined }),
+    createContext: () => contextData,
   });
+}
 
-export { handler as GET, handler as POST };
+export async function POST(req: Request) {
+  const contextData = await createTRPCContext({ req });
+  
+  return fetchRequestHandler({
+    endpoint: "/api/trpc",
+    req,
+    router: appRouter,
+    createContext: () => contextData,
+  });
+}

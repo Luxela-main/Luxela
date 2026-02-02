@@ -2,7 +2,6 @@
 
 import {
   LayoutGrid,
-  PlusCircle,
   ShoppingCart,
   BarChart3,
   X,
@@ -12,8 +11,8 @@ import {
 import { Bell, Clock, FileText, Headphones, User, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import Logo from "@/public/luxela.svg";
+import { usePathname } from "next/navigation";
 import { CurrentUser, getCurrentUser } from "@/lib/utils/getCurrentUser";
 import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
@@ -86,10 +85,10 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button - Hidden on lg screens */}
    <button
   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-  className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-[#141414] shadow-lg hover:bg-[#1f1f1f] transition-colors"
+  className="lg:hidden fixed top-3 left-4 z-[70] p-2 rounded-lg bg-[#141414] shadow-lg hover:bg-[#1f1f1f] transition-colors cursor-pointer"
   aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
 >
   {isMobileMenuOpen ? (
@@ -101,30 +100,27 @@ export default function Sidebar() {
       {/* Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden pt-16"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       <div
-        className={`fixed lg:static inset-y-0 left-0 overflow-y-auto bg-[#121212] border-r border-[#222] z-40 w-64 flex flex-col transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+        className={`fixed lg:static inset-y-0 left-0 overflow-y-auto bg-[#121212] border-r border-[#222] z-[60] lg:z-auto pt-0 w-64 flex flex-col transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:pt-16`}
       >
-        <div className="p-6">
-          <Link
-            href="/sellers/dashboard"
-            className="flex mx-auto justify-center items-center"
-          >
-            <Image
-              src={Logo}
-              alt="LUXELA"
-              width={147.99}
-              height={24.15}
-              className="mr-2"
-            />
-          </Link>
+        {/* Logo - Only visible on mobile */}
+        <div className="lg:hidden px-4 py-4 border-b border-[#222] flex items-center justify-center sticky top-0 bg-[#121212] z-20 mt-16">
+          <Image
+            src={Logo}
+            alt="LUXELA"
+            width={120}
+            height={24}
+            className="h-6 w-auto"
+            priority
+          />
         </div>
 
-        <nav className="flex-1 px-4 py-2 mt-5">
+        <nav className="flex-1 px-4 py-2">
           <ul className="space-y-1">
             <li>
               <Link
@@ -140,22 +136,6 @@ export default function Sidebar() {
               >
                 <LayoutGrid size={20} />
                 <span>Dashboard</span>
-              </Link>
-            </li>
-            <li>
-              <Link
-                onClick={() => {
-                      setIsMobileMenuOpen(false);
-                    }}
-                href="/sellers/new-listing"
-                className={`flex items-center gap-3 px-3 py-2 rounded-md ${
-                  isActive("/sellers/new-listing")
-                    ? "bg-[#1e1e1e]"
-                    : "hover:bg-[#1e1e1e]"
-                }`}
-              >
-                <PlusCircle size={20} />
-                <span>New listing</span>
               </Link>
             </li>
             <li>
@@ -381,4 +361,4 @@ export default function Sidebar() {
       </div>
     </>
   );
-}
+}

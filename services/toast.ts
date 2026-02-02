@@ -1,17 +1,20 @@
-import { toast } from "react-toastify";
-export const toastSvc = {
-  success: (msg: string) => toast.success(msg, { hideProgressBar: true }),
+import { toast, ToastOptions } from "react-toastify";
 
-  error: (msg: string) => {
+type ExtendedToastOptions = ToastOptions & { description?: string };
+
+export const toastSvc = {
+  success: (msg: string, options?: ExtendedToastOptions) => toast.success(msg, { hideProgressBar: true, ...options }),
+
+  error: (msg: string, options?: ExtendedToastOptions) => {
     if (msg === "Unauthorized") return;
-    toast.error(msg, { hideProgressBar: true });
+    toast.error(msg, { hideProgressBar: true, ...options });
   },
 
-  info: (msg: string) => toast.info(msg, { hideProgressBar: true }),
+  info: (msg: string, options?: ExtendedToastOptions) => toast.info(msg, { hideProgressBar: true, ...options }),
 
-  warning: (msg: string) => toast.warning(msg, { hideProgressBar: true }),
+  warning: (msg: string, options?: ExtendedToastOptions) => toast.warning(msg, { hideProgressBar: true, ...options }),
 
-  apiError: (error: any) => {
+  apiError: (error: any, options?: ExtendedToastOptions) => {
     let message = "An unexpected error occurred.";
 
     if (error.response?.data) {
@@ -26,7 +29,7 @@ export const toastSvc = {
     }
 
     if (message !== "Unauthorized") {
-      toast.error(message, { hideProgressBar: true });
+      toast.error(message, { hideProgressBar: true, ...options });
     }
   },
 };

@@ -1,4 +1,3 @@
-// contexts/ListingsContext.tsx
 "use client";
 
 import {
@@ -47,6 +46,7 @@ export interface Listing {
   updated_at: string;
   seller_id: string;
   product_id: string | null;
+  status: "draft" | "pending_review" | "approved" | "rejected" | "archived";
   sellers: {
     id: string;
     seller_business: SellerBusiness[];
@@ -92,7 +92,8 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
               bio
             )
           )
-        `);
+        `)
+        .eq('status', 'approved');
 
       if (fetchError) {
         const errorMessage = fetchError.message || JSON.stringify(fetchError) || "Unknown error";
@@ -100,7 +101,15 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
         throw new Error(errorMessage);
       }
 
-      setListings(data || []);
+      // Parse JSON fields for proper data structure
+      const parsedData = (data || []).map((listing: any) => ({
+        ...listing,
+        sizes_json: listing.sizes_json ? (typeof listing.sizes_json === 'string' ? JSON.parse(listing.sizes_json) : listing.sizes_json) : null,
+        colors_available: listing.colors_available ? (typeof listing.colors_available === 'string' ? JSON.parse(listing.colors_available) : listing.colors_available) : null,
+        items_json: listing.items_json ? (typeof listing.items_json === 'string' ? JSON.parse(listing.items_json) : listing.items_json) : null,
+      }));
+
+      setListings(parsedData);
     } catch (err: any) {
       const errorMessage = err?.message || (err instanceof Error ? err.message : JSON.stringify(err) || "Failed to fetch listings");
       setError(errorMessage);
@@ -151,4 +160,4 @@ export function useListings() {
     throw new Error("useListings must be used within a ListingsProvider");
   }
   return context;
-}
+}

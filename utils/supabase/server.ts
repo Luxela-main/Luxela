@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Creates a Supabase client for use in Server Components,
@@ -28,4 +29,20 @@ export async function createClient() {
       },
     }
   );
+}
+
+/**
+ * Creates a Supabase admin client with service role key.
+ * Use this ONLY for admin operations (listUsers, updateUserById, etc).
+ * IMPORTANT: This must be used server-side only with proper authorization checks.
+ */
+export function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set');
+  }
+
+  return createSupabaseClient(supabaseUrl, serviceRoleKey);
 }

@@ -18,7 +18,7 @@ const navItems: NavItem[] = [
   { name: "How To?", route: "#how-to" },
 ];
 
-export default function client() {
+export default function Navbar() {
   const [sticky, setSticky] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user } = useAuth();
@@ -92,7 +92,7 @@ export default function client() {
 
           {user && (
             <Link
-              href={user.role === "seller" ? "/sellers/dashboard" : "/buyer/dashboard"}
+              href={user.user_metadata?.role === "seller" ? "/sellers/dashboard" : user.user_metadata?.role === "admin" ? "/admin/dashboard" : "/buyer/dashboard"}
               className="h-10 w-10 rounded-full overflow-hidden border border-white/30 hover:border-purple-500 transition">
               {user.user_metadata?.avatar_url ? (
                 <Image

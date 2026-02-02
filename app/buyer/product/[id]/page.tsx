@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 import { useListings } from "@/context/ListingsContext";
 import ProductImageGallery from "@/components/buyer/ProductImageGallery";
 import ProductInfo from "@/components/buyer/ProductInfo";
@@ -9,8 +9,11 @@ import ProductReviews from "@/components/buyer/ProductReviews";
 import VendorDetails from "@/components/buyer/VendorDetails";
 import RelatedProducts from "@/components/buyer/RelatedProducts";
 import Breadcrumb from "@/components/buyer/Breadcrumb";
+import { JsonLdScript } from "@/components/seo/JsonLdScript";
+import { generateProductSchema, generateBreadcrumbSchema } from "@/lib/seo/structured-data";
+import { SITE } from "@/lib/seo/config";
 
-export default function ProductDetailPage({
+function ProductDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -27,6 +30,7 @@ export default function ProductDetailPage({
   }
 
   const product = getListingById(id);
+  const business = product?.sellers?.seller_business?.[0];
 
   if (!product) {
     return (
@@ -36,13 +40,33 @@ export default function ProductDetailPage({
     );
   }
 
-  const business = product.sellers?.seller_business?.[0];
   const brandProducts = getListingsByBrand(business?.brand_name || "").filter(
     (p) => p.id !== id
   );
 
+  const productSchema = generateProductSchema({
+    id: product.id,
+    name: product.title || "Product",
+    description: product.description || "",
+    image: product.image || "",
+    price: ((product.price_cents || 0) / 100).toString(),
+    currency: product.currency || "NGN",
+    availability: product.quantity_available && product.quantity_available > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    brand: business?.brand_name || "Luxela",
+    url: `${SITE.url}/buyer/product/${product.id}`,
+  });
+
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: SITE.url },
+    { name: "Products", url: `${SITE.url}/buyer` },
+    { name: product.title || "Product", url: `${SITE.url}/buyer/product/${product.id}` },
+  ]);
+
   return (
-    <div className="bg-black min-h-screen text-white lg:px-12">
+    <>
+      <JsonLdScript data={productSchema} id="product-schema" />
+      <JsonLdScript data={breadcrumbSchema} id="breadcrumb-schema" />
+      <div className="bg-black min-h-screen text-white lg:px-12">
       <div className="max-w-7xl mx-auto px-6 py-6">
         <Breadcrumb product={product as any} business={business} />
 
@@ -71,5 +95,8 @@ export default function ProductDetailPage({
         />
       </div>
     </div>
+    </>
   );
-}
+}
+
+export default ProductDetailPage;

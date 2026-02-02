@@ -12,7 +12,7 @@ export const refundRouter = createTRPCRouter({
       z.object({
         orderId: z.string().uuid('Order ID is required'),
         reason: z.string().min(5, 'Reason must be at least 5 characters'),
-        refundType: z.enum(['full', 'partial']).default('full'),
+        refundType: z.enum(['full', 'partial', 'store_credit']).default('full'),
         amount: z.number().positive().optional(),
       })
     )

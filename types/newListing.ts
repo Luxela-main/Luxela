@@ -2,13 +2,25 @@
 export interface FormData {
   collectionTitle?: string;
   collectionDescription?: string;
+  collectionSku?: string;
+  collectionSlug?: string;
+  collectionMetaDescription?: string;
+  collectionBarcode?: string;
+  collectionVideoUrl?: string;
+  collectionCareInstructions?: string;
+  collectionRefundPolicy?: string;
+  collectionImages?: (File | string)[];
   collectionItems?: {
     title: string;
     priceCents: number;
     currency: string;
     productId?: string; 
     images?: (File | string)[]; 
-    image?: string;             
+    image?: string;
+    sku?: string;
+    slug?: string;
+    metaDescription?: string;
+    barcode?: string;
   }[];
 
   // Basic Information
@@ -36,6 +48,15 @@ export interface FormData {
   domesticMinutes: string;
   internationalDays: string;
   internationalMinutes: string;
+
+  // Enterprise Fields
+  sku: string;
+  slug: string;
+  metaDescription: string;
+  barcode: string;
+  videoUrl: string;
+  careInstructions: string;
+  refundPolicy: string;
 
   // Images
   images: (File | string)[];

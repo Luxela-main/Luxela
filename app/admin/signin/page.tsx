@@ -102,7 +102,7 @@ function AdminSignInContent() {
       </div>
 
       {/* Right Side */}
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-2 mb-6">
             <Shield className="w-8 h-8 text-amber-500" />
@@ -119,7 +119,7 @@ function AdminSignInContent() {
             onSubmit={handleAdminSignIn}
           >
             {({ errors, touched, isSubmitting }) => (
-              <Form className="space-y-4">
+              <Form className="space-y-3 sm:space-y-4">
                 {/* Email */}
                 <div>
                   <Label htmlFor="email" className="mb-1">
@@ -200,7 +200,7 @@ function AdminSignInContent() {
           {/* Back to regular signin */}
           <p className="text-center text-zinc-500 text-sm mt-4">
             Not an admin?{' '}
-            <Link href="/signin" className="text-amber-400 underline">
+            <Link href="/signin" className="text-amber-400 underline cursor-pointer">
               Sign In as Buyer/Seller <ArrowRight className="h-4 w-4 inline-block" />
             </Link>
           </p>

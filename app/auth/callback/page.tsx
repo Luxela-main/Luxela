@@ -18,19 +18,27 @@ function AuthCallbackHandler() {
 
   const checkProfile = async (role: "buyer" | "seller") => {
     try {
-      const res = await fetch(`/api/profile/check`);
+      const res = await fetch(`/api/profile/check`, {
+        credentials: "include",
+      });
       if (!res.ok) {
-        console.error("Profile check failed:", res.status);
+        try {
+          const errorData = await res.json();
+          console.error("[AuthCallback] Profile check failed with status", res.status, "Response:", errorData);
+        } catch {
+          console.error("[AuthCallback] Profile check failed with status", res.status, "Could not parse response");
+        }
         return { exists: false, profileComplete: false };
       }
       const data = await res.json();
+      console.log("[AuthCallback] Profile check successful:", data);
       return {
         exists: data?.exists === true,
         profileComplete: data?.profileComplete === true,
         role: data?.role,
       };
     } catch (err) {
-      console.error("Profile check error:", err);
+      console.error("[AuthCallback] Profile check error:", err);
       return { exists: false, profileComplete: false };
     }
   };

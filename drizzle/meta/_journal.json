@@ -50,6 +50,27 @@
       "when": 1769556978475,
       "tag": "0007_omniscient_naoko",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769707931332,
+      "tag": "0008_noisy_mephistopheles",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769714231828,
+      "tag": "0009_skinny_abomination",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769820710774,
+      "tag": "0010_overconfident_katie_power",
+      "breakpoints": true
     }
   ]
 }

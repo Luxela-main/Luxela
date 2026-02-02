@@ -360,7 +360,7 @@ export const buyerRouter = createTRPCRouter({
             isDefault: z.boolean(),
           })
           .nullable(),
-      })
+      }).nullable()
     )
     .query(async ({ ctx }) => {
       const userId = ctx.user?.id;
@@ -372,7 +372,19 @@ export const buyerRouter = createTRPCRouter({
       }
 
       try {
-        const buyer = await getBuyer(userId);
+        // Check if buyer exists first (new users won't have a buyer record yet)
+        const existingBuyer = await db
+          .select()
+          .from(buyers)
+          .where(eq(buyers.userId, userId))
+          .limit(1);
+
+        // If no buyer record exists, return null (user hasn't created profile yet)
+        if (existingBuyer.length === 0) {
+          return null;
+        }
+
+        const buyer = existingBuyer[0];
 
         const [accountDetails, billingAddress] = await Promise.all([
           db
@@ -392,11 +404,9 @@ export const buyerRouter = createTRPCRouter({
             .then((r) => r[0] || null),
         ]);
 
+        // If no account details, return null (profile not yet created)
         if (!accountDetails) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Account details not found",
-          });
+          return null;
         }
 
         return {

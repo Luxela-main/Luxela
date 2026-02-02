@@ -13,6 +13,7 @@ type ReleaseDurationType = "24hrs" | "48hrs" | "72hrs" | "1week" | "2weeks" | "1
 const SizesEnum = z.enum(["S", "M", "L", "XL", "XXL", "XXXL"]);
 const SupplyCapacityEnum = z.enum(["no_max", "limited"]);
 const LimitedBadgeEnum = z.enum(["show_badge", "do_not_show"]);
+const ListingStatusEnum = z.enum(["pending", "approved", "rejected", "revision_requested"]);
 const CategoryEnum = z.enum([
   "men_clothing",
   "women_clothing",
@@ -69,8 +70,17 @@ const ListingOutput = z.object({
   shippingOption: ShippingOptionEnum.nullable(),
   etaDomestic: ShippingEtaEnum.nullable(),
   etaInternational: ShippingEtaEnum.nullable(),
+  refundPolicy: z.enum(['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']).nullable(),
+  localPricing: z.enum(['fiat', 'cryptocurrency', 'both']).nullable(),
   itemsJson: z.array(z.any()).nullable(),
+  status: ListingStatusEnum.default('pending'),
   productId: z.string().uuid().nullable().optional(),
+  sku: z.string().nullable().optional(),
+  slug: z.string().nullable().optional(),
+  metaDescription: z.string().nullable().optional(),
+  barcode: z.string().nullable().optional(),
+  videoUrl: z.string().nullable().optional(),
+  careInstructions: z.string().nullable().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -102,7 +112,15 @@ const SingleListingInput = z.object({
   limitedEditionBadge: LimitedBadgeEnum.nullable().optional(),
   releaseDuration: ReleaseDurationEnum.nullable().optional(),
   materialComposition: z.string().nullable().optional(),
-  colorsAvailable: z.array(z.string()).nullable().optional(),
+  colorsAvailable: z
+    .array(
+      z.object({
+        colorName: z.string(),
+        colorHex: z.string(),
+      })
+    )
+    .nullable()
+    .optional(),
   additionalTargetAudience: TargetAudienceEnum.nullable().optional(),
   shippingOption: ShippingOptionEnum.nullable().optional(),
   etaDomestic: ShippingEtaEnum.nullable().optional(),
@@ -111,6 +129,12 @@ const SingleListingInput = z.object({
   localPricing: z.enum(['fiat', 'cryptocurrency', 'both']).nullable().optional(),
   itemsJson: z.array(z.any()).nullable().optional(),
   productId: z.string().uuid().nullable().optional(),
+  sku: z.string().nullable().optional(),
+  slug: z.string().nullable().optional(),
+  metaDescription: z.string().nullable().optional(),
+  barcode: z.string().nullable().optional(),
+  videoUrl: z.string().nullable().optional(),
+  careInstructions: z.string().nullable().optional(),
   collectionId: z.any().optional(),
 }).transform((data) => {
   const { collectionId, ...rest } = data;
@@ -182,15 +206,33 @@ export const listingRouter = createTRPCRouter({
 
       const productId = input.productId ?? uuidv4();
 
-      const productInserted = await db.insert(products).values({
-        id: productId,
+      const convertedPrice = input.priceCents ? (input.priceCents / 100).toFixed(2) : "0.00";
+      
+      // Build product values object with only fields that have values
+      const productValues: any = {
+        brandId: brandId,
+        collectionId: null,  // Explicitly set to null for single products
         name: input.title,
         slug: input.title.toLowerCase().replace(/\s+/g, "-"),
-        sku: `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        brandId: brandId,
-        price: String(input.priceCents ?? 0),
+        price: convertedPrice,
         currency: input.currency ?? "SOL",
-      }).returning({ id: products.id });
+        type: "single",
+        sku: input.sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        inStock: true,
+      };
+
+      // Only add optional fields if they have values
+      if (input.description) {
+        productValues.description = input.description;
+      }
+      if (input.category) {
+        productValues.category = input.category;
+      }
+      if (input.etaDomestic) {
+        productValues.shipsIn = input.etaDomestic;
+      }
+      
+      const productInserted = await db.insert(products).values(productValues).returning({ id: products.id });
 
       const listingValues = {
         sellerId: seller.id,
@@ -217,6 +259,12 @@ export const listingRouter = createTRPCRouter({
         refundPolicy: input.refundPolicy ?? null,
         localPricing: input.localPricing ?? null,
         itemsJson: input.itemsJson ? JSON.stringify(input.itemsJson) : null,
+        sku: input.sku ?? null,
+        slug: input.slug ?? null,
+        metaDescription: input.metaDescription ?? null,
+        barcode: input.barcode ?? null,
+        videoUrl: input.videoUrl ?? null,
+        careInstructions: input.careInstructions ?? null,
       };
 
       const listingInserted = await db.insert(listings).values(listingValues).returning();
@@ -255,8 +303,16 @@ export const listingRouter = createTRPCRouter({
         shippingOption: created.shippingOption,
         etaDomestic: created.etaDomestic as any,
         etaInternational: created.etaInternational as any,
+        refundPolicy: created.refundPolicy ?? null,
+        localPricing: created.localPricing ?? null,
         itemsJson: created.itemsJson ? JSON.parse(created.itemsJson) : null,
         productId: created.productId,
+        sku: created.sku || undefined,
+        slug: created.slug || undefined,
+        metaDescription: created.metaDescription || undefined,
+        barcode: created.barcode || undefined,
+        videoUrl: created.videoUrl || undefined,
+        careInstructions: created.careInstructions || undefined,
         createdAt: created.createdAt instanceof Date ? created.createdAt : new Date(created.createdAt),
         updatedAt: created.updatedAt instanceof Date ? created.updatedAt : new Date(created.updatedAt),
       };
@@ -319,19 +375,18 @@ export const listingRouter = createTRPCRouter({
       productIds.push(productId);
 
       await db.insert(products).values({
-        id: productId,
         brandId: brandId,
         collectionId: collectionId,
         name: item.title,
         slug: item.title.toLowerCase().replace(/\s+/g, "-"),
-        description: item.description && item.description.trim() ? item.description : null,
-        category: item.category as any,
-        sku: `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        price: String(item.priceCents ?? 0),
+        ...(item.description && { description: item.description }),
+        ...(item.category && { category: item.category }),
+        price: ((item.priceCents ?? 0) / 100).toFixed(2),
         currency: item.currency ?? "SOL",
+        type: "collection",
+        sku: `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         inStock: true,
       });
-
     }
 
     const result = await db.insert(listings).values({
@@ -381,6 +436,8 @@ export const listingRouter = createTRPCRouter({
       shippingOption: createdListing.shippingOption,
       etaDomestic: unmapShippingEta(createdListing.etaDomestic) as any,
       etaInternational: unmapShippingEta(createdListing.etaInternational) as any,
+      refundPolicy: createdListing.refundPolicy,
+      localPricing: createdListing.localPricing,
       itemsJson: createdListing.itemsJson ? JSON.parse(createdListing.itemsJson) : null,
       productId: createdListing.productId ?? undefined,
       createdAt: new Date(createdListing.createdAt),
@@ -425,8 +482,16 @@ export const listingRouter = createTRPCRouter({
         shippingOption: l.shippingOption,
         etaDomestic: l.etaDomestic as any,
         etaInternational: l.etaInternational as any,
+        refundPolicy: l.refundPolicy,
+        localPricing: l.localPricing,
         itemsJson: l.itemsJson ? JSON.parse(l.itemsJson) : null,
         productId: l.productId ?? undefined,
+        sku: l.sku || undefined,
+        slug: l.slug || undefined,
+        metaDescription: l.metaDescription || undefined,
+        barcode: l.barcode || undefined,
+        videoUrl: l.videoUrl || undefined,
+        careInstructions: l.careInstructions || undefined,
         createdAt: new Date(l.createdAt),
         updatedAt: new Date(l.updatedAt),
       }));
@@ -613,8 +678,16 @@ export const listingRouter = createTRPCRouter({
         shippingOption: updated.shippingOption,
         etaDomestic: updated.etaDomestic as any,
         etaInternational: updated.etaInternational as any,
+        refundPolicy: updated.refundPolicy ?? null,
+        localPricing: updated.localPricing ?? null,
         itemsJson: updated.itemsJson ? JSON.parse(updated.itemsJson) : null,
         productId: updated.productId ?? undefined,
+        sku: updated.sku || undefined,
+        slug: updated.slug || undefined,
+        metaDescription: updated.metaDescription || undefined,
+        barcode: updated.barcode || undefined,
+        videoUrl: updated.videoUrl || undefined,
+        careInstructions: updated.careInstructions || undefined,
         createdAt: new Date(updated.createdAt),
         updatedAt: new Date(updated.updatedAt),
       };
@@ -628,5 +701,72 @@ export const listingRouter = createTRPCRouter({
       const seller = await fetchSeller(ctx);
       await db.delete(listings).where(and(eq(listings.id, input.id), eq(listings.sellerId, seller.id)));
       return { success: true };
+    }),
+
+  getApprovedListings: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/listing/approved",
+        tags: ["Listing"],
+        summary: "Fetch all approved listings visible to buyers",
+      },
+    })
+    .input(z.object({
+      type: z.enum(["single", "collection"]).optional(),
+      category: CategoryEnum.optional(),
+    }).optional())
+    .output(z.array(ListingOutput))
+    .query(async ({ input }) => {
+      const conditions = [eq(listings.status, "approved")];
+      
+      if (input?.type) {
+        conditions.push(eq(listings.type, input.type));
+      }
+      
+      if (input?.category) {
+        conditions.push(eq(listings.category, input.category));
+      }
+      
+      const approvedListings = await db
+        .select()
+        .from(listings)
+        .where(and(...conditions));
+
+      return approvedListings.map((l) => ({
+        id: l.id,
+        sellerId: l.sellerId,
+        type: l.type as "single" | "collection",
+        title: l.title,
+        description: l.description,
+        category: l.category,
+        image: l.image,
+        imagesJson: l.imagesJson,
+        priceCents: l.priceCents,
+        currency: l.currency,
+        sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
+        supplyCapacity: l.supplyCapacity,
+        quantityAvailable: l.quantityAvailable,
+        limitedEditionBadge: l.limitedEditionBadge,
+        releaseDuration: l.releaseDuration as any,
+        materialComposition: l.materialComposition,
+        colorsAvailable: l.colorsAvailable ? JSON.parse(l.colorsAvailable) : null,
+        additionalTargetAudience: l.additionalTargetAudience,
+        shippingOption: l.shippingOption,
+        etaDomestic: l.etaDomestic as any,
+        etaInternational: l.etaInternational as any,
+        refundPolicy: l.refundPolicy,
+        localPricing: l.localPricing,
+        itemsJson: l.itemsJson ? JSON.parse(l.itemsJson) : null,
+        productId: l.productId ?? undefined,
+        sku: l.sku || undefined,
+        slug: l.slug || undefined,
+        metaDescription: l.metaDescription || undefined,
+        barcode: l.barcode || undefined,
+        videoUrl: l.videoUrl || undefined,
+        careInstructions: l.careInstructions || undefined,
+        createdAt: new Date(l.createdAt),
+        updatedAt: new Date(l.updatedAt),
+      }));
     }),
 });

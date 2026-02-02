@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from "uuid";
  * @returns The seller record
  * @throws Error if seller retrieval or creation fails
  */
-export async function getSeller(userId: string) {
+export async function getSeller(userId: string): Promise<typeof sellers.$inferSelect> {
   try {
     // Check if seller exists
     const existingSeller = await db
@@ -30,6 +30,9 @@ export async function getSeller(userId: string) {
     const newSeller = {
       id: uuidv4(),
       userId,
+      brandId: null,
+      profilePhoto: null,
+      payoutMethods: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

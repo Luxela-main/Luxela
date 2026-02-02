@@ -27,18 +27,78 @@ import { v4 as uuidv4 } from 'uuid';
  * - Audit logging
  */
 
-async function ensureAdmin(userId: string, userRole?: string) {
-  // Check if user has admin role from Supabase metadata
+async function ensureAdmin(userId: string, userRole?: string): Promise<boolean> {
   if (!userRole || userRole !== 'admin') {
     throw new TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'Only administrators can access this resource',
+      code: 'FORBIDDEN',
+      message: 'Admin access required. Only administrators can access this resource.',
     });
   }
   return true;
 }
 
 export const supportAdminRouter = createTRPCRouter({
+  // ============ TICKET LISTING ============
+  
+  getAllTickets: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/admin/support/all-tickets',
+        tags: ['Support Admin'],
+        summary: 'Get all support tickets (admin only)',
+      },
+    })
+    .output(z.array(z.object({
+      id: z.string(),
+      buyerId: z.string(),
+      sellerId: z.string().nullable(),
+      orderId: z.string().nullable(),
+      subject: z.string(),
+      description: z.string(),
+      category: z.string(),
+      status: z.string(),
+      priority: z.string(),
+      assignedTo: z.string().nullable(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+      resolvedAt: z.date().nullable(),
+    })))
+    .query(async ({ ctx }) => {
+      try {
+        const userId = ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        }
+        
+        await ensureAdmin(userId, ctx.user?.role);
+
+        const allTickets = await db.select().from(supportTickets).orderBy(desc(supportTickets.createdAt));
+        
+        return allTickets.map(t => ({
+          id: t.id,
+          buyerId: t.buyerId,
+          sellerId: t.sellerId ?? null,
+          orderId: t.orderId ?? null,
+          subject: t.subject,
+          description: t.description,
+          category: t.category,
+          status: t.status,
+          priority: t.priority,
+          assignedTo: t.assignedTo ?? null,
+          createdAt: new Date(t.createdAt),
+          updatedAt: new Date(t.updatedAt),
+          resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : null,
+        }));
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch tickets',
+        });
+      }
+    }),
+
   // ============ ADMIN DASHBOARD ============
   
   getDashboardMetrics: protectedProcedure
@@ -165,6 +225,12 @@ export const supportAdminRouter = createTRPCRouter({
       
       await ensureAdmin(userId, ctx.user?.role);
 
+      // Verify ticket exists
+      const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0]) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Ticket not found' });
+      }
+
       // Check if team member exists and has capacity
       const teamMember = await db.select().from(supportTeamMembers).where(eq(supportTeamMembers.id, input.assignToId));
       if (!teamMember[0]) {
@@ -179,6 +245,11 @@ export const supportAdminRouter = createTRPCRouter({
       await db.update(supportTeamMembers)
         .set({ currentLoadCount: teamMember[0].currentLoadCount + 1 })
         .where(eq(supportTeamMembers.id, teamMember[0].id));
+
+      // Assign ticket to team member
+      await db.update(supportTickets)
+        .set({ assignedTo: input.assignToId, updatedAt: new Date() })
+        .where(eq(supportTickets.id, input.ticketId));
 
       // Log audit
       await db.insert(supportAuditLogs).values({
@@ -211,8 +282,11 @@ export const supportAdminRouter = createTRPCRouter({
 
       // Get ticket to find assigned member
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0]) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Ticket not found' });
+      }
       
-      if (ticket[0] && ticket[0].assignedTo) {
+      if (ticket[0].assignedTo) {
         // Decrease team member capacity
         const teamMember = await db.select().from(supportTeamMembers)
           .where(eq(supportTeamMembers.id, ticket[0].assignedTo));
@@ -225,7 +299,7 @@ export const supportAdminRouter = createTRPCRouter({
 
         // Update ticket to remove assignment
         await db.update(supportTickets)
-          .set({ assignedTo: null })
+          .set({ assignedTo: null, updatedAt: new Date() })
           .where(eq(supportTickets.id, input.ticketId));
       }
 

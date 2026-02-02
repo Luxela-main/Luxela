@@ -1,443 +1,535 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Camera } from "lucide-react";
-import { useFormik } from "formik";
-import * as Yup from "yup";
-import BuyerFooter from "@/components/buyer/footer";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import Logo from "../../public/luxela.svg";
+import { Building, Truck, CreditCard, FileText, ArrowLeft, Save, Edit2Building } from "lucide-react";
+import BuyerFooter from "@/components/buyer/footer";
 import { SellerSetupFormData } from "@/types/seller";
 import {
-  validateImageFile,
-  deleteImage,
-  uploadImage,
-} from "@/lib/upload-image";
-import { toastSvc } from "@/services/toast";
-import { X } from "lucide-react";
-import { CheckCircle, Loader2 } from "lucide-react";
-import { trpc } from "../_trpc/client";
-import {
-  BUSINESS_TYPES,
-  ID_TYPES,
-  SHIPPING_ETA_OPTIONS,
-  REFUND_POLICIES,
-  FIAT_PAYOUT_METHODS,
-  WALLET_TYPES,
-  PAYOUT_TOKENS,
+  COUNTRIES_WITH_STATES_AND_CITIES,
+  getStatesForCountry,
+  getCitiesForState,
+  PHONE_COUNTRY_CODES,
   SOCIAL_MEDIA_PLATFORMS,
 } from "./constants/formOptions";
-import {
-  COUNTRIES,
-  NIGERIAN_STATES,
-  NIGERIAN_CITIES,
-  SOCIAL_MEDIA_PLATFORMS as LOCATION_SOCIAL_PLATFORMS,
-  getCountryCode,
-  getStatesByCountry,
-  getCitiesByState,
-  getCountryPhoneCode,
-  COUNTRY_PHONE_CODES,
-} from "@/lib/constants/locations";
 
-interface SellerSetupFormProps {
+type SetupProps = {
   initialData: SellerSetupFormData;
   onPreview: (data: SellerSetupFormData) => void;
-}
+};
 
-const SellerSetupForm: React.FC<SellerSetupFormProps> = ({
-  initialData,
-  onPreview,
-}) => {
-  const [activeTab, setActiveTab] = useState("business");
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
-  const [idNumber, setIdNumber] = useState("");
-  const [isVerified, setIsVerified] = useState(false);
-  const [currentErrorIndex, setCurrentErrorIndex] = useState(0);
-  const [availableStates, setAvailableStates] = useState<typeof NIGERIAN_STATES>([]);
-  const [availableCities, setAvailableCities] = useState<string[]>([]);
-  const [socialMediaLinks, setSocialMediaLinks] = useState<Array<{ platform: string; username: string; url: string }>>([]);
-  const isInitialLoadRef = useRef(true);
-
-  const validationSchema = Yup.object({
-    brandName: Yup.string().required("Brand name is required"),
-    businessType: Yup.string().required("Business type is required"),
-    businessAddress: Yup.string().required("Business address is required"),
-    officialEmail: Yup.string()
-      .email("Invalid email")
-      .required("Email is required"),
-    phoneNumber: Yup.string()
-      .required("Phone number is required")
-      .min(10, "Min 10 digits"),
-    country: Yup.string().required("Country is required"),
-    fullName: Yup.string().required("Full name is required"),
-    idType: Yup.string().required("ID type is required"),
-    shippingZone: Yup.string().required("Shipping zone is required"),
-    cityTown: Yup.string().required("City/Town is required"),
-    shippingAddress: Yup.string().required("Shipping address is required"),
-    returnAddress: Yup.string().required("Return address is required"),
-    preferredPayoutMethod: Yup.string().required("Payment method is required"),
-    productCategory: Yup.string()
-      .required("Please select a category"),
-    targetAudience: Yup.string().required("Target audience is required"),
-    localPricing: Yup.string().required("Local pricing is required"),
-    refundPolicy: Yup.string().required('Refund policy is required when shipping type is selected'),
-    periodUntilRefund: Yup.string().required('Period until refund is required when shipping type is selected'),
-    otherCategoryName: Yup.string().when('productCategory', {
-      is: 'others',
-      then: (schema) => schema.required('Please specify your product category'),
-      otherwise: (schema) => schema.optional(),
-    }),
+const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
+  const [activeTab, setActiveTab] = useState<"business" | "shipping" | "payment" | "additional">("business");
+  const [formData, setFormData] = useState<SellerSetupFormData>(initialData);
+  const [socialMediaLinks, setSocialMediaLinks] = useState(
+    initialData.socialMediaLinks || []
+  );
+  const [newSocialLink, setNewSocialLink] = useState({
+    platform: "",
+    url: "",
+    username: "",
   });
-
-  const verifyMutation = trpc.seller.verifyId.useMutation({
-    onSuccess: (data) => {
-      if (data.success) {
-        setIsVerified(true);
-        toastSvc.success("ID Verified Successfully");
-      } else {
-        setIsVerified(false);
-        toastSvc.error(data.message || "Verification failed");
-      }
-    },
-    onError: (err: any) => {
-      setIsVerified(false);
-      toastSvc.error(err.message || "Failed to verify ID");
-    },
-  });
-
-  // Load saved form data from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedData = localStorage.getItem('sellerSetupFormData');
-      if (savedData) {
-        try {
-          const parsedData = JSON.parse(savedData);
-          // Update formik with saved data
-          Object.keys(parsedData).forEach((key) => {
-            formik.setFieldValue(key, parsedData[key]);
-          });
-          
-          // Also populate available states and cities based on saved country/state
-          if (parsedData.country) {
-            const states = getStatesByCountry(parsedData.country);
-            setAvailableStates(states);
-            
-            // Populate cities if state is also saved
-            if (parsedData.shippingZone) {
-              const cities = getCitiesByState(parsedData.shippingZone, parsedData.country);
-              setAvailableCities(cities);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load saved form data:', error);
-        }
-      }
-      isInitialLoadRef.current = false;
-    }
-  }, []);
-
-  // Initialize formik BEFORE useEffect hooks
-  const formik = useFormik({
-    initialValues: initialData,
-    validationSchema,
-    validateOnChange: false,
-    validateOnBlur: true,
-    validateOnMount: false,
-    onSubmit: (values) => {
-      const submissionData = {
-        ...values,
-        idNumber: idNumber,
-        idVerified: isVerified
-      };
-      clearSavedData();
-      onPreview(submissionData);
-    },
-  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   // Save form data to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !isInitialLoadRef.current) {
-      const timerId = setTimeout(() => {
-        localStorage.setItem('sellerSetupFormData', JSON.stringify(formik.values));
-      }, 500); // Debounce saves by 500ms
-      return () => clearTimeout(timerId);
-    }
-  }, [formik.values]);
-
-  // Auto-populate country code when country changes
-  useEffect(() => {
-    if (formik.values.country) {
-      const phoneCode = getCountryPhoneCode(formik.values.country);
-      formik.setFieldValue('countryCode', phoneCode);
-    }
-  }, [formik.values.country]);
-
-  // Update available states when country changes
-  useEffect(() => {
-    const states = getStatesByCountry(formik.values.country);
-    setAvailableStates(states);
-    // Only reset cities/state if country actually changed and it's not the initial load
-    if (!isInitialLoadRef.current) {
-      setAvailableCities([]);
-      // Keep the saved shippingZone if it exists, only clear if country changed to empty
-      if (!formik.values.country) {
-        formik.setFieldValue('shippingZone', '');
-        formik.setFieldValue('cityTown', '');
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sellerOnboardingFormData', JSON.stringify(formData));
+      } catch (error) {
+        console.error('Error saving form data to localStorage:', error);
       }
     }
-  }, [formik.values.country]);
+  }, [formData]);
 
-  // Update available cities when state changes
-  useEffect(() => {
-    const cities = getCitiesByState(formik.values.shippingZone, formik.values.country);
-    setAvailableCities(cities);
-    // Only reset cityTown if state changed and it's not the initial load
-    if (!isInitialLoadRef.current && !formik.values.shippingZone) {
-      formik.setFieldValue('cityTown', '');
+  const validateSection = (section: string) => {
+    const newErrors: Record<string, string> = {};
+
+    if (section === "business") {
+      if (!formData.brandName.trim())
+        newErrors.brandName = "Brand name is required";
+      if (!formData.businessType) newErrors.businessType = "Business type is required";
+      if (!formData.businessAddress.trim())
+        newErrors.businessAddress = "Business address is required";
+      if (!formData.officialEmail.trim())
+        newErrors.officialEmail = "Email is required";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.officialEmail))
+        newErrors.officialEmail = "Invalid email format";
+      if (!formData.phoneNumber.trim())
+        newErrors.phoneNumber = "Phone number is required";
+      if (!formData.country) newErrors.country = "Country is required";
+      if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
+      if (!formData.idType) newErrors.idType = "ID type is required";
+      if (!formData.storeDescription?.trim())
+        newErrors.storeDescription = "Store description is required";
     }
-  }, [formik.values.shippingZone, formik.values.country]);
 
-  const tabs = [
-    { id: "business", label: "Business Information" },
-    { id: "shipping", label: "Shipping Information" },
-    { id: "payment", label: "Payment Information" },
-    { id: "additional", label: "Additional Information" },
-  ];
+    if (section === "shipping") {
+      if (!formData.shippingZone.trim())
+        newErrors.shippingZone = "Shipping zone is required";
+      if (!formData.cityTown.trim())
+        newErrors.cityTown = "City/Town is required";
+      if (!formData.shippingAddress.trim())
+        newErrors.shippingAddress = "Shipping address is required";
+      if (!formData.returnAddress.trim())
+        newErrors.returnAddress = "Return address is required";
+      if (!formData.shippingType) newErrors.shippingType = "Shipping type is required";
+      if (!formData.estimatedShippingTime)
+        newErrors.estimatedShippingTime = "Estimated shipping time is required";
+      if (!formData.refundPolicy) newErrors.refundPolicy = "Refund policy is required";
+      if (!formData.periodUntilRefund)
+        newErrors.periodUntilRefund = "Refund period is required";
+    }
 
-  const productCategory = [
-    { label: "Men Clothing", value: "men_clothing" as const },
-    { label: "Women Clothing", value: "women_clothing" as const },
-    { label: "Men Shoes", value: "men_shoes" as const },
-    { label: "Women Shoes", value: "women_shoes" as const },
-    { label: "Accessories", value: "accessories" as const },
-    { label: "Merch", value: "merch" as const },
-    { label: "Others", value: "others" as const },
-  ];
+    if (section === "payment") {
+      if (!formData.preferredPayoutMethod)
+        newErrors.preferredPayoutMethod = "Preferred payout method is required";
 
-  // Clear saved data on successful submission
-  const clearSavedData = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('sellerSetupFormData');
+      if (
+        formData.preferredPayoutMethod === "fiat_currency" ||
+        formData.preferredPayoutMethod === "both"
+      ) {
+        if (!formData.fiatPayoutMethod)
+          newErrors.fiatPayoutMethod = "Fiat payout method is required";
+        if (formData.fiatPayoutMethod === "bank") {
+          if (!formData.bankCountry)
+            newErrors.bankCountry = "Bank country is required";
+          if (!formData.accountHolderName?.trim())
+            newErrors.accountHolderName = "Account holder name is required";
+          if (!formData.accountNumber?.trim())
+            newErrors.accountNumber = "Account number is required";
+        }
+      }
+
+      if (
+        formData.preferredPayoutMethod === "cryptocurrency" ||
+        formData.preferredPayoutMethod === "both"
+      ) {
+        if (!formData.walletType)
+          newErrors.walletType = "Wallet type is required";
+        if (!formData.walletAddress?.trim())
+          newErrors.walletAddress = "Wallet address is required";
+        if (!formData.preferredPayoutToken)
+          newErrors.preferredPayoutToken = "Preferred payout token is required";
+        if (!formData.supportedBlockchain)
+          newErrors.supportedBlockchain = "Blockchain is required";
+      }
+    }
+
+    if (section === "additional") {
+      if (!formData.productCategory)
+        newErrors.productCategory = "Product category is required";
+      if (!formData.targetAudience)
+        newErrors.targetAudience = "Target audience is required";
+      if (!formData.localPricing) newErrors.localPricing = "Pricing type is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
-  const audiences = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-    { label: "Unisex", value: "unisex" },
-  ];
-
-  const handleVerifyId = () => {
-    if (!formik.values.idType || !idNumber) {
-      toastSvc.error("Please select ID type and enter ID number");
+  const addSocialLink = () => {
+    if (!newSocialLink.platform || !newSocialLink.url) {
+      setErrors((prev) => ({
+        ...prev,
+        socialMedia: "Platform and URL are required",
+      }));
       return;
     }
 
-    verifyMutation.mutate({
-      idType: formik.values.idType as any,
-      idNumber: idNumber
+    const updatedLinks = [
+      ...socialMediaLinks,
+      { ...newSocialLink, username: newSocialLink.username || "" },
+    ];
+    setSocialMediaLinks(updatedLinks);
+    setFormData((prev) => ({ ...prev, socialMediaLinks: updatedLinks }));
+    setNewSocialLink({ platform: "", url: "", username: "" });
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors.socialMedia;
+      return newErrors;
     });
   };
 
-  const fieldNameMap: Record<string, string> = {
-    brandName: "Brand Name",
-    businessType: "Business Type",
-    businessAddress: "Business Address",
-    officialEmail: "Official Email",
-    phoneNumber: "Phone Number",
-    country: "Country",
-    fullName: "Full Name",
-    idType: "ID Type",
-    shippingZone: "Shipping Zone",
-    cityTown: "City/Town",
-    shippingAddress: "Shipping Address",
-    returnAddress: "Return Address",
-    preferredPayoutMethod: "Preferred Payout Method",
-    productCategory: "Product Category",
-    targetAudience: "Target Audience",
-    localPricing: "Local Pricing",
-    refundPolicy: "Refund Policy",
-    periodUntilRefund: "Period Until Refund",
+  const removeSocialLink = (index: number) => {
+    const updatedLinks = socialMediaLinks.filter((_, i) => i !== index);
+    setSocialMediaLinks(updatedLinks);
+    setFormData((prev) => ({ ...prev, socialMediaLinks: updatedLinks }));
   };
 
-  const handleNext = async () => {
-    const errors = await formik.validateForm();
-
-    const tabFields: Record<string, string[]> = {
-      business: ["brandName", "businessType", "businessAddress", "officialEmail", "phoneNumber", "country", "fullName", "idType"],
-      shipping: ["shippingZone", "cityTown", "shippingAddress", "returnAddress"],
-      payment: ["preferredPayoutMethod"],
-      additional: ["productCategory", "targetAudience", "localPricing"]
-    };
-
-    const currentTabFields = tabFields[activeTab] || [];
-    const currentTabErrors = currentTabFields
-      .filter(field => errors[field as keyof typeof errors])
-      .map(field => ({
-        field,
-        name: fieldNameMap[field] || field,
-        message: errors[field as keyof typeof errors]
-      }));
-
-    if (currentTabErrors.length > 0) {
-      const errorIndex = currentErrorIndex % currentTabErrors.length;
-      const error = currentTabErrors[errorIndex];
-
-      toastSvc.error(`${error.message}`);
-
-      const errorField = document.querySelector(`[name="${error.field}"]`);
-      if (errorField) {
-        errorField.scrollIntoView({ behavior: "smooth", block: "center" });
-        (errorField as HTMLElement).focus();
-      }
-
-      setCurrentErrorIndex(prev => prev + 1);
-
-      return;
+  const handleNext = () => {
+    if (activeTab === "business" && validateSection("business")) {
+      setActiveTab("shipping");
+    } else if (activeTab === "shipping" && validateSection("shipping")) {
+      setActiveTab("payment");
+    } else if (activeTab === "payment" && validateSection("payment")) {
+      setActiveTab("additional");
     }
+  };
 
-    setCurrentErrorIndex(0);
+  const handlePrevious = () => {
+    const tabOrder: Array<"business" | "shipping" | "payment" | "additional"> = [
+      "business",
+      "shipping",
+      "payment",
+      "additional",
+    ];
+    const currentIndex = tabOrder.indexOf(activeTab);
+    if (currentIndex > 0) {
+      setActiveTab(tabOrder[currentIndex - 1]);
+    }
+  };
 
-    if (activeTab === "additional") {
-      const submissionData = {
-        ...formik.values,
-        idNumber: idNumber,
-        idVerified: isVerified
-      };
-      onPreview(submissionData);
+  const handleSubmitPreview = () => {
+    const allTabsValid =
+      validateSection("business") &&
+      validateSection("shipping") &&
+      validateSection("payment") &&
+      validateSection("additional");
+
+    if (allTabsValid) {
+      onPreview(formData);
     } else {
-      const idx = tabs.findIndex((t) => t.id === activeTab);
-      if (idx < tabs.length - 1) {
-        setActiveTab(tabs[idx + 1].id);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      setActiveTab("business");
     }
   };
 
-  const toggleCategory = (
-    value:
-      | "men_clothing"
-      | "women_clothing"
-      | "men_shoes"
-      | "women_shoes"
-      | "accessories"
-      | "merch"
-      | "others"
-  ) => {
-    formik.setFieldValue("productCategory", value);
-  };
-
-  const selectStyle = {
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-    backgroundRepeat: "no-repeat",
-    backgroundPosition: "right 1rem center",
-  };
+  const tabs = [
+    { id: "business" as const, label: "Business Information", icon: Building },
+    { id: "shipping" as const, label: "Shipping Information", icon: Truck },
+    { id: "payment" as const, label: "Payment Information", icon: CreditCard },
+    { id: "additional" as const, label: "Additional Information", icon: FileText },
+  ];
 
   const inputClass =
-    "w-full bg-black border border-[#747474] rounded px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500 transition-colors placeholder:text-gray-600";
+    "w-full bg-black border border-[#747474] rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors placeholder:text-gray-600";
   const selectClass =
-    "w-full bg-black border border-[#747474] rounded px-4 py-2.5 text-sm text-[#858585] focus:outline-none focus:border-purple-500 transition-colors appearance-none cursor-pointer";
+    "w-full bg-black border border-[#747474] rounded px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer";
+  const labelClass = "block text-sm text-gray-400 mb-2 font-medium";
+  const errorClass = "text-red-500 text-xs mt-1";
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const renderInputField = (
+    label: string,
+    name: keyof SellerSetupFormData,
+    type: string = "text",
+    placeholder: string = "",
+    required: boolean = true
+  ) => (
+    <div className="mb-6">
+      <label className={labelClass}>
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <input
+        type={type}
+        name={name as string}
+        value={(formData[name] as string) || ""}
+        onChange={handleInputChange}
+        className={`${inputClass} ${errors[name] ? "border-red-500" : ""}`}
+        placeholder={placeholder}
+      />
+      {errors[name] && <p className={errorClass}>{errors[name]}</p>}
+    </div>
+  );
 
-    const validation = validateImageFile(file, 5);
-    if (!validation.valid) {
-      toastSvc.error(validation.error!);
-      if (logoInputRef.current) {
-        logoInputRef.current.value = "";
-      }
-      return;
-    }
+  const renderSelectField = (
+    label: string,
+    name: keyof SellerSetupFormData,
+    options: Array<{ value: string; label: string }>,
+    required: boolean = true
+  ) => (
+    <div className="mb-6">
+      <label className={labelClass}>
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <select
+        name={name as string}
+        value={(formData[name] as string) || ""}
+        onChange={handleInputChange}
+        className={`${selectClass} ${errors[name] ? "border-red-500" : ""}`}
+      >
+        <option value="">Select {label.toLowerCase()}</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      {errors[name] && <p className={errorClass}>{errors[name]}</p>}
+    </div>
+  );
 
-    setUploadingLogo(true);
-    try {
-      if (formik.values.logoPath) {
-        await deleteImage(formik.values.logoPath);
-      }
+  const renderCountryField = (
+    label: string = "Country",
+    required: boolean = true
+  ) => {
+    const countryList = Object.entries(COUNTRIES_WITH_STATES_AND_CITIES).map(
+      ([code, data]) => ({
+        value: code,
+        label: data.label,
+      })
+    );
 
-      const result = await uploadImage(file, "store-assets", "logos", false);
-
-      if (result) {
-        formik.setFieldValue("storeLogo", result.url);
-        formik.setFieldValue("logoPath", result.path);
-        toastSvc.success("Logo uploaded successfully");
-      }
-    } catch (error: any) {
-      toastSvc.error(error.message || "Failed to upload logo");
-    } finally {
-      setUploadingLogo(false);
-      if (logoInputRef.current) {
-        logoInputRef.current.value = "";
-      }
-    }
+    return (
+      <div className="mb-6">
+        <label className={labelClass}>
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        <select
+          name="country"
+          value={(formData.country as string) || ""}
+          onChange={(e) => {
+            handleInputChange(e);
+            setFormData((prev) => ({
+              ...prev,
+              state: "",
+              city: "",
+            }));
+          }}
+          className={`${selectClass} ${errors.country ? "border-red-500" : ""}`}
+        >
+          <option value="">Select country</option>
+          {countryList.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        {errors.country && <p className={errorClass}>{errors.country}</p>}
+      </div>
+    );
   };
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const renderStateField = (
+    label: string = "State/Region",
+    required: boolean = true
+  ) => {
+    const states = formData.country ? getStatesForCountry(formData.country) : [];
 
-    const validation = validateImageFile(file, 10);
-    if (!validation.valid) {
-      toastSvc.error(validation.error!);
-      if (bannerInputRef.current) {
-        bannerInputRef.current.value = "";
-      }
-      return;
-    }
-
-    setUploadingBanner(true);
-    try {
-      if (formik.values.bannerPath) {
-        await deleteImage(formik.values.bannerPath);
-      }
-
-      const result = await uploadImage(file, "store-assets", "banners", false);
-
-      if (result) {
-        formik.setFieldValue("storeBanner", result.url);
-        formik.setFieldValue("bannerPath", result.path);
-        toastSvc.success("Banner uploaded successfully");
-      }
-    } catch (error: any) {
-      toastSvc.error(error.message || "Failed to upload banner");
-    } finally {
-      setUploadingBanner(false);
-      if (bannerInputRef.current) {
-        bannerInputRef.current.value = "";
-      }
-    }
+    return (
+      <div className="mb-6">
+        <label className={labelClass}>
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        <select
+          name="state"
+          value={(formData.state as string) || ""}
+          onChange={(e) => {
+            handleInputChange(e);
+            setFormData((prev) => ({
+              ...prev,
+              city: "",
+            }));
+          }}
+          disabled={!formData.country}
+          className={`${selectClass} ${errors.state ? "border-red-500" : ""} ${
+            !formData.country ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          <option value="">Select state/region</option>
+          {states.map((state) => (
+            <option key={state} value={state}>
+              {state}
+            </option>
+          ))}
+        </select>
+        {errors.state && <p className={errorClass}>{errors.state}</p>}
+      </div>
+    );
   };
 
-  const removeLogo = async () => {
-    if (formik.values.logoPath) {
-      await deleteImage(formik.values.logoPath);
-    }
-    formik.setFieldValue("storeLogo", "");
-    formik.setFieldValue("logoPath", "");
+  const renderCityField = (
+    label: string = "City",
+    required: boolean = true,
+    fieldName: 'city' | 'cityTown' = 'city'
+  ) => {
+    const cities =
+      formData.country && formData.state
+        ? getCitiesForState(formData.country, formData.state)
+        : [];
+
+    return (
+      <div className="mb-6">
+        <label className={labelClass}>
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        <select
+          name={fieldName}
+          value={(formData[fieldName] as string) || ""}
+          onChange={handleInputChange}
+          disabled={!formData.state}
+          className={`${selectClass} ${errors[fieldName] ? "border-red-500" : ""} ${
+            !formData.state ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          <option value="">Select city</option>
+          {cities.map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
+        </select>
+        {errors[fieldName] && <p className={errorClass}>{errors[fieldName]}</p>}
+      </div>
+    );
   };
 
-  const removeBanner = async () => {
-    if (formik.values.bannerPath) {
-      await deleteImage(formik.values.bannerPath);
-    }
-    formik.setFieldValue("storeBanner", "");
-    formik.setFieldValue("bannerPath", "");
+  const renderBankCountryField = (
+    label: string = "Bank Country",
+    required: boolean = true
+  ) => {
+    const countryList = Object.entries(COUNTRIES_WITH_STATES_AND_CITIES).map(
+      ([code, data]) => ({
+        value: code,
+        label: data.label,
+      })
+    );
+
+    return (
+      <div className="mb-6">
+        <label className={labelClass}>
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+        <select
+          name="bankCountry"
+          value={(formData.bankCountry as string) || ""}
+          onChange={handleInputChange}
+          className={`${selectClass} ${errors.bankCountry ? "border-red-500" : ""}`}
+        >
+          <option value="">Select country</option>
+          {countryList.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        {errors.bankCountry && <p className={errorClass}>{errors.bankCountry}</p>}
+      </div>
+    );
   };
+
+  const getCountryCodeForCountry = (countryCode: string): string => {
+    const phoneCountryData = PHONE_COUNTRY_CODES.find(
+      (c) => c.value === countryCode
+    );
+    return phoneCountryData?.code || "";
+  };
+
+  const renderCountryCodeField = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label className={labelClass}>
+            Phone Number
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <input
+            type="tel"
+            name="phoneNumber"
+            value={(formData.phoneNumber as string) || ""}
+            onChange={handleInputChange}
+            placeholder="Enter phone number"
+            className={`${inputClass} ${errors.phoneNumber ? "border-red-500" : ""}`}
+          />
+          {errors.phoneNumber && <p className={errorClass}>{errors.phoneNumber}</p>}
+        </div>
+        <div>
+          <label className={labelClass}>
+            Country Code
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <select
+            name="countryCode"
+            value={(formData.countryCode as string) || ""}
+            onChange={(e) => {
+              handleInputChange(e);
+            }}
+            disabled={!formData.country}
+            className={`${selectClass} ${errors.countryCode ? "border-red-500" : ""} ${
+              !formData.country ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            <option value="">Select country code</option>
+            {PHONE_COUNTRY_CODES.map((cc) => (
+              <option key={cc.value} value={cc.code}>
+                {cc.label}
+              </option>
+            ))}
+          </select>
+          {errors.countryCode && <p className={errorClass}>{errors.countryCode}</p>}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTwoColumns = (
+    label1: string,
+    name1: keyof SellerSetupFormData,
+    label2: string,
+    name2: keyof SellerSetupFormData,
+    type1: string = "text",
+    type2: string = "text"
+  ) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div>
+        <label className={labelClass}>
+          {label1}
+          <span className="text-red-500 ml-1">*</span>
+        </label>
+        <input
+          type={type1}
+          name={name1 as string}
+          value={(formData[name1] as string) || ""}
+          onChange={handleInputChange}
+          className={`${inputClass} ${errors[name1] ? "border-red-500" : ""}`}
+        />
+        {errors[name1] && <p className={errorClass}>{errors[name1]}</p>}
+      </div>
+      <div>
+        <label className={labelClass}>
+          {label2}
+          <span className="text-red-500 ml-1">*</span>
+        </label>
+        <input
+          type={type2}
+          name={name2 as string}
+          value={(formData[name2] as string) || ""}
+          onChange={handleInputChange}
+          className={`${inputClass} ${errors[name2] ? "border-red-500" : ""}`}
+        />
+        {errors[name2] && <p className={errorClass}>{errors[name2]}</p>}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen text-white  w-full bg-[#0E0E0E]">
-      <header className="border-b border-[#2B2B2B]">
-        <div className="p-6">
-          <Link
-            href="/sellersAccountSetup"
-            className="flex mx-auto justify-center items-center"
-          >
+    <div className="min-h-screen bg-[#0E0E0E] text-white pb-20">
+      <header className="border-b border-[#2B2B2B] sticky top-0 z-10 bg-[#0E0E0E]">
+        <div className="p-6 max-w-7xl mx-auto">
+          <Link href="/" className="flex justify-center items-center">
             <Image
-              src={Logo}
+              src="/luxela.svg"
               alt="LUXELA"
               width={147.99}
               height={24.15}
@@ -447,1058 +539,710 @@ const SellerSetupForm: React.FC<SellerSetupFormProps> = ({
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-xl font-medium text-[#f2f2f2] mb-2">
-            Setup your Seller Account
-          </h1>
-          <p className="text-[#dcdcdc] text-sm">
-            This is where your journey begins. Please provide the details below
-            to create your seller account on Luxela.
+          <h1 className="text-3xl font-bold mb-2">Seller Account Setup</h1>
+          <p className="text-gray-400">
+            Complete all sections to set up your seller account
           </p>
         </div>
 
-        <div className="flex gap-6 mb-24">
-          {/* Logo Upload */}
-          <div className="shrink-0 relative">
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex gap-2 bg-[#141414] p-2 rounded-lg min-w-max md:min-w-0">
+            {tabs.map((tab, idx) => {
+              const TabIcon = (tab as any).icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (idx < tabs.indexOf(tabs.find((t) => t.id === activeTab) || tabs[0])) {
+                      setActiveTab(tab.id);
+                    }
+                  }}
+                  type="button"
+                  className={`px-3 py-2 rounded text-sm transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer font-medium ${
+                    activeTab === tab.id
+                      ? "bg-purple-600 text-white"
+                      : "text-gray-400 hover:text-gray-300"
+                  }`}
+                  title={tab.label}
+                >
+                  <TabIcon size={16} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Progress Indicator */}
+        <div className="mb-6 flex gap-2">
+          {tabs.map((tab, idx) => (
             <div
-              onClick={() => logoInputRef.current?.click()}
-              className="z-999 absolute left-20 top-24 w-36 h-36 bg-[#141414] rounded-full border border-[#212121] flex flex-col items-center justify-center cursor-pointer hover:bg-[#222] transition-colors overflow-hidden"
-            >
-              {formik.values.storeLogo ? (
-                <>
-                  <img
-                    src={formik.values.storeLogo}
-                    alt="Store Logo"
-                    className="w-full h-full object-cover rounded-full"
-                  />
+              key={tab.id}
+              className={`h-1 flex-1 rounded transition-colors ${
+                activeTab === tab.id ? "bg-purple-500" : "bg-[#333]"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="bg-black border border-[#747474] rounded-lg p-6 md:p-8">
+          {activeTab === "business" && (
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold mb-6">Business Information</h2>
+
+              {renderInputField(
+                "Brand Name",
+                "brandName",
+                "text",
+                "Enter your brand name",
+                true
+              )}
+
+              {renderSelectField(
+                "Business Type",
+                "businessType",
+                [
+                  { value: "individual", label: "Individual" },
+                  { value: "business", label: "Registered Business" },
+                  { value: "sole_proprietorship", label: "Sole Proprietorship" },
+                  { value: "llc", label: "LLC" },
+                  { value: "corporation", label: "Corporation" },
+                  { value: "partnership", label: "Partnership" },
+                  { value: "cooperative", label: "Cooperative" },
+                  { value: "non_profit", label: "Non-Profit" },
+                  { value: "trust", label: "Trust" },
+                  { value: "joint_venture", label: "Joint Venture" },
+                ],
+                true
+              )}
+
+              {renderInputField(
+                "Business Address",
+                "businessAddress",
+                "text",
+                "Street address",
+                true
+              )}
+
+              {renderInputField(
+                "Official Email",
+                "officialEmail",
+                "email",
+                "Enter your official email",
+                true
+              )}
+
+              {renderCountryField("Country", true)}
+
+              {renderStateField("State/Region", true)}
+
+              {renderCityField("City", true)}
+
+              {renderCountryCodeField()}
+
+              {renderInputField(
+                "Full Name",
+                "fullName",
+                "text",
+                "Your full name",
+                true
+              )}
+
+              {renderInputField(
+                "Bio",
+                "bio",
+                "text",
+                "A brief bio about yourself",
+                false
+              )}
+
+              {renderInputField(
+                "Store Description",
+                "storeDescription",
+                "text",
+                "Brief description of your store",
+                true
+              )}
+
+              <div className="border-t border-[#747474] pt-6 mt-6">
+                <h3 className="font-semibold mb-4">Store Branding</h3>
+                
+                {/* Store Logo Upload */}
+                <div className="mb-6">
+                  <label className={labelClass}>
+                    Store Logo / Profile Picture
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="flex gap-4 items-start">
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                storeLogo: reader.result as string,
+                                logoPath: file.name,
+                              }));
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="w-full cursor-pointer file:cursor-pointer hover:opacity-80"
+                      />
+                      {formData.logoPath && (
+                        <p className="text-xs text-gray-500 mt-2">Selected: {formData.logoPath}</p>
+                      )}
+                    </div>
+                    {formData.storeLogo && (
+                      <div className="w-24 h-24 relative rounded border border-[#747474] overflow-hidden flex-shrink-0">
+                        <Image
+                          src={formData.storeLogo}
+                          alt="Store Logo Preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Store Banner Upload */}
+                <div className="mb-6">
+                  <label className={labelClass}>
+                    Store Banner
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="flex gap-4 items-start flex-col">
+                    <div className="w-full">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                storeBanner: reader.result as string,
+                                bannerPath: file.name,
+                              }));
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="w-full cursor-pointer file:cursor-pointer hover:opacity-80"
+                      />
+                      {formData.bannerPath && (
+                        <p className="text-xs text-gray-500 mt-2">Selected: {formData.bannerPath}</p>
+                      )}
+                    </div>
+                    {formData.storeBanner && (
+                      <div className="w-full h-32 relative rounded border border-[#747474] overflow-hidden">
+                        <Image
+                          src={formData.storeBanner}
+                          alt="Store Banner Preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-[#747474] pt-6 mt-6">
+                <h3 className="font-semibold mb-4">ID Verification</h3>
+                {renderSelectField(
+                  "ID Type",
+                  "idType",
+                  [
+                    { value: "national_id", label: "National ID (NIN)" },
+                    { value: "passport", label: "International Passport" },
+                    { value: "drivers_license", label: "Driver's License" },
+                    { value: "voters_card", label: "Voter's Card" },
+                    { value: "business_license", label: "Business License" },
+                    { value: "tax_id", label: "Tax ID" },
+                    { value: "business_registration", label: "Business Registration" },
+                  ],
+                  true
+                )}
+              </div>
+
+              <div className="border-t border-[#747474] pt-6 mt-6">
+                <h3 className="font-semibold mb-4">Social Media Links (Optional)</h3>
+                <div className="mb-4 p-4 bg-[#1a1a1a] rounded-lg">
+                  <div className="mb-4">
+                    <label className={labelClass}>Social Media Platform</label>
+                    <select
+                      value={newSocialLink.platform}
+                      onChange={(e) =>
+                        setNewSocialLink((prev) => ({
+                          ...prev,
+                          platform: e.target.value,
+                        }))
+                      }
+                      className={selectClass}
+                    >
+                      <option value="">Select platform</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="x">Twitter/X</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="whatsapp">WhatsApp</option>
+                    </select>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className={labelClass}>Username/Handle</label>
+                    <input
+                      type="text"
+                      value={newSocialLink.username}
+                      onChange={(e) =>
+                        setNewSocialLink((prev) => ({
+                          ...prev,
+                          username: e.target.value,
+                        }))
+                      }
+                      className={inputClass}
+                      placeholder="@username"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className={labelClass}>Profile URL</label>
+                    <input
+                      type="url"
+                      value={newSocialLink.url}
+                      onChange={(e) =>
+                        setNewSocialLink((prev) => ({
+                          ...prev,
+                          url: e.target.value,
+                        }))
+                      }
+                      className={inputClass}
+                      placeholder="https://..."
+                    />
+                  </div>
+
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeLogo();
-                    }}
-                    className="absolute top-2 right-2 bg-red-500 rounded-full p-1.5 hover:bg-red-600 z-10"
+                    onClick={addSocialLink}
+                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm transition-colors cursor-pointer font-medium active:scale-95"
                   >
-                    <X className="h-3 w-3" />
+                    Add Link
                   </button>
-                </>
-              ) : (
-                <>
-                  {uploadingLogo ? (
-                    <div className="text-[#858585] text-sm">Uploading...</div>
-                  ) : (
-                    <Camera className="w-12 h-12 text-[#858585] mb-2" />
-                  )}
-                </>
+                </div>
+
+                {errors.socialMedia && (
+                  <p className={errorClass}>{errors.socialMedia}</p>
+                )}
+
+                {socialMediaLinks.length > 0 && (
+                  <div className="space-y-2">
+                    {socialMediaLinks.map((link, idx) => {
+                      const platform = SOCIAL_MEDIA_PLATFORMS.find(
+                        (p) => p.value === link.platform
+                      );
+                      const IconComponent = platform?.icon;
+                      return (
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center p-3 bg-[#1a1a1a] rounded border border-[#747474]"
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            {IconComponent && (
+                              <IconComponent
+                                size={20}
+                                color={platform?.iconColor || "#ffffff"}
+                                className="flex-shrink-0"
+                              />
+                            )}
+                            <div>
+                              <p className="text-sm text-gray-400 capitalize">
+                                {link.platform}
+                              </p>
+                              <p className="text-xs text-gray-500">{link.url}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSocialLink(idx)}
+                            className="text-red-500 hover:text-red-400 ml-4 cursor-pointer font-bold active:scale-110 transition-transform"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "shipping" && (
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold mb-6">Shipping Information</h2>
+
+              {renderInputField(
+                "Shipping Zone",
+                "shippingZone",
+                "text",
+                "Enter shipping zone",
+                true
+              )}
+
+              {renderCityField("City/Town", true, 'cityTown')}
+
+              {renderInputField(
+                "Shipping Address",
+                "shippingAddress",
+                "text",
+                "Complete shipping address",
+                true
+              )}
+
+              {renderInputField(
+                "Return Address",
+                "returnAddress",
+                "text",
+                "Address for returns",
+                true
+              )}
+
+              {renderSelectField(
+                "Type of Shipping",
+                "shippingType",
+                [
+                  { value: "domestic", label: "Domestic Only" },
+                  { value: "international", label: "International Only" },
+                  { value: "both", label: "Both Domestic & International" },
+                ],
+                true
+              )}
+
+              {renderSelectField(
+                "Estimated Shipping Time",
+                "estimatedShippingTime",
+                [
+                  { value: "same_day", label: "Same Day" },
+                  { value: "next_day", label: "Next Day" },
+                  { value: "48hrs", label: "48 Hours" },
+                  { value: "72hrs", label: "72 Hours" },
+                  { value: "5_working_days", label: "5 Working Days" },
+                  { value: "1_2_weeks", label: "1-2 Weeks" },
+                  { value: "2_3_weeks", label: "2-3 Weeks" },
+                  { value: "custom", label: "Custom" },
+                ],
+                true
+              )}
+
+              {renderSelectField(
+                "Refund Policy",
+                "refundPolicy",
+                [
+                  { value: "no_refunds", label: "No Refunds" },
+                  { value: "48hrs", label: "Within 48 Hours" },
+                  { value: "72hrs", label: "Within 72 Hours" },
+                  { value: "5_working_days", label: "Within 5 Working Days" },
+                  { value: "1week", label: "Within 1 Week" },
+                  { value: "14days", label: "Within 14 Days" },
+                  { value: "30days", label: "Within 30 Days" },
+                  { value: "60days", label: "Within 60 Days" },
+                  { value: "store_credit", label: "Store Credit Only" },
+                  { value: "accept_refunds", label: "Accept Refunds" },
+                ],
+                true
+              )}
+
+              {renderSelectField(
+                "Refund Period",
+                "periodUntilRefund",
+                [
+                  { value: "24hrs", label: "24 Hours" },
+                  { value: "48hrs", label: "48 Hours" },
+                  { value: "72hrs", label: "72 Hours" },
+                  { value: "5_working_days", label: "5 Working Days" },
+                  { value: "1week", label: "1 Week" },
+                  { value: "2weeks", label: "2 Weeks" },
+                ],
+                true
               )}
             </div>
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp"
-              onChange={handleLogoUpload}
-              className="hidden"
-            />
-          </div>
+          )}
 
-          {/* Banner Upload */}
-          <div className="flex-1">
-            <div
-              onClick={() => bannerInputRef.current?.click()}
-              className="w-full h-48 bg-[#141414] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-[#222] transition-colors relative overflow-hidden"
-            >
-              {formik.values.storeBanner ? (
-                <>
-                  <img
-                    src={formik.values.storeBanner}
-                    alt="Store Banner"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeBanner();
-                    }}
-                    className="absolute top-3 right-3 bg-red-500 rounded-full p-2 hover:bg-red-600 z-10"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  {uploadingBanner ? (
-                    <div className="text-[#858585] text-sm">Uploading...</div>
-                  ) : (
+          {activeTab === "payment" && (
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold mb-6">Payment Information</h2>
+
+              <div className="mb-6">
+                <label className={labelClass}>
+                  Preferred Payout Method
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <div className="space-y-3">
+                  {[
+                    {
+                      value: "fiat_currency",
+                      label: "Fiat Currency (Bank Transfer, etc.)",
+                    },
+                    { value: "cryptocurrency", label: "Cryptocurrency Wallet" },
+                    { value: "both", label: "Both Methods" },
+                  ].map((method) => (
+                    <label
+                      key={method.value}
+                      className="flex items-center p-3 border border-[#747474] rounded cursor-pointer hover:bg-[#1a1a1a] transition-colors font-medium"
+                    >
+                      <input
+                        type="radio"
+                        name="preferredPayoutMethod"
+                        value={method.value}
+                        checked={formData.preferredPayoutMethod === method.value}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <span className="ml-3 text-sm">{method.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.preferredPayoutMethod && (
+                  <p className={errorClass}>{errors.preferredPayoutMethod}</p>
+                )}
+              </div>
+
+              {(formData.preferredPayoutMethod === "fiat_currency" ||
+                formData.preferredPayoutMethod === "both") && (
+                <div className="mb-8 p-6 bg-[#1a1a1a] rounded-lg border border-[#747474]">
+                  <h3 className="font-semibold mb-4">Fiat Currency Details</h3>
+
+                  {renderSelectField(
+                    "Preferred Fiat Method",
+                    "fiatPayoutMethod",
+                    [
+                      { value: "bank", label: "Bank Transfer" },
+                      { value: "paypal", label: "PayPal" },
+                      { value: "stripe", label: "Stripe" },
+                      { value: "flutterwave", label: "Flutterwave" },
+                      { value: "wise", label: "Wise" },
+                      { value: "mobile_money", label: "Mobile Money" },
+                      { value: "local_gateway", label: "Local Payment Gateway" },
+                    ],
+                    true
+                  )}
+
+                  {formData.fiatPayoutMethod === "bank" && (
                     <>
-                      <Camera className="w-12 h-12 text-[#858585] mb-1" />
-                      <p className="text-xs text-[#acacac]">
-                        Supported file formats are .png and .jpeg
-                      </p>
+                      {renderBankCountryField("Bank Country", true)}
+                      {renderInputField(
+                        "Account Holder Name",
+                        "accountHolderName",
+                        "text",
+                        "Full name on account",
+                        true
+                      )}
+                      {renderInputField(
+                        "Account Number",
+                        "accountNumber",
+                        "text",
+                        "Bank account number",
+                        true
+                      )}
                     </>
                   )}
-                </>
+                </div>
+              )}
+
+              {(formData.preferredPayoutMethod === "cryptocurrency" ||
+                formData.preferredPayoutMethod === "both") && (
+                <div className="mb-8 p-6 bg-[#1a1a1a] rounded-lg border border-[#747474]">
+                  <h3 className="font-semibold mb-4">Cryptocurrency Wallet Details</h3>
+
+                  {renderSelectField(
+                    "Supported Blockchain",
+                    "supportedBlockchain",
+                    [
+                      { value: "solana", label: "Solana" },
+                      { value: "ethereum", label: "Ethereum" },
+                      { value: "polygon", label: "Polygon" },
+                      { value: "arbitrum", label: "Arbitrum" },
+                      { value: "optimism", label: "Optimism" },
+                    ],
+                    true
+                  )}
+
+                  {renderSelectField(
+                    "Wallet Type",
+                    "walletType",
+                    [
+                      { value: "phantom", label: "Phantom" },
+                      { value: "solflare", label: "Solflare" },
+                      { value: "backpack", label: "Backpack" },
+                      { value: "magic_eden", label: "Magic Eden" },
+                      { value: "wallet_connect", label: "Wallet Connect" },
+                      { value: "ledger_live", label: "Ledger Live" },
+                    ],
+                    true
+                  )}
+
+                  {renderInputField(
+                    "Wallet Address",
+                    "walletAddress",
+                    "text",
+                    "Your public wallet address",
+                    true
+                  )}
+
+                  {renderSelectField(
+                    "Preferred Payout Token",
+                    "preferredPayoutToken",
+                    [
+                      { value: "USDT", label: "USDT (Tether)" },
+                      { value: "USDC", label: "USDC (USD Coin)" },
+                      { value: "DAI", label: "DAI" },
+                      { value: "solana", label: "SOL (Solana)" },
+                      { value: "ETH", label: "ETH (Ethereum)" },
+                      { value: "MATIC", label: "MATIC (Polygon)" },
+                    ],
+                    true
+                  )}
+                </div>
               )}
             </div>
-            <input
-              ref={bannerInputRef}
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp"
-              onChange={handleBannerUpload}
-              className="hidden"
-            />
-          </div>
+          )}
+
+          {activeTab === "additional" && (
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold mb-6">Additional Information</h2>
+
+              {renderSelectField(
+                "Primary Product Category",
+                "productCategory",
+                [
+                  { value: "men_clothing", label: "Men Clothing" },
+                  { value: "women_clothing", label: "Women Clothing" },
+                  { value: "men_shoes", label: "Men Shoes" },
+                  { value: "women_shoes", label: "Women Shoes" },
+                  { value: "accessories", label: "Accessories" },
+                  { value: "merch", label: "Merchandise" },
+                  { value: "others", label: "Others" },
+                ],
+                true
+              )}
+
+              {formData.productCategory === "others" && (
+                <div className="mb-6">
+                  <label className={labelClass}>
+                    Specify Your Category
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="otherCategoryName"
+                    value={formData.otherCategoryName || ""}
+                    onChange={handleInputChange}
+                    className={inputClass}
+                    placeholder="Enter category name"
+                  />
+                </div>
+              )}
+
+              {renderSelectField(
+                "Target Audience",
+                "targetAudience",
+                [
+                  { value: "male", label: "Male" },
+                  { value: "female", label: "Female" },
+                  { value: "unisex", label: "Unisex" },
+                  { value: "kids", label: "Kids" },
+                  { value: "teens", label: "Teens" },
+                ],
+                true
+              )}
+
+              {renderSelectField(
+                "Local Pricing Type",
+                "localPricing",
+                [
+                  { value: "fiat", label: "Fiat Currency" },
+                  { value: "cryptocurrency", label: "Cryptocurrency" },
+                  { value: "both", label: "Both" },
+                ],
+                true
+              )}
+
+              <div className="mb-6">
+                <label className={labelClass}>Store Bio (Optional)</label>
+                <textarea
+                  name="bio"
+                  value={formData.bio || ""}
+                  onChange={handleInputChange}
+                  className={`${inputClass} resize-none h-24`}
+                  placeholder="Tell customers about your store..."
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="mb-6">
-          <div className="flex w-fit gap-8 bg-[#141414] pt-3 pb-2 rounded-sm px-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 text-sm relative transition-colors cursor-pointer ${activeTab === tab.id ? "text-purple-500" : "text-[#595959] hover:text-gray-300"}`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500"></div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        <div className="flex justify-between items-center mt-8 gap-4">
+          <button
+            onClick={handlePrevious}
+            disabled={activeTab === "business"}
+            type="button"
+            className={`px-6 py-2.5 rounded text-sm transition-colors ${
+              activeTab === "business"
+                ? "text-gray-600 cursor-not-allowed"
+                : "text-gray-300 border border-[#747474] hover:bg-[#1a1a1a] cursor-pointer active:scale-95"
+            }`}
+          >
+            Previous
+          </button>
 
-        <form onSubmit={formik.handleSubmit}>
-          <div className="bg-[#0a0a0a] border border-[#747474] rounded-lg p-8">
-
-            {activeTab === "business" && (
-              <div>
-                <h2 className="text-xl font-medium mb-6">
-                  Business Information
-                </h2>
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Brand Name
-                    </label>
-                    <input
-                      type="text"
-                      name="brandName"
-                      value={formik.values.brandName}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      placeholder="Enter your brand name"
-                      className={inputClass}
-                    />
-                    {formik.touched.brandName && formik.errors.brandName && (
-                      <div className="text-red-500 text-xs mt-1">
-                        {formik.errors.brandName}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Business Type
-                    </label>
-                    <select
-                      name="businessType"
-                      value={formik.values.businessType}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      className={selectClass}
-                      style={selectStyle}
-                    >
-                      <option value="">Enter your business type</option>
-                      {BUSINESS_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                    {formik.touched.businessType &&
-                      formik.errors.businessType && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.businessType}
-                        </div>
-                      )}
-                    {formik.values.businessType && (
-                      <p className="text-xs text-[#858585] mt-1">
-                        {BUSINESS_TYPES.find(t => t.value === formik.values.businessType)?.description}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Business Address
-                    </label>
-                    <input
-                      type="text"
-                      name="businessAddress"
-                      value={formik.values.businessAddress}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      placeholder="Enter your business address"
-                      className={inputClass}
-                    />
-                    {formik.touched.businessAddress &&
-                      formik.errors.businessAddress && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.businessAddress}
-                        </div>
-                      )}
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Official Email Address
-                    </label>
-                    <input
-                      type="email"
-                      name="officialEmail"
-                      value={formik.values.officialEmail}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      placeholder="Enter your email address"
-                      className={inputClass}
-                    />
-                    {formik.touched.officialEmail &&
-                      formik.errors.officialEmail && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.officialEmail}
-                        </div>
-                      )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm mb-2 text-[#dcdcdc]">
-                        Phone Number
-                      </label>
-                      <div className="flex flex-col md:flex-row gap-2 items-start">
-                        <select
-                          name="countryCode"
-                          value={formik.values.countryCode || ""}
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
-                          className="w-24 bg-black border border-[#747474] rounded px-2 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                        >
-                          <option value="">Code</option>
-                          {Object.entries(COUNTRY_PHONE_CODES).map(([code, phoneCode]) => {
-                            const country = COUNTRIES.find(c => c.code === code);
-                            return (
-                              <option key={code} value={phoneCode}>
-                                {country?.flag} {phoneCode}
-                              </option>
-                            );
-                          })}
-                        </select>
-                        <input
-                          type="tel"
-                          name="phoneNumber"
-                          value={formik.values.phoneNumber}
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
-                          placeholder="Enter your phone number"
-                          className="flex-1 bg-black border border-[#747474] rounded px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-                      {formik.touched.phoneNumber &&
-                        formik.errors.phoneNumber && (
-                          <div className="text-red-500 text-xs mt-1">
-                            {formik.errors.phoneNumber}
-                          </div>
-                        )}
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-2 text-[#dcdcdc]">
-                        Country
-                      </label>
-                      <select
-                        name="country"
-                        value={formik.values.country}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        className={selectClass}
-                        style={selectStyle}
-                      >
-                        <option value="">Select your country</option>
-                        {COUNTRIES.map((country) => (
-                          <option key={country.code} value={country.code}>
-                            {country.flag} {country.name}
-                          </option>
-                        ))}
-                      </select>
-                      {formik.touched.country && formik.errors.country && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.country}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Social Media Links
-                    </label>
-                    
-                    {/* Add Social Media Platform */}
-                    <div className="mb-6 p-4 border border-[#747474] rounded-lg bg-[#0E0E0E]">
-                      <label className="text-xs text-[#858585] mb-2 block">Add Social Media Platform</label>
-                      <div className="flex gap-2">
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              const newLink = {
-                                platform: e.target.value,
-                                username: "",
-                                url: "",
-                              };
-                              const updatedLinks = [...(formik.values.socialMediaLinks || []), newLink];
-                              formik.setFieldValue("socialMediaLinks", updatedLinks);
-                              e.target.value = ""; // Reset dropdown
-                            }
-                          }}
-                          className={selectClass}
-                          style={selectStyle}
-                        >
-                          <option value="">Select a platform to add</option>
-                          {SOCIAL_MEDIA_PLATFORMS.map((platform) => {
-                            const isAdded = formik.values.socialMediaLinks?.some(
-                              (link) => link.platform === platform.value
-                            );
-                            return (
-                              <option key={platform.value} value={platform.value} disabled={isAdded}>
-                                {platform.label} {isAdded ? "(Added)" : ""}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                      <p className="text-xs text-[#666] mt-2">Optional: Add your social media profiles to help verify your account</p>
-                    </div>
-                    
-                    {/* Display Added Social Media Links */}
-                    <div className="space-y-6">
-                      {formik.values.socialMediaLinks?.map((socialLink) => {
-                        const platform = SOCIAL_MEDIA_PLATFORMS.find(
-                          (p) => p.value === socialLink.platform
-                        );
-                        if (!platform) return null;
-                        
-                        const Icon = platform.icon;
-
-                        return (
-                          <div key={socialLink.platform} className="border border-[#747474] rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-5 h-5" style={{ color: platform.iconColor }} />
-                                <label className="text-sm font-medium text-[#f2f2f2]">
-                                  {platform.label}
-                                </label>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (formik.values.socialMediaLinks) {
-                                    const updatedLinks = formik.values.socialMediaLinks.filter(
-                                      (link) => link.platform !== socialLink.platform
-                                    );
-                                    formik.setFieldValue("socialMediaLinks", updatedLinks);
-                                  }
-                                }}
-                                className="text-red-500 hover:text-red-400 text-sm font-medium"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-xs text-[#858585] mb-1 block">
-                                  Username/Handle
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder={platform.placeholder}
-                                  value={socialLink.username || ""}
-                                  onChange={(e) => {
-                                    const updatedLinks = (formik.values.socialMediaLinks || []).map((link) =>
-                                      link.platform === socialLink.platform
-                                        ? { ...link, username: e.target.value }
-                                        : link
-                                    );
-                                    formik.setFieldValue("socialMediaLinks", updatedLinks);
-                                  }}
-                                  className={inputClass}
-                                />
-                                <p className="text-xs text-[#666] mt-0.5">{platform.description}</p>
-                              </div>
-                              <div>
-                                <label className="text-xs text-[#858585] mb-1 block">
-                                  Profile URL
-                                </label>
-                                <input
-                                  type="url"
-                                  placeholder={`https://${platform.value}.com/...`}
-                                  value={socialLink.url || ""}
-                                  onChange={(e) => {
-                                    const updatedLinks = (formik.values.socialMediaLinks || []).map((link) =>
-                                      link.platform === socialLink.platform
-                                        ? { ...link, url: e.target.value }
-                                        : link
-                                    );
-                                    formik.setFieldValue("socialMediaLinks", updatedLinks);
-                                  }}
-                                  className={inputClass}
-                                />
-                                <p className="text-xs text-[#666] mt-0.5">Full profile URL</p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Full Name */}
-                  <div>
-                    <label className="text-sm mb-2 text-[#dcdcdc] flex justify-between">
-                      Full name <span>Required</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formik.values.fullName}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      placeholder="Enter your full name"
-                      className={inputClass}
-                    />
-                    {formik.touched.fullName && formik.errors.fullName && (
-                      <div className="text-red-500 text-xs mt-1">
-                        {formik.errors.fullName}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ID Verification Section */}
-                  <div className="border-t border-[#747474] pt-6 mt-6">
-                    <h3 className="text-base font-medium text-[#f2f2f2] mb-4">ID Verification</h3>
-
-                    <div className="grid grid-cols-2 gap-6 mb-4">
-                      {/* ID Type */}
-                      <div>
-                        <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
-                          ID Type <span>Required</span>
-                        </label>
-                        <select
-                          name="idType"
-                          value={formik.values.idType}
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
-                          className={selectClass}
-                          style={selectStyle}
-                        >
-                          <option value="">Select ID type</option>
-                          {ID_TYPES.filter(id => ['passport', 'drivers_license', 'voters_card', 'national_id'].includes(id.value)).map((idType) => (
-                            <option key={idType.value} value={idType.value}>
-                              {idType.label}
-                            </option>
-                          ))}
-                        </select>
-                        {formik.touched.idType && formik.errors.idType && (
-                          <div className="text-red-500 text-xs mt-1">
-                            {formik.errors.idType}
-                          </div>
-                        )}
-                        {formik.values.idType && (
-                          <p className="text-xs text-[#858585] mt-1">
-                            {ID_TYPES.find(id => id.value === formik.values.idType)?.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* ID Number */}
-                      <div>
-                        <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
-                          ID Number <span>Required</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={idNumber}
-                          onChange={(e) => setIdNumber(e.target.value)}
-                          placeholder="Enter your ID number"
-                          className={inputClass}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Verify Button */}
-                    <div className="flex items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={handleVerifyId}
-                        disabled={!idNumber || !formik.values.idType || verifyMutation.isPending || isVerified}
-                        className={`px-6 py-2.5 rounded text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
-                          isVerified
-                            ? "bg-green-600 hover:bg-green-700 text-white"
-                            : "bg-purple-600 hover:bg-purple-700 text-white"
-                        }`}
-                      >
-                        {verifyMutation.isPending ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Verifying...
-                          </>
-                        ) : isVerified ? (
-                          <>
-                            <CheckCircle className="w-4 h-4" />
-                            Verified
-                          </>
-                        ) : (
-                          "Verify ID"
-                        )}
-                      </button>
-
-                      {isVerified && (
-                        <span className="text-green-500 text-sm flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4" />
-                          Verification Successful
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "shipping" && (
-              <div>
-                <h2 className="text-xl font-medium mb-6">
-                  Shipping Information
-                </h2>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
-                        Shipping zone <span>Required</span>
-                      </label>
-                      <select
-                        name="shippingZone"
-                        value={formik.values.shippingZone}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        className={selectClass}
-                        style={selectStyle}
-                        disabled={!formik.values.country}
-                      >
-                        <option value="">Select the state</option>
-                        {availableStates.map((state, index) => (
-                          <option key={`${state.name}-${index}`} value={state.name}>
-                            {state.name}
-                          </option>
-                        ))}
-                      </select>
-                      {!formik.values.country && (
-                        <p className="text-xs text-[#858585] mt-1">Please select a country first</p>
-                      )}
-                      {formik.touched.shippingZone &&
-                        formik.errors.shippingZone && (
-                          <div className="text-red-500 text-xs mt-1">
-                            {formik.errors.shippingZone}
-                          </div>
-                        )}
-                    </div>
-                    <div>
-                      <label className="flex justify-between text-sm mb-2 text-[#dcdcdc]">
-                        City/Town <span>Required</span>
-                      </label>
-                      <select
-                        name="cityTown"
-                        value={formik.values.cityTown}
-                        onChange={formik.handleChange}
-                        onBlur={formik.handleBlur}
-                        className={selectClass}
-                        style={selectStyle}
-                        disabled={!formik.values.shippingZone}
-                      >
-                        <option value="">Select city/town</option>
-                        {availableCities.map((city, index) => (
-                          <option key={`${city}-${index}`} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
-                      {!formik.values.shippingZone && (
-                        <p className="text-xs text-[#858585] mt-1">Please select a state first</p>
-                      )}
-                      {formik.touched.cityTown && formik.errors.cityTown && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.cityTown}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Shipping Address
-                    </label>
-                    <input
-                      type="text"
-                      name="shippingAddress"
-                      value={formik.values.shippingAddress}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      placeholder="Enter your shipping address"
-                      className={inputClass}
-                    />
-                    {formik.touched.shippingAddress &&
-                      formik.errors.shippingAddress && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.shippingAddress}
-                        </div>
-                      )}
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-[#dcdcdc]">
-                      Return Address
-                    </label>
-                    <input
-                      type="text"
-                      name="returnAddress"
-                      value={formik.values.returnAddress}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      placeholder="Enter your return address"
-                      className={inputClass}
-                    />
-                    {formik.touched.returnAddress &&
-                      formik.errors.returnAddress && (
-                        <div className="text-red-500 text-xs mt-1">
-                          {formik.errors.returnAddress}
-                        </div>
-                      )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm mb-2 text-[#dcdcdc]">
-                        Type of shipping
-                      </label>
-                      <select
-                        name="shippingType"
-                        value={formik.values.shippingType}
-                        onChange={formik.handleChange}
-                        className={selectClass}
-                        style={selectStyle}
-                      >
-                        <option value="">Select shipping type</option>
-                        <option value="domestic">Domestic</option>
-                        <option value="international">International</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-2 text-[#dcdcdc]">
-                        Estimated Shipping time
-                      </label>
-                      <select
-                        name="estimatedShippingTime"
-                        value={formik.values.estimatedShippingTime}
-                        onChange={formik.handleChange}
-                        className={selectClass}
-                        style={selectStyle}
-                      >
-                        <option value="">Select time</option>
-                        {SHIPPING_ETA_OPTIONS.filter(opt => ['same_day', 'next_day', '48hrs', '72hrs', '5_working_days', '1_2_weeks'].includes(opt.value)).map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm mb-2 text-[#dcdcdc]">
-                        Refund policy
-                      </label>
-                      <select
-                        name="refundPolicy"
-                        value={formik.values.refundPolicy}
-                        onChange={formik.handleChange}
-                        className={selectClass}
-                        style={selectStyle}
-                      >
-                        <option value="">Select refund policy</option>
-                        {REFUND_POLICIES.map((policy) => (
-                          <option key={policy.value} value={policy.value}>
-                            {policy.label}
-                          </option>
-                        ))}
-                      </select>
-                      {formik.values.refundPolicy && (
-                        <p className="text-xs text-[#858585] mt-1">
-                          {formik.values.refundPolicy === 'no_refunds' ? 'No refunds will be offered after purchase' : 'Customers can request refunds within the specified period'}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-2 text-[#dcdcdc]">
-                        Refund Period
-                      </label>
-                      <select
-                        name="periodUntilRefund"
-                        value={formik.values.periodUntilRefund}
-                        onChange={formik.handleChange}
-                        className={selectClass}
-                        style={selectStyle}
-                        disabled={formik.values.refundPolicy !== 'accept_refunds'}
-                      >
-                        <option value="">Select refund period</option>
-                        <option value="24hrs">24 Hours</option>
-                        <option value="48hrs">48 Hours</option>
-                        <option value="72hrs">72 Hours (3 Days)</option>
-                        <option value="5_working_days">5 Working Days</option>
-                        <option value="1week">1 Week</option>
-                        <option value="2weeks">2 Weeks</option>
-                      </select>
-                      {formik.values.refundPolicy !== 'accept_refunds' && (
-                        <p className="text-xs text-[#858585] mt-1">Enable refunds to set a refund period</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "payment" && (
-              <div>
-                <h2 className="text-lg font-medium mb-6 text-[#f2f2f2]">
-                  Payment Information
-                </h2>
-                <div className="space-y-8">
-                  <div className="border border-[#747474] rounded-lg p-6">
-                    <h3 className="text-base mb-4 text-[#f2f2f2]">
-                      Choose your Preferred payout method
-                    </h3>
-                    <div className="flex gap-8 text-[#858585]">
-                      {[
-                        {
-                          value: "fiat_currency",
-                          label: "Fiat currency (Local Currency)",
-                        },
-                        { value: "cryptocurrency", label: "Cryptocurrency" },
-                        { value: "both", label: "Both" },
-                      ].map((method) => (
-                        <label
-                          key={method.value}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            name="preferredPayoutMethod"
-                            value={method.value}
-                            checked={
-                              formik.values.preferredPayoutMethod ===
-                              method.value
-                            }
-                            onChange={formik.handleChange}
-                            className="w-4 h-4 accent-purple-600"
-                          />
-                          <span className="text-sm">{method.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                    {formik.touched.preferredPayoutMethod &&
-                      formik.errors.preferredPayoutMethod && (
-                        <div className="text-red-500 text-xs mt-2">
-                          {formik.errors.preferredPayoutMethod}
-                        </div>
-                      )}
-                  </div>
-
-                  {(formik.values.preferredPayoutMethod === "fiat_currency" ||
-                    formik.values.preferredPayoutMethod === "both") && (
-                    <div className="border border-[#747474] rounded-lg p-6 text-[#f2f2f2]">
-                      <h3 className="text-base mb-2">
-                        Fiat Payment Information
-                      </h3>
-                      <p className="text-sm mb-6">
-                        Enter bank details to receive payment in traditional
-                        currencies
-                      </p>
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-6">
-                          <div>
-                            <label className="flex justify-between text-sm mb-2 text-[#858585]">
-                              Preferred Payout Method <span>Required</span>
-                            </label>
-                            <select
-                              name="fiatPayoutMethod"
-                              value={formik.values.fiatPayoutMethod}
-                              onChange={formik.handleChange}
-                              className={selectClass}
-                              style={selectStyle}
-                            >
-                              <option value="">Select payout option</option>
-                              {FIAT_PAYOUT_METHODS.map((method) => (
-                                <option key={method.value} value={method.value}>
-                                  {method.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="flex justify-between text-sm mb-2 text-[#858585]">
-                              Bank Country <span>Required</span>
-                            </label>
-                            <select
-                              name="bankCountry"
-                              value={formik.values.bankCountry}
-                              onChange={formik.handleChange}
-                              className={selectClass}
-                              style={selectStyle}
-                            >
-                              <option value="">Select country</option>
-                              {COUNTRIES.map((country) => (
-                                <option key={country.code} value={country.code}>
-                                  {country.flag} {country.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm mb-2 text-[#858585]">
-                              Account Holder Name
-                            </label>
-                            <input
-                              type="text"
-                              name="accountHolderName"
-                              value={formik.values.accountHolderName}
-                              onChange={formik.handleChange}
-                              placeholder="Enter name as on bank account"
-                              className={inputClass}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm mb-2 text-[#858585]">
-                              Account Number
-                            </label>
-                            <input
-                              type="text"
-                              name="accountNumber"
-                              value={formik.values.accountNumber}
-                              onChange={formik.handleChange}
-                              placeholder="Enter account details"
-                              className={inputClass}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(formik.values.preferredPayoutMethod === "cryptocurrency" ||
-                    formik.values.preferredPayoutMethod === "both") && (
-                    <div className="border border-[#747474] text-[#f2f2f2] rounded-lg p-6">
-                      <h3 className="text-base mb-2">
-                        Digital Wallet (Crypto) Information
-                      </h3>
-                      <p className="text-sm mb-6">
-                        Enter digital wallet to receive payments in
-                        cryptocurrency.
-                      </p>
-                      <div className="space-y-6 text-[#858585]">
-                        <div className="grid grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm mb-2">
-                              Supported Blockchain
-                            </label>
-                            <select
-                              name="supportedBlockchain"
-                              value={formik.values.supportedBlockchain}
-                              onChange={formik.handleChange}
-                              className={selectClass}
-                              style={selectStyle}
-                            >
-                              <option value="solana">Solana</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="flex justify-between text-sm mb-2">
-                              Wallet Type <span>Required</span>
-                            </label>
-                            <select
-                              name="walletType"
-                              value={formik.values.walletType}
-                              onChange={formik.handleChange}
-                              className={selectClass}
-                              style={selectStyle}
-                            >
-                              <option value="">Select wallet type</option>
-                              {WALLET_TYPES.map((wallet) => (
-                                <option key={wallet.value} value={wallet.value}>
-                                  {wallet.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div>
-                            <label className="flex justify-between text-sm mb-2">
-                              Wallet Address <span>Required</span>
-                            </label>
-                            <input
-                              type="text"
-                              name="walletAddress"
-                              value={formik.values.walletAddress}
-                              onChange={formik.handleChange}
-                              placeholder="Enter wallet address"
-                              className={inputClass}
-                            />
-                          </div>
-                          <div>
-                            <label className="flex justify-between text-sm mb-2">
-                              Preferred Payout Token <span>Required</span>
-                            </label>
-                            <select
-                              name="preferredPayoutToken"
-                              value={formik.values.preferredPayoutToken}
-                              onChange={formik.handleChange}
-                              className={selectClass}
-                              style={selectStyle}
-                            >
-                              <option value="">Select token</option>
-                              {PAYOUT_TOKENS.map((token) => (
-                                <option key={token.value} value={token.value}>
-                                  {token.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "additional" && (
-              <div>
-                <h2 className="text-lg font-medium mb-6">
-                  Additional information
-                </h2>
-                <div className="space-y-8">
-                  <div className="border border-[#747474] rounded-lg p-6">
-                    <h3 className="text-base mb-4 text-[#f2f2f2]">
-                      Select product category
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      {productCategory.map(({ label, value }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => toggleCategory(value)}
-                          className={`px-6 py-3 rounded text-sm transition-colors ${
-                            formik.values.productCategory === value
-                              ? "bg-purple-600 text-white"
-                              : "bg-[#1a1a1a] text-[#858585] hover:bg-[#222]"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    {formik.values.productCategory === 'others' && (
-                      <div className="mt-6 p-4 bg-[#1a1a1a] rounded border border-[#747474]">
-                        <label className="block text-sm text-[#f2f2f2] mb-2">
-                          Specify your product category
-                        </label>
-                        <input
-                          type="text"
-                          name="otherCategoryName"
-                          value={formik.values.otherCategoryName || ''}
-                          onChange={formik.handleChange}
-                          onBlur={formik.handleBlur}
-                          placeholder="Enter your category"
-                          className="w-full px-4 py-2 bg-[#0E0E0E] text-[#f2f2f2] border border-[#747474] rounded focus:outline-none focus:border-purple-600"
-                        />
-                        {formik.touched.otherCategoryName && formik.errors.otherCategoryName && (
-                          <p className="text-red-500 text-sm mt-2">{formik.errors.otherCategoryName}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="border border-[#747474] rounded-lg p-6">
-                    <h3 className="text-base mb-4 text-[#f2f2f2]">
-                      Target audience
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      {audiences.map(({ label, value }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() =>
-                            formik.setFieldValue("targetAudience", value)
-                          }
-                          className={`px-6 py-3 rounded text-sm transition-colors ${formik.values.targetAudience === value ? "bg-purple-600 text-white" : "bg-[#1a1a1a] text-[#858585] hover:bg-[#222]"}`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="border border-[#747474] rounded-lg p-6">
-                    <h3 className="text-base mb-4 text-[#f2f2f2]">
-                      Local pricing or currency
-                    </h3>
-                    <select
-                      name="localPricing"
-                      value={formik.values.localPricing}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      className={selectClass}
-                      style={selectStyle}
-                    >
-                      <option value="">
-                        Select your local pricing or currency
-                      </option>
-                      <option value="fiat">Fiat</option>
-                      <option value="cryptocurrency">Cryptocurrency</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-4 mt-8">
+          {activeTab !== "additional" ? (
             <button
+              onClick={handleNext}
               type="button"
-              className="px-8 py-2.5 border border-[#747474] rounded text-sm hover:bg-[#1a1a1a] transition-colors cursor-pointer"
+              className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors cursor-pointer font-medium active:scale-95"
             >
-              Cancel
+              Next
             </button>
-            {activeTab === "additional" ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors cursor-pointer"
-              >
-                Preview
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="px-8 py-2.5 bg-purple-600 rounded text-sm hover:bg-purple-700 transition-colors"
-              >
-                Next
-              </button>
-            )}
-          </div>
-        </form>
+          ) : (
+            <button
+              onClick={handleSubmitPreview}
+              disabled={isLoading}
+              type="button"
+              className="px-8 py-2.5 bg-green-600 rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer font-medium active:scale-95"
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                  </svg>
+                  Loading...
+                </>
+              ) : (
+                "Review & Submit"
+              )}
+            </button>
+          )}
+        </div>
       </main>
+
       <BuyerFooter />
     </div>
   );

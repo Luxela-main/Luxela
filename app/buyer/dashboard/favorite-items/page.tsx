@@ -151,7 +151,7 @@ export default function FavoriteItemsPage() {
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleAddToCart(item.id)}
-                      className="flex-1 bg-[#8451e1] hover:bg-[#7043d8] text-white py-2 rounded cursor-pointer transition flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#8451e1] hover:bg-[#7040d1] text-white py-2 rounded cursor-pointer transition flex items-center justify-center gap-2"
                     >
                       <ShoppingCart size={16} />
                       Add to Cart
@@ -183,7 +183,7 @@ export default function FavoriteItemsPage() {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => handleAddToCart(item.id)}
-                      className="bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-2 rounded cursor-pointer transition text-sm flex items-center gap-2"
+                      className="bg-[#8451e1] hover:bg-[#7040d1] text-white px-4 py-2 rounded cursor-pointer transition text-sm flex items-center gap-2"
                     >
                       <ShoppingCart size={14} />
                       Add to Cart

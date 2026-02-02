@@ -14,6 +14,61 @@ const SellerOnboardingContentInner = () => {
   const [currentPage, setCurrentPage] = useState<"setup" | "preview">("setup");
   const router = useRouter();
 
+  // Initialize form data with localStorage support
+  const getInitialFormData = (): SellerSetupFormData => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('sellerOnboardingFormData');
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (error) {
+        console.error('Error loading form data from localStorage:', error);
+      }
+    }
+    return {
+      brandName: "",
+      businessType: "individual",
+      businessAddress: "",
+      officialEmail: "",
+      phoneNumber: "",
+      countryCode: "+234",
+      country: "",
+      state: "",
+      city: "",
+      socialMediaLinks: [],
+      fullName: "",
+      idType: "passport",
+      storeDescription: "",
+      storeLogo: "",
+      storeBanner: "",
+      logoPath: "",
+      bannerPath: "",
+      shippingZone: "",
+      cityTown: "",
+      shippingAddress: "",
+      returnAddress: "",
+      shippingType: "domestic",
+      estimatedShippingTime: "48hrs",
+      refundPolicy: "no_refunds",
+      periodUntilRefund: "48hrs",
+      preferredPayoutMethod: "fiat_currency",
+      fiatPayoutMethod: "bank",
+      bankCountry: "",
+      accountHolderName: "",
+      accountNumber: "",
+      supportedBlockchain: "solana",
+      walletType: "phantom",
+      walletAddress: "",
+      preferredPayoutToken: "USDT",
+      productCategory: "others",
+      targetAudience: "unisex",
+      localPricing: "fiat",
+      bio: "",
+      otherCategoryName: "",
+    };
+  };
+
   // Initialize mutations at the top level (not in useState/useEffect)
   const createSellerMutation = trpc.seller.createSellerProfile.useMutation();
   const updateBusinessMutation = trpc.seller.updateSellerBusiness.useMutation();
@@ -22,46 +77,18 @@ const SellerOnboardingContentInner = () => {
   const updateAdditionalMutation = trpc.seller.updateSellerAdditional.useMutation();
 
   // Corrected initial state with safe literal values
-  const [formData, setFormData] = useState<SellerSetupFormData>({
-    brandName: "",
-    businessType: "individual",
-    businessAddress: "",
-    officialEmail: "",
-    phoneNumber: "",
-    countryCode: "+234",
-    country: "",
-    socialMediaPlatform: "",
-    socialMedia: "",
-    fullName: "",
-    idType: "passport",
-    storeDescription: "",
-    storeLogo: "",
-    storeBanner: "",
-    logoPath: "",
-    bannerPath: "",
-    shippingZone: "",
-    cityTown: "",
-    shippingAddress: "",
-    returnAddress: "",
-    shippingType: "domestic",
-    estimatedShippingTime: "48hrs",
-    refundPolicy: "no_refunds",
-    periodUntilRefund: "48hrs",
-    paymentMethod: "",
-    preferredPayoutMethod: "fiat_currency",
-    fiatPayoutMethod: "bank",
-    bankCountry: "",
-    accountHolderName: "",
-    accountNumber: "",
-    supportedBlockchain: "solana",
-    walletType: "phantom",
-    walletAddress: "",
-    preferredPayoutToken: "USDT",
-    productCategory: "others",
-    targetAudience: "unisex",
-    localPricing: "fiat",
-    bio: "",
-  });
+  const [formData, setFormData] = useState<SellerSetupFormData>(getInitialFormData());
+
+  // Save form data to localStorage whenever it changes
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sellerOnboardingFormData', JSON.stringify(formData));
+      } catch (error) {
+        console.error('Error saving form data to localStorage:', error);
+      }
+    }
+  }, [formData]);
 
   const goToPreview = (data: SellerSetupFormData) => {
     setFormData(data);
@@ -83,14 +110,13 @@ const SellerOnboardingContentInner = () => {
 
       await updateBusinessMutation.mutateAsync({
         brandName: data.brandName,
-        businessType: (data.businessType as "individual" | "sole_proprietorship" | "llc" | "corporation" | "partnership" | "cooperative" | "non_profit" | "trust" | "joint_venture" | "business") as "business" | "individual",
+        businessType: data.businessType,
         businessAddress: data.businessAddress,
         officialEmail: data.officialEmail,
         phoneNumber: data.phoneNumber,
         country: data.country,
         countryCode: data.countryCode,
-        socialMediaPlatform: data.socialMediaPlatform as "x" | "instagram" | "facebook" | "whatsapp" | "tiktok" | undefined,
-        socialMedia: data.socialMedia,
+        socialMedia: data.socialMediaLinks ? JSON.stringify(data.socialMediaLinks) : undefined,
         fullName: data.fullName,
         idType: data.idType as "passport" | "drivers_license" | "voters_card" | "national_id",
         bio: data.bio,
@@ -104,22 +130,31 @@ const SellerOnboardingContentInner = () => {
         city: data.cityTown,
         shippingAddress: data.shippingAddress,
         returnAddress: data.returnAddress,
-        shippingType: "domestic",
+        shippingType: data.shippingType as "domestic" | "international" | "both",
         estimatedShippingTime: data.estimatedShippingTime as
           | "same_day"
           | "next_day"
-          | "1_2_weeks"
-          | "2_3_weeks"
-          | "custom",
-        refundPolicy: data.refundPolicy as "no_refunds" | "14days" | "30days" | "60days" | "store_credit",
-        refundPeriod: data.periodUntilRefund as
           | "48hrs"
           | "72hrs"
           | "5_working_days"
+          | "1_2_weeks"
+          | "2_3_weeks"
+          | "custom",
+        refundPolicy: data.refundPolicy as "no_refunds" | "48hrs" | "72hrs" | "5_working_days" | "1week" | "14days" | "30days" | "60days" | "store_credit",
+        refundPeriod: data.periodUntilRefund as
+          | "same_day"
+          | "next_day"
+          | "48hrs"
+          | "72hrs"
+          | "5_working_days"
+          | "1_2_weeks"
+          | "2_3_weeks"
           | "1week"
           | "14days"
           | "30days"
-          | "60days",
+          | "60days"
+          | "store_credit"
+          | "custom",
       });
 
       await updatePaymentMutation.mutateAsync({

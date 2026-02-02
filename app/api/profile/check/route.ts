@@ -32,10 +32,14 @@ export async function GET(request: NextRequest) {
     const userEmail = user.email;
 
     // Get role from Supabase user metadata (stored server-side)
-    const role = user.user_metadata?.role as "buyer" | "seller" | undefined;
+    const rawRole = user.user_metadata?.role;
+    const role = (typeof rawRole === 'string' ? rawRole.toLowerCase().trim() : rawRole) as "buyer" | "seller" | undefined;
+
+    console.log("[Profile Check] Raw role:", rawRole, "Processed role:", role, "User ID:", userId);
 
     // If no role is set, user hasn't completed role selection
     if (!role) {
+      console.log("[Profile Check] No role found for user", userId);
       return NextResponse.json({
         role: null,
         exists: false,
@@ -113,20 +117,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Fallback (should never reach here)
+    console.error("[Profile Check] Reached invalid role fallback. Raw role:", rawRole, "Processed:", role);
     return NextResponse.json(
       {
         error: "Invalid role",
-        role: null,
+        role: role,
+        rawRole: rawRole,
         exists: false,
         profileComplete: false,
+        debug: `Role '${rawRole}' could not be normalized to 'buyer' or 'seller'`,
       },
       { status: 400 }
     );
   } catch (error) {
-    console.error("Profile check error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[Profile Check] Server error:", errorMessage, error);
     return NextResponse.json(
       {
         error: "Server error",
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
         role: null,
         exists: false,
         profileComplete: false,

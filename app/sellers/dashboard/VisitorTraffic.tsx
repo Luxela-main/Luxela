@@ -3,43 +3,85 @@
 import { useDashboardData } from "@/modules/sellers";
 import { defaultDashboardData } from "./dashboardDataStats";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export function VisitorTraffic() {
   const [visitorTimeframe, setVisitorTimeframe] = useState("Month");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: dashboardData } = useDashboardData();
   const displayData = (dashboardData || defaultDashboardData) as typeof defaultDashboardData;
   const { visitorTraffic } = displayData;
 
+  const timeframeOptions = ["Month", "Quarter", "Year"];
   const colors = ["bg-blue-500", "bg-[#B8A179]", "bg-gray-400", "bg-pink-200"];
   const strokeColors = ["#3B82F6", "#B8A179", "#9CA3AF", "#FFC0CB"];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isDropdownOpen]);
 
   return (
     <div className="bg-[#1a1a1a] rounded-lg p-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">Visitors Traffic</h3>
-        <Button
-          variant="outline"
-          className="bg-[#222] border-[#333] text-white hover:bg-[#333] hover:text-white"
-        >
-          {visitorTimeframe}
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="ml-2"
+        <div className="relative" ref={dropdownRef}>
+          <Button
+            variant="outline"
+            className="bg-[#222] border-[#333] text-white hover:bg-[#333] hover:text-white"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
-            <path
-              d="M6 9L12 15L18 9"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Button>
+            {visitorTimeframe}
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className={`ml-2 transform transition-transform ${
+                isDropdownOpen ? "rotate-180" : ""
+              }`}
+            >
+              <path
+                d="M6 9L12 15L18 9"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Button>
+          {isDropdownOpen && (
+            <div className="absolute top-full right-0 mt-2 w-32 bg-[#222] border border-[#333] rounded-lg shadow-lg z-10">
+              {timeframeOptions.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => {
+                    setVisitorTimeframe(option);
+                    setIsDropdownOpen(false);
+                  }}
+                  className={`block w-full text-left px-4 py-2 text-sm ${
+                    visitorTimeframe === option
+                      ? "bg-blue-500 text-white"
+                      : "text-gray-400 hover:bg-[#333] hover:text-white"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <div className="flex justify-center">
         <div className="relative w-48 h-48">

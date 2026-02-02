@@ -1,10 +1,11 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { db } from '../db';
-import { supportTickets, supportTicketReplies, sellers } from '../db/schema';
+import { supportTickets, supportTicketReplies, sellers, notifications, users, buyers } from '../db/schema';
 import { and, eq, or, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from 'uuid';
+import { sendSupportTicketEmail } from '../services/emailService';
 
 const TicketStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'closed']);
 const TicketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
@@ -20,23 +21,25 @@ const TicketCategoryEnum = z.enum([
 ]);
 
 const SupportTicketOutput = z.object({
-  id: z.string().uuid(),
-  buyerId: z.string().uuid(),
-  sellerId: z.string().uuid().nullable(),
+  id: z.string(),
+  buyerId: z.string(),
+  sellerId: z.string().nullable(),
+  orderId: z.string().nullable(),
   subject: z.string(),
   description: z.string(),
-  category: TicketCategoryEnum,
+  category: z.string(),
   status: TicketStatusEnum,
   priority: TicketPriorityEnum,
+  assignedTo: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
   resolvedAt: z.date().nullable(),
 });
 
 const TicketReplyOutput = z.object({
-  id: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  senderId: z.string().uuid(),
+  id: z.string(),
+  ticketId: z.string(),
+  senderId: z.string(),
   senderRole: z.enum(['buyer', 'seller', 'admin']),
   message: z.string(),
   attachmentUrl: z.string().url().nullable(),
@@ -50,7 +53,7 @@ export const supportRouter = createTRPCRouter({
         method: 'POST',
         path: '/support/tickets',
         tags: ['Support'],
-        summary: 'Create a new support ticket',
+        summary: 'Create a new support ticket (buyers only)',
       },
     })
     .input(
@@ -59,6 +62,7 @@ export const supportRouter = createTRPCRouter({
         description: z.string().min(10),
         category: TicketCategoryEnum,
         priority: TicketPriorityEnum.optional(),
+        orderId: z.string().optional(),
       })
     )
     .output(SupportTicketOutput)
@@ -70,41 +74,79 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const ticketId = uuidv4();
-      const now = new Date();
+      try {
+        // Ensure buyer record exists
+        const existingBuyer = await db
+          .select()
+          .from(buyers)
+          .where(eq(buyers.userId, userId));
 
-      const result = await db
-        .insert(supportTickets)
-        .values({
-          id: ticketId,
-          buyerId: userId,
-          sellerId: null,
-          subject: input.subject,
-          description: input.description,
-          category: input.category,
-          status: 'open',
-          priority: input.priority || 'medium',
-          createdAt: now,
-          updatedAt: now,
-          resolvedAt: null,
-        })
-        .returning();
+        let buyerId = existingBuyer[0]?.id;
 
-      const ticket = result[0];
+        if (!buyerId) {
+          // Auto-create buyer record if missing
+          const newBuyerId = uuidv4();
+          await db.insert(buyers).values({
+            id: newBuyerId,
+            userId: userId,
+          });
+          buyerId = newBuyerId;
+        }
 
-      return {
-        id: ticket.id,
-        buyerId: ticket.buyerId,
-        sellerId: ticket.sellerId,
-        subject: ticket.subject,
-        description: ticket.description,
-        category: ticket.category as any,
-        status: ticket.status as any,
-        priority: ticket.priority as any,
-        createdAt: new Date(ticket.createdAt),
-        updatedAt: new Date(ticket.updatedAt),
-        resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt) : null,
-      };
+        const ticketId = uuidv4();
+        const now = new Date();
+
+        const result = await db
+          .insert(supportTickets)
+          .values({
+            id: ticketId,
+            buyerId: buyerId,
+            sellerId: null,
+            subject: input.subject,
+            description: input.description,
+            category: input.category,
+            status: 'open',
+            priority: input.priority || 'medium',
+            createdAt: now,
+            updatedAt: now,
+            ...(input.orderId ? { orderId: input.orderId } : {}),
+          })
+          .returning();
+
+        const ticket = result[0];
+
+        if (!ticket) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to create ticket - no result returned',
+          });
+        }
+
+        return {
+          id: ticket.id,
+          buyerId: ticket.buyerId,
+          sellerId: ticket.sellerId ?? null,
+          orderId: ticket.orderId ?? null,
+          subject: ticket.subject,
+          description: ticket.description,
+          category: ticket.category,
+          status: ticket.status,
+          priority: ticket.priority,
+          assignedTo: ticket.assignedTo ?? null,
+          createdAt: new Date(ticket.createdAt),
+          updatedAt: new Date(ticket.updatedAt),
+          resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt) : null,
+        };
+      } catch (error) {
+        console.error('[Support] createTicket error:', error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to create support ticket',
+        });
+      }
     }),
 
   getTickets: protectedProcedure
@@ -113,7 +155,7 @@ export const supportRouter = createTRPCRouter({
         method: 'GET',
         path: '/support/tickets',
         tags: ['Support'],
-        summary: 'Get all support tickets for the current user (buyer or seller)',
+        summary: 'Get support tickets (buyers see own, sellers see assigned)',
       },
     })
     .input(z.object({ status: TicketStatusEnum.optional() }))
@@ -126,37 +168,44 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      // Check if user is a seller
-      const sellerResult = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-      
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
       const seller = sellerResult[0];
 
-      // Build conditions based on whether user is a seller or buyer
-      const conditions: any[] = seller
-        ? [eq(supportTickets.sellerId, seller.id)]
-        : [eq(supportTickets.buyerId, userId)];
-      
+      let whereClause: any;
+      if (seller) {
+        whereClause = eq(supportTickets.assignedTo, seller.id);
+      } else {
+        // Get buyer ID associated with this user
+        const buyerResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
+        const buyer = buyerResult[0];
+        if (!buyer) {
+          // User is not a buyer, return empty
+          return [];
+        }
+        whereClause = eq(supportTickets.buyerId, buyer.id);
+      }
+
       if (input.status) {
-        conditions.push(eq(supportTickets.status, input.status));
+        whereClause = and(whereClause, eq(supportTickets.status, input.status));
       }
 
       const tickets = await db
         .select()
         .from(supportTickets)
-        .where(and(...conditions));
+        .where(whereClause)
+        .orderBy(desc(supportTickets.createdAt));
 
       return tickets.map((t) => ({
         id: t.id,
         buyerId: t.buyerId,
-        sellerId: t.sellerId,
+        sellerId: t.sellerId ?? null,
+        orderId: t.orderId ?? null,
         subject: t.subject,
         description: t.description,
-        category: t.category as any,
-        status: t.status as any,
-        priority: t.priority as any,
+        category: t.category,
+        status: t.status,
+        priority: t.priority,
+        assignedTo: t.assignedTo ?? null,
         createdAt: new Date(t.createdAt),
         updatedAt: new Date(t.updatedAt),
         resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : null,
@@ -172,7 +221,7 @@ export const supportRouter = createTRPCRouter({
         summary: 'Get a specific support ticket',
       },
     })
-    .input(z.object({ ticketId: z.string().uuid() }))
+    .input(z.object({ ticketId: z.string() }))
     .output(SupportTicketOutput)
     .query(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
@@ -182,34 +231,19 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      // Check if user is a seller
-      const sellerResult = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-      
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
       const seller = sellerResult[0];
 
-      // Build query conditions based on whether user is a seller or buyer
       const conditions = seller
-        ? and(
-            eq(supportTickets.id, input.ticketId),
-            eq(supportTickets.sellerId, seller.id)
-          )
-        : and(
-            eq(supportTickets.id, input.ticketId),
-            eq(supportTickets.buyerId, userId)
-          );
+        ? and(eq(supportTickets.id, input.ticketId), eq(supportTickets.assignedTo, seller.id))
+        : and(eq(supportTickets.id, input.ticketId), eq(supportTickets.buyerId, userId));
 
-      const ticket = await db
-        .select()
-        .from(supportTickets)
-        .where(conditions);
+      const ticket = await db.select().from(supportTickets).where(conditions);
 
       if (!ticket[0]) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Ticket not found',
+          message: 'Ticket not found or access denied',
         });
       }
 
@@ -217,12 +251,14 @@ export const supportRouter = createTRPCRouter({
       return {
         id: t.id,
         buyerId: t.buyerId,
-        sellerId: t.sellerId,
+        sellerId: t.sellerId ?? null,
+        orderId: t.orderId ?? null,
         subject: t.subject,
         description: t.description,
-        category: t.category as any,
-        status: t.status as any,
-        priority: t.priority as any,
+        category: t.category,
+        status: t.status,
+        priority: t.priority,
+        assignedTo: t.assignedTo ?? null,
         createdAt: new Date(t.createdAt),
         updatedAt: new Date(t.updatedAt),
         resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : null,
@@ -235,12 +271,12 @@ export const supportRouter = createTRPCRouter({
         method: 'PATCH',
         path: '/support/tickets/{ticketId}',
         tags: ['Support'],
-        summary: 'Update a support ticket',
+        summary: 'Update ticket (admin via support-admin router)',
       },
     })
     .input(
       z.object({
-        ticketId: z.string().uuid(),
+        ticketId: z.string(),
         subject: z.string().min(5).optional(),
         description: z.string().min(10).optional(),
         status: TicketStatusEnum.optional(),
@@ -257,49 +293,24 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      // Check if user is a seller
-      const sellerResult = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-      
-      const seller = sellerResult[0];
-
-      if (!seller) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You are not registered as a seller',
-        });
-      }
-
-      const [existing] = await db
-        .select()
-        .from(supportTickets)
-        .where(
-          and(
-            eq(supportTickets.id, input.ticketId),
-            eq(supportTickets.sellerId, seller.id)
-          )
-        );
-
-      if (!existing) {
+      const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0])
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Ticket not found',
+        });
+
+      const isBuyer = ticket[0].buyerId === userId;
+      if (!isBuyer) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the ticket creator can modify it',
         });
       }
 
       const updateData: any = {};
       if (input.subject !== undefined) updateData.subject = input.subject;
       if (input.description !== undefined) updateData.description = input.description;
-      if (input.status !== undefined) updateData.status = input.status;
-      if (input.priority !== undefined) updateData.priority = input.priority;
-      if (input.category !== undefined) updateData.category = input.category;
-
-      if (input.status === 'resolved' && existing.status !== 'resolved') {
-        updateData.resolvedAt = new Date();
-      }
-
       updateData.updatedAt = new Date();
 
       const result = await db
@@ -312,12 +323,14 @@ export const supportRouter = createTRPCRouter({
       return {
         id: t.id,
         buyerId: t.buyerId,
-        sellerId: t.sellerId,
+        sellerId: t.sellerId ?? null,
+        orderId: t.orderId ?? null,
         subject: t.subject,
         description: t.description,
-        category: t.category as any,
-        status: t.status as any,
-        priority: t.priority as any,
+        category: t.category,
+        status: t.status,
+        priority: t.priority,
+        assignedTo: t.assignedTo ?? null,
         createdAt: new Date(t.createdAt),
         updatedAt: new Date(t.updatedAt),
         resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : null,
@@ -330,10 +343,10 @@ export const supportRouter = createTRPCRouter({
         method: 'DELETE',
         path: '/support/tickets/{ticketId}',
         tags: ['Support'],
-        summary: 'Delete a support ticket',
+        summary: 'Delete a support ticket (creator only)',
       },
     })
-    .input(z.object({ ticketId: z.string().uuid() }))
+    .input(z.object({ ticketId: z.string() }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
@@ -343,39 +356,21 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const sellerResult = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-      
-      const seller = sellerResult[0];
-
-      if (!seller) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You are not registered as a seller',
-        });
-      }
-
-      const [existing] = await db
-        .select()
-        .from(supportTickets)
-        .where(
-          and(
-            eq(supportTickets.id, input.ticketId),
-            eq(supportTickets.sellerId, seller.id)
-          )
-        );
-
-      if (!existing) {
+      const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0])
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Ticket not found',
         });
+
+      if (ticket[0].buyerId !== userId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only the ticket creator can delete it',
+        });
       }
 
       await db.delete(supportTickets).where(eq(supportTickets.id, input.ticketId));
-
       return { success: true };
     }),
 
@@ -385,10 +380,10 @@ export const supportRouter = createTRPCRouter({
         method: 'POST',
         path: '/support/tickets/{ticketId}/close',
         tags: ['Support'],
-        summary: 'Close a support ticket',
+        summary: 'Close a support ticket (creator or assigned seller)',
       },
     })
-    .input(z.object({ ticketId: z.string().uuid() }))
+    .input(z.object({ ticketId: z.string() }))
     .output(SupportTicketOutput)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
@@ -398,34 +393,22 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const sellerResult = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-      
-      const seller = sellerResult[0];
-
-      if (!seller) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You are not registered as a seller',
-        });
-      }
-
-      const ticket = await db
-        .select()
-        .from(supportTickets)
-        .where(
-          and(
-            eq(supportTickets.id, input.ticketId),
-            eq(supportTickets.sellerId, seller.id)
-          )
-        );
-
-      if (!ticket[0]) {
+      const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0])
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Ticket not found',
+        });
+
+      const isBuyer = ticket[0].buyerId === userId;
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
+      const seller = sellerResult[0];
+      const isAssignedSeller = seller && ticket[0].assignedTo === seller.id;
+
+      if (!isBuyer && !isAssignedSeller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not authorized to close this ticket',
         });
       }
 
@@ -444,12 +427,14 @@ export const supportRouter = createTRPCRouter({
       return {
         id: t.id,
         buyerId: t.buyerId,
-        sellerId: t.sellerId,
+        sellerId: t.sellerId ?? null,
+        orderId: t.orderId ?? null,
         subject: t.subject,
         description: t.description,
-        category: t.category as any,
-        status: t.status as any,
-        priority: t.priority as any,
+        category: t.category,
+        status: t.status,
+        priority: t.priority,
+        assignedTo: t.assignedTo ?? null,
         createdAt: new Date(t.createdAt),
         updatedAt: new Date(t.updatedAt),
         resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : null,
@@ -467,7 +452,7 @@ export const supportRouter = createTRPCRouter({
     })
     .input(
       z.object({
-        ticketId: z.string().uuid(),
+        ticketId: z.string(),
         message: z.string().min(1),
         attachmentUrl: z.string().url().optional(),
       })
@@ -481,27 +466,26 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const ticket = await db
-        .select()
-        .from(supportTickets)
-        .where(eq(supportTickets.id, input.ticketId));
-
-      if (!ticket[0]) {
+      const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0])
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Ticket not found',
         });
+
+      const isBuyer = ticket[0].buyerId === userId;
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
+      const seller = sellerResult[0];
+      const isAssignedSeller = seller && ticket[0].assignedTo === seller.id;
+
+      if (!isBuyer && !isAssignedSeller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not authorized to reply to this ticket',
+        });
       }
 
-      let senderRole: 'buyer' | 'seller' | 'admin' = 'buyer';
-      const seller = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-
-      if (seller[0]) {
-        senderRole = 'seller';
-      }
+      let senderRole: 'buyer' | 'seller' | 'admin' = isBuyer ? 'buyer' : 'seller';
 
       const replyId = uuidv4();
       const now = new Date();
@@ -521,16 +505,42 @@ export const supportRouter = createTRPCRouter({
 
       const reply = result[0];
 
-      await db
-        .update(supportTickets)
-        .set({ updatedAt: now })
-        .where(eq(supportTickets.id, input.ticketId));
+      await db.update(supportTickets).set({ updatedAt: now }).where(eq(supportTickets.id, input.ticketId));
+
+      if (isBuyer && ticket[0].assignedTo) {
+        const assignedSeller = await db.select().from(sellers).where(eq(sellers.id, ticket[0].assignedTo));
+        if (assignedSeller[0]) {
+          const sellerUser = await db.select().from(users).where(eq(users.id, assignedSeller[0].userId));
+          if (sellerUser[0]) {
+            await sendSupportTicketEmail({
+              type: 'ticket_reply',
+              recipientEmail: sellerUser[0].email,
+              ticketId: input.ticketId,
+              ticketSubject: ticket[0].subject,
+              replyMessage: input.message,
+              senderName: 'Customer',
+            }).catch(err => console.error('Email notification failed:', err));
+          }
+        }
+      } else if (isAssignedSeller) {
+        const buyerUser = await db.select().from(users).where(eq(users.id, ticket[0].buyerId));
+        if (buyerUser[0]) {
+          await sendSupportTicketEmail({
+            type: 'ticket_reply',
+            recipientEmail: buyerUser[0].email,
+            ticketId: input.ticketId,
+            ticketSubject: ticket[0].subject,
+            replyMessage: input.message,
+            senderName: 'Support Agent',
+          }).catch(err => console.error('Email notification failed:', err));
+        }
+      }
 
       return {
         id: reply.id,
         ticketId: reply.ticketId,
         senderId: reply.senderId,
-        senderRole: reply.senderRole as any,
+        senderRole: reply.senderRole,
         message: reply.message,
         attachmentUrl: reply.attachmentUrl,
         createdAt: new Date(reply.createdAt),
@@ -546,9 +556,35 @@ export const supportRouter = createTRPCRouter({
         summary: 'Get all replies for a support ticket',
       },
     })
-    .input(z.object({ ticketId: z.string().uuid() }))
+    .input(z.object({ ticketId: z.string() }))
     .output(z.array(TicketReplyOutput))
     .query(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId)
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not logged in',
+        });
+
+      const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0])
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Ticket not found',
+        });
+
+      const isBuyer = ticket[0].buyerId === userId;
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
+      const seller = sellerResult[0];
+      const isAssignedSeller = seller && ticket[0].assignedTo === seller.id;
+
+      if (!isBuyer && !isAssignedSeller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not authorized to view this ticket',
+        });
+      }
+
       const replies = await db
         .select()
         .from(supportTicketReplies)
@@ -559,7 +595,7 @@ export const supportRouter = createTRPCRouter({
         id: r.id,
         ticketId: r.ticketId,
         senderId: r.senderId,
-        senderRole: r.senderRole as any,
+        senderRole: r.senderRole,
         message: r.message,
         attachmentUrl: r.attachmentUrl,
         createdAt: new Date(r.createdAt),
@@ -575,7 +611,7 @@ export const supportRouter = createTRPCRouter({
         summary: 'Delete a ticket reply (soft delete)',
       },
     })
-    .input(z.object({ replyId: z.string().uuid() }))
+    .input(z.object({ replyId: z.string() }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
@@ -585,17 +621,12 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const reply = await db
-        .select()
-        .from(supportTicketReplies)
-        .where(eq(supportTicketReplies.id, input.replyId));
-
-      if (!reply[0]) {
+      const reply = await db.select().from(supportTicketReplies).where(eq(supportTicketReplies.id, input.replyId));
+      if (!reply[0])
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Reply not found',
         });
-      }
 
       if (reply[0].senderId !== userId) {
         throw new TRPCError({
@@ -604,12 +635,7 @@ export const supportRouter = createTRPCRouter({
         });
       }
 
-      await db
-        .update(supportTicketReplies)
-        .set({
-          message: '[Deleted by user]',
-        })
-        .where(eq(supportTicketReplies.id, input.replyId));
+      await db.update(supportTicketReplies).set({ message: '[Deleted by user]' }).where(eq(supportTicketReplies.id, input.replyId));
 
       return { success: true };
     }),
@@ -641,29 +667,20 @@ export const supportRouter = createTRPCRouter({
           message: 'User not logged in',
         });
 
-      const sellerResult = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.userId, userId));
-      
+      const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
       const seller = sellerResult[0];
 
       if (!seller) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'You are not registered as a seller',
+          message: 'Not a seller account',
         });
       }
 
       const allTickets = await db
         .select()
         .from(supportTickets)
-        .where(
-          or(
-            eq(supportTickets.sellerId, seller.id),
-            eq(supportTickets.assignedTo, seller.id)
-          )
-        );
+        .where(eq(supportTickets.assignedTo, seller.id));
 
       return {
         total: allTickets.length,

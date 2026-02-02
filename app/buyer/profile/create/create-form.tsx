@@ -23,7 +23,7 @@ const STORAGE_KEY = 'buyer_profile_form_data';
 
 export default function CreateBuyerProfileForm() {
   const router = useRouter();
-  const { setProfile } = useProfile();
+  const { refreshProfile } = useProfile();
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const toastShownRef = useRef(false);
@@ -115,10 +115,8 @@ export default function CreateBuyerProfileForm() {
         // Silently fail
       }
       
-      // Immediately set the created profile in context so page doesn't wait for server fetch
-      if (response.profile) {
-        setProfile(response.profile);
-      }
+      // Refresh profile data immediately
+      await refreshProfile();
       
       // Invalidate the profile query cache for future refreshes
       await utils.buyer.getAccountDetails.invalidate();

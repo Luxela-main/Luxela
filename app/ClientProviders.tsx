@@ -7,6 +7,10 @@ import { AuthProvider } from "@/context/AuthContext";
 import { trpc } from "./_trpc/client";
 import { httpBatchLink } from "@trpc/client";
 import { createClient } from "@/utils/supabase/client";
+import { CartProvider } from "@/modules/cart/context";
+import { TRPCReadyProvider } from "@/context/TRPCReadyContext";
+import { ProfileProvider } from "@/context/ProfileContext";
+import { ListingsProvider } from "@/context/ListingsContext";
 import "react-toastify/dist/ReactToastify.css";
 
 const ToastContainer = dynamic(
@@ -65,19 +69,27 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          {children}
+          <TRPCReadyProvider>
+            <ProfileProvider>
+              <ListingsProvider>
+                <CartProvider>
+                  {children}
 
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}      
-            hideProgressBar={false}
-            newestOnTop
-            closeOnClick
-            pauseOnHover={false}   
-            pauseOnFocusLoss={false}
-            draggable
-            theme="colored"
-          />
+                  <ToastContainer
+                    position="top-right"
+                    autoClose={3000}      
+                    hideProgressBar={false}
+                    newestOnTop
+                    closeOnClick
+                    pauseOnHover={false}   
+                    pauseOnFocusLoss={false}
+                    draggable
+                    theme="colored"
+                  />
+                </CartProvider>
+              </ListingsProvider>
+            </ProfileProvider>
+          </TRPCReadyProvider>
         </AuthProvider>
       </QueryClientProvider>
     </trpc.Provider>

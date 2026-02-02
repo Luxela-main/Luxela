@@ -50,7 +50,7 @@ Visit `http://localhost:3000` in your browser.
 - Account settings and profile management
 
 ### 🏪 Seller Features
-- Create and manage product listings (single & collections)
+- Create and manage product listings (single & collections) with review workflow
 - Multi-image upload (up to 4 images per listing)
 - Inventory management with real-time updates
 - Pending order management (confirm/cancel)
@@ -60,6 +60,33 @@ Visit `http://localhost:3000` in your browser.
 - Customer support ticket management
 - Sales analytics and statistics
 - Collection management
+- **Listing Review System**
+  - Real-time notification panel for listing status changes
+  - Listing approval/rejection feedback from admin reviewers
+  - Resubmit capability for rejected or revision-requested listings
+  - Complete activity history with timestamps
+  - Status tracking (pending_review → approved|rejected|revision_requested)
+
+### 🏛️ Admin Features
+- **Listing Review Dashboard**
+  - View all pending listings for quality control
+  - Filter by status (pending_review, approved, rejected, archived)
+  - Pagination and sorting for efficient management
+  - Real-time statistics (pending count, daily approvals, rejection rate)
+  - Quick action buttons for batch operations
+- **Listing Detail & Review Interface**
+  - View full listing details with all images
+  - Access seller information and history
+  - Approve listings immediately (visible to buyers)
+  - Reject listings with reason feedback
+  - Request revision with specific improvement comments
+  - View complete activity log and audit trail
+  - See all previous review actions with reviewer info and timestamps
+- **Review Workflow Management**
+  - Centralized queue for all pending listings
+  - Role-based access (admin-only endpoints with authorization checks)
+  - Comprehensive audit trail for compliance
+  - Seller notification system for all status changes
 
 ### 💳 Payment & Escrow
 - **Tsara Payment Gateway Integration**
@@ -76,6 +103,27 @@ Visit `http://localhost:3000` in your browser.
 - Refund management with escrow integration
 - Financial ledger tracking with transaction history
 - Dynamic fee calculation based on payment method
+
+### 📋 Listing Approval Workflow
+- **Three-Tier Status System**
+  - **draft** → Initial seller creation state
+  - **pending_review** → Awaiting admin approval (default for new listings)
+  - **approved** → Visible to all buyers in catalog
+  - **rejected** → Not visible; seller notified with reason
+  - **archived** → Seller can delete or resubmit
+- **Review Process**
+  1. Seller creates listing → automatically marked pending_review
+  2. Admin reviews in dashboard with full details and images
+  3. Admin decision: Approve (live), Reject (reason provided), Request Revision (feedback)
+  4. Seller receives notification with action/feedback
+  5. For rejection/revision: Seller edits and resubmits
+  6. Process repeats until approved or archived
+- **Approval Benefits**
+  - ✅ Ensures high-quality product listings only
+  - ✅ Prevents misleading/fraudulent product information
+  - ✅ Maintains brand quality and user trust
+  - ✅ Reduces buyer complaints and returns
+  - ✅ Complete compliance audit trail
 
 ### 📞 Support System
 - **Buyer Support**
@@ -94,26 +142,42 @@ Visit `http://localhost:3000` in your browser.
 ## 🏗️ Tech Stack
 
 ### Frontend
-- **Framework:** Next.js 16 (Turbopack) with App Router
+- **Framework:** Next.js 16.1.1 (Turbopack) with App Router
 - **Language:** TypeScript
-- **Styling:** Tailwind CSS
+- **Styling:** Tailwind CSS with custom theme colors
 - **State Management:** React Query (TanStack Query) & Context API
 - **API Client:** TRPC with optimized JWT authentication
+  - Client setup at `app/_trpc/client.ts`
+  - React hooks integration with useTRPC pattern
 - **Authentication:** Supabase Auth with JWT token caching
-- **UI Components:** Radix UI, shadcn/ui, Headless UI
-- **Storage:** localStorage for form persistence
-- **Database Client:** Drizzle ORM
+  - Reads JWT from cookies (sb-auth-token, access_token)
+  - Instant local validation via JWT decoding
+- **UI Components:** Radix UI, shadcn/ui, Headless UI, Lucide icons
+- **Status Indicators:** Color-coded badges (pending: amber, approved: green, rejected: red, revision: orange)
+- **Storage:** localStorage for form persistence, cart data, billing preferences
+- **Database Client:** Drizzle ORM for type-safe queries
 - **JWT Decoding:** jwt-decode for server-side auth optimization
+- **Email:** Resend SMTP integration for contact forms and notifications
+- **Validation:** Zod for type-safe input validation across all endpoints
 
 ### Backend
 - **Runtime:** Node.js with Edge Middleware
-- **Framework:** TRPC with 23+ routers
+- **Framework:** TRPC with 30+ routers for type-safe API
 - **Database:** PostgreSQL with Drizzle ORM
+  - Schema-driven migrations in server/db/schema.ts
+  - Type inference from database schema
+  - New listing_reviews & listing_activity_log tables for audit trail
+  - listing_status enum with draft|pending_review|approved|rejected|archived states
 - **Authentication:** Supabase Auth with JWT token validation
 - **File Storage:** Supabase Storage
-- **Payment:** Tsara API (Card, Bank Transfer, Crypto)
-- **Validation:** Zod for type-safe validation
-- **Services:** Escrow, Payment, Analytics services
+- **Payment:** Tsara API with Escrow integration
+- **Email:** Resend SMTP for transactional communications
+- **Validation:** Zod for comprehensive input validation across all routers
+- **Services:** 25+ services including escrow, payment, notifications, listing reviews
+- **New Routers:**
+  - admin-listing-review: getPendingListings, getListingDetails, approveListing, rejectListing, requestRevision, getActivityHistory, getDashboardStats
+  - seller-listing-notifications: getNotifications, markNotificationAsRead
+  - buyer-listings-catalog: Filter approved listings only with pagination/sorting
 
 ### Infrastructure
 - **Deployment:** Vercel (Frontend)
@@ -125,16 +189,29 @@ Visit `http://localhost:3000` in your browser.
 
 ```
 luxela/
-├── app/                          # Next.js App Router pages
-│   ├── api/trpc/                # TRPC API endpoints
+├── app/                          # Next.js App Router pages & routes
+│   ├── _trpc/                   # TRPC client setup (React hooks)
+│   ├── api/                     # API routes
+│   │   ├── contact/             # Contact form endpoint (Email service)
+│   │   └── trpc/                # TRPC API endpoints
 │   ├── buyer/                   # Buyer pages (dashboard, cart, notifications, support)
-│   ├── seller/                  # Seller pages (dashboard, orders, collections)
-│   ├── admin/                   # Admin pages (support dashboard)
+│   ├── sellers/                 # Seller pages (dashboard, orders, collections)
+│   │   ├── support-tickets/     # Seller support ticket management
+│   │   ├── my-listings/         # Seller listing management with notification panel
+│   │   └── notifications/       # Listing status notifications
+│   ├── admin/                   # Admin pages (support dashboard, listing review)
+│   │   ├── listings/            # Listing review dashboard & detail pages
+│   │   └── support/             # Support ticket management
 │   ├── cart/                    # Shopping cart page with payment flow
 │   ├── account/                 # Account settings
+│   ├── auth/                    # Authentication pages (signin, signup, verify)
+│   ├── actions/                 # Server actions
+│   ├── contact/                 # Contact page
+│   ├── ClientProviders.tsx       # Client-side providers wrapper
 │   └── layout.tsx               # Root layout with providers
 ├── server/
-│   ├── routers/                 # TRPC routers (23+ feature routers)
+│   ├── routers/                 # TRPC routers (30+ feature routers)
+│   │   ├── auth/                # Authentication logic
 │   │   ├── buyer.ts             # Buyer operations
 │   │   ├── seller.ts            # Seller operations
 │   │   ├── checkout.ts          # Checkout & orders
@@ -142,14 +219,40 @@ luxela/
 │   │   ├── support-admin.ts     # Admin support management
 │   │   ├── payment.ts           # Payment processing
 │   │   ├── notification.ts      # Notifications
-│   │   └── (other routers)      # 16+ additional routers
+│   │   ├── sales.ts             # Seller sales operations
+│   │   ├── inventory.ts         # Inventory management
+│   │   ├── finance.ts           # Financial operations
+│   │   ├── product.ts           # Product operations
+│   │   ├── collection.ts        # Collection management
+│   │   ├── review.ts            # Product reviews
+│   │   ├── refund.ts            # Refund processing
+│   │   ├── shipping.ts          # Shipping management
+│   │   ├── webhook.ts           # Webhook handlers
+│   │   ├── admin-listing-review.ts # Admin listing approval workflow
+│   │   ├── seller-listing-notifications.ts # Seller notifications
+│   │   ├── buyer-listings-catalog.ts # Approved listings for buyers
+│   │   └── (12+ additional routers)
 │   ├── db/
 │   │   └── schema.ts            # Database schema with Drizzle ORM
-│   ├── services/                # Business logic services
+│   ├── services/                # Business logic services (25+)
 │   │   ├── escrowService.ts     # Escrow & payout management
 │   │   ├── paymentService.ts    # Tsara payment processing
-│   │   └── (other services)     # Analytics, email, etc.
-│   └── utils.ts                 # Server utilities (seller management)
+│   │   ├── emailService.ts      # Email sending via Resend SMTP
+│   │   ├── notificationService.ts # Real-time notifications
+│   │   ├── orderService.ts      # Order processing
+│   │   ├── paymentFlowService.ts # Payment flow orchestration
+│   │   ├── shippingService.ts   # Shipping calculations
+│   │   ├── automaticPayoutService.ts # Automatic payout scheduler
+│   │   ├── schedulerService.ts  # Job scheduling
+│   │   ├── listingReviewService.ts # Listing approval workflow management
+│   │   ├── listingNotificationService.ts # Listing status notifications to sellers
+│   │   └── (13+ additional services)
+│   ├── lib/                     # Server utilities
+│   ├── utils/                   # Server utilities (seller management)
+│   ├── trpc/                    # TRPC setup
+│   ├── websocket/               # WebSocket support
+│   ├── jobs/                    # Background jobs
+│   └── index.ts                 # TRPC initialization
 ├── modules/
 │   ├── cart/
 │   │   ├── components/          # Cart UI (payment, summary, billing)
@@ -163,21 +266,48 @@ luxela/
 │   │   ├── components/          # Seller UI (dashboard, orders)
 │   │   ├── hooks/               # Seller data hooks
 │   │   └── types/               # Seller types
+│   ├── sellers/
+│   │   ├── components/          # Additional seller components
+│   │   └── support/             # Support-related seller modules
+│   ├── admin/
+│   │   └── components/          # Admin UI components
 │   └── shared/
 │       ├── components/          # Shared UI components
 │       ├── hooks/               # Shared hooks
 │       └── types/               # Shared types
 ├── components/
 │   ├── buyer/                   # Buyer-specific components
-│   ├── ui/                      # Base UI components
+│   ├── ui/                      # Base UI components (shadcn/ui, Radix)
 │   └── (shared components)      # Global components
 ├── lib/
+│   ├── _trpc/                   # TRPC client utilities
+│   ├── trpc/                    # TRPC configuration
 │   ├── hooks/                   # Custom React hooks
-│   ├── utils/                   # Helper functions
-│   └── providers/               # Context providers
-├── public/                       # Static assets (SVGs, images)
+│   ├── utils/                   # Helper functions & utilities
+│   ├── providers/               # Context providers
+│   ├── auth/                    # Authentication utilities
+│   ├── analytics/               # Analytics integration
+│   ├── emails/                  # Email templates
+│   ├── seo/                     # SEO utilities
+│   ├── data/                    # Data utilities
+│   ├── constants/               # App constants
+│   ├── api.ts                   # API client setup
+│   ├── trpc.ts                  # TRPC setup
+│   └── queryClient.ts           # React Query client
+├── context/                      # React Context API providers
+├── constants/                    # App-wide constants
+├── hooks/                        # Root-level custom hooks
+├── types/                        # TypeScript type definitions
+├── utils/                        # Root-level utilities
+├── services/                     # Additional services
+├── functions/                    # Utility functions
+├── public/                       # Static assets (SVGs, images, icons)
+├── drizzle/                      # Drizzle ORM migrations
+├── scripts/                      # Build & utility scripts
 ├── proxy.ts                      # Authentication middleware (JWT optimization)
 ├── middleware.ts                 # Next.js middleware
+├── env.ts                        # Environment validation
+├── env.js                        # Runtime env config
 └── docs/
     └── LUXELA_COMPLETE_DOCUMENTATION.md  # Complete technical documentation
 ```
@@ -188,7 +318,9 @@ luxela/
 - **users** - Authentication and profiles
 - **buyers** - Buyer-specific information
 - **sellers** - Seller-specific information
-- **products** - Product listings
+- **products** - Product listings with listing_status field
+- **listing_reviews** - Admin review decisions and feedback (NEW)
+- **listing_activity_log** - Complete audit trail of listing actions (NEW)
 - **orders** - Customer orders
 - **payments** - Payment records
 - **escrows** - Escrow holds
@@ -197,9 +329,12 @@ luxela/
 
 ### Relationships
 - One-to-Many: Users → Orders, Orders → Payments
+- One-to-Many: Products → ListingReviews (for audit trail)
+- One-to-Many: Products → ListingActivityLog (for activity history)
 - One-to-One: Users → Buyers/Sellers
 - Many-to-Many: Products → Collections
 - Cascading deletes configured for data integrity
+- Foreign keys: listing_reviews.reviewer_id → users.id (admin only)
 
 See `/docs/LUXELA_COMPLETE_DOCUMENTATION.md` for complete schema details.
 
@@ -299,6 +434,13 @@ NEXT_PUBLIC_TSARA_PUBLIC_KEY=your_public_key
 TSARA_SECRET_KEY=your_secret_key
 TSARA_WEBHOOK_SECRET=your_webhook_secret
 
+# Email Service (Resend SMTP)
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASS=your_resend_api_key
+ADMIN_EMAIL=support@luxela.com
+
 # API
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
@@ -381,7 +523,41 @@ For comprehensive documentation, see `/docs/LUXELA_COMPLETE_DOCUMENTATION.md` wh
 - Add toast notifications for user feedback
 - Test complex business logic
 
-## ⚡ Recent Optimizations
+## ⚡ Recent Optimizations & Bug Fixes
+
+### Latest Fixes (v1.1.0 - Enterprise Listing Review System)
+- **Enterprise Listing Review Workflow**
+  - Three-tier approval system (pending_review → approved|rejected|revision_requested)
+  - Admin dashboard with statistics and filtering by status
+  - Seller notification panel integrated into my-listings page
+  - Complete audit trail with activity history for compliance
+  - Zod validation schemas for all review endpoints
+  - TRPCError handling for authorization and validation
+  - Role-based access control (admin-only endpoints)
+- **Database Schema Updates**
+  - listing_status enum with draft|pending_review|approved|rejected|archived
+  - listing_reviews table for storing approval decisions
+  - listing_activity_log table for complete audit trail
+  - Proper foreign key relationships and indexes
+- **UI/UX Enhancements**
+  - Color-coded status badges (pending: amber, approved: green, rejected: red, revision: orange)
+  - Pagination and filtering on admin dashboard
+  - Activity timeline showing all review actions with timestamps
+  - Focused modals for approval/rejection/revision actions
+  - Notification panel for sellers with status updates
+- **Documentation Updates**
+  - IMPLEMENTATION_SUMMARY.md with feature overview
+  - IMPLEMENTATION_GUIDE.md with integration checklist
+  - LISTING_REVIEW_SYSTEM.md with system architecture
+  - DEPLOYMENT_READY_CHECKLIST.md with pre/post deployment steps
+  - TESTING_GUIDE.md with test scenarios
+  - SYSTEM_IMPLEMENTATION_COMPLETE.md with detailed specs
+
+### Previous Fixes (v1.0.1)
+- Support Ticket TRPC routing corrected to use trpc.support.createTicket
+- TRPC client imports fixed to use @/app/_trpc/client
+- Resend SMTP email integration for contact forms
+- TypeScript type inference for seller profiles
 
 ### Performance
 - **JWT Auth Caching**: Reduced auth overhead from 1-11s to <100ms
@@ -390,6 +566,11 @@ For comprehensive documentation, see `/docs/LUXELA_COMPLETE_DOCUMENTATION.md` wh
 - **Hydration Mismatch Fixes**: Fixed SSR/client rendering mismatches
   - Proper `mounted` state handling
   - Conditional rendering after hydration
+- **Listing Review System**: Enterprise-grade optimization
+  - Pagination support for large listing queues
+  - Indexed database queries for fast filtering
+  - Cached dashboard statistics
+  - Efficient audit trail queries
 - **Payment Flow**: Enterprise-level improvements
   - Dynamic shipping calculation
   - Tax calculation (7.5% VAT)
@@ -401,6 +582,12 @@ For comprehensive documentation, see `/docs/LUXELA_COMPLETE_DOCUMENTATION.md` wh
 - Enhanced payment method selection with Tsara escrow details
 - Improved notification routing and support ticket access
 - Added SVG assets for payment methods (Visa, Mastercard, Amex, Crypto wallets)
+- **Listing Review System UX**
+  - Integrated notification panel into seller dashboard
+  - Color-coded status badges for quick visual feedback
+  - Timeline view for complete listing history
+  - Modal-based actions for approval/rejection/revision
+  - Real-time status updates and notifications
 
 ## 🐛 Known Issues & Troubleshooting
 
@@ -438,7 +625,22 @@ For issues, feature requests, or questions:
 
 ## 📖 Version History
 
-### v1.0.0 (Current)
+### v1.1.0 (Current - Latest)
+- ✅ Enterprise listing review workflow (three-tier approval system)
+- ✅ Admin listing review dashboard with statistics and filtering
+- ✅ Seller listing notification panel with status updates
+- ✅ Complete audit trail (listing_activity_log) for compliance
+- ✅ Role-based access control for admin-only endpoints
+- ✅ Buyer catalog filtered for approved listings only
+- ✅ Zod validation schemas for all review endpoints
+- ✅ Color-coded status badges (pending, approved, rejected, revision)
+- ✅ Activity timeline with complete listing history
+- ✅ Seller resubmission workflow for rejected/revision listings
+- ✅ Comprehensive documentation (IMPLEMENTATION_SUMMARY, GUIDE, TESTING_GUIDE)
+- ✅ Database schema updates with proper foreign keys and indexes
+- ✅ TRPCError handling for authorization and validation
+
+### v1.0.1 (Previous)
 - ✅ Full buyer & seller platform
 - ✅ Tsara payment integration with escrow
 - ✅ Support ticket system (buyer & seller)
@@ -446,11 +648,16 @@ For issues, feature requests, or questions:
 - ✅ Enterprise payment flow with multiple methods
 - ✅ Hydration mismatch fixes
 - ✅ Admin support dashboard
+- ✅ Resend SMTP email integration for contact forms
+- ✅ Fixed TRPC support ticket routing
+- ✅ Corrected @/app/_trpc/client import paths
+- ✅ TypeScript type inference improvements for seller data
 
-### v1.1.0 (In Progress)
+### v1.2.0 (In Progress)
 - 🚧 Mobile app
-- 🚧 Advanced analytics
-- 🚧 AI recommendations
+- 🚧 Advanced seller analytics
+- 🚧 AI-powered recommendations
+- 🚧 Bulk listing operations
 
 ---
 

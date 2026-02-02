@@ -58,6 +58,7 @@ export const orderStatusRouter = createTRPCRouter({
           'shipped',
           'delivered',
           'canceled',
+          'returned',
         ]),
         limit: z.number().default(20),
         offset: z.number().default(0),

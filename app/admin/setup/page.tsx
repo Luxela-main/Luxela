@@ -83,7 +83,7 @@ export default function AdminSetupPage() {
           <p className="text-gray-400 mb-6">Please log in first to access admin setup</p>
           <Button
             onClick={() => router.push("/signin")}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer"
           >
             Go to Login
           </Button>
@@ -105,24 +105,24 @@ export default function AdminSetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-3 sm:p-4">
       <div className="w-full max-w-md">
-        <div className="bg-slate-800 rounded-xl border border-slate-700 p-8">
-          <div className="text-center mb-8">
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 sm:p-8">
+          <div className="text-center mb-6 sm:mb-8">
             <img
               src="/luxela.svg"
               alt="Luxela"
-              className="w-32 mx-auto mb-4"
+              className="w-24 sm:w-32 mx-auto mb-3 sm:mb-4"
             />
-            <h1 className="text-2xl font-bold text-white mb-2">Admin Setup</h1>
-            <p className="text-gray-400">
+            <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">Admin Setup</h1>
+            <p className="text-xs sm:text-sm text-gray-400">
               Grant yourself admin access to the support dashboard
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                 Your Email
               </label>
               <input
@@ -137,7 +137,7 @@ export default function AdminSetupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                 Admin Password
               </label>
               <input
@@ -147,7 +147,7 @@ export default function AdminSetupPage() {
                 placeholder="Enter admin password"
                 className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder:text-gray-500 focus:border-purple-500 focus:outline-none"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1 text-[0.65rem] sm:text-xs">
                 Required only if there are existing admins in the system
               </p>
             </div>
@@ -177,7 +177,7 @@ export default function AdminSetupPage() {
             <Button
               onClick={handleSetAdmin}
               disabled={isSubmitting || success}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition-colors"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition-colors cursor-pointer"
             >
               {isSubmitting ? "Setting up..." : "Grant Admin Access"}
             </Button>

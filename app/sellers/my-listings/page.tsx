@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Package, Filter, PlusCircle, SquarePen, Trash2 } from "lucide-react";
-import SearchBar from "@/components/search-bar";
-import EmptyState from "@/components/empty-state";
+import { PlusCircle, Bell } from "lucide-react";
 import { useMyListings } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ErrorState } from "@/components/sellers/ErrorState";
-import { AddProductModal } from "@/components/sellers/AddProductModal";
-import { ListingDetailsModal } from "./ListingDetailsModal";
+import { ListingDetailsModal } from "@/components/sellers/ListingDetailsModal";
+import { CollectionPreviewModal } from "@/components/sellers/CollectionPreviewModal";
+import { EnhancedListingGrid } from "@/components/sellers/EnhancedListingGrid";
 import {
   Dialog,
   DialogContent,
@@ -20,22 +19,23 @@ import {
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { Button } from "@/components/ui/button";
+import { SellerListingNotificationPanel } from "@/components/sellers/SellerListingNotificationPanel";
+import { ListingReviewStatusBadge } from "@/components/sellers/ListingReviewStatusBadge";
 
 type TabType = "single" | "collection";
 
 export default function MyListings() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("single");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<any>(null);
+  const [collectionToPreview, setCollectionToPreview] = useState<any>(null);
+  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
 
   const { data: listings, isLoading, error, refetch } = useMyListings();
-
-  console.log(listings, " listings");
 
   const deleteMutation = (trpc.listing as any).deleteListing.useMutation({
     onSuccess: () => {
@@ -53,7 +53,6 @@ export default function MyListings() {
   };
 
   const handleEdit = (listing: any) => {
-    // Navigate to new-listing page with edit mode (to be implemented)
     router.push(`/sellers/new-listing?edit=${listing.id}`);
   };
 
@@ -82,183 +81,84 @@ export default function MyListings() {
     );
   }
 
-  const filteredListings =
-    listings?.filter((listing: any) => {
-      const matchesTab = listing.type === activeTab;
-      const matchesSearch =
-        listing.title.toLowerCase().includes(search.toLowerCase()) ||
-        listing.category?.toLowerCase().includes(search.toLowerCase());
-      return matchesTab && matchesSearch;
-    }) || [];
-
-  const handleProductSuccess = () => {
-    refetch();
-  };
+  const tabListings = listings?.filter((l: any) => l.type === activeTab) || [];
 
   return (
-    <div className="px-6 mt-4 md:mt-0">
-      <div className="mb-6">
-        <div className="w-60 z-10 lg:w-80 max-lg:fixed max-md:right-10 max-lg:right-12 max-lg:top-[18px] lg:ml-auto">
-          <SearchBar search={search} setSearch={setSearch} />
+    <div className="px-4 lg:px-6 mt-4 md:mt-0 pb-10">
+      {/* Premium Header */}
+      <div className="mb-12">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
+          <span className="text-xs font-semibold text-purple-400 uppercase tracking-widest">
+            Inventory Management
+          </span>
         </div>
-      </div>
-      <div className="mb-6 md:max-lg:pt-10">
-        <h1 className="text-2xl font-semibold">My Listing</h1>
-        <p className="text-gray-400 mt-1">
-          View and manage all your listed products in one place.
-        </p>
-      </div>
-
-      <div className="flex justify-between mb-6">
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setActiveTab("single")}
-            className={`px-4 py-2 rounded-md flex items-center transition ${
-              activeTab === "single"
-                ? "bg-[#1a1a1a] border border-[#333] text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            <span className="mr-2">Single Items</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("collection")}
-            className={`px-4 py-2 rounded-md transition ${
-              activeTab === "collection"
-                ? "bg-[#1a1a1a] border border-[#333] text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Collections
-          </button>
-        </div>
-        <div className="flex space-x-2">
-          <button className="bg-[#1a1a1a] border border-[#333] text-white px-4 py-2 rounded-md flex items-center">
-            <Filter className="h-4 w-4 mr-2" />
-            <span>Filter</span>
-          </button>
-          {/*<button
-            onClick={() => //setIsModalOpen(true)}
-            className="bg-purple-600 text-white px-4 py-2 rounded-md flex items-center hover:bg-purple-700 transition"
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            <span>Add Product</span>
-          </button>*/}
-        </div>
-      </div>
-
-      <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
-        <div className="grid grid-cols-6 gap-4 p-4 border-b border-[#333] text-gray-400 text-sm">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
-            />
-            <span>
-              {activeTab === "single" ? "Product Name" : "Collection Name"}
-            </span>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent mb-3">
+              My Listings
+            </h1>
+            <p className="text-gray-400 text-lg">
+              Manage and track all your product listings with advanced analytics
+            </p>
           </div>
-          <div>Category</div>
-          <div>Price</div>
-          <div>{activeTab === "single" ? "Stock" : "Items"}</div>
-          <div>Status</div>
-          <div>Action</div>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => setIsNotificationPanelOpen(true)}
+              variant="outline"
+              className="flex items-center justify-center gap-2"
+            >
+              <Bell className="w-5 h-5" />
+              <span>Notifications</span>
+            </Button>
+            <Button
+              onClick={() => router.push("/sellers/new-listing")}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-[#8451E1] hover:bg-[#7340D0] text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-[#8451E1]/50 h-auto cursor-pointer"
+            >
+              <PlusCircle className="w-5 h-5" />
+              <span>New Listing</span>
+            </Button>
+          </div>
         </div>
-
-        {filteredListings.length === 0 ? (
-          <EmptyState
-            icon={<Package className="h-16 w-16" />}
-            title={`Your ${activeTab === "single" ? "products" : "collections"} list is empty`}
-            description={`Once you ${activeTab === "single" ? "add products" : "create collections"}, they will show up here.`}
-          />
-        ) : (
-          filteredListings.map((listing: any) => (
-            <div key={listing.id} className="border-b border-[#333]">
-              <div className="grid grid-cols-6 gap-4 p-4 items-center">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
-                  />
-                  <div className="flex items-center">
-                    <div className="bg-[#222] p-1 rounded-md mr-2">
-                      <Package className="h-5 w-5" />
-                    </div>
-                    <span>{listing.title}</span>
-                  </div>
-                </div>
-                <div>{listing.category || "N/A"}</div>
-                <div>
-                  {listing.type === "single" && listing.priceCents
-                    ? `₦${(listing.priceCents / 100).toLocaleString()}`
-                    : listing.type === "collection"
-                      ? "Varies"
-                      : "N/A"}
-                </div>
-                <div>
-                    {listing.type === "single"
-                    ? listing.quantityAvailable || 0
-                    : listing.itemsJson
-                    ? (typeof listing.itemsJson === "string"
-                    ? JSON.parse(listing.itemsJson).length
-                    : listing.itemsJson.length)
-                    : 0}
-                </div>
-
-                <div>
-                  {listing.type === "single" ? (
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        (listing.quantityAvailable || 0) > 10
-                          ? "bg-green-100 text-green-800"
-                          : (listing.quantityAvailable || 0) > 0
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {(listing.quantityAvailable || 0) > 10
-                        ? "In stock"
-                        : (listing.quantityAvailable || 0) > 0
-                          ? "Low stock"
-                          : "Sold out"}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Collection
-                    </span>
-                  )}
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={() => handleViewDetails(listing)}
-                    className="bg-[#0a0a0a] border border-[#333] hover:bg-[#222] hover:border-purple-600 text-white text-sm px-4 py-2 rounded transition flex items-center"
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    onClick={() => handleEdit(listing)}
-                    className="bg-[#0a0a0a] border border-[#333] hover:bg-purple-600 hover:border-purple-600 text-white text-sm p-2 rounded transition"
-                    title="Edit listing"
-                  >
-                    <SquarePen className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={() => handleDeleteClick(listing)}
-                    title="Delete listing"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
       </div>
 
-      <AddProductModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleProductSuccess}
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 mb-8 border-b border-gray-800/50">
+        {[
+          { id: "single", label: "Single Items" },
+          { id: "collection", label: "Collections" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as TabType)}
+            className={`px-4 py-3 font-medium text-sm transition-all duration-200 cursor-pointer relative group ${
+              activeTab === tab.id
+                ? "text-white"
+                : "text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            <span>{tab.label}</span>
+            {activeTab === tab.id && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-gradient-to-r from-purple-600 to-pink-600"></div>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Enhanced Listing Grid */}
+      <EnhancedListingGrid
+        listings={tabListings}
+        isLoading={false}
+        onView={handleViewDetails}
+        onEdit={handleEdit}
+        onDelete={handleDeleteClick}
+        type={activeTab}
+      />
+
+      {/* Modals */}
+      <SellerListingNotificationPanel
+        isOpen={isNotificationPanelOpen}
+        onClose={() => setIsNotificationPanelOpen(false)}
       />
 
       <ListingDetailsModal
@@ -270,26 +170,54 @@ export default function MyListings() {
         }}
       />
 
+      {collectionToPreview && (
+        <CollectionPreviewModal
+          collectionTitle={collectionToPreview.title || "Collection"}
+          collectionDescription={collectionToPreview.description}
+          items={(collectionToPreview.items || []).map((item: any) => ({
+            title: item.title || "",
+            price: item.priceCents || 0,
+            currency: item.currency || "NGN",
+            image: item.image,
+            quantity: item.quantityAvailable || 1,
+          }))}
+          totalPrice={collectionToPreview.priceCents || 0}
+          currency={collectionToPreview.currency || "NGN"}
+          itemCount={collectionToPreview.items?.length || 0}
+          isOpen={isCollectionModalOpen}
+          onClose={() => {
+            setIsCollectionModalOpen(false);
+            setCollectionToPreview(null);
+          }}
+        />
+      )}
+
+      {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-[#0a0a0a] border-[#333] text-white">
+        <DialogContent className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-gray-800 text-white shadow-2xl shadow-black/50 rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Delete Listing</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Are you sure you want to delete "{listingToDelete?.title}"? This
-              action cannot be undone.
+            <DialogTitle className="text-xl font-bold">
+              Delete Listing
+            </DialogTitle>
+            <DialogDescription className="text-gray-400 mt-2">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-white">
+                "{listingToDelete?.title}"
+              </span>
+              ? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end space-x-3 mt-4">
+          <div className="flex justify-end gap-3 mt-6">
             <button
               onClick={() => setIsDeleteDialogOpen(false)}
-              className="px-4 py-2 bg-transparent border border-[#333] text-gray-400 hover:text-white rounded-md transition"
+              className="px-4 py-2.5 bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:border-gray-700 rounded-lg transition-all duration-200 cursor-pointer font-medium"
             >
               Cancel
             </button>
             <button
               onClick={handleDeleteConfirm}
               disabled={deleteMutation.isPending}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition disabled:opacity-50"
+              className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-medium shadow-lg shadow-red-500/30"
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </button>
@@ -298,4 +226,4 @@ export default function MyListings() {
       </Dialog>
     </div>
   );
-}
+}

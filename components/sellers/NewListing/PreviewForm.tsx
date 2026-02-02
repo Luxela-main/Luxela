@@ -144,6 +144,50 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
               {formData.domesticDays || ''} Days within country, {formData.internationalDays || ''} Days international shipping
             </p>
           </div>
+
+          {/* SKU */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">SKU (Stock Keeping Unit)</label>
+            <p className="text-white">{formData.sku || 'Auto-generated'}</p>
+          </div>
+
+          {/* Slug */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">URL Slug</label>
+            <p className="text-white">{formData.slug || 'Auto-generated'}</p>
+          </div>
+
+          {/* Meta Description */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">Meta Description (SEO)</label>
+            <p className="text-white text-xs">{formData.metaDescription || 'Not specified'}</p>
+          </div>
+
+          {/* Barcode */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">Barcode</label>
+            <p className="text-white">{formData.barcode || 'Not specified'}</p>
+          </div>
+
+          {/* Video URL */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">Product Video URL</label>
+            <p className="text-white text-xs break-all">{formData.videoUrl || 'Not specified'}</p>
+          </div>
+
+          {/* Care Instructions */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">Care Instructions</label>
+            <p className="text-white">{formData.careInstructions || 'Not specified'}</p>
+          </div>
+
+          {/* Refund Policy */}
+          <div className="border-b border-[#333] pb-4">
+            <label className="block text-sm text-gray-400 mb-1">Refund Policy</label>
+            <p className="text-white capitalize">
+              {formData.refundPolicy ? formData.refundPolicy.replace(/_/g, ' ') : 'Not specified'}
+            </p>
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -162,8 +206,8 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
   disabled={isSubmitting}
   className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 ${
     isSubmitting 
-      ? 'bg-gray-600 cursor-not-allowed' 
-      : ''
+      ? 'bg-[#8451E1]/50 cursor-not-allowed' 
+      : 'bg-[#8451E1] hover:bg-[#7340D0]'
   } text-white transition-colors`}
 >
   {isSubmitting && (

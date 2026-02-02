@@ -54,6 +54,8 @@ import {
   supportAnalyticsSchema,
   faqsSchema,
   loyaltyNFTsSchema,
+  listingReviewSchema,
+  listingActivityLogSchema,
 } from "./zodSchemas";
 
 // ===================== USER TYPES =====================
@@ -87,6 +89,8 @@ export type Inventory = z.infer<typeof inventorySchema>;
 
 // ===================== LISTING TYPES =====================
 export type Listing = z.infer<typeof listingsSchema>;
+export type ListingReview = z.infer<typeof listingReviewSchema>;
+export type ListingActivityLog = z.infer<typeof listingActivityLogSchema>;
 
 // ===================== ORDER & PAYMENT TYPES =====================
 export type Order = z.infer<typeof ordersSchema>;
@@ -202,4 +206,6 @@ export {
   supportAnalyticsSchema,
   faqsSchema,
   loyaltyNFTsSchema,
+  listingReviewSchema,
+  listingActivityLogSchema,
 };

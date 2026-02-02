@@ -62,6 +62,8 @@ export const settlementStatusEnum = pgEnum('settlement_status', ['pending', 'com
 export const rolesInOrgEnum = pgEnum('roles_in_org', ['member', 'manager', 'admin', 'owner']);
 export const slaPriorityEnum = pgEnum('sla_priority', ['low', 'medium', 'high', 'critical']);
 export const escalationStatusEnum = pgEnum('escalation_status', ['pending', 'triggered', 'resolved', 'cancelled']);
+export const listingStatusEnum = pgEnum('listing_status', ['draft', 'pending_review', 'approved', 'rejected', 'archived']);
+export const listingReviewStatusEnum = pgEnum('listing_review_status', ['pending', 'approved', 'rejected', 'revision_requested']);
 
 // =======================
 // DOMAIN TABLES
@@ -289,7 +291,14 @@ export const listings = pgTable('listings', {
   etaInternational: shippingEtaEnum('eta_international'),
   refundPolicy: refundPolicyEnum('refund_policy'),
   localPricing: localPricingEnum('local_pricing'), 
+  sku: text('sku'),
+  slug: text('slug'),
+  metaDescription: text('meta_description'),
+  barcode: text('barcode'),
+  videoUrl: text('video_url'),
+  careInstructions: text('care_instructions'),
   itemsJson: text('items_json'),
+  status: listingStatusEnum('status').default('pending_review').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -884,6 +893,36 @@ export const productImages = pgTable('product_images', {
 });
 
 // =======================
+// LISTING REVIEWS
+// =======================
+export const listingReviews = pgTable('listing_reviews', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  status: listingReviewStatusEnum('status').notNull(),
+  reviewedBy: uuid('reviewed_by'),
+  reviewedAt: timestamp('reviewed_at'),
+  rejectionReason: text('rejection_reason'),
+  revisionRequests: jsonb('revision_requests'),
+  comments: text('comments'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const listingActivityLog = pgTable('listing_activity_log', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  action: varchar('action', { length: 100 }).notNull(),
+  actionType: varchar('action_type', { length: 50 }).notNull(),
+  details: jsonb('details'),
+  performedBy: uuid('performed_by'),
+  performedByRole: rolesEnum('performed_by_role'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// =======================
 // RELATIONS
 // =======================
 
@@ -920,7 +959,10 @@ export const sellersRelations = relations(sellers, ({ one, many }) => ({
   brands: many(brands),
   shippingRates: many(shippingRates),
   scheduledPayouts: many(scheduledPayouts),
+  listingReviews: many(listingReviews),
+  listingActivityLog: many(listingActivityLog),
 }));
+
 
 // Brands → Collections & Products
 export const brandsRelations = relations(brands, ({ one, many }) => ({
@@ -960,16 +1002,19 @@ export const inventoryRelations = relations(inventory, ({ one, many }) => ({
   reservations: many(inventoryReservations),
 }));
 
-// Listings → Seller & Product
+// Listings → Seller, Product, Collection, Reviews, Activity
 export const listingsRelations = relations(listings, ({ one, many }) => ({
   seller: one(sellers),
   product: one(products),
+  collection: one(collections),
   cartItems: many(cartItems),
   orders: many(orders),
   payments: many(payments),
   sales: many(sales),
   reviews: many(reviews),
   favorites: many(buyerFavorites),
+  listingReviews: many(listingReviews),
+  activityLog: many(listingActivityLog),
 }));
 
 // Orders → Buyer, Seller, Listing
@@ -1208,4 +1253,16 @@ export const scheduledPayoutsRelations = relations(scheduledPayouts, ({ one }) =
 }));
 
 // Support Analytics → none
-export const supportAnalyticsRelations = relations(supportAnalytics, ({}) => ({}));
+export const supportAnalyticsRelations = relations(supportAnalytics, ({}) => ({}));
+
+// Listing Reviews → Listing & Seller
+export const listingReviewsRelations = relations(listingReviews, ({ one }) => ({
+  listing: one(listings),
+  seller: one(sellers),
+}));
+
+// Listing Activity Log → Listing & Seller
+export const listingActivityLogRelations = relations(listingActivityLog, ({ one }) => ({
+  listing: one(listings),
+  seller: one(sellers),
+}));

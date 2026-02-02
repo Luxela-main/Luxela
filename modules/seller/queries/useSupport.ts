@@ -250,15 +250,31 @@ export function useDeleteReply(): UseMutationResult<
  * Get support statistics for the seller's dashboard
  */
 export function useGetTicketsStats(): UseQueryResult<SupportStats, Error> {
+  // Fetch all tickets and calculate stats client-side
+  const ticketsQuery = useGetTickets();
+  
   return useQuery({
     queryKey: supportKeys.stats(),
     queryFn: async () => {
-      const client = getTRPCClient();
-      const result = await ((client.support as any).getTicketsStats as any).query();
-      return result as SupportStats;
+      // Use data from useGetTickets hook
+      if (!ticketsQuery.data) {
+        throw new Error('Failed to load tickets');
+      }
+
+      const stats: SupportStats = {
+        total: ticketsQuery.data.length,
+        open: ticketsQuery.data.filter(t => t.status === 'open').length,
+        inProgress: ticketsQuery.data.filter(t => t.status === 'in_progress').length,
+        resolved: ticketsQuery.data.filter(t => t.status === 'resolved').length,
+        closed: ticketsQuery.data.filter(t => t.status === 'closed').length,
+        urgent: ticketsQuery.data.filter(t => t.priority === 'urgent').length,
+      };
+
+      return stats;
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    refetchInterval: 1000 * 60 * 2, // Auto-refresh every 2 minutes
+    enabled: !!ticketsQuery.data,
+    staleTime: 1000 * 60 * 2,
+    refetchInterval: 1000 * 60 * 2,
   });
 }
 

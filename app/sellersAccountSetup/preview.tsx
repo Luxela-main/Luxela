@@ -1,11 +1,12 @@
 "use client"
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Edit2, Save } from "lucide-react";
+import { Building, Truck, CreditCard, FileText, ArrowLeft, Save, Edit2 } from "lucide-react";
 import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import BuyerFooter from "@/components/buyer/footer";
 import { SellerSetupFormData } from "@/types/seller";
+import { SOCIAL_MEDIA_PLATFORMS, PHONE_COUNTRY_CODES } from "./constants/formOptions";
 
 type SellerPreviewProps = {
   data: SellerSetupFormData;
@@ -34,10 +35,10 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
   }, [data]);
 
   const tabs = [
-    { id: "business", label: "Business Information" },
-    { id: "shipping", label: "Shipping Information" },
-    { id: "payment", label: "Payment Information" },
-    { id: "additional", label: "Additional Information" },
+    { id: "business", label: "Business Information", icon: Building },
+    { id: "shipping", label: "Shipping Information", icon: Truck },
+    { id: "payment", label: "Payment Information", icon: CreditCard },
+    { id: "additional", label: "Additional Information", icon: FileText },
   ];
 
   const productCategory = [
@@ -290,22 +291,26 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
 
         <div className="mb-6">
           <div className="flex w-fit gap-8 bg-[#141414] pt-3 pb-2 rounded-sm px-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 text-sm relative transition-colors ${
-                  activeTab === tab.id
-                    ? "text-purple-500"
-                    : "text-[#595959] hover:text-gray-300"
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500"></div>
-                )}
-              </button>
-            ))}
+            {tabs.map((tab) => {
+              const TabIcon = (tab as any).icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`pb-3 text-sm relative transition-colors flex items-center gap-2 ${
+                    activeTab === tab.id
+                      ? "text-purple-500"
+                      : "text-[#595959] hover:text-gray-300"
+                  }`}
+                >
+                  <TabIcon size={16} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500"></div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -352,7 +357,15 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
                 [
                   { label: "Select business type", value: "" },
                   { label: "Individual", value: "individual" },
-                  { label: "Business", value: "business" },
+                  { label: "Registered Business", value: "business" },
+                  { label: "Sole Proprietorship", value: "sole_proprietorship" },
+                  { label: "LLC", value: "llc" },
+                  { label: "Corporation", value: "corporation" },
+                  { label: "Partnership", value: "partnership" },
+                  { label: "Cooperative", value: "cooperative" },
+                  { label: "Non-Profit", value: "non_profit" },
+                  { label: "Trust", value: "trust" },
+                  { label: "Joint Venture", value: "joint_venture" },
                 ]
               )}
               {renderInfoField(
@@ -367,13 +380,50 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
                 "email"
               )}
 
-              {renderInfoRow(
-                "Phone Number",
-                "phoneNumber",
-                "Country",
-                "country",
-                editingSection === "business"
-              )}
+              {/* Phone Number and Country Code */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Phone Number</label>
+                  {editingSection === "business" ? (
+                    <input
+                      key={`phoneNumber-${editingSection}`}
+                      type="tel"
+                      name="phoneNumber"
+                      value={(localData.phoneNumber as string) || ""}
+                      onChange={handleInputChange}
+                      className={inputClass}
+                      autoFocus={false}
+                    />
+                  ) : (
+                    <div className="text-gray-300 text-sm">
+                      {(data.phoneNumber as string) || "Not provided"}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Country Code</label>
+                  {editingSection === "business" ? (
+                    <select
+                      key={`countryCode-${editingSection}`}
+                      name="countryCode"
+                      value={(localData.countryCode as string) || ""}
+                      onChange={handleSelectChange}
+                      className={selectClass}
+                    >
+                      <option value="">Select country code</option>
+                      {PHONE_COUNTRY_CODES.map((cc) => (
+                        <option key={cc.value} value={cc.code} className="bg-black text-white">
+                          {cc.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-gray-300 text-sm">
+                      {PHONE_COUNTRY_CODES.find(cc => cc.code === (data.countryCode as string))?.label || (data.countryCode as string) || "Not provided"}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Social Media Links */}
               <div className="mb-6">
@@ -381,12 +431,27 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
                 {editingSection === "business" ? (
                   <div className="space-y-3">
                     {localData.socialMediaLinks && localData.socialMediaLinks.length > 0 ? (
-                      localData.socialMediaLinks.map((link, index) => (
-                        <div key={index} className="p-3 bg-[#1a1a1a] rounded border border-[#747474]">
-                          <p className="text-sm text-gray-300 capitalize">{link.platform}</p>
-                          <p className="text-xs text-gray-500 break-all">{link.url}</p>
-                        </div>
-                      ))
+                      localData.socialMediaLinks.map((link, index) => {
+                        const platform = SOCIAL_MEDIA_PLATFORMS.find(
+                          (p) => p.value === link.platform
+                        );
+                        const IconComponent = platform?.icon;
+                        return (
+                          <div key={index} className="p-3 bg-[#1a1a1a] rounded border border-[#747474] flex items-start gap-3">
+                            {IconComponent && (
+                              <IconComponent
+                                size={20}
+                                color={platform?.iconColor || "#ffffff"}
+                                className="flex-shrink-0 mt-0.5"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-300 capitalize">{link.platform}</p>
+                              <p className="text-xs text-gray-500 break-all">{link.url}</p>
+                            </div>
+                          </div>
+                        );
+                      })
                     ) : (
                       <p className="text-gray-500 text-sm">No social media links added</p>
                     )}
@@ -394,12 +459,27 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
                 ) : (
                   <div className="space-y-2">
                     {data.socialMediaLinks && data.socialMediaLinks.length > 0 ? (
-                      data.socialMediaLinks.map((link, index) => (
-                        <div key={index} className="text-sm">
-                          <p className="text-gray-400 capitalize">{link.platform}</p>
-                          <p className="text-gray-300 break-all">{link.url}</p>
-                        </div>
-                      ))
+                      data.socialMediaLinks.map((link, index) => {
+                        const platform = SOCIAL_MEDIA_PLATFORMS.find(
+                          (p) => p.value === link.platform
+                        );
+                        const IconComponent = platform?.icon;
+                        return (
+                          <div key={index} className="flex items-start gap-3 text-sm">
+                            {IconComponent && (
+                              <IconComponent
+                                size={18}
+                                color={platform?.iconColor || "#ffffff"}
+                                className="flex-shrink-0 mt-1"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <p className="text-gray-400 capitalize">{link.platform}</p>
+                              <p className="text-gray-300 break-all">{link.url}</p>
+                            </div>
+                          </div>
+                        );
+                      })
                     ) : (
                       <p className="text-gray-300 text-sm">Not provided</p>
                     )}
@@ -756,11 +836,7 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
                         onClick={() =>
                           setLocalData((prev) => ({
                             ...prev,
-                            targetAudience: value as
-                              | ""
-                              | "male"
-                              | "female"
-                              | "unisex",
+                            targetAudience: value as any,
                           }))
                         }
                         className={`px-6 py-3 rounded text-sm transition-colors ${

@@ -24,6 +24,37 @@ import { getSeller } from "./utils";
 import { verifyIdWithDojah, getCountryCode } from "../lib/dojah";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+const FILE_CONSTRAINTS = {
+  maxSize: 5 * 1024 * 1024, // 5MB
+  allowedTypes: ["image/jpeg", "image/png", "image/webp"],
+};
+
+function validateFile(
+  base64Data: string,
+  fileType: string
+): { valid: boolean; error?: string } {
+  if (!FILE_CONSTRAINTS.allowedTypes.includes(fileType)) {
+    return {
+      valid: false,
+      error: `File type not allowed. Accepted: ${
+        FILE_CONSTRAINTS.allowedTypes.join(", ")
+      }`,
+    };
+  }
+
+  const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
+  if (sizeInBytes > FILE_CONSTRAINTS.maxSize) {
+    return {
+      valid: false,
+      error: `File size exceeds ${
+        FILE_CONSTRAINTS.maxSize / 1024 / 1024
+      }MB limit`,
+    };
+  }
+
+  return { valid: true };
+}
+
 let supabase: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient | null {
   if (supabase) return supabase;
@@ -101,6 +132,7 @@ export const sellerRouter = createTRPCRouter({
         seller: z.object({
           id: z.string(),
           userId: z.string(),
+          profilePhoto: z.string().nullable(),
           createdAt: z.date(),
           updatedAt: z.date(),
         }),
@@ -154,6 +186,7 @@ export const sellerRouter = createTRPCRouter({
               seller: {
                 id: seller.id,
                 userId: seller.userId,
+                profilePhoto: seller.profilePhoto || null,
                 createdAt: seller.createdAt,
                 updatedAt: seller.updatedAt,
               },
@@ -188,7 +221,7 @@ export const sellerRouter = createTRPCRouter({
     .input(
       z.object({
         brandName: z.string().min(1, "Brand name is required"),
-        businessType: z.enum(["individual", "business"]),
+        businessType: z.enum(["individual", "sole_proprietorship", "llc", "corporation", "partnership", "cooperative", "non_profit", "trust", "joint_venture"]),
         businessAddress: z.string().min(1, "Business address is required"),
         officialEmail: z.string().email("Invalid email format"),
         phoneNumber: z.string().min(3, "Phone number is required"),
@@ -202,6 +235,9 @@ export const sellerRouter = createTRPCRouter({
           "drivers_license",
           "voters_card",
           "national_id",
+          "business_license",
+          "tax_id",
+          "business_registration",
         ]),
         idNumber: z.string().optional(),
         idVerified: z.boolean().optional(),
@@ -242,26 +278,47 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getSeller(userId);
+        // Ensure seller record exists
+        let seller = await db
+          .select()
+          .from(sellers)
+          .where(eq(sellers.userId, userId));
+
+        if (!seller[0]) {
+          // Auto-create seller record if missing
+          const newSellerId = uuidv4();
+          await db.insert(sellers).values({
+            id: newSellerId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          seller = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+        }
+
+        const sellerRecord = seller[0];
         const { profilePhoto, ...businessData } = input;
 
         const existing = await db
           .select()
           .from(sellerBusiness)
-          .where(eq(sellerBusiness.sellerId, seller.id));
+          .where(eq(sellerBusiness.sellerId, sellerRecord.id));
 
         if (existing.length > 0) {
           // Update existing
           await db
             .update(sellerBusiness)
             .set({ ...(businessData as any), updatedAt: new Date() })
-            .where(eq(sellerBusiness.sellerId, seller.id));
+            .where(eq(sellerBusiness.sellerId, sellerRecord.id));
         } else {
           // Create new
           await db.insert(sellerBusiness).values({
             ...businessData,
             id: uuidv4(),
-            sellerId: seller.id,
+            sellerId: sellerRecord.id,
           } as any);
         }
 
@@ -270,7 +327,7 @@ export const sellerRouter = createTRPCRouter({
           await db
             .update(sellers)
             .set({ profilePhoto, updatedAt: new Date() })
-            .where(eq(sellers.id, seller.id));
+            .where(eq(sellers.id, sellerRecord.id));
         }
 
         // Invalidate cache
@@ -404,7 +461,7 @@ export const sellerRouter = createTRPCRouter({
         city: z.string().min(1, "City is required"),
         shippingAddress: z.string().min(1, "Shipping address is required"),
         returnAddress: z.string().min(1, "Return address is required"),
-        shippingType: z.enum(["domestic"]),
+        shippingType: z.enum(["domestic", "international", "both"]),
         estimatedShippingTime: z.enum([
           "same_day",
           "next_day",
@@ -416,7 +473,7 @@ export const sellerRouter = createTRPCRouter({
           "1week",
           "custom",
         ]),
-        refundPolicy: z.enum(["no_refunds", "48hrs", "72hrs", "5_working_days", "1week", "14days", "30days", "60days", "store_credit"]),
+        refundPolicy: z.enum(["no_refunds", "48hrs", "72hrs", "5_working_days", "1week", "14days", "30days", "60days", "store_credit", "accept_refunds"]),
         refundPeriod: z.enum(["same_day", "next_day", "48hrs", "72hrs", "5_working_days", "1_2_weeks", "2_3_weeks", "1week", "14days", "30days", "60days", "store_credit", "custom"]),
       })
     )
@@ -450,23 +507,44 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getSeller(userId);
+        // Ensure seller record exists
+        let seller = await db
+          .select()
+          .from(sellers)
+          .where(eq(sellers.userId, userId));
+
+        if (!seller[0]) {
+          // Auto-create seller record if missing
+          const newSellerId = uuidv4();
+          await db.insert(sellers).values({
+            id: newSellerId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          seller = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+        }
+
+        const sellerRecord = seller[0];
 
         const existing = await db
           .select()
           .from(sellerShipping)
-          .where(eq(sellerShipping.sellerId, seller.id));
+          .where(eq(sellerShipping.sellerId, sellerRecord.id));
 
         if (existing.length > 0) {
           await db
             .update(sellerShipping)
             .set({ ...(input as any), updatedAt: new Date() })
-            .where(eq(sellerShipping.sellerId, seller.id));
+            .where(eq(sellerShipping.sellerId, sellerRecord.id));
         } else {
           await db.insert(sellerShipping).values({
             ...input,
             id: uuidv4(),
-            sellerId: seller.id,
+            sellerId: sellerRecord.id,
           } as any);
         }
 
@@ -574,23 +652,44 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getSeller(userId);
+        // Ensure seller record exists
+        let seller = await db
+          .select()
+          .from(sellers)
+          .where(eq(sellers.userId, userId));
+
+        if (!seller[0]) {
+          // Auto-create seller record if missing
+          const newSellerId = uuidv4();
+          await db.insert(sellers).values({
+            id: newSellerId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          seller = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+        }
+
+        const sellerRecord = seller[0];
 
         const existing = await db
           .select()
           .from(sellerPayment)
-          .where(eq(sellerPayment.sellerId, seller.id));
+          .where(eq(sellerPayment.sellerId, sellerRecord.id));
 
         if (existing.length > 0) {
           await db
             .update(sellerPayment)
             .set({ ...(input as any), updatedAt: new Date() })
-            .where(eq(sellerPayment.sellerId, seller.id));
+            .where(eq(sellerPayment.sellerId, sellerRecord.id));
         } else {
           await db.insert(sellerPayment).values({
             ...input,
             id: uuidv4(),
-            sellerId: seller.id,
+            sellerId: sellerRecord.id,
           } as any);
         }
 
@@ -666,23 +765,44 @@ export const sellerRouter = createTRPCRouter({
       }
 
       try {
-        const seller = await getSeller(userId);
+        // Ensure seller record exists
+        let seller = await db
+          .select()
+          .from(sellers)
+          .where(eq(sellers.userId, userId));
+
+        if (!seller[0]) {
+          // Auto-create seller record if missing
+          const newSellerId = uuidv4();
+          await db.insert(sellers).values({
+            id: newSellerId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          seller = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+        }
+
+        const sellerRecord = seller[0];
 
         const existing = await db
           .select()
           .from(sellerAdditional)
-          .where(eq(sellerAdditional.sellerId, seller.id));
+          .where(eq(sellerAdditional.sellerId, sellerRecord.id));
 
         if (existing.length > 0) {
           await db
             .update(sellerAdditional)
             .set({ ...(input as any), updatedAt: new Date() })
-            .where(eq(sellerAdditional.sellerId, seller.id));
+            .where(eq(sellerAdditional.sellerId, sellerRecord.id));
         } else {
           await db.insert(sellerAdditional).values({
             ...input,
             id: uuidv4(),
-            sellerId: seller.id,
+            sellerId: sellerRecord.id,
           } as any);
         }
 
@@ -890,6 +1010,84 @@ export const sellerRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to delete account",
+        });
+      }
+    }),
+
+  // ============ PROFILE PICTURE ============
+
+  uploadProfilePicture: protectedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: "/seller/profile-picture",
+        tags: ["Seller"],
+        summary: "Upload profile picture",
+        description: "Upload a new seller profile picture (max 5MB, JPEG/PNG/WebP)",
+      },
+    })
+    .input(
+      z.object({
+        fileName: z.string(),
+        fileType: z.string(),
+        base64Data: z.string(),
+      })
+    )
+    .output(z.object({ url: z.string(), success: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const validation = validateFile(input.base64Data, input.fileType);
+      if (!validation.valid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: validation.error,
+        });
+      }
+
+      try {
+        const seller = await getSeller(userId);
+
+        const buffer = Buffer.from(input.base64Data, "base64");
+        const timestamp = Date.now();
+        const uniqueFileName = `${userId}/pfp/${timestamp}_${input.fileName}`;
+
+        const sb = getSupabase();
+        if (!sb) {
+          throw new Error("Supabase storage is not configured on the server");
+        }
+
+        const { data, error } = await sb.storage
+          .from("profile-pictures")
+          .upload(uniqueFileName, buffer, {
+            contentType: input.fileType,
+            upsert: false,
+          });
+
+        if (error) {
+          throw new Error(`Upload failed: ${error.message}`);
+        }
+
+        const {
+          data: { publicUrl },
+        } = sb.storage.from("profile-pictures").getPublicUrl(data.path);
+
+        await db
+          .update(sellers)
+          .set({ profilePhoto: publicUrl, updatedAt: new Date() })
+          .where(eq(sellers.id, seller.id));
+
+        // Invalidate cache
+        await deleteCache(CacheKeys.sellerProfile(userId));
+
+        return { url: publicUrl, success: true };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: err?.message || "Failed to upload profile picture",
         });
       }
     }),
