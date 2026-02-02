@@ -14,21 +14,5 @@
       "path": "/api/cron/escalate-disputes",
       "schedule": "0 0 * * *"
     }
-  ],
-  "env": [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "NEXT_PUBLIC_API_URL",
-    "DATABASE_URL",
-    "SUPABASE_URL",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "TSARA_BASE_URL",
-    "TSARA_SECRET_KEY",
-    "TSARA_PUBLIC_KEY",
-    "DOJAH_APP_ID",
-    "DOJAH_SECRET_KEY",
-    "RESEND_API_KEY",
-    "SMTP_FROM",
-    "CRON_SECRET"
   ]
 }
