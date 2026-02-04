@@ -11,7 +11,10 @@ export const useSales = (status?: string) => {
       const client: any = getTRPCClient();
       return await ((client.sales as any).getAllSales as any).query(status ? { status } : {});
     },
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: undefined, // Disable auto-refetch
+    refetchOnWindowFocus: false, // Disable window focus refetch
   });
 };
 

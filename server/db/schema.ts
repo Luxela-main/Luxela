@@ -12,7 +12,7 @@ export const shippingTypeEnum = pgEnum('shipping_type', ['same_day', 'next_day',
 export const shippingEtaEnum = pgEnum('shipping_eta', ['same_day', 'next_day', '48hrs', '72hrs', '5_working_days', '1_2_weeks', '2_3_weeks', 'custom']);
 export const refundPolicyEnum = pgEnum('refund_policy', ['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']);
 export const preferredPayoutMethodEnum = pgEnum('preferred_payout_method', ['fiat_currency', 'cryptocurrency', 'both']);
-export const fiatPayoutMethodEnum = pgEnum('fiat_payout_method', ['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'other']);
+export const fiatPayoutMethodEnum = pgEnum('fiat_payout_method', ['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'wise', 'other']);
 export const walletTypeEnum = pgEnum('wallet_type', ['phantom', 'solflare', 'backpack', 'wallet_connect', 'magic_eden', 'ledger_live']);
 export const payoutTokenEnum = pgEnum('payout_token', ['USDT', 'USDC', 'solana']);
 export const productCategoryEnum = pgEnum('product_category', [
@@ -81,7 +81,7 @@ export const buyers = pgTable('buyers', {
 // --- Sellers ---
 export const sellers = pgTable('sellers', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid('user_id').notNull(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   brandId: uuid('brand_id'),
   profilePhoto: text('profile_photo'),
   payoutMethods: text('payout_methods'),
@@ -196,19 +196,25 @@ export const sellerShipping = pgTable('seller_shipping', {
 // =================================
 // BRANDS
 // =================================
-export const brands = pgTable('brands', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  slug: text('slug').notNull().unique(),
-  description: text('description'),
-  heroImage: text('hero_image'),
-  logoImage: text('logo_image'),
-  rating: numeric('rating', { precision: 2, scale: 1 }).default('0'),
-  totalProducts: integer('total_products').default(0),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+export const brands = pgTable(
+  'brands',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    description: text('description'),
+    heroImage: text('hero_image'),
+    logoImage: text('logo_image'),
+    rating: numeric('rating', { precision: 2, scale: 1 }).default(sql`0`),
+    totalProducts: integer('total_products').default(sql`0`),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueSellerSlug: unique().on(t.sellerId, t.slug),
+  })
+);
 
 // =======================
 // COLLECTIONS
@@ -251,7 +257,7 @@ export const products = pgTable('products', {
   slug: text('slug').notNull(),
   description: text('description'),
   category: productCategoryEnum('category'),
-  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  priceCents: integer('price_cents').notNull(),
   currency: varchar('currency', { length: 16 }).default('SOL').notNull(),
   type: varchar("type", { length: 50 }),
   sku: text('sku').notNull().unique(),
@@ -259,7 +265,11 @@ export const products = pgTable('products', {
   shipsIn: varchar('ships_in', { length: 64 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+},
+(t) => ({
+  uniqueBrandSlug: unique().on(t.brandId, t.slug),
+})
+);
 
 // =======================
 // LISTINGS
@@ -579,21 +589,69 @@ export const buyerFavorites = pgTable('buyer_favorites', {
 });
 
 // =======================
-// SELLER PAYMENT
+// SELLER PAYMENT CONFIG
 // =======================
-export const sellerPayment = pgTable('seller_payment', {
+export const sellerPaymentConfig = pgTable('seller_payment_config', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().unique().references(() => sellers.id, { onDelete: 'cascade' }),
+  preferredPayoutMethod: preferredPayoutMethodEnum('preferred_payout_method').notNull(),
+  payoutSchedule: payoutScheduleEnum('payout_schedule').default('weekly').notNull(),
+  minimumPayoutThreshold: numeric('minimum_payout_threshold', { precision: 15, scale: 2 }).default('0').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
+// SELLER PAYOUT METHODS (Fiat & Digital)
+// =======================
+export const sellerPayoutMethods = pgTable('seller_payout_methods', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
-  preferredPayoutMethod: preferredPayoutMethodEnum('preferred_payout_method').notNull(),
-  fiatPayoutMethod: fiatPayoutMethodEnum('fiat_payout_method'),
+  methodType: fiatPayoutMethodEnum('method_type').notNull(),
+  isDefault: boolean('is_default').default(false).notNull(),
+  isVerified: boolean('is_verified').default(false).notNull(),
+  verificationToken: varchar('verification_token', { length: 255 }),
+  
+  // Bank Transfer Details
   bankCountry: varchar('bank_country', { length: 100 }),
   bankName: varchar('bank_name', { length: 255 }),
-  accountName: varchar('account_name', { length: 255 }),
+  bankCode: varchar('bank_code', { length: 100 }),
   accountHolderName: varchar('account_holder_name', { length: 255 }),
   accountNumber: varchar('account_number', { length: 255 }),
-  walletType: walletTypeEnum('wallet_type'),
-  walletAddress: varchar('wallet_address', { length: 255 }),
-  preferredPayoutToken: payoutTokenEnum('preferred_payout_token'),
+  accountType: varchar('account_type', { length: 50 }),
+  swiftCode: varchar('swift_code', { length: 50 }),
+  iban: varchar('iban', { length: 50 }),
+  
+  // Digital Payment Service Details
+  email: varchar('email', { length: 255 }),
+  accountId: varchar('account_id', { length: 255 }),
+  
+  // Mobile Money Details
+  phoneNumber: varchar('phone_number', { length: 50 }),
+  mobileMoneyProvider: varchar('mobile_money_provider', { length: 100 }),
+  
+  // Metadata
+  metadata: jsonb('metadata'),
+  lastUsedAt: timestamp('last_used_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
+// SELLER CRYPTO PAYOUT METHODS
+// =======================
+export const sellerCryptoPayoutMethods = pgTable('seller_crypto_payout_methods', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  walletType: walletTypeEnum('wallet_type').notNull(),
+  blockchainNetwork: varchar('blockchain_network', { length: 100 }).notNull(),
+  walletAddress: varchar('wallet_address', { length: 255 }).notNull(),
+  payoutToken: payoutTokenEnum('payout_token').notNull(),
+  isDefault: boolean('is_default').default(false).notNull(),
+  isVerified: boolean('is_verified').default(false).notNull(),
+  verificationSignature: text('verification_signature'),
+  lastUsedAt: timestamp('last_used_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -736,7 +794,7 @@ export const discounts = pgTable('discounts', {
 // =======================
 export const supportTickets = pgTable('support_tickets', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  buyerId: uuid('buyer_id').references(() => buyers.id, { onDelete: 'cascade' }),
   sellerId: uuid('seller_id').references(() => sellers.id, { onDelete: 'cascade' }),
   orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
   subject: varchar('subject', { length: 255 }).notNull(),
@@ -949,7 +1007,9 @@ export const sellersRelations = relations(sellers, ({ one, many }) => ({
   user: one(users),
   business: one(sellerBusiness),
   shipping: one(sellerShipping),
-  payment: one(sellerPayment),
+  paymentConfig: one(sellerPaymentConfig),
+  payoutMethods: many(sellerPayoutMethods),
+  cryptoPayoutMethods: many(sellerCryptoPayoutMethods),
   additional: one(sellerAdditional),
   listings: many(listings),
   orders: many(orders),
@@ -1127,8 +1187,18 @@ export const buyerFavoritesRelations = relations(buyerFavorites, ({ one }) => ({
   listing: one(listings),
 }));
 
-// Seller Payment → Seller
-export const sellerPaymentRelations = relations(sellerPayment, ({ one }) => ({
+// Seller Payment Config → Seller
+export const sellerPaymentConfigRelations = relations(sellerPaymentConfig, ({ one }) => ({
+  seller: one(sellers),
+}));
+
+// Seller Payout Methods → Seller
+export const sellerPayoutMethodsRelations = relations(sellerPayoutMethods, ({ one }) => ({
+  seller: one(sellers),
+}));
+
+// Seller Crypto Payout Methods → Seller
+export const sellerCryptoPayoutMethodsRelations = relations(sellerCryptoPayoutMethods, ({ one }) => ({
   seller: one(sellers),
 }));
 

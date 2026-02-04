@@ -4,7 +4,9 @@ import {
   sellers,
   sellerBusiness,
   sellerShipping,
-  sellerPayment,
+  sellerPaymentConfig,
+  sellerPayoutMethods,
+  sellerCryptoPayoutMethods,
   sellerAdditional,
   notifications,
   conversations,
@@ -159,7 +161,7 @@ export const sellerRouter = createTRPCRouter({
             // Get or create seller automatically
             const seller = await getSeller(userId);
 
-            const [business, shipping, payment, additional] = await Promise.all([
+            const [business, shipping, paymentConfig, payoutMethods, cryptoMethods, additional] = await Promise.all([
               db
                 .select()
                 .from(sellerBusiness)
@@ -172,9 +174,17 @@ export const sellerRouter = createTRPCRouter({
                 .then((r) => r[0] || null),
               db
                 .select()
-                .from(sellerPayment)
-                .where(eq(sellerPayment.sellerId, seller.id))
+                .from(sellerPaymentConfig)
+                .where(eq(sellerPaymentConfig.sellerId, seller.id))
                 .then((r) => r[0] || null),
+              db
+                .select()
+                .from(sellerPayoutMethods)
+                .where(eq(sellerPayoutMethods.sellerId, seller.id)),
+              db
+                .select()
+                .from(sellerCryptoPayoutMethods)
+                .where(eq(sellerCryptoPayoutMethods.sellerId, seller.id)),
               db
                 .select()
                 .from(sellerAdditional)
@@ -192,7 +202,11 @@ export const sellerRouter = createTRPCRouter({
               },
               business,
               shipping,
-              payment,
+              payment: {
+                config: paymentConfig,
+                payoutMethods,
+                cryptoMethods,
+              },
               additional,
             };
           },
@@ -300,7 +314,7 @@ export const sellerRouter = createTRPCRouter({
         }
 
         const sellerRecord = seller[0];
-        const { profilePhoto, ...businessData } = input;
+        let { storeLogo, profilePhoto, ...businessData } = input;
 
         const existing = await db
           .select()
@@ -311,22 +325,108 @@ export const sellerRouter = createTRPCRouter({
           // Update existing
           await db
             .update(sellerBusiness)
-            .set({ ...(businessData as any), updatedAt: new Date() })
+            .set({ ...(businessData as any), storeLogo: storeLogo || existing[0].storeLogo, updatedAt: new Date() })
             .where(eq(sellerBusiness.sellerId, sellerRecord.id));
         } else {
           // Create new
           await db.insert(sellerBusiness).values({
             ...businessData,
+            storeLogo,
             id: uuidv4(),
             sellerId: sellerRecord.id,
           } as any);
         }
 
-        // Update profilePhoto in sellers table if provided
-        if (profilePhoto) {
+        // Handle profile picture upload to Supabase and update user metadata
+        let avatarUrl = profilePhoto || storeLogo;
+        if (storeLogo && storeLogo.startsWith('data:')) {
+          // Upload base64 image to Supabase storage
+          const supabaseClient = getSupabase();
+          if (supabaseClient) {
+            try {
+              // Convert base64 to buffer
+              const base64Data = storeLogo.replace(/^data:image\/\w+;base64,/, '');
+              const buffer = Buffer.from(base64Data, 'base64');
+              
+              // Determine file type from base64 header
+              let mimeType = 'image/jpeg';
+              if (storeLogo.includes('image/png')) mimeType = 'image/png';
+              else if (storeLogo.includes('image/webp')) mimeType = 'image/webp';
+              
+              // Generate unique filename
+              const timestamp = Date.now();
+              const filename = `seller-avatars/${userId}/${timestamp}-profile.${mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg'}`;
+              
+              // Upload to Supabase storage
+              const { data: uploadData, error: uploadError } = await supabaseClient
+                .storage
+                .from('profile-pictures')
+                .upload(filename, buffer, {
+                  contentType: mimeType,
+                  upsert: true,
+                });
+              
+              if (!uploadError && uploadData) {
+                // Get public URL
+                const { data: publicUrlData } = supabaseClient
+                  .storage
+                  .from('profile-pictures')
+                  .getPublicUrl(filename);
+                
+                avatarUrl = publicUrlData.publicUrl;
+                
+                // Update Supabase auth user metadata with avatar URL
+                const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
+                  userId,
+                  {
+                    user_metadata: {
+                      avatar_url: avatarUrl,
+                      full_name: input.fullName,
+                      role: 'seller',
+                    },
+                  }
+                );
+                
+                if (updateError) {
+                  console.error('Error updating user metadata:', updateError);
+                } else {
+                  console.log('User metadata updated with avatar URL');
+                }
+              } else {
+                console.error('Error uploading to storage:', uploadError);
+              }
+            } catch (uploadErr) {
+              console.error('Error handling image upload:', uploadErr);
+              // Continue with base64 as fallback
+              avatarUrl = storeLogo;
+            }
+          }
+        } else if (avatarUrl) {
+          // If it's already a URL, update user metadata
+          const supabaseClient = getSupabase();
+          if (supabaseClient) {
+            try {
+              await supabaseClient.auth.admin.updateUserById(
+                userId,
+                {
+                  user_metadata: {
+                    avatar_url: avatarUrl,
+                    full_name: input.fullName,
+                    role: 'seller',
+                  },
+                }
+              );
+            } catch (err) {
+              console.error('Error updating user metadata:', err);
+            }
+          }
+        }
+
+        // Update sellers table with the avatar URL
+        if (avatarUrl) {
           await db
             .update(sellers)
-            .set({ profilePhoto, updatedAt: new Date() })
+            .set({ profilePhoto: avatarUrl, updatedAt: new Date() })
             .where(eq(sellers.id, sellerRecord.id));
         }
 
@@ -473,7 +573,7 @@ export const sellerRouter = createTRPCRouter({
           "1week",
           "custom",
         ]),
-        refundPolicy: z.enum(["no_refunds", "48hrs", "72hrs", "5_working_days", "1week", "14days", "30days", "60days", "store_credit", "accept_refunds"]),
+        refundPolicy: z.enum(["no_refunds", "48hrs", "72hrs", "5_working_days", "1week", "14days", "30days", "60days", "store_credit"]),
         refundPeriod: z.enum(["same_day", "next_day", "48hrs", "72hrs", "5_working_days", "1_2_weeks", "2_3_weeks", "1week", "14days", "30days", "60days", "store_credit", "custom"]),
       })
     )
@@ -564,6 +664,12 @@ export const sellerRouter = createTRPCRouter({
       }
     }),
 
+  // NOTE: Payment methods are now handled via separate tables:
+  // - sellerPaymentConfig (payout preferences and schedule)
+  // - sellerPayoutMethods (fiat payment methods)
+  // - sellerCryptoPayoutMethods (crypto wallets)
+  // Create dedicated payment router (payments.ts) to handle these
+  /*
   updateSellerPayment: protectedProcedure
     .meta({
       openapi: {
@@ -708,6 +814,7 @@ export const sellerRouter = createTRPCRouter({
         });
       }
     }),
+  */
 
   updateSellerAdditional: protectedProcedure
     .meta({
@@ -960,10 +1067,7 @@ export const sellerRouter = createTRPCRouter({
             .delete(sellerShipping)
             .where(eq(sellerShipping.sellerId, seller.id));
 
-          // Delete seller payment methods
-          await tx
-            .delete(sellerPayment)
-            .where(eq(sellerPayment.sellerId, seller.id));
+
 
           // Delete seller additional details
           await tx

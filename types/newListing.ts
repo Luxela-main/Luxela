@@ -61,6 +61,9 @@ export interface FormData {
   // Images
   images: (File | string)[];
 
+  // Videos
+  videos?: File[];
+
   // Listing Type
   type?: "single" | "collection";
 }

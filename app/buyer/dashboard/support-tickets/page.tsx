@@ -54,6 +54,7 @@ interface Ticket {
   id: string;
   buyerId: string;
   sellerId: string | null;
+  orderId: string | null;
   subject: string;
   description: string;
   category: string;
@@ -497,6 +498,18 @@ export default function BuyerSupportTicketsPage() {
                           <span className="text-[#DCDCDC]">Created:</span>{" "}
                           {new Date(ticket.createdAt).toLocaleDateString()}
                         </div>
+                        {ticket.buyerId && (
+                          <div>
+                            <span className="text-[#DCDCDC]">Buyer ID:</span>{" "}
+                            {ticket.buyerId.slice(0, 8)}...
+                          </div>
+                        )}
+                        {ticket.orderId && (
+                          <div>
+                            <span className="text-[#DCDCDC]">Order ID:</span>{" "}
+                            {ticket.orderId.slice(0, 8)}...
+                          </div>
+                        )}
                         {ticket.resolvedAt && (
                           <div>
                             <span className="text-[#DCDCDC]">

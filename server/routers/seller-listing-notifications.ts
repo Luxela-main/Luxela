@@ -40,8 +40,8 @@ export const sellerListingNotificationsRouter = createTRPCRouter({
     })
     .input(
       z.object({
-        page: z.number().int().positive().default(1),
-        limit: z.number().int().positive().max(50).default(20),
+        page: z.number().int().positive().optional().default(1),
+        limit: z.number().int().positive().max(100).optional().default(20),
       })
     )
     .output(

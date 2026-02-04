@@ -31,6 +31,30 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
   const { data: methods, isLoading: methodsLoading } = trpc.sales.getPayoutMethod.useQuery() as any;
   const { data: balanceData } = trpc.finance.getPayoutBalance.useQuery({ currency: 'NGN' }) as any;
 
+  // Get filtered payout methods based on schedule type
+  const getFilteredPayoutMethods = () => {
+    if (!methods || methods.length === 0) return [];
+
+    // Immediate payouts: exclude Tsara (it's designed for recurring/automatic)
+    if (formData.scheduleType === 'immediate') {
+      return methods.filter((m: any) => m.type !== 'tsara');
+    }
+
+    // Recurring payouts: include all methods including Tsara
+    if (formData.scheduleType === 'recurring') {
+      return methods;
+    }
+
+    // Scheduled (one-time future): exclude Tsara
+    if (formData.scheduleType === 'scheduled') {
+      return methods.filter((m: any) => m.type !== 'tsara');
+    }
+
+    return methods;
+  };
+
+  const filteredMethods = getFilteredPayoutMethods();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -76,6 +100,18 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
         name: `${m.accountDetails?.tokenType || "Crypto"} - ${m.accountDetails?.walletAddress?.slice(0, 10)}...${m.accountDetails?.walletAddress?.slice(-4)}`,
       };
     }
+    if (m.type === "tsara") {
+      return {
+        id: m.id,
+        name: `Tsara Escrow`,
+      };
+    }
+    if (m.type === "wise") {
+      return {
+        id: m.id,
+        name: `Wise - ${m.accountDetails?.email || m.accountDetails?.recipientId}`,
+      };
+    }
     return {
       id: m.id,
       name: m.type,
@@ -91,7 +127,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
           <h2 className="text-2xl font-semibold text-white">Schedule Payout</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-[#0a0a0a] rounded-lg transition-colors"
+            className="p-1 hover:bg-[#0a0a0a] rounded-lg transition-colors cursor-pointer"
           >
             <X className="text-gray-400" size={24} />
           </button>
@@ -167,17 +203,37 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                     value={formData.payoutMethod}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600"
+                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600 cursor-pointer"
                   >
                     <option value="">Select a payment method</option>
-                    {formattedMethods.map((method: { id: string; name: string }) => (
-                      <option key={method.id} value={method.id}>
-                        {method.name}
-                      </option>
-                    ))}
+                    {filteredMethods.map((method: any) => {
+                      const formattedMethod = formattedMethods.find((m) => m.id === method.id);
+                      return (
+                        <option key={method.id} value={method.id}>
+                          {method.type === 'tsara' ? '🔐 ' : ''}{formattedMethod?.name || method.type}
+                        </option>
+                      );
+                    })}
                   </select>
                 )}
               </div>
+
+              {/* Tsara Escrow Info - Show for recurring payouts */}
+              {formData.scheduleType === 'recurring' && (
+                <div className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-600/30 rounded-lg p-4 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">✨</span>
+                    <div>
+                      <p className="text-sm font-semibold text-purple-300">
+                        Tsara Escrow Available for Recurring Payouts
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Funds are automatically released to your account when buyers confirm order delivery. Enjoy peace of mind with escrow-backed recurring payouts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-blue-600/10 border border-blue-600/20 rounded-lg p-4 flex gap-3">
                 <AlertCircle className="text-blue-400 flex-shrink-0 mt-0.5" size={20} />
@@ -202,7 +258,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                       value="immediate"
                       checked={formData.scheduleType === "immediate"}
                       onChange={handleInputChange}
-                      className="w-4 h-4 accent-purple-600"
+                      className="w-4 h-4 accent-purple-600 cursor-pointer"
                     />
                     <div>
                       <p className="font-medium text-white">Immediate</p>
@@ -217,7 +273,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                       value="scheduled"
                       checked={formData.scheduleType === "scheduled"}
                       onChange={handleInputChange}
-                      className="w-4 h-4 accent-purple-600"
+                      className="w-4 h-4 accent-purple-600 cursor-pointer"
                     />
                     <div>
                       <p className="font-medium text-white">Schedule for Later</p>
@@ -232,11 +288,11 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                       value="recurring"
                       checked={formData.scheduleType === "recurring"}
                       onChange={handleInputChange}
-                      className="w-4 h-4 accent-purple-600"
+                      className="w-4 h-4 accent-purple-600 cursor-pointer"
                     />
                     <div>
                       <p className="font-medium text-white">Recurring</p>
-                      <p className="text-xs text-gray-400">Automatic regular payouts</p>
+                      <p className="text-xs text-gray-400">Automatic regular payouts with Tsara Escrow</p>
                     </div>
                   </label>
                 </div>
@@ -252,7 +308,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                     name="scheduleDate"
                     value={formData.scheduleDate}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600"
+                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600 cursor-pointer"
                   />
                 </div>
               )}
@@ -266,7 +322,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                     name="frequency"
                     value={formData.frequency}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600"
+                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600 cursor-pointer"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -327,7 +383,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                 type="button"
                 onClick={() => setStep(step - 1)}
                 variant="outline"
-                className="flex-1 border-[#2a2a2a]"
+                className="flex-1 border-[#2a2a2a] cursor-pointer"
                 disabled={isCreating || loading}
               >
                 Back
@@ -344,7 +400,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
                   }
                   setStep(step + 1);
                 }}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
                 disabled={isCreating || loading}
               >
                 Next
@@ -353,7 +409,7 @@ export function SchedulePayoutModal({ isOpen, onClose }: SchedulePayoutModalProp
               <Button
                 type="submit"
                 disabled={isCreating || loading}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 cursor-pointer"
               >
                 {isCreating || loading ? (
                   <>

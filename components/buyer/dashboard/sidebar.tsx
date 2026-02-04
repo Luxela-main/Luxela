@@ -21,7 +21,7 @@ export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
   const handleLogout = useCallback(async () => {
     try {
       await logout();
-      router.push('/login');
+      router.push('/signin');
     } catch (err) {
       console.error('Logout failed:', err);
       setShowLogoutConfirm(false);
@@ -134,7 +134,7 @@ export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
           ) : (
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-[#1a1a1a] transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />
               <span className="truncate">Log out</span>

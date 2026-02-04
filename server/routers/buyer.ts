@@ -117,7 +117,32 @@ async function getBuyer(userId: string) {
     if (err instanceof TRPCError) {
       throw err;
     }
-    throw new Error(`getBuyer failed: ${err?.message || err}`);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `getBuyer failed: ${err?.message || err}`,
+    });
+  }
+}
+
+// Helper function that returns null instead of throwing if buyer doesn't exist
+async function getBuyerOrNull(userId: string) {
+  try {
+    const existingBuyer = await db
+      .select()
+      .from(buyers)
+      .where(eq(buyers.userId, userId));
+
+    if (existingBuyer.length === 0) {
+      return null;
+    }
+
+    return existingBuyer[0];
+  } catch (err: any) {
+    console.error("Error in getBuyerOrNull:", err);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `getBuyerOrNull failed: ${err?.message || err}`,
+    });
   }
 }
 
@@ -963,7 +988,19 @@ return {
       }
 
       try {
-        const buyer = await getBuyer(userId);
+        const buyer = await getBuyerOrNull(userId);
+        
+        // If buyer doesn't exist yet, return empty favorites
+        if (!buyer) {
+          return {
+            data: [],
+            total: 0,
+            page: input.page,
+            limit: input.limit,
+            totalPages: 0,
+          };
+        }
+
         const offset = (input.page - 1) * input.limit;
 
         const [favorites, totalResult] = await Promise.all([
@@ -983,13 +1020,11 @@ return {
             .orderBy(desc(buyerFavorites.createdAt))
             .limit(input.limit)
             .offset(offset),
-          db
-            .select({ count: (db as any).fn.count().as("count") })
-            .from(buyerFavorites)
-            .where(eq(buyerFavorites.buyerId, buyer.id)),
+          db.execute(sql`SELECT count(*) as count FROM ${buyerFavorites} WHERE buyer_id = ${buyer.id}`),
         ]);
 
-        const total = totalResult[0]?.count || 0;
+        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const total = Number(rawCount);
 
         return {
           data: favorites,
@@ -999,6 +1034,7 @@ return {
           totalPages: Math.ceil(total / input.limit),
         };
       } catch (err: any) {
+        if (err instanceof TRPCError) throw err;
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to fetch favorites",
@@ -1221,7 +1257,23 @@ return {
       }
 
       try {
-        const buyer = await getBuyer(userId);
+        // Try to get buyer profile, but if it doesn't exist, return empty data
+        let buyer;
+        try {
+          buyer = await getBuyer(userId);
+        } catch (err: any) {
+          // If buyer profile doesn't exist, return empty purchase history
+          if (err instanceof TRPCError && err.code === "NOT_FOUND") {
+            return {
+              data: [],
+              total: 0,
+              page: input.page,
+              limit: input.limit,
+              totalPages: 0,
+            };
+          }
+          throw err;
+        }
         const offset = (input.page - 1) * input.limit;
 
         const status = input?.status ?? "all";
@@ -1263,13 +1315,11 @@ return {
             .orderBy(desc(orders.orderDate))
             .limit(input.limit)
             .offset(offset),
-          db
-            .select({ count: (db as any).fn.count().as("count") })
-            .from(orders)
-            .where(whereCondition),
+          db.execute(sql`SELECT count(*) as count FROM ${orders} WHERE buyer_id = ${buyer.id}`),
         ]);
 
-        const total = totalResult[0]?.count || 0;
+        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const total = Number(rawCount);
 
         return {
           data: results.map((o) => ({
@@ -1289,6 +1339,10 @@ return {
           totalPages: Math.ceil(total / input.limit),
         };
       } catch (err: any) {
+        // If it's already a TRPC error, re-throw it as-is
+        if (err instanceof TRPCError) {
+          throw err;
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to fetch purchase history",
@@ -1368,6 +1422,10 @@ return {
         };
       } catch (err: any) {
         console.error("Error fetching order details:", err);
+        // If it's already a TRPC error, re-throw it as-is
+        if (err instanceof TRPCError) {
+          throw err;
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to fetch order details",
@@ -1449,18 +1507,11 @@ return {
             .orderBy(desc(orders.orderDate))
             .limit(input.limit)
             .offset(offset),
-          db
-            .select({ count: (db as any).fn.count().as("count") })
-            .from(orders)
-            .where(
-              and(
-                eq(orders.buyerId, buyer.id),
-                eq(orders.orderStatus, input.status)
-              )
-            ),
+          db.execute(sql`SELECT count(*) as count FROM ${orders} WHERE buyer_id = ${buyer.id} AND order_status = ${input.status}`),
         ]);
 
-        const total = totalResult[0]?.count || 0;
+        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const total = Number(rawCount);
 
         return {
           data: results.map((o) => ({
@@ -1536,7 +1587,19 @@ return {
       }
 
       try {
-        const buyer = await getBuyer(userId);
+        const buyer = await getBuyerOrNull(userId);
+        
+        // If buyer doesn't exist yet, return empty notifications
+        if (!buyer) {
+          return {
+            data: [],
+            total: 0,
+            page: input.page,
+            limit: input.limit,
+            totalPages: 0,
+          };
+        }
+
         const offset = (input.page - 1) * input.limit;
 
         const [notifs, totalResult] = await Promise.all([
@@ -1552,18 +1615,11 @@ return {
             .orderBy(desc(notifications.createdAt))
             .limit(input.limit)
             .offset(offset),
-          db
-            .select({ count: (db as any).fn.count().as("count") })
-            .from(notifications)
-            .where(
-              and(
-                eq(notifications.buyerId, buyer.id),
-                isNull(notifications.sellerId)
-              )
-            ),
+          db.execute(sql`SELECT count(*) as count FROM ${notifications} WHERE buyer_id = ${buyer.id} AND seller_id IS NULL`),
         ]);
 
-        const total = totalResult[0]?.count || 0;
+        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const total = Number(rawCount);
 
         return {
           data: notifs.map((n) => ({
@@ -1581,6 +1637,7 @@ return {
           totalPages: Math.ceil(total / input.limit),
         };
       } catch (err: any) {
+        if (err instanceof TRPCError) throw err;
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to fetch notifications",
@@ -1624,8 +1681,16 @@ return {
       }
 
       try {
-        const buyer = await getBuyer(userId);
+        const buyer = await getBuyerOrNull(userId);
         
+        // If buyer doesn't exist yet, return empty NFTs
+        if (!buyer) {
+          return {
+            nfts: [],
+            totalPoints: 0,
+          };
+        }
+
         // Fetch real NFTs from database
         const nfts = await db
           .select({
@@ -1656,6 +1721,7 @@ return {
           totalPoints,
         };
       } catch (err: any) {
+        if (err instanceof TRPCError) throw err;
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: err?.message || "Failed to fetch loyalty NFTs",
@@ -2098,4 +2164,4 @@ return {
         });
       }
     }),
-});
+});

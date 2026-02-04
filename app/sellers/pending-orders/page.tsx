@@ -428,7 +428,7 @@ export default function PendingOrders() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">Sort by:</span>
             <Select value={sortBy} onValueChange={(val: any) => setFilters({...filters, sortBy: val})}>
-              <SelectTrigger className="bg-[#242424] border-[#333] w-40">
+              <SelectTrigger className="bg-[#242424] border-[#333] w-40 cursor-pointer">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#1a1a1a] border-[#333]">
@@ -704,7 +704,7 @@ export default function PendingOrders() {
             <div>
               <label className="text-sm font-medium text-gray-200 block mb-2">Cancellation Reason *</label>
               <Select value={filters.cancelReason} onValueChange={(val: string) => setFilters({...filters, cancelReason: val})}>
-                <SelectTrigger className="bg-[#242424] border-[#333]">
+                <SelectTrigger className="bg-[#242424] border-[#333] cursor-pointer">
                   <SelectValue placeholder="Select a reason" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1a1a] border-[#333]">

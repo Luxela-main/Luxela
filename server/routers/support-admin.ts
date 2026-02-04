@@ -51,7 +51,7 @@ export const supportAdminRouter = createTRPCRouter({
     })
     .output(z.array(z.object({
       id: z.string(),
-      buyerId: z.string(),
+      buyerId: z.string().nullable(),
       sellerId: z.string().nullable(),
       orderId: z.string().nullable(),
       subject: z.string(),
@@ -77,7 +77,7 @@ export const supportAdminRouter = createTRPCRouter({
         
         return allTickets.map(t => ({
           id: t.id,
-          buyerId: t.buyerId,
+          buyerId: t.buyerId ?? null,
           sellerId: t.sellerId ?? null,
           orderId: t.orderId ?? null,
           subject: t.subject,
@@ -593,5 +593,86 @@ export const supportAdminRouter = createTRPCRouter({
         newValue: l.newValue,
         createdAt: new Date(l.createdAt),
       }));
+    }),
+
+  // ============ TICKET UPDATES ============
+
+  updateTicketStatus: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'PATCH',
+        path: '/admin/support/tickets/{ticketId}/status',
+        tags: ['Support Admin'],
+        summary: 'Update ticket status (admin only)',
+      },
+    })
+    .input(
+      z.object({
+        ticketId: z.string(),
+        status: z.enum(['open', 'in_progress', 'resolved', 'closed']),
+      })
+    )
+    .output(z.object({
+      id: z.string(),
+      buyerId: z.string().nullable(),
+      sellerId: z.string().nullable(),
+      orderId: z.string().nullable(),
+      subject: z.string(),
+      description: z.string(),
+      category: z.string(),
+      status: z.enum(['open', 'in_progress', 'resolved', 'closed']),
+      priority: z.enum(['low', 'medium', 'high', 'urgent']),
+      assignedTo: z.string().nullable(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+      resolvedAt: z.date().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+      
+      await ensureAdmin(userId, ctx.user?.role);
+
+      const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+      if (!ticket[0]) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Ticket not found',
+        });
+      }
+
+      const now = new Date();
+      const updateData: any = {
+        status: input.status,
+        updatedAt: now,
+      };
+
+      // Set resolvedAt when status changes to resolved
+      if (input.status === 'resolved' && ticket[0].status !== 'resolved') {
+        updateData.resolvedAt = now;
+      }
+
+      const result = await db
+        .update(supportTickets)
+        .set(updateData)
+        .where(eq(supportTickets.id, input.ticketId))
+        .returning();
+
+      const t = result[0];
+      return {
+        id: t.id,
+        buyerId: t.buyerId,
+        sellerId: t.sellerId ?? null,
+        orderId: t.orderId ?? null,
+        subject: t.subject,
+        description: t.description,
+        category: t.category,
+        status: t.status as 'open' | 'in_progress' | 'resolved' | 'closed',
+        priority: t.priority as 'low' | 'medium' | 'high' | 'urgent',
+        assignedTo: t.assignedTo ?? null,
+        createdAt: new Date(t.createdAt),
+        updatedAt: new Date(t.updatedAt),
+        resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : null,
+      };
     }),
 });

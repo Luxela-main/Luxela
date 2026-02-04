@@ -11,7 +11,9 @@ import {
   sellerSchema,
   sellerBusinessSchema,
   sellerShippingSchema,
-  sellerPaymentSchema,
+  sellerPaymentConfigSchema,
+  sellerPayoutMethodsSchema,
+  sellerCryptoPayoutMethodsSchema,
   sellerAdditionalSchema,
   brandsSchema,
   collectionsSchema,
@@ -73,7 +75,9 @@ export type Favorite = z.infer<typeof buyerFavoritesSchema>;
 export type Seller = z.infer<typeof sellerSchema>;
 export type SellerBusiness = z.infer<typeof sellerBusinessSchema>;
 export type SellerShipping = z.infer<typeof sellerShippingSchema>;
-export type SellerPayment = z.infer<typeof sellerPaymentSchema>;
+export type SellerPaymentConfig = z.infer<typeof sellerPaymentConfigSchema>;
+export type SellerPayoutMethod = z.infer<typeof sellerPayoutMethodsSchema>;
+export type SellerCryptoPayoutMethod = z.infer<typeof sellerCryptoPayoutMethodsSchema>;
 export type SellerAdditional = z.infer<typeof sellerAdditionalSchema>;
 
 // ===================== BRAND & COLLECTION TYPES =====================
@@ -163,7 +167,9 @@ export {
   sellerSchema,
   sellerBusinessSchema,
   sellerShippingSchema,
-  sellerPaymentSchema,
+  sellerPaymentConfigSchema,
+  sellerPayoutMethodsSchema,
+  sellerCryptoPayoutMethodsSchema,
   sellerAdditionalSchema,
   brandsSchema,
   collectionsSchema,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { autoReleaseExpiredHolds } from '@/server/services/disputeResolutionService';
+import { autoReleaseExpiredHolds } from '@/server/services/escrowService';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -16,19 +16,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    console.log('Starting cron job: Release expired payment holds');
+    console.log('Starting cron job: Release escrow holds');
 
-    const result = await autoReleaseExpiredHolds(30);
+    const releasedCount = await autoReleaseExpiredHolds();
 
     console.log(
-      `Cron job completed: Released ${result.released} holds, Failed: ${result.failed}`
+      `Cron job completed: Released ${releasedCount} holds`
     );
 
     return NextResponse.json({
       success: true,
-      message: 'Expired payment holds released',
-      released: result.released,
-      failed: result.failed,
+      message: 'Escrow holds released',
+      released: releasedCount,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {

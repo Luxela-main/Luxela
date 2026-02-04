@@ -1,0 +1,1 @@
+ALTER TABLE "support_tickets" ALTER COLUMN "buyer_id" DROP NOT NULL;

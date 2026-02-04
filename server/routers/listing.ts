@@ -1,8 +1,8 @@
-import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
-import { listings, sellers, brands, collections, products, productImages } from "../db/schema";
-import { and, eq } from "drizzle-orm";
+import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews } from "../db/schema";
+import { and, eq, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { TRPCContext } from "../trpc/context";
@@ -143,10 +143,11 @@ const SingleListingInput = z.object({
 
 const CollectionItemInput = z.object({
   title: z.string(),
-  priceCents: z.number().int().positive(),
+  priceCents: z.number().int().nonnegative().default(0),
   currency: z.string(),
   description: z.string().optional(),
   category: CategoryEnum.optional(),
+  images: z.array(z.string()).optional(),
 });
 
 // ---------- HELPERS ----------
@@ -188,6 +189,9 @@ export const listingRouter = createTRPCRouter({
 
       if (input.supplyCapacity === "limited" && (!input.quantityAvailable || input.quantityAvailable <= 0))
         throw new TRPCError({ code: "BAD_REQUEST", message: "quantityAvailable is required for limited supply" });
+      
+      // Set default quantity to 1000 if not limited and not provided
+      const quantity = input.quantityAvailable ?? (input.supplyCapacity === "limited" ? 0 : 1000);
 
       // Get or create brand for seller
       const existingBrands = await db.select().from(brands).where(eq(brands.sellerId, seller.id));
@@ -205,16 +209,43 @@ export const listingRouter = createTRPCRouter({
       }
 
       const productId = input.productId ?? uuidv4();
-
-      const convertedPrice = input.priceCents ? (input.priceCents / 100).toFixed(2) : "0.00";
+      
+      // Generate base slug from title
+      let baseSlug = input.title.toLowerCase().replace(/\s+/g, "-").substring(0, 50);
+      
+      // Check if slug already exists for this brand and make it unique if needed
+      let slug = baseSlug;
+      let slugExists: any[] = [];
+      try {
+        slugExists = await db.select().from(products).where(
+          and(eq(products.brandId, brandId), eq(products.slug, slug))
+        );
+      } catch (error) {
+        console.warn('Slug check failed, proceeding with base slug:', error);
+      }
+      
+      let counter = 1;
+      while (slugExists && slugExists.length > 0) {
+        slug = `${baseSlug}-${counter}`;
+        try {
+          slugExists = await db.select().from(products).where(
+            and(eq(products.brandId, brandId), eq(products.slug, slug))
+          );
+        } catch (error) {
+          console.warn(`Slug check failed for ${slug}, trying next counter:`, error);
+          counter++;
+          continue;
+        }
+        counter++;
+      }
       
       // Build product values object with only fields that have values
       const productValues: any = {
         brandId: brandId,
-        collectionId: null,  // Explicitly set to null for single products
+        collectionId: sql.raw('NULL'),
         name: input.title,
-        slug: input.title.toLowerCase().replace(/\s+/g, "-"),
-        price: convertedPrice,
+        slug: slug,
+        priceCents: input.priceCents ?? 0,
         currency: input.currency ?? "SOL",
         type: "single",
         sku: input.sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -232,7 +263,17 @@ export const listingRouter = createTRPCRouter({
         productValues.shipsIn = input.etaDomestic;
       }
       
-      const productInserted = await db.insert(products).values(productValues).returning({ id: products.id });
+      let productInserted;
+      try {
+        productInserted = await db.insert(products).values(productValues).returning({ id: products.id });
+      } catch (error: any) {
+        console.error('Product insert error:', error);
+        throw new TRPCError({ 
+          code: 'INTERNAL_SERVER_ERROR', 
+          message: `Database error: ${error.message}`,
+          cause: error
+        });
+      }
 
       const listingValues = {
         sellerId: seller.id,
@@ -247,7 +288,7 @@ export const listingRouter = createTRPCRouter({
         currency: input.currency ?? null,
         sizesJson: input.sizes ? JSON.stringify(input.sizes) : null,
         supplyCapacity: input.supplyCapacity ?? null,
-        quantityAvailable: input.quantityAvailable ?? null,
+        quantityAvailable: quantity,
         limitedEditionBadge: input.limitedEditionBadge ?? null,
         releaseDuration: input.releaseDuration ?? null,
         materialComposition: input.materialComposition ?? null,
@@ -268,6 +309,13 @@ export const listingRouter = createTRPCRouter({
       };
 
       const listingInserted = await db.insert(listings).values(listingValues).returning();
+
+      // Create a corresponding listing review entry for admin review dashboard
+      await db.insert(listingReviews).values({
+        listingId: listingInserted[0].id,
+        sellerId: seller.id,
+        status: 'pending',
+      });
 
       // Insert additional product images if provided
       if (input.images && input.images.length > 0) {
@@ -333,12 +381,26 @@ export const listingRouter = createTRPCRouter({
       title: z.string().min(1),
       description: z.string().optional(),
       items: z.array(CollectionItemInput).nonempty(),
+      // Shipping and supply fields
+      supplyCapacity: SupplyCapacityEnum.optional(),
+      shippingOption: ShippingOptionEnum.optional(),
+      etaDomestic: ShippingEtaEnum.optional(),
+      etaInternational: ShippingEtaEnum.optional(),
+      refundPolicy: z.enum(['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']).optional(),
+      // Enterprise fields
+      sku: z.string().optional().transform(val => val === '' ? undefined : val),
+      slug: z.string().optional(),
+      metaDescription: z.string().optional().transform(val => val === '' ? undefined : val),
+      barcode: z.string().optional().transform(val => val === '' ? undefined : val),
+      videoUrl: z.string().optional().transform(val => val === '' ? undefined : val),
+      careInstructions: z.string().optional().transform(val => val === '' ? undefined : val),
     })
   )
   .output(ListingOutput)
   .mutation(async ({ ctx, input }) => {
-    // --- Fetch seller and brand ---
-    const seller = await fetchSeller(ctx);
+    try {
+      // --- Fetch seller and brand ---
+      const seller = await fetchSeller(ctx);
 
     // Get or create brand for seller
     const existingBrands = await db.select().from(brands).where(eq(brands.sellerId, seller.id));
@@ -358,49 +420,233 @@ export const listingRouter = createTRPCRouter({
     // --- Create the collection ---
     const collectionId = uuidv4();
     const now = new Date();
-    await db.insert(collections).values({
-      id: collectionId,
-      brandId: brandId,
-      name: input.title,
-      slug: input.title.toLowerCase().replace(/\s+/g, "-"),
-      description: input.description ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    
+    // Generate slug: use input slug if provided and non-empty, otherwise generate from title
+    let collectionSlug = input.slug || input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    // If slug is still empty after generation, use timestamp fallback
+    if (!collectionSlug || collectionSlug.trim() === "") {
+      collectionSlug = `collection-${Date.now()}`;
+    }
+    
+    // Check for slug uniqueness within the brand and append numeric suffix if needed
+    let uniqueSlug = collectionSlug;
+    let slugCounter = 1;
+    let slugExists = true;
+    const maxAttempts = 100;
+    let attempts = 0;
+    
+    while (slugExists && attempts < maxAttempts) {
+      try {
+        const existingCollection = await db
+          .select({ id: collections.id })
+          .from(collections)
+          .where(
+            and(
+              eq(collections.brandId, brandId),
+              eq(collections.slug, uniqueSlug)
+            )
+          )
+          .limit(1);
+        
+        if (existingCollection.length === 0) {
+          slugExists = false;
+        } else {
+          uniqueSlug = `${collectionSlug}-${slugCounter}`;
+          slugCounter++;
+        }
+      } catch (error) {
+        console.error('Error checking slug uniqueness:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to check collection slug uniqueness'
+        });
+      }
+      attempts++;
+    }
+    
+    if (attempts >= maxAttempts) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Could not generate unique collection slug'
+      });
+    }
+    
+    // Sanitize slug to ensure it's safe for database
+    if (!uniqueSlug || typeof uniqueSlug !== 'string' || uniqueSlug.length === 0) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Invalid collection slug generated'
+      });
+    }
+    
+    let result: any;
+    try {
+      await db.insert(collections).values({
+        id: collectionId,
+        brandId: brandId,
+        name: input.title,
+        slug: uniqueSlug,
+        description: input.description,
+        createdAt: now,
+        updatedAt: now,
+      });
 
     // --- Create all products for this collection ---
     const productIds: string[] = [];
+    const collectionItemsToInsert: any[] = [];
+    
     for (const [index, item] of input.items.entries()) {
       const productId = uuidv4();
       productIds.push(productId);
 
-      await db.insert(products).values({
+      // Generate slug with proper special character handling
+      const productSlug = item.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      // Generate unique SKU using UUID
+      const uniqueSku = `SKU-${uuidv4().slice(0, 8).toUpperCase()}`;
+
+      // Insert product into database - DO NOT set type to 'collection'
+      const productInserted = await db.insert(products).values({
+        id: productId,
         brandId: brandId,
         collectionId: collectionId,
         name: item.title,
-        slug: item.title.toLowerCase().replace(/\s+/g, "-"),
-        ...(item.description && { description: item.description }),
-        ...(item.category && { category: item.category }),
-        price: ((item.priceCents ?? 0) / 100).toFixed(2),
+        slug: productSlug,
+        description: item.description ?? null,
+        category: item.category ?? null,
+        priceCents: item.priceCents,
         currency: item.currency ?? "SOL",
-        type: "collection",
-        sku: `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        sku: uniqueSku,
         inStock: true,
+      }).returning({ id: products.id });
+      
+      if (!productInserted[0]?.id) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to create product for collection item: ${item.title}`
+        });
+      }
+
+      // Add to collection items to be inserted later
+      collectionItemsToInsert.push({
+        id: uuidv4(),
+        collectionId: collectionId,
+        productId: productId,
+        position: index,
+      });
+
+      // Insert product images if provided
+      if (item.images && item.images.length > 0) {
+        const imageValues = item.images.map((imageUrl, imgIndex) => ({
+          id: uuidv4(),
+          productId: productId,
+          imageUrl,
+          position: imgIndex,
+        }));
+        await db.insert(productImages).values(imageValues);
+      }
+    }
+
+    // Insert collection items into junction table for proper relational structure
+    if (collectionItemsToInsert.length > 0) {
+      await db.insert(collectionItems).values(collectionItemsToInsert);
+    }
+
+    // Create individual listings for each product so they're cartable
+    const listingsToInsert: any[] = [];
+    for (const [index, item] of input.items.entries()) {
+      const productId = productIds[index];
+      
+      // Generate listing slug
+      const listingSlug = item.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      listingsToInsert.push({
+        id: uuidv4(),
+        productId: productId,
+        collectionId: collectionId,
+        sellerId: seller.id,
+        type: "single",
+        title: item.title,
+        description: item.description ?? null,
+        category: item.category ?? null,
+        priceCents: item.priceCents,
+        currency: item.currency ?? "SOL",
+        supplyCapacity: input.supplyCapacity ?? "no_max",
+        quantityAvailable: 1,
+        shippingOption: input.shippingOption ?? "both",
+        etaDomestic: input.etaDomestic ?? null,
+        etaInternational: input.etaInternational ?? null,
+        refundPolicy: input.refundPolicy ?? null,
+        slug: listingSlug,
+        status: "pending_review",
       });
     }
 
-    const result = await db.insert(listings).values({
+    if (listingsToInsert.length > 0) {
+      await db.insert(listings).values(listingsToInsert);
+    }
+
+    // Get the first product's image for the collection thumbnail
+    let collectionMainImage: string | null = null;
+    if (productIds.length > 0) {
+      try {
+        const firstProductImages = await db
+          .select()
+          .from(productImages)
+          .where(eq(productImages.productId, productIds[0]))
+          .orderBy(productImages.position)
+          .limit(1);
+        
+        if (firstProductImages.length > 0) {
+          collectionMainImage = firstProductImages[0].imageUrl;
+        }
+      } catch (imageError) {
+        console.warn('Error fetching first product image for collection:', imageError);
+      }
+    }
+
+    // Create the collection overview listing
+    result = await db.insert(listings).values({
+      collectionId: collectionId,
       sellerId: seller.id,
       type: "collection",
       title: input.title,
       description: input.description ?? null,
-      itemsJson: JSON.stringify(productIds),
+      image: collectionMainImage,
+      itemsJson: null,
       productId: null,
-    }).returning();
+      quantityAvailable: input.items.length,
+      status: "pending_review",
+      }).returning();
+    
+    // Create a corresponding listing review entry for admin review dashboard
+    if (result[0]) {
+      await db.insert(listingReviews).values({
+        listingId: result[0].id,
+        sellerId: seller.id,
+        status: 'pending',
+      });
+    }
+    } catch (dbError) {
+      console.error('Database error inserting collection:', dbError);
+      if (dbError instanceof Error) {
+        console.error('Error details:', dbError.message);
+        console.error('Stack:', dbError.stack);
+      }
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Failed to create collection: ${dbError instanceof Error ? dbError.message : String(dbError)}`
+      });
+    }
 
     const createdListing = result[0];
     if (!createdListing) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create listing' });
-    const listingId = createdListing.id;
 
     // Helper to reverse-map shipping eta from DB values to full enum
     const unmapShippingEta = (value: string | null): string | null => {
@@ -440,9 +686,25 @@ export const listingRouter = createTRPCRouter({
       localPricing: createdListing.localPricing,
       itemsJson: createdListing.itemsJson ? JSON.parse(createdListing.itemsJson) : null,
       productId: createdListing.productId ?? undefined,
+      sku: createdListing.sku || undefined,
+      slug: createdListing.slug || undefined,
+      metaDescription: createdListing.metaDescription || undefined,
+      barcode: createdListing.barcode || undefined,
+      videoUrl: createdListing.videoUrl || undefined,
+      careInstructions: createdListing.careInstructions || undefined,
       createdAt: new Date(createdListing.createdAt),
       updatedAt: new Date(createdListing.updatedAt),
     };
+  } catch (error) {
+    console.error('Error in createCollection mutation:', error);
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: error instanceof Error ? error.message : 'Failed to create collection'
+    });
+  }
   }),
 
   // ---- GET MY LISTINGS ----
@@ -460,41 +722,414 @@ export const listingRouter = createTRPCRouter({
       const seller = await fetchSeller(ctx);
       const myListings = await db.select().from(listings).where(eq(listings.sellerId, seller.id));
 
-      return myListings.map((l) => ({
-        id: l.id,
-        sellerId: l.sellerId,
-        type: l.type as "single" | "collection",
-        title: l.title,
-        description: l.description,
-        category: l.category,
-        image: l.image,
-        imagesJson: l.imagesJson,
-        priceCents: l.priceCents,
-        currency: l.currency,
-        sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
-        supplyCapacity: l.supplyCapacity,
-        quantityAvailable: l.quantityAvailable,
-        limitedEditionBadge: l.limitedEditionBadge,
-        releaseDuration: l.releaseDuration as any,
-        materialComposition: l.materialComposition,
-        colorsAvailable: l.colorsAvailable ? JSON.parse(l.colorsAvailable) : null,
-        additionalTargetAudience: l.additionalTargetAudience,
-        shippingOption: l.shippingOption,
-        etaDomestic: l.etaDomestic as any,
-        etaInternational: l.etaInternational as any,
-        refundPolicy: l.refundPolicy,
-        localPricing: l.localPricing,
-        itemsJson: l.itemsJson ? JSON.parse(l.itemsJson) : null,
-        productId: l.productId ?? undefined,
-        sku: l.sku || undefined,
-        slug: l.slug || undefined,
-        metaDescription: l.metaDescription || undefined,
-        barcode: l.barcode || undefined,
-        videoUrl: l.videoUrl || undefined,
-        careInstructions: l.careInstructions || undefined,
-        createdAt: new Date(l.createdAt),
-        updatedAt: new Date(l.updatedAt),
+      return await Promise.all(myListings.map(async (l) => {
+        try {
+          const result: any = {
+            id: l.id,
+            sellerId: l.sellerId,
+            type: l.type as "single" | "collection",
+            title: l.title,
+            description: l.description,
+            category: l.category,
+            image: l.image,
+            imagesJson: l.imagesJson || null,
+            priceCents: l.priceCents,
+            currency: l.currency,
+            sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
+            supplyCapacity: l.supplyCapacity,
+            quantityAvailable: l.quantityAvailable,
+            limitedEditionBadge: l.limitedEditionBadge,
+            releaseDuration: l.releaseDuration as any,
+            materialComposition: l.materialComposition,
+            colorsAvailable: l.colorsAvailable ? JSON.parse(l.colorsAvailable) : null,
+            additionalTargetAudience: l.additionalTargetAudience,
+            shippingOption: l.shippingOption,
+            etaDomestic: l.etaDomestic as any,
+            etaInternational: l.etaInternational as any,
+            refundPolicy: l.refundPolicy,
+            localPricing: l.localPricing,
+            itemsJson: null,
+            productId: l.productId ?? undefined,
+            createdAt: new Date(l.createdAt),
+            updatedAt: new Date(l.updatedAt),
+          };
+          
+          // Only include optional enterprise fields if they exist
+          if (l.sku) result.sku = l.sku;
+          if (l.slug) result.slug = l.slug;
+          if (l.metaDescription) result.metaDescription = l.metaDescription;
+          if (l.barcode) result.barcode = l.barcode;
+          if (l.videoUrl) result.videoUrl = l.videoUrl;
+          if (l.careInstructions) result.careInstructions = l.careInstructions;
+          
+          // For single listings, fetch product images from database
+          if (l.type === 'single' && l.productId) {
+            try {
+              const productImagesList = await db
+                .select()
+                .from(productImages)
+                .where(eq(productImages.productId, l.productId))
+                .orderBy(productImages.position);
+              
+              if (productImagesList.length > 0) {
+                // Build imagesJson array from product images
+                result.imagesJson = JSON.stringify(productImagesList.map((img) => ({
+                  url: img.imageUrl,
+                })));
+                
+                // If no main image, use the first product image
+                if (!result.image) {
+                  result.image = productImagesList[0].imageUrl;
+                }
+              }
+            } catch (singleError) {
+              console.error('Error fetching images for single listing:', l.id, singleError);
+            }
+          }
+          // For collection listings, fetch real product data from database with images
+          else if (l.type === 'collection' && l.collectionId) {
+            try {
+              const items = await db
+                .select()
+                .from(collectionItems)
+                .where(eq(collectionItems.collectionId, l.collectionId))
+                .orderBy(collectionItems.position);
+              
+              if (items.length > 0) {
+                const productIds = items.map((item) => item.productId);
+                const productsData = await db
+                  .select()
+                  .from(products)
+                  .where(inArray(products.id, productIds));
+                
+                // Fetch images for all products
+                const allImages = await db
+                  .select()
+                  .from(productImages)
+                  .where(inArray(productImages.productId, productIds));
+                
+                // Build collection items with real data including all images and extended metadata
+                result.itemsJson = items.map((item) => {
+                  const product = productsData.find((p) => p.id === item.productId);
+                  const productImageList = allImages.filter((img) => img.productId === item.productId);
+                  
+                  return {
+                    id: item.productId,
+                    title: product?.name || '',
+                    priceCents: product?.priceCents || 0,
+                    currency: product?.currency || l.currency || 'NGN',
+                    image: productImageList[0]?.imageUrl || null,
+                    images: productImageList.map((img) => img.imageUrl),
+                    imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img) => ({ url: img.imageUrl }))) : null,
+                    quantityAvailable: product?.inStock ? 1 : 0,
+                    sku: product?.sku || null,
+                    description: product?.description || null,
+                    category: product?.category || null,
+                  };
+                });
+                
+                // If collection listing doesn't have a main image, set it from the first product
+                if (!result.image && result.itemsJson.length > 0) {
+                  result.image = result.itemsJson[0].image;
+                }
+              }
+            } catch (collectionError) {
+              console.error('Error fetching collection items for listing:', l.id, collectionError);
+              result.itemsJson = [];
+            }
+          } else if (l.itemsJson) {
+            result.itemsJson = typeof l.itemsJson === 'string' ? JSON.parse(l.itemsJson) : l.itemsJson;
+          }
+          
+          return result;
+        } catch (parseError) {
+          console.error('Error parsing listing:', l.id, parseError);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to parse listing data for ${l.id}`,
+            cause: parseError
+          });
+        }
       }));
+    }),
+
+  // ---- GET MY COLLECTIONS ----
+  getMyCollections: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/listing/my-collections",
+        tags: ["Listing"],
+        summary: "Fetch all collections belonging to the current seller",
+      },
+    })
+    .output(z.array(ListingOutput))
+    .query(async ({ ctx }) => {
+      const seller = await fetchSeller(ctx);
+      
+      // Get all collection type listings for this seller
+      const collectionListings = await db
+        .select()
+        .from(listings)
+        .where(
+          and(
+            eq(listings.sellerId, seller.id),
+            eq(listings.type, 'collection')
+          )
+        );
+
+      return await Promise.all(collectionListings.map(async (l) => {
+        try {
+          const result: any = {
+            id: l.id,
+            sellerId: l.sellerId,
+            type: l.type as "single" | "collection",
+            title: l.title,
+            description: l.description,
+            category: l.category,
+            image: l.image,
+            imagesJson: l.imagesJson || null,
+            priceCents: l.priceCents,
+            currency: l.currency,
+            sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
+            supplyCapacity: l.supplyCapacity,
+            quantityAvailable: l.quantityAvailable,
+            limitedEditionBadge: l.limitedEditionBadge,
+            releaseDuration: l.releaseDuration as any,
+            materialComposition: l.materialComposition,
+            colorsAvailable: l.colorsAvailable ? JSON.parse(l.colorsAvailable) : null,
+            additionalTargetAudience: l.additionalTargetAudience,
+            shippingOption: l.shippingOption,
+            etaDomestic: l.etaDomestic as any,
+            etaInternational: l.etaInternational as any,
+            refundPolicy: l.refundPolicy,
+            localPricing: l.localPricing,
+            itemsJson: null,
+            productId: l.productId ?? undefined,
+            createdAt: new Date(l.createdAt),
+            updatedAt: new Date(l.updatedAt),
+          };
+          
+          // Only include optional enterprise fields if they exist
+          if (l.sku) result.sku = l.sku;
+          if (l.slug) result.slug = l.slug;
+          if (l.metaDescription) result.metaDescription = l.metaDescription;
+          if (l.barcode) result.barcode = l.barcode;
+          if (l.videoUrl) result.videoUrl = l.videoUrl;
+          if (l.careInstructions) result.careInstructions = l.careInstructions;
+          
+          // Fetch collection items with real product data
+          if (l.collectionId) {
+            try {
+              const items = await db
+                .select()
+                .from(collectionItems)
+                .where(eq(collectionItems.collectionId, l.collectionId))
+                .orderBy(collectionItems.position);
+              
+              if (items.length > 0) {
+                const productIds = items.map((item) => item.productId);
+                const productsData = await db
+                  .select()
+                  .from(products)
+                  .where(inArray(products.id, productIds));
+                
+                // Fetch images for all products
+                const allImages = await db
+                  .select()
+                  .from(productImages)
+                  .where(inArray(productImages.productId, productIds));
+                
+                // Build collection items with real data including all images and extended metadata
+                result.itemsJson = items.map((item) => {
+                  const product = productsData.find((p) => p.id === item.productId);
+                  const productImageList = allImages.filter((img) => img.productId === item.productId);
+                  
+                  return {
+                    id: item.productId,
+                    title: product?.name || '',
+                    priceCents: product?.priceCents || 0,
+                    currency: product?.currency || l.currency || 'NGN',
+                    image: productImageList[0]?.imageUrl || null,
+                    images: productImageList.map((img) => img.imageUrl),
+                    imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img) => ({ url: img.imageUrl }))) : null,
+                    quantityAvailable: product?.inStock ? 1 : 0,
+                    sku: product?.sku || null,
+                    description: product?.description || null,
+                    category: product?.category || null,
+                  };
+                });
+                
+                // If collection listing doesn't have a main image, set it from the first product
+                if (!result.image && result.itemsJson.length > 0) {
+                  result.image = result.itemsJson[0].image;
+                }
+              } else {
+                result.itemsJson = [];
+              }
+            } catch (collectionError) {
+              console.error('Error fetching collection items for listing:', l.id, collectionError);
+              result.itemsJson = [];
+            }
+          } else if (l.itemsJson) {
+            result.itemsJson = typeof l.itemsJson === 'string' ? JSON.parse(l.itemsJson) : l.itemsJson;
+          }
+          
+          return result;
+        } catch (parseError) {
+          console.error('Error parsing collection listing:', l.id, parseError);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to parse collection listing data for ${l.id}`,
+            cause: parseError
+          });
+        }
+      }));
+    }),
+
+  // ---- GET ALL COLLECTIONS (Public) ----
+  getAllCollections: publicProcedure
+    .output(z.array(ListingOutput))
+    .query(async () => {
+      try {
+        const collectionListings = await db
+          .select()
+          .from(listings)
+          .where(
+            and(
+              eq(listings.type, 'collection'),
+              eq(listings.status, 'approved')
+            )
+          );
+
+        return await Promise.all(collectionListings.map(async (l) => {
+          try {
+            const result: any = {
+              id: l.id,
+              sellerId: l.sellerId,
+              type: l.type as "single" | "collection",
+              title: l.title,
+              description: l.description,
+              category: l.category,
+              image: l.image,
+              imagesJson: l.imagesJson || null,
+              priceCents: l.priceCents,
+              currency: l.currency,
+              sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
+              supplyCapacity: l.supplyCapacity,
+              quantityAvailable: l.quantityAvailable,
+              limitedEditionBadge: l.limitedEditionBadge,
+              releaseDuration: l.releaseDuration as any,
+              materialComposition: l.materialComposition,
+              colorsAvailable: l.colorsAvailable ? JSON.parse(l.colorsAvailable) : null,
+              additionalTargetAudience: l.additionalTargetAudience,
+              shippingOption: l.shippingOption,
+              etaDomestic: l.etaDomestic as any,
+              etaInternational: l.etaInternational as any,
+              refundPolicy: l.refundPolicy,
+              videoUrl: l.videoUrl,
+              careInstructions: l.careInstructions,
+              sku: l.sku,
+              slug: l.slug,
+              metaDescription: l.metaDescription,
+              barcode: l.barcode,
+              localPricing: l.localPricing,
+              itemsJson: null,
+              productId: l.productId ?? undefined,
+              createdAt: new Date(l.createdAt),
+              updatedAt: new Date(l.updatedAt),
+            };
+            
+            if (l.collectionId) {
+              try {
+                const items = await db
+                  .select()
+                  .from(collectionItems)
+                  .where(eq(collectionItems.collectionId, l.collectionId))
+                  .orderBy(collectionItems.position);
+                
+                if (items.length > 0) {
+                  const productIds = items.map((item) => item.productId);
+                  const productsData = await db
+                    .select()
+                    .from(products)
+                    .where(sql`${products.id} = ANY(ARRAY[${sql.join(productIds, sql`,`)}]::uuid[])`);
+                  
+                  const allImages = await db
+                    .select()
+                    .from(productImages)
+                    .where(sql`${productImages.productId} = ANY(ARRAY[${sql.join(productIds, sql`,`)}]::uuid[])`);
+                  
+                  result.itemsJson = items.map((item) => {
+                    const product = productsData.find((p) => p.id === item.productId);
+                    const productImageList = allImages.filter((img) => img.productId === item.productId);
+                    return {
+                      id: item.productId,
+                      title: product?.name || '',
+                      priceCents: product?.priceCents || 0,
+                      currency: product?.currency || l.currency || 'NGN',
+                      image: productImageList[0]?.imageUrl || null,
+                      images: productImageList.map((img) => img.imageUrl),
+                      imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img) => ({ url: img.imageUrl }))) : null,
+                      quantityAvailable: product?.inStock ? 1 : 0,
+                      sku: product?.sku || null,
+                      description: product?.description || null,
+                      category: product?.category || null,
+                    };
+                  });
+                } else {
+                  result.itemsJson = [];
+                }
+              } catch (collectionError) {
+                console.error('Error fetching collection items:', l.id, collectionError);
+                result.itemsJson = [];
+              }
+            } else if (l.itemsJson) {
+              result.itemsJson = typeof l.itemsJson === 'string' ? JSON.parse(l.itemsJson) : l.itemsJson;
+            }
+            
+            return result;
+          } catch (parseError) {
+            console.error('Error parsing collection:', l.id, parseError);
+            return {
+              id: l.id,
+              sellerId: l.sellerId,
+              type: l.type as "single" | "collection",
+              title: l.title,
+              description: l.description,
+              category: l.category,
+              image: l.image,
+              imagesJson: null,
+              priceCents: l.priceCents,
+              currency: l.currency,
+              sizesJson: null,
+              supplyCapacity: l.supplyCapacity,
+              quantityAvailable: l.quantityAvailable,
+              limitedEditionBadge: l.limitedEditionBadge,
+              releaseDuration: l.releaseDuration as any,
+              materialComposition: l.materialComposition,
+              colorsAvailable: null,
+              additionalTargetAudience: l.additionalTargetAudience,
+              shippingOption: l.shippingOption,
+              etaDomestic: l.etaDomestic as any,
+              etaInternational: l.etaInternational as any,
+              refundPolicy: l.refundPolicy,
+              localPricing: l.localPricing,
+              itemsJson: [],
+              productId: l.productId ?? undefined,
+              createdAt: new Date(l.createdAt),
+              updatedAt: new Date(l.updatedAt),
+            };
+          }
+        }));
+      } catch (error) {
+        console.error('Error fetching collections:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch collections',
+          cause: error
+        });
+      }
     }),
 
   // ---- RESTOCK ----
@@ -733,40 +1368,55 @@ export const listingRouter = createTRPCRouter({
         .from(listings)
         .where(and(...conditions));
 
-      return approvedListings.map((l) => ({
-        id: l.id,
-        sellerId: l.sellerId,
-        type: l.type as "single" | "collection",
-        title: l.title,
-        description: l.description,
-        category: l.category,
-        image: l.image,
-        imagesJson: l.imagesJson,
-        priceCents: l.priceCents,
-        currency: l.currency,
-        sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
-        supplyCapacity: l.supplyCapacity,
-        quantityAvailable: l.quantityAvailable,
-        limitedEditionBadge: l.limitedEditionBadge,
-        releaseDuration: l.releaseDuration as any,
-        materialComposition: l.materialComposition,
-        colorsAvailable: l.colorsAvailable ? JSON.parse(l.colorsAvailable) : null,
-        additionalTargetAudience: l.additionalTargetAudience,
-        shippingOption: l.shippingOption,
-        etaDomestic: l.etaDomestic as any,
-        etaInternational: l.etaInternational as any,
-        refundPolicy: l.refundPolicy,
-        localPricing: l.localPricing,
-        itemsJson: l.itemsJson ? JSON.parse(l.itemsJson) : null,
-        productId: l.productId ?? undefined,
-        sku: l.sku || undefined,
-        slug: l.slug || undefined,
-        metaDescription: l.metaDescription || undefined,
-        barcode: l.barcode || undefined,
-        videoUrl: l.videoUrl || undefined,
-        careInstructions: l.careInstructions || undefined,
-        createdAt: new Date(l.createdAt),
-        updatedAt: new Date(l.updatedAt),
-      }));
+      return approvedListings.map((l) => {
+        try {
+          const result: any = {
+            id: l.id,
+            sellerId: l.sellerId,
+            type: l.type as "single" | "collection",
+            title: l.title,
+            description: l.description,
+            category: l.category,
+            image: l.image,
+            imagesJson: l.imagesJson || null,
+            priceCents: l.priceCents,
+            currency: l.currency,
+            sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
+            supplyCapacity: l.supplyCapacity,
+            quantityAvailable: l.quantityAvailable,
+            limitedEditionBadge: l.limitedEditionBadge,
+            releaseDuration: l.releaseDuration as any,
+            materialComposition: l.materialComposition,
+            colorsAvailable: l.colorsAvailable ? JSON.parse(l.colorsAvailable) : null,
+            additionalTargetAudience: l.additionalTargetAudience,
+            shippingOption: l.shippingOption,
+            etaDomestic: l.etaDomestic as any,
+            etaInternational: l.etaInternational as any,
+            refundPolicy: l.refundPolicy,
+            localPricing: l.localPricing,
+            itemsJson: l.itemsJson ? JSON.parse(l.itemsJson) : null,
+            productId: l.productId ?? undefined,
+            createdAt: new Date(l.createdAt),
+            updatedAt: new Date(l.updatedAt),
+          };
+          
+          // Only include optional enterprise fields if they exist
+          if (l.sku) result.sku = l.sku;
+          if (l.slug) result.slug = l.slug;
+          if (l.metaDescription) result.metaDescription = l.metaDescription;
+          if (l.barcode) result.barcode = l.barcode;
+          if (l.videoUrl) result.videoUrl = l.videoUrl;
+          if (l.careInstructions) result.careInstructions = l.careInstructions;
+          
+          return result;
+        } catch (parseError) {
+          console.error('Error parsing approved listing:', l.id, parseError);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to parse listing data for ${l.id}`,
+            cause: parseError
+          });
+        }
+      });
     }),
 });

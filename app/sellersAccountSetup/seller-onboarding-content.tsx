@@ -13,19 +13,10 @@ import { useTRPCReady } from "@/context/TRPCReadyContext";
 const SellerOnboardingContentInner = () => {
   const [currentPage, setCurrentPage] = useState<"setup" | "preview">("setup");
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = React.useState(false);
 
-  // Initialize form data with localStorage support
+  // Initialize form data - always returns default on first render (SSR safe)
   const getInitialFormData = (): SellerSetupFormData => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('sellerOnboardingFormData');
-        if (saved) {
-          return JSON.parse(saved);
-        }
-      } catch (error) {
-        console.error('Error loading form data from localStorage:', error);
-      }
-    }
     return {
       brandName: "",
       businessType: "individual",
@@ -52,15 +43,6 @@ const SellerOnboardingContentInner = () => {
       estimatedShippingTime: "48hrs",
       refundPolicy: "no_refunds",
       periodUntilRefund: "48hrs",
-      preferredPayoutMethod: "fiat_currency",
-      fiatPayoutMethod: "bank",
-      bankCountry: "",
-      accountHolderName: "",
-      accountNumber: "",
-      supportedBlockchain: "solana",
-      walletType: "phantom",
-      walletAddress: "",
-      preferredPayoutToken: "USDT",
       productCategory: "others",
       targetAudience: "unisex",
       localPricing: "fiat",
@@ -73,22 +55,35 @@ const SellerOnboardingContentInner = () => {
   const createSellerMutation = trpc.seller.createSellerProfile.useMutation();
   const updateBusinessMutation = trpc.seller.updateSellerBusiness.useMutation();
   const updateShippingMutation = trpc.seller.updateSellerShipping.useMutation();
-  const updatePaymentMutation = trpc.seller.updateSellerPayment.useMutation();
   const updateAdditionalMutation = trpc.seller.updateSellerAdditional.useMutation();
 
   // Corrected initial state with safe literal values
   const [formData, setFormData] = useState<SellerSetupFormData>(getInitialFormData());
 
-  // Save form data to localStorage whenever it changes
+  // Load from localStorage after hydration is complete
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('sellerOnboardingFormData');
+      if (saved) {
+        const parsedData = JSON.parse(saved);
+        setFormData(parsedData);
+      }
+    } catch (error) {
+      console.error('Error loading form data from localStorage:', error);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Save form data to localStorage whenever it changes (only after hydration)
+  React.useEffect(() => {
+    if (isHydrated) {
       try {
         localStorage.setItem('sellerOnboardingFormData', JSON.stringify(formData));
       } catch (error) {
         console.error('Error saving form data to localStorage:', error);
       }
     }
-  }, [formData]);
+  }, [formData, isHydrated]);
 
   const goToPreview = (data: SellerSetupFormData) => {
     setFormData(data);
@@ -116,6 +111,7 @@ const SellerOnboardingContentInner = () => {
         phoneNumber: data.phoneNumber,
         country: data.country,
         countryCode: data.countryCode,
+        socialMediaPlatform: data.socialMediaLinks?.[0]?.platform,
         socialMedia: data.socialMediaLinks ? JSON.stringify(data.socialMediaLinks) : undefined,
         fullName: data.fullName,
         idType: data.idType as "passport" | "drivers_license" | "voters_card" | "national_id",
@@ -155,17 +151,6 @@ const SellerOnboardingContentInner = () => {
           | "60days"
           | "store_credit"
           | "custom",
-      });
-
-      await updatePaymentMutation.mutateAsync({
-        preferredPayoutMethod: data.preferredPayoutMethod as "fiat_currency" | "cryptocurrency" | "both",
-        fiatPayoutMethod: data.fiatPayoutMethod as "bank" | "paypal" | "stripe" | "flutterwave" | undefined,
-        bankCountry: data.bankCountry,
-        accountHolderName: data.accountHolderName,
-        accountNumber: data.accountNumber,
-        walletType: data.walletType as "phantom" | "solflare" | "backpack" | "wallet_connect" | undefined,
-        walletAddress: data.walletAddress,
-        preferredPayoutToken: data.preferredPayoutToken as "USDT" | "USDC" | "solana" | undefined,
       });
 
       await updateAdditionalMutation.mutateAsync({

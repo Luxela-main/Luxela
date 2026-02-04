@@ -518,12 +518,12 @@ export default function Sales() {
                     </button>
                   )}
 
-                  <button className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2">
+                  <button className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer">
                     <MessageCircle size={16} />
                     Message Buyer
                   </button>
 
-                  <button className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2">
+                  <button className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer">
                     <Download size={16} />
                     <span className="hidden sm:inline">Details</span>
                   </button>

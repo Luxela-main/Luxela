@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
 import { db } from "../db";
-import { orders, sellers } from "../db/schema";
+import { orders, sellers, sellerPayoutMethods } from "../db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -276,8 +276,38 @@ export const salesRouter = createTRPCRouter({
         if (!seller)
           throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
 
-        const methods = seller.payoutMethods ? JSON.parse(seller.payoutMethods) : [];
-        return methods;
+        // Fetch from the actual database table with error handling
+        let methods: any[] = [];
+        try {
+          methods = await db
+            .select()
+            .from(sellerPayoutMethods)
+            .where(eq(sellerPayoutMethods.sellerId, seller.id));
+        } catch (dbError: any) {
+          console.warn("[PAYOUT_METHODS] Query failed:", dbError?.message);
+          // Return empty array if query fails - table might not be migrated yet
+          methods = [];
+        }
+        
+        return methods.map((m) => ({
+          id: m.id,
+          type: m.methodType,
+          is_default: m.isDefault,
+          is_verified: m.isVerified,
+          accountName: m.accountHolderName || m.email || m.phoneNumber || 'Unnamed Account',
+          bankName: m.bankName,
+          accountNumber: m.accountNumber,
+          bankCountry: m.bankCountry,
+          swiftCode: m.swiftCode,
+          iban: m.iban,
+          email: m.email,
+          accountId: m.accountId,
+          phoneNumber: m.phoneNumber,
+          mobileMoneyProvider: m.mobileMoneyProvider,
+          sellerId: seller.id,
+          created_at: m.createdAt,
+          updated_at: m.updatedAt,
+        }));
       } catch (err: any) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -289,7 +319,7 @@ export const salesRouter = createTRPCRouter({
   addPayoutMethod: protectedProcedure
     .input(
       z.object({
-        type: z.enum(["bank_transfer", "paypal", "stripe", "crypto", "wise"]),
+        type: z.enum(["bank", "paypal", "stripe", "flutterwave", "tsara", "mobile_money", "wise", "other"]),
         accountDetails: z.record(z.string(), z.any()),
         isDefault: z.boolean().optional(),
       })
@@ -305,28 +335,103 @@ export const salesRouter = createTRPCRouter({
         if (!seller)
           throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
 
-        const methods = seller.payoutMethods ? JSON.parse(seller.payoutMethods) : [];
-        const newMethod = {
-          id: Date.now().toString(),
-          type: input.type,
-          accountDetails: input.accountDetails,
-          is_default: input.isDefault || methods.length === 0,
-          is_verified: false,
-          created_at: new Date().toISOString(),
-        };
+        // Check if this will be the default method with error handling
+        let existingMethods: any[] = [];
+        try {
+          existingMethods = await db
+            .select()
+            .from(sellerPayoutMethods)
+            .where(eq(sellerPayoutMethods.sellerId, seller.id));
+        } catch (dbError: any) {
+          console.warn("[PAYOUT_METHODS] Failed to check existing methods:", dbError?.message);
+          existingMethods = [];
+        }
+        
+        const isDefault = input.isDefault || existingMethods.length === 0;
 
-        if (newMethod.is_default) {
-          methods.forEach((m: any) => (m.is_default = false));
+        // If this method should be default, unset others
+        if (isDefault && existingMethods.length > 0) {
+          try {
+            await db
+              .update(sellerPayoutMethods)
+              .set({ isDefault: false })
+              .where(eq(sellerPayoutMethods.sellerId, seller.id));
+          } catch (dbError: any) {
+            console.warn("[PAYOUT_METHODS] Failed to update default status:", dbError?.message);
+          }
         }
 
-        methods.push(newMethod);
+        // Helper function to sanitize string inputs
+        const sanitizeInput = (value: any): string | null => {
+          if (!value || typeof value !== 'string') return null;
+          // Trim whitespace and remove leading special characters that indicate corrupted data
+          const cleaned = value.trim();
+          if (cleaned === '' || cleaned === '&') return null;
+          // Remove leading ampersand if present (URL encoding artifact)
+          return cleaned.startsWith('&') ? cleaned.substring(1) : cleaned;
+        };
 
-        await db
-          .update(sellers)
-          .set({ payoutMethods: JSON.stringify(methods) })
-          .where(eq(sellers.id, seller.id));
+        // Create new method in database with error handling
+        let newMethod: any[] = [];
+        try {
+          const insertData: any = {
+            sellerId: seller.id,
+            methodType: input.type as any,
+            isDefault,
+            isVerified: false,
+            // Explicitly set default/nullable fields to null to avoid Drizzle "default" keyword issues
+            verificationToken: null,
+            bankCountry: null,
+            bankName: null,
+            bankCode: null,
+            accountHolderName: null,
+            accountNumber: null,
+            accountType: null,
+            swiftCode: null,
+            iban: null,
+            email: null,
+            accountId: null,
+            phoneNumber: null,
+            mobileMoneyProvider: null,
+            metadata: null,
+            lastUsedAt: null,
+          };
 
-        return newMethod;
+          // Add optional fields only if they are defined and not null
+          const optionalFields = [
+            'bankCountry', 'bankName', 'bankCode', 'accountHolderName',
+            'accountNumber', 'accountType', 'swiftCode', 'iban',
+            'email', 'accountId', 'phoneNumber', 'mobileMoneyProvider'
+          ];
+          
+          for (const field of optionalFields) {
+            const value = input.accountDetails[field];
+            const sanitized = sanitizeInput(value);
+            if (sanitized !== null && sanitized !== '') {
+              insertData[field] = sanitized;
+            }
+          }
+
+          newMethod = await db
+            .insert(sellerPayoutMethods)
+            .values(insertData)
+            .returning();
+        } catch (dbError: any) {
+          console.error("[PAYOUT_METHODS] Insert failed:", dbError?.message);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: dbError?.message || "Failed to add payout method",
+          });
+        }
+
+        return {
+          id: newMethod[0].id,
+          type: newMethod[0].methodType,
+          is_default: newMethod[0].isDefault,
+          is_verified: newMethod[0].isVerified,
+          accountName: newMethod[0].accountHolderName || newMethod[0].email || newMethod[0].phoneNumber || 'Unnamed Account',
+          created_at: newMethod[0].createdAt,
+        };
       } catch (err: any) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -354,26 +459,87 @@ export const salesRouter = createTRPCRouter({
         if (!seller)
           throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
 
-        const methods = seller.payoutMethods ? JSON.parse(seller.payoutMethods) : [];
-        const methodIndex = methods.findIndex((m: any) => m.id === input.methodId);
-        if (methodIndex === -1)
+        // Verify the method belongs to this seller
+        let method: any[] = [];
+        try {
+          method = await db
+            .select()
+            .from(sellerPayoutMethods)
+            .where(
+              and(
+                eq(sellerPayoutMethods.id, input.methodId),
+                eq(sellerPayoutMethods.sellerId, seller.id)
+              )
+            );
+        } catch (dbError: any) {
+          console.warn("[PAYOUT_METHODS] Failed to fetch method:", dbError?.message);
+          throw new TRPCError({ code: "NOT_FOUND", message: "Method not found" });
+        }
+        
+        if (method.length === 0)
           throw new TRPCError({ code: "NOT_FOUND", message: "Method not found" });
 
+        const sanitizeInput = (value: any): string | null => {
+          if (!value || typeof value !== 'string') return null;
+          const cleaned = value.trim();
+          if (cleaned === '' || cleaned === '&') return null;
+          return cleaned.startsWith('&') ? cleaned.substring(1) : cleaned;
+        };
+
+        const updateData: any = {};
+        
         if (input.accountDetails) {
-          methods[methodIndex].accountDetails = input.accountDetails;
+          const fields = [
+            'bankCountry', 'bankName', 'bankCode', 'accountHolderName',
+            'accountNumber', 'accountType', 'swiftCode', 'iban',
+            'email', 'accountId', 'phoneNumber', 'mobileMoneyProvider'
+          ];
+          
+          for (const field of fields) {
+            const value = (input.accountDetails as any)[field];
+            const sanitized = sanitizeInput(value);
+            if (sanitized !== null && sanitized !== '') {
+              (updateData as any)[field] = sanitized;
+            }
+          }
         }
 
         if (input.isDefault !== undefined && input.isDefault) {
-          methods.forEach((m: any) => (m.is_default = false));
-          methods[methodIndex].is_default = true;
+          // Unset other default methods
+          try {
+            await db
+              .update(sellerPayoutMethods)
+              .set({ isDefault: false })
+              .where(eq(sellerPayoutMethods.sellerId, seller.id));
+          } catch (dbError: any) {
+            console.warn("[PAYOUT_METHODS] Failed to update other methods:", dbError?.message);
+          }
+          updateData.isDefault = true;
         }
 
-        await db
-          .update(sellers)
-          .set({ payoutMethods: JSON.stringify(methods) })
-          .where(eq(sellers.id, seller.id));
+        let updatedMethod: any[] = [];
+        try {
+          updatedMethod = await db
+            .update(sellerPayoutMethods)
+            .set(updateData)
+            .where(eq(sellerPayoutMethods.id, input.methodId))
+            .returning();
+        } catch (dbError: any) {
+          console.error("[PAYOUT_METHODS] Update failed:", dbError?.message);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: dbError?.message || "Failed to update payout method",
+          });
+        }
 
-        return methods[methodIndex];
+        const updated = updatedMethod[0];
+        return {
+          id: updated.id,
+          type: updated.methodType,
+          is_default: updated.isDefault,
+          is_verified: updated.isVerified,
+          accountName: updated.accountHolderName || updated.email || updated.phoneNumber || 'Unnamed Account',
+        };
       } catch (err: any) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -395,20 +561,60 @@ export const salesRouter = createTRPCRouter({
         if (!seller)
           throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
 
-        const methods = seller.payoutMethods ? JSON.parse(seller.payoutMethods) : [];
-        const updatedMethods = methods.filter((m: any) => m.id !== input.methodId);
-
-        if (updatedMethods.length === methods.length)
+        // Verify the method belongs to this seller
+        let method: any[] = [];
+        try {
+          method = await db
+            .select()
+            .from(sellerPayoutMethods)
+            .where(
+              and(
+                eq(sellerPayoutMethods.id, input.methodId),
+                eq(sellerPayoutMethods.sellerId, seller.id)
+              )
+            );
+        } catch (dbError: any) {
+          console.warn("[PAYOUT_METHODS] Failed to fetch method for deletion:", dbError?.message);
+          throw new TRPCError({ code: "NOT_FOUND", message: "Method not found" });
+        }
+        
+        if (method.length === 0)
           throw new TRPCError({ code: "NOT_FOUND", message: "Method not found" });
 
-        if (updatedMethods.length > 0 && !updatedMethods.some((m: any) => m.is_default)) {
-          updatedMethods[0].is_default = true;
+        // Check if this is the default method
+        const isDefault = method[0].isDefault;
+
+        // Delete the method
+        try {
+          await db
+            .delete(sellerPayoutMethods)
+            .where(eq(sellerPayoutMethods.id, input.methodId));
+        } catch (dbError: any) {
+          console.error("[PAYOUT_METHODS] Delete failed:", dbError?.message);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: dbError?.message || "Failed to delete payout method",
+          });
         }
 
-        await db
-          .update(sellers)
-          .set({ payoutMethods: JSON.stringify(updatedMethods) })
-          .where(eq(sellers.id, seller.id));
+        // If we deleted the default method, set a new one as default
+        if (isDefault) {
+          try {
+            const remainingMethods = await db
+              .select()
+              .from(sellerPayoutMethods)
+              .where(eq(sellerPayoutMethods.sellerId, seller.id));
+            
+            if (remainingMethods.length > 0) {
+              await db
+                .update(sellerPayoutMethods)
+                .set({ isDefault: true })
+                .where(eq(sellerPayoutMethods.id, remainingMethods[0].id));
+            }
+          } catch (dbError: any) {
+            console.warn("[PAYOUT_METHODS] Failed to set new default method:", dbError?.message);
+          }
+        }
 
         return { success: true };
       } catch (err: any) {
@@ -569,4 +775,4 @@ export const salesRouter = createTRPCRouter({
         });
       }
     }),
-});
+});

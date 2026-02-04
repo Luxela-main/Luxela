@@ -9,7 +9,7 @@ const shippingTypeEnum = z.enum(['same_day', 'next_day', 'express', 'standard', 
 const shippingEtaEnum = z.enum(['same_day', 'next_day', '48hrs', '72hrs', '5_working_days', '1_2_weeks', '2_3_weeks', 'custom']);
 const refundPolicyEnum = z.enum(['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']);
 const preferredPayoutMethodEnum = z.enum(['fiat_currency', 'cryptocurrency', 'both']);
-const fiatPayoutMethodEnum = z.enum(['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'other']);
+const fiatPayoutMethodEnum = z.enum(['bank', 'paypal', 'stripe', 'flutterwave', 'tsara', 'mobile_money', 'wise', 'other']);
 const walletTypeEnum = z.enum(['phantom', 'solflare', 'backpack', 'wallet_connect', 'magic_eden', 'ledger_live']);
 const payoutTokenEnum = z.enum(['USDT', 'USDC', 'solana']);
 const productCategoryEnum = z.enum(['men_clothing', 'women_clothing', 'men_shoes', 'women_shoes', 'accessories', 'merch', 'others']);
@@ -43,6 +43,7 @@ const nftTierEnum = z.enum(['bronze', 'silver', 'gold', 'platinum']);
 const discountTypeEnum = z.enum(['percentage', 'fixed_amount', 'buy_one_get_one', 'free_shipping']);
 const discountStatusEnum = z.enum(['active', 'inactive', 'expired']);
 const payoutScheduleEnum = z.enum(['immediate', 'daily', 'weekly', 'bi_weekly', 'monthly']);
+const blockchainEnum = z.enum(['solana', 'ethereum', 'polygon', 'bitcoin', 'other']);
 const listingReviewStatusEnum = z.enum(['pending', 'approved', 'rejected', 'revision_requested']);
 
 // ========================== USERS ==========================
@@ -184,20 +185,57 @@ export const sellerShippingSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// ========================== SELLER PAYMENT ==========================
-export const sellerPaymentSchema = z.object({
+// ========================== SELLER PAYMENT CONFIG ==========================
+export const sellerPaymentConfigSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
-  preferredPayoutMethod: preferredPayoutMethodEnum,
-  fiatPayoutMethod: fiatPayoutMethodEnum.nullable().optional(),
+  payoutMethod: preferredPayoutMethodEnum,
+  payoutSchedule: payoutScheduleEnum.default('monthly'),
+  minimumPayoutThreshold: z.number().positive().nullable().optional(),
+  isActive: z.boolean().default(true),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== SELLER PAYOUT METHODS ==========================
+export const sellerPayoutMethodsSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  methodType: fiatPayoutMethodEnum,
   bankCountry: z.string().nullable().optional(),
-  bankName: z.string().nullable().optional(),
-  accountName: z.string().nullable().optional(),
+  bankCode: z.string().nullable().optional(),
   accountHolderName: z.string().nullable().optional(),
   accountNumber: z.string().nullable().optional(),
-  walletType: walletTypeEnum.nullable().optional(),
-  walletAddress: z.string().nullable().optional(),
-  preferredPayoutToken: payoutTokenEnum.nullable().optional(),
+  bankSortCode: z.string().nullable().optional(),
+  ibanCode: z.string().nullable().optional(),
+  swiftCode: z.string().nullable().optional(),
+  digitalServiceEmail: z.string().email().nullable().optional(),
+  digitalServiceAccountId: z.string().nullable().optional(),
+  mobileMoney: z.boolean().default(false),
+  mobileMoneyProvider: z.string().nullable().optional(),
+  mobileMoneyNumber: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  verificationToken: z.string().nullable().optional(),
+  isVerified: z.boolean().default(false),
+  isDefault: z.boolean().default(false),
+  lastUsed: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== SELLER CRYPTO PAYOUT METHODS ==========================
+export const sellerCryptoPayoutMethodsSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  walletType: walletTypeEnum,
+  walletAddress: z.string(),
+  blockchain: blockchainEnum,
+  supportedTokens: z.array(payoutTokenEnum),
+  isVerified: z.boolean().default(false),
+  verificationToken: z.string().nullable().optional(),
+  isDefault: z.boolean().default(false),
+  lastUsed: z.date().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -222,7 +260,7 @@ export const brandsSchema = z.object({
   description: z.string().nullable().optional(),
   heroImage: z.string().nullable().optional(),
   logoImage: z.string().nullable().optional(),
-  rating: z.string().nullable().optional(),
+  rating: z.number().nullable().optional(),
   totalProducts: z.number().int().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),

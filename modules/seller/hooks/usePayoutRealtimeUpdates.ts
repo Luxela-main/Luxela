@@ -7,10 +7,11 @@ import { sellerQueryKeys } from '../queries/queryKeys';
 export interface PayoutRealtimeConfig {
   enabled?: boolean;
   pollIntervalMs?: number;
+  includePayoutMethods?: boolean;
 }
 
 export const usePayoutRealtimeUpdates = (config: PayoutRealtimeConfig = {}) => {
-  const { enabled = true, pollIntervalMs = 30000 } = config; // 30 seconds default
+  const { enabled = true, pollIntervalMs = 30000, includePayoutMethods = true } = config; // 30 seconds default
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -25,7 +26,14 @@ export const usePayoutRealtimeUpdates = (config: PayoutRealtimeConfig = {}) => {
     queryClient.invalidateQueries({
       queryKey: sellerQueryKeys.payoutHistory(),
     });
-  }, [queryClient]);
+    
+    // Include payout methods in real-time updates if enabled
+    if (includePayoutMethods) {
+      queryClient.invalidateQueries({
+        queryKey: sellerQueryKeys.payoutMethods(),
+      });
+    }
+  }, [queryClient, includePayoutMethods]);
 
   // Set up polling for payout updates (compatible with Vercel serverless)
   useEffect(() => {

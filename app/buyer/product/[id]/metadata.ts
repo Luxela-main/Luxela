@@ -48,7 +48,7 @@ export async function generateMetadata(
     return generateProductMetadata({
       title: product.name,
       description: product.description || "",
-      price: product.price.toString(),
+      price: (product.priceCents / 100).toFixed(2),
       image: imageUrl,
       rating: averageRating,
       reviewCount: reviewData.length,

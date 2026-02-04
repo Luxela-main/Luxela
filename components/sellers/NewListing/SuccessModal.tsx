@@ -1,33 +1,56 @@
-// SuccessModal.tsx
-import { Button } from "@/components/ui/button";
-import React from "react";
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { CheckCircle } from 'lucide-react';
 
 interface SuccessModalProps {
   isOpen: boolean;
-  onView: () => void;
+  onClose: () => void;
+  productTitle?: string;
 }
 
-const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onView }) => {
-  if (!isOpen) return null;
+export function SuccessModal({ isOpen, onClose, productTitle = 'Your product' }: SuccessModalProps) {
+  const router = useRouter();
+
+  const handleViewListings = () => {
+    router.push('/sellers/my-listings');
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="h-60 bg-[#141414] border border-purple-700 rounded-2xl p-8 max-w-lg w-full mx-4 text-center items-center flex justify-center flex-col">
-        <h2 className="text-lg font-semibold text-[#f2f2f2] mb-6">
-          Product listed successfully!
-        </h2>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center justify-center mb-4">
+            <CheckCircle className="w-12 h-12 text-green-500" />
+          </div>
+          <DialogTitle className="text-center text-lg font-semibold">
+            Product listed successfully!
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {productTitle} has been added to your store and is now visible to customers.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="cursor-pointer rounded-md text-white bg-linear-to-b from-[#8451E1] via-#8451E1] to-[#5C2EAF] py-3 px-12">
-          <button
-            onClick={onView}
-            className="rounded-md w-full h-full flex items-center justify-center "
+        <div className="flex flex-col gap-3 mt-6">
+          <Button
+            onClick={handleViewListings}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
           >
-            <span>View</span>
-          </button>
+            View My Listings
+          </Button>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="w-full cursor-pointer"
+          >
+            Close
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
-};
-
+}
 export default SuccessModal;

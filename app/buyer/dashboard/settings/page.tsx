@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '@/context/ProfileContext';
 import { trpc } from '@/lib/trpc';
@@ -30,10 +30,11 @@ interface PasswordRequirements {
   hasSpecialChar: boolean;
 }
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const router = useRouter();
-  const { profile } = useProfile();
+  const { profile, loading } = useProfile();
   const [activeTab, setActiveTab] = useState('account');
+  const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
@@ -47,9 +48,9 @@ export default function SettingsPage() {
 
   // Account form state
   const [accountData, setAccountData] = useState({
-    fullName: profile?.fullName || '',
-    email: profile?.email || '',
-    phoneNumber: profile?.phoneNumber || '',
+    fullName: '',
+    email: '',
+    phoneNumber: '',
   });
 
   // Password form state
@@ -81,6 +82,17 @@ export default function SettingsPage() {
     promotionalEmails: true,
     securityAlerts: true,
   });
+
+  // Sync profile data into account form when profile loads
+  useEffect(() => {
+    if (profile) {
+      setAccountData({
+        fullName: profile.fullName || '',
+        email: profile.email || '',
+        phoneNumber: profile.phoneNumber || '',
+      });
+    }
+  }, [profile]);
 
   // Load preferences from database
   useEffect(() => {
@@ -121,6 +133,17 @@ export default function SettingsPage() {
     setAccountData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleCancelEdit = () => {
+    if (profile) {
+      setAccountData({
+        fullName: profile.fullName || '',
+        email: profile.email || '',
+        phoneNumber: profile.phoneNumber || '',
+      });
+    }
+    setIsEditingAccount(false);
+  };
+
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPasswordData(prev => ({ ...prev, [name]: value }));
@@ -144,9 +167,9 @@ export default function SettingsPage() {
         securityAlerts: preferencesData.securityAlerts,
       });
 
-      alert('Notification preferences updated successfully');
+      toastSvc.success('Notification preferences updated successfully');
     } catch (error: any) {
-      alert(error?.message || 'Failed to update preferences');
+      toastSvc.error(error?.message || 'Failed to update preferences');
     }
   };
 
@@ -161,9 +184,10 @@ export default function SettingsPage() {
       });
 
       // Show success message
-      alert('Profile updated successfully');
+      toastSvc.success('Profile updated successfully');
+      setIsEditingAccount(false);
     } catch (error: any) {
-      alert(error?.message || 'Failed to update profile');
+      toastSvc.error(error?.message || 'Failed to update profile');
     }
   };
 
@@ -183,7 +207,7 @@ export default function SettingsPage() {
         newPassword: passwordData.newPassword,
       });
 
-      alert('Password updated successfully. Please sign in again.');
+      toastSvc.success('Password updated successfully. Please sign in again.');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setShowPasswordDialog(false);
 
@@ -198,7 +222,7 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     if (!deleteAccountPassword) {
-      alert('Please enter your password to confirm deletion');
+      toastSvc.error('Please enter your password to confirm deletion');
       return;
     }
 
@@ -208,13 +232,24 @@ export default function SettingsPage() {
 
       toastSvc.success('Account deleted successfully. Redirecting...');
       setTimeout(() => router.push('/signin'), 1500);
-    } catch (error) {
-      toastSvc.error('Failed to delete account');
+    } catch (error: any) {
+      toastSvc.error(error?.message || 'Failed to delete account');
     } finally {
       setDeleteAccountPassword('');
       setShowDeleteDialog(false);
     }
   };
+
+  // Show loading state while fetching profile
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0e0e0e] py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-[#acacac]">Loading your settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0e0e0e] py-8 px-4 sm:px-6 lg:px-8">
@@ -249,8 +284,9 @@ export default function SettingsPage() {
                       name="fullName"
                       value={accountData.fullName}
                       onChange={handleAccountChange}
+                      disabled={!isEditingAccount}
                       placeholder="John Doe"
-                      className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666]"
+                      className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666] disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
 
@@ -276,14 +312,39 @@ export default function SettingsPage() {
                       name="phoneNumber"
                       value={accountData.phoneNumber}
                       onChange={handleAccountChange}
+                      disabled={!isEditingAccount}
                       placeholder="+1 (555) 000-0000"
-                      className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666]"
+                      className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666] disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
 
-                  <Button type="submit" disabled={updateAccountMutation.isPending} className="w-full">
-                    {updateAccountMutation.isPending ? 'Saving...' : 'Save Changes'}
-                  </Button>
+                  {!isEditingAccount ? (
+                    <Button
+                      type="button"
+                      onClick={() => setIsEditingAccount(true)}
+                      className="w-full"
+                    >
+                      Edit Profile
+                    </Button>
+                  ) : (
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={updateAccountMutation.isPending}
+                        className="flex-1"
+                      >
+                        {updateAccountMutation.isPending ? 'Saving...' : 'Save Changes'}
+                      </Button>
+                    </div>
+                  )}
                 </form>
               </CardContent>
             </Card>
@@ -570,5 +631,13 @@ export default function SettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0e0e0e] py-8 px-4 flex items-center justify-center"><p className="text-[#acacac]">Loading...</p></div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

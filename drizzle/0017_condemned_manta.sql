@@ -1,0 +1,1 @@
+ALTER TABLE "brands" ALTER COLUMN "total_products" SET DEFAULT 0;

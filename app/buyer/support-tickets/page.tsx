@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 
 interface SupportTicket {
   id: string;
-  buyerId: string;
+  buyerId: string | null;
   sellerId: string | null;
   orderId: string | null;
   subject: string;
@@ -152,6 +152,7 @@ export default function BuyerSupportTicketsPage() {
       const updatedTicket: SupportTicket = {
         ...selectedTicket,
         ...detailsQuery.data,
+        buyerId: selectedTicket.buyerId,
         orderId: detailsQuery.data.orderId ?? null,
         assignedTo: detailsQuery.data.assignedTo ?? null,
         priority: detailsQuery.data.priority as 'low' | 'medium' | 'high' | 'urgent',

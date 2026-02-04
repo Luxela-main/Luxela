@@ -18,7 +18,7 @@ import {
 
 interface TicketWithReplies {
   id: string;
-  buyerId: string;
+  buyerId: string | null;
   sellerId: string | null;
   orderId: string | null;
   subject: string;
@@ -112,7 +112,7 @@ export default function AdminTicketsPage() {
   );
 
   // Update ticket status mutation
-  const updateTicketMutation = trpc.support.updateTicket.useMutation();
+  const updateTicketMutation = trpc.supportAdmin.updateTicketStatus.useMutation();
 
   // Reply to ticket mutation
   const replyMutation = trpc.support.replyToTicket.useMutation();
@@ -217,7 +217,7 @@ export default function AdminTicketsPage() {
     try {
       const updated = await updateTicketMutation.mutateAsync({
         ticketId: selectedTicket.id,
-        status: newStatus as any,
+        status: newStatus as 'open' | 'in_progress' | 'resolved' | 'closed',
       });
 
       const normalizedUpdated = {

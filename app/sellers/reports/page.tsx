@@ -137,7 +137,7 @@ export default function Reports() {
       {/* Filters */}
       <div className="flex gap-4 mb-6 flex-wrap">
         <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-40 bg-[#1a1a1a] border-[#333]">
+          <SelectTrigger className="w-40 bg-[#1a1a1a] border-[#333] cursor-pointer">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-[#1a1a1a] border-[#333]">
@@ -148,7 +148,7 @@ export default function Reports() {
           </SelectContent>
         </Select>
         <Select value={orderStatus} onValueChange={setOrderStatus}>
-          <SelectTrigger className="w-40 bg-[#1a1a1a] border-[#333]">
+          <SelectTrigger className="w-40 bg-[#1a1a1a] border-[#333] cursor-pointer">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-[#1a1a1a] border-[#333]">

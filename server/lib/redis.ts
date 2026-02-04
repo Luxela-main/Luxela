@@ -93,6 +93,27 @@ interface CacheOptions {
   ttl?: number;
 }
 
+// Helper function to revive Date objects from ISO strings
+function reviveObject(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(reviveObject);
+  
+  const revived: any = {};
+  for (const key in obj) {
+    const value = obj[key];
+    // Check if string looks like an ISO date
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+      revived[key] = new Date(value);
+    } else if (typeof value === 'object') {
+      revived[key] = reviveObject(value);
+    } else {
+      revived[key] = value;
+    }
+  }
+  return revived;
+}
+
 export async function getCached<T>(
   key: string,
   fetchFn: () => Promise<T>,
@@ -105,7 +126,9 @@ export async function getCached<T>(
     const cached = await redis.get(cacheKey);
     if (cached) {
       console.log(`Cache hit: ${key}`);
-      return JSON.parse(cached) as T;
+      const parsed = JSON.parse(cached);
+      // Revive Date objects from ISO strings
+      return reviveObject(parsed) as T;
     }
 
     console.log(`Cache miss: ${key}`);

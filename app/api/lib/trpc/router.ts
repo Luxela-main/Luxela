@@ -32,6 +32,7 @@ import { productsRouter } from "@/server/routers/products";
 import { adminListingReviewRouter } from "@/server/routers/admin-listing-review";
 import { sellerListingNotificationsRouter } from "@/server/routers/seller-listing-notifications";
 import { buyerListingsCatalogRouter } from "@/server/routers/buyer-listings-catalog";
+import { payoutVerificationRouter } from "@/server/routers/payoutVerification";
 
 const helloRouter = createTRPCRouter({
   hello: publicProcedure
@@ -73,6 +74,7 @@ export const appRouter = createTRPCRouter({
   adminListingReview: adminListingReviewRouter,
   sellerListingNotifications: sellerListingNotificationsRouter,
   buyerListingsCatalog: buyerListingsCatalogRouter,
+  payoutVerification: payoutVerificationRouter,
 });
 
 export type AppRouter = typeof appRouter;

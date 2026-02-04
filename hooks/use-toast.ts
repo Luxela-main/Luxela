@@ -15,22 +15,36 @@ interface ToastActionElement {
 
 export function useToast() {
   const toast = useCallback(
-    (props: {
+    (props?: {
       title?: string;
       description?: string;
       variant?: 'default' | 'destructive' | 'success' | 'info';
       duration?: number;
       action?: ToastActionElement;
     }) => {
-      // Implementation stub - can be replaced with actual toast library
-      const message = props.title || props.description || 'Notification';
+      // Defensive checks: ensure props exists
+      if (!props || typeof props !== 'object') {
+        console.log('Toast: Notification');
+        return;
+      }
       
-      if (props.variant === 'destructive') {
-        console.error(message);
-      } else if (props.variant === 'success') {
-        console.log('✓', message);
-      } else {
-        console.log(message);
+      // Implementation stub - can be replaced with actual toast library
+      const message = String(props.title || props.description || 'Notification');
+      const variant = props.variant || 'default';
+      
+      try {
+        if (variant === 'destructive') {
+          console.error('[Error]', message);
+        } else if (variant === 'success') {
+          console.log('✓', message);
+        } else {
+          console.log(message);
+        }
+      } catch (err) {
+        // Fallback if console logging fails
+        if (typeof window !== 'undefined') {
+          console.log('Toast:', message);
+        }
       }
     },
     []

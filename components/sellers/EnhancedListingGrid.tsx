@@ -70,17 +70,32 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
 
   // Get image from listing
   const getImage = (listing: Listing): string | undefined => {
+    // For collections, try to get image from first item
+    if (listing.type === 'collection' && listing.itemsJson) {
+      try {
+        const items = typeof listing.itemsJson === 'string' ? JSON.parse(listing.itemsJson) : listing.itemsJson;
+        if (Array.isArray(items) && items.length > 0 && items[0].image) {
+          return items[0].image;
+        }
+      } catch {
+        // Fall through to other image sources
+      }
+    }
+    
     if (listing.image) return listing.image;
     if (listing.imagesJson) {
       try {
-        const images = JSON.parse(listing.imagesJson);
-        return images[0]?.url || images[0];
+        const images = typeof listing.imagesJson === 'string' ? JSON.parse(listing.imagesJson) : listing.imagesJson;
+        if (Array.isArray(images) && images.length > 0) {
+          const firstImg = images[0];
+          return typeof firstImg === 'string' ? firstImg : firstImg?.url || firstImg;
+        }
       } catch {
         return undefined;
       }
     }
     return undefined;
-  };
+  }
 
   // Get item count for collections
   const getItemCount = (listing: Listing): number => {
@@ -207,7 +222,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
             {/* Advanced Filters */}
             <button
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center gap-2 px-4 py-3 bg-gray-900/50 border border-gray-800 rounded-xl text-gray-300 hover:text-white hover:border-gray-700 transition-all duration-300 backdrop-blur-sm"
+              className="flex items-center gap-2 px-4 py-3 bg-gray-900/50 border border-gray-800 rounded-xl text-gray-300 hover:text-white hover:border-gray-700 transition-all duration-300 backdrop-blur-sm cursor-pointer"
               title="Advanced filters"
             >
               <SlidersHorizontal className="w-4 h-4" />
@@ -249,7 +264,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
             <div className="flex border border-gray-800 rounded-xl bg-gray-900/50 backdrop-blur-sm">
               <button
                 onClick={() => setViewType("grid")}
-                className={`px-3 py-2.5 transition-all duration-300 ${
+                className={`px-3 py-2.5 transition-all duration-300 cursor-pointer ${
                   viewType === "grid"
                     ? "text-[#8451E1] bg-[#8451E1]/20"
                     : "text-gray-400 hover:text-white"
@@ -261,7 +276,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
               <div className="w-px bg-gray-800" />
               <button
                 onClick={() => setViewType("table")}
-                className={`px-3 py-2.5 transition-all duration-300 ${
+                className={`px-3 py-2.5 transition-all duration-300 cursor-pointer ${
                   viewType === "table"
                     ? "text-[#8451E1] bg-[#8451E1]/20"
                     : "text-gray-400 hover:text-white"
@@ -298,7 +313,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                       onChange={(e) =>
                         setFilterStatus(e.target.value as FilterStatus)
                       }
-                      className="w-4 h-4 border-gray-600 text-[#8451E1]"
+                      className="w-4 h-4 border-gray-600 text-[#8451E1] cursor-pointer"
                     />
                     <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
                       {option.label}
@@ -490,21 +505,21 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                 <div className="flex items-center justify-end gap-2">
                   <button
                     onClick={() => onView(listing)}
-                    className="p-2 hover:bg-[#8451E1]/20 rounded-lg transition-colors duration-300"
+                    className="p-2 hover:bg-[#8451E1]/20 rounded-lg transition-colors duration-300 cursor-pointer"
                     title="View"
                   >
                     <Eye className="w-4 h-4 text-gray-400 group-hover:text-[#8451E1]" />
                   </button>
                   <button
                     onClick={() => onEdit(listing)}
-                    className="p-2 hover:bg-[#8451E1]/20 rounded-lg transition-colors duration-300"
+                    className="p-2 hover:bg-[#8451E1]/20 rounded-lg transition-colors duration-300 cursor-pointer"
                     title="Edit"
                   >
                     <Edit className="w-4 h-4 text-gray-400 group-hover:text-[#8451E1]" />
                   </button>
                   <button
                     onClick={() => onDelete(listing)}
-                    className="p-2 hover:bg-red-600/20 rounded-lg transition-colors duration-300"
+                    className="p-2 hover:bg-red-600/20 rounded-lg transition-colors duration-300 cursor-pointer"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-400" />

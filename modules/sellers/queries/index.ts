@@ -1,5 +1,6 @@
 export * from './useSellerProfile';
 export * from './useMyListings';
+export * from './useMyCollections';
 export * from './useSales';
 export * from './useNotifications';
 export * from './useListingStatusNotifications';

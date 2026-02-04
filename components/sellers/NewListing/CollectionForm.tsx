@@ -101,7 +101,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
 }) => {
   const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
 
-  const addItem = () => {
+  const addItem = (): void => {
     onItemsChange([
       ...items,
       {
@@ -117,7 +117,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     ]);
   };
 
-  const removeItem = (index: number) => {
+  const removeItem = (index: number): void => {
     onItemsChange(items.filter((_, i) => i !== index));
   };
 
@@ -125,7 +125,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     index: number,
     field: keyof CollectionItem,
     value: string | number | string[] | File[] | (string | File)[]
-  ) => {
+  ): void => {
     const updated = [...items];
     updated[index] = { ...updated[index], [field]: value };
     onItemsChange(updated);
@@ -134,7 +134,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
   const handleImageUpload = (
     index: number,
     e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  ): void => {
     const files = Array.from(e.target.files || []);
     const item = items[index];
     const currentImages = item.images || [];
@@ -142,7 +142,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     updateItem(index, "images", updatedImages);
   };
 
-  const removeImage = (itemIndex: number, imageIndex: number) => {
+  const removeImage = (itemIndex: number, imageIndex: number): void => {
     const item = items[itemIndex];
     const updatedImages = (item.images || []).filter(
       (_, i) => i !== imageIndex
@@ -150,14 +150,27 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     updateItem(itemIndex, "images", updatedImages);
   };
 
-  const getImagePreview = (file: File | string) => {
-    if (typeof file === 'string') {
-      return file; // Already a URL
+  const getImagePreview = (file: File | string | undefined | null): string => {
+    // Handle null/undefined
+    if (!file) {
+      return ''; // Return empty string for missing images
     }
-    return URL.createObjectURL(file); // Convert File to object URL
+    
+    // If it's already a string (URL), return it
+    if (typeof file === 'string') {
+      return file;
+    }
+    
+    // Validate it's a File or Blob by checking if it has slice method
+    if (file && typeof (file as any).slice === 'function') {
+      return URL.createObjectURL(file as Blob);
+    }
+    
+    // Fallback for any unexpected type
+    return '';
   };
 
-  const toggleSize = (index: number, size: string) => {
+  const toggleSize = (index: number, size: string): void => {
     const item = items[index];
     const currentSizes = item.sizes || [];
     const newSizes = currentSizes.includes(size)
@@ -166,7 +179,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     updateItem(index, "sizes", newSizes);
   };
 
-  const toggleColor = (index: number, colorName: string) => {
+  const toggleColor = (index: number, colorName: string): void => {
     const item = items[index];
     const currentColors = item.colors || [];
     const newColors = currentColors.includes(colorName)
@@ -208,7 +221,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
 
         {/* Collection Enterprise Fields */}
         <div className="border-t border-[#333] pt-6">
-          <h3 className="text-sm font-semibold mb-4">Collection Details (Enterprise)</h3>
+          <h3 className="text-sm font-semibold mb-4">Extended Metadata</h3>
           <div className="grid grid-cols-2 gap-4">
             {/* SKU */}
             <div>
@@ -307,7 +320,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             <Button
               onClick={addItem}
               type="button"
-              className="bg-purple-600 hover:bg-purple-700 text-sm"
+              className="bg-purple-600 hover:bg-purple-700 text-sm cursor-pointer"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Item
@@ -349,7 +362,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                         e.stopPropagation();
                         removeItem(index);
                       }}
-                      className="text-red-400 hover:text-red-300"
+                      className="text-red-400 hover:text-red-300 cursor-pointer"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -464,25 +477,29 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                           Item Images (Max 4)
                         </label>
                         <div className="grid grid-cols-4 gap-3 mb-3">
-                          {[0, 1, 2, 3].map((imageIndex) => (
+                          {[0, 1, 2, 3].map((imageIndex) => {
+                            const preview = item.images && item.images[imageIndex] ? getImagePreview(item.images[imageIndex]) : '';
+                            return (
                             <div
                               key={imageIndex}
                               className="relative aspect-square border-2 border-dashed border-[#333] rounded-lg overflow-hidden group"
                             >
-                              {item.images && item.images[imageIndex] ? (
+                              {preview ? (
                                 <>
                                   <img
-                                    src={getImagePreview(
-                                      item.images[imageIndex]
-                                    )}
+                                    src={preview}
                                     alt={`Item ${imageIndex + 1}`}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      // Handle broken preview URLs gracefully
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
                                   />
                                   <button
                                     onClick={() =>
                                       removeImage(index, imageIndex)
                                     }
-                                    className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white"
+                                    className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white cursor-pointer"
                                   >
                                     <X className="h-4 w-4" />
                                   </button>
@@ -499,12 +516,11 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                                     onChange={(e) => {
                                       const file = e.target.files?.[0];
                                       if (file) {
-                                        const currentImages =
-                                          item.images || [];
-                                        const updatedImages = [
-                                          ...currentImages,
-                                          file,
-                                        ].slice(0, 4);
+                                        const currentImages = item.images ? [...item.images] : [undefined, undefined, undefined, undefined];
+                                        // Set the image at the specific slot
+                                        currentImages[imageIndex] = file;
+                                        // Filter out undefined values while keeping the 4-slot structure
+                                        const updatedImages = currentImages.filter((img) => img !== undefined).slice(0, 4);
                                         updateItem(
                                           index,
                                           "images",
@@ -517,7 +533,8 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                                 </label>
                               )}
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                       </div>
 
@@ -532,7 +549,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                               key={size}
                               type="button"
                               onClick={() => toggleSize(index, size)}
-                              className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                              className={`px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
                                 item.sizes?.includes(size)
                                   ? "bg-purple-600 text-white"
                                   : "bg-[#1a1a1a] border border-[#333] text-gray-400 hover:border-purple-500"
@@ -555,7 +572,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                               key={color.name}
                               type="button"
                               onClick={() => toggleColor(index, color.name)}
-                              className={`relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition ${
+                              className={`relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition cursor-pointer ${
                                 item.colors?.includes(color.name)
                                   ? "border-[#8451E1] bg-[#8451E1]/10"
                                   : "border-[#333] bg-[#1a1a1a] hover:border-[#8451E1]/50"
@@ -595,7 +612,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
           <Button
             onClick={onSubmit}
             disabled={!title || items.length === 0 || items.some(item => !item.title || item.priceCents <= 0) || isSubmitting}
-            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             title={items.some(item => item.priceCents <= 0) ? "All items must have a price greater than 0" : ""}
           >
             {isSubmitting ? "Creating Collection..." : "Create Collection"}

@@ -249,9 +249,21 @@ export const refundRouter = createTRPCRouter({
         };
       } catch (error: any) {
         if (error instanceof TRPCError) throw error;
+        
+        // Extract error message from different error types
+        let errorMessage = 'Failed to create return request';
+        if (typeof error === 'string') {
+          errorMessage = error;
+        } else if (error instanceof Error) {
+          errorMessage = error.message || errorMessage;
+        } else if (typeof error === 'object' && error !== null) {
+          errorMessage = error.message || error.msg || String(error);
+        }
+        
+        console.error('Return request error:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: error?.message || 'Failed to create return request',
+          message: errorMessage,
         });
       }
     }),

@@ -11,6 +11,8 @@ interface ProductInfoFormProps {
   onCancel: () => void;
   images: File[];
   onImagesChange: (images: File[]) => void;
+  videos: File[];
+  onVideosChange: (videos: File[]) => void;
 }
 
 const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
@@ -20,6 +22,8 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
   onCancel,
   images,
   onImagesChange,
+  videos,
+  onVideosChange,
 }) => {
   const sizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
 
@@ -39,7 +43,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
     <div className="grid grid-cols-12 gap-6">
       {/* Left Column - Image Upload */}
       <div className="col-span-12 lg:col-span-5">
-        <ImageUpload images={images} onImagesChange={onImagesChange} />
+        <ImageUpload images={images} onImagesChange={onImagesChange} videos={videos} onVideosChange={onVideosChange} />
       </div>
 
       {/* Right Column - Form Fields */}

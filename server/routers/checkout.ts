@@ -105,7 +105,6 @@ export const checkoutRouter = createTRPCRouter({
         ),
         summary: z.object({
           subtotalCents: z.number().int(),
-          taxCents: z.number().int(),
           shippingCents: z.number().int(),
           totalCents: z.number().int(),
           currency: z.string(),
@@ -176,9 +175,8 @@ export const checkoutRouter = createTRPCRouter({
 
         // Calculate totals
         const subtotalCents = itemsWithDetails.reduce((sum, item) => sum + item.totalPriceCents, 0);
-        const taxCents = Math.round(subtotalCents * 0.075); // 7.5% tax
         const shippingCents = 50000; // ₦500 flat rate (in cents)
-        const totalCents = subtotalCents + taxCents + shippingCents;
+        const totalCents = subtotalCents + shippingCents;
 
         // Get unique sellers
         const sellerIds = [...new Set(itemsWithDetails.map((item) => item.sellerId))];
@@ -192,7 +190,6 @@ export const checkoutRouter = createTRPCRouter({
           items: itemsWithDetails,
           summary: {
             subtotalCents,
-            taxCents,
             shippingCents,
             totalCents,
             currency: items[0].currency,

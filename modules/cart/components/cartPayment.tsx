@@ -102,16 +102,13 @@ export default function CartPaymentPage() {
 
   const isProcessing = initializePaymentMutation.isPending;
   
-  // Calculate taxes (7.5% standard VAT in Nigeria)
-  const taxAmount = Math.round(subtotal * 0.075);
-  
   // Shipping calculation based on number of items
   // Free shipping over ₦50,000, otherwise ₦2,000 base + ₦500 per item
   const shippingFees = subtotal > 5000000 
     ? 0 
     : 200000 + (items.length * 50000);
   
-  const finalTotal = subtotal + taxAmount - discountAmount + shippingFees;
+  const finalTotal = subtotal - discountAmount + shippingFees;
 
 
   return (
@@ -238,21 +235,21 @@ export default function CartPaymentPage() {
                       alt="Visa"
                       width={32}
                       height={20}
-                      className="opacity-80"
+                      className="opacity-80 h-auto"
                     />
                     <Image
                       src="/mastercard.svg"
                       alt="Mastercard"
                       width={32}
                       height={20}
-                      className="opacity-80"
+                      className="opacity-80 h-auto"
                     />
                     <Image
                       src="/opay.svg"
                       alt="Opay"
                       width={45}
                       height={20}
-                      className="opacity-80"
+                      className="opacity-80 h-auto"
                     />
                   </div>
                 )}
@@ -290,10 +287,6 @@ export default function CartPaymentPage() {
             <div className="flex justify-between">
               <span className="text-gray-400">Subtotal</span>
               <span>₦{(subtotal / 100).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Tax (7.5% VAT)</span>
-              <span>₦{(taxAmount / 100).toLocaleString()}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-green-500">

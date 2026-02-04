@@ -54,6 +54,8 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
   );
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
     if (profileData?.seller) {
@@ -62,6 +64,7 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
       setIsVerified(profileData?.business?.idVerified || false);
       if (profileData?.seller?.profilePhoto) {
         setProfilePhoto(profileData?.seller?.profilePhoto);
+        setImageError(false);
       }
     }
   }, [profileData?.business, profileData?.seller]);
@@ -97,6 +100,8 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
       setProfilePhoto(data.url);
       setSelectedFile(null);
       setPreviewUrl(null);
+      setIsUploadingPhoto(false);
+      setIsEditMode(false);
       toastSvc.success("Photo uploaded successfully");
       utils.seller.getProfile.invalidate();
       if (fileInputRef.current) {
@@ -104,6 +109,7 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
       }
     },
     onError: (err: any) => {
+      setIsUploadingPhoto(false);
       toastSvc.error(err?.message || "Failed to upload photo");
     },
   });
@@ -155,6 +161,7 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
   const updateProfileMutation = trpc.seller.updateSellerBusiness.useMutation({
     onSuccess: () => {
       setIsSaving(false);
+      setIsEditMode(false);
       toastSvc.success("Profile updated successfully");
       utils.seller.getProfile.invalidate();
     },
@@ -226,76 +233,137 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
     },
   });
 
+  const handleCancel = () => {
+    setIsEditMode(false);
+    setPreviewUrl(null);
+    setSelectedFile(null);
+    formik.resetForm();
+  };
+
   return (
     <div className="bg-[#1a1a1a] rounded-lg p-6">
-      <h2 className="text-xl font-medium mb-6">Profile Account</h2>
-
-      <div className="mb-6">
-        <div className="flex items-center mb-6">
-          <div className="w-20 h-20 bg-[#222] rounded-full mr-6 flex items-center justify-center overflow-hidden">
-            {previewUrl ? (
-              <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-            ) : profilePhoto ? (
-              <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <User className="h-10 w-10 text-gray-400" />
-            )}
-          </div>
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingPhoto}
-              variant="outline"
-              className="bg-[#222] border-[#333] hover:bg-[#333] hover:text-white mb-2 cursor-pointer transition disabled:cursor-not-allowed"
-            >
-              {isUploadingPhoto ? (
-                "Uploading..."
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Photo
-                </>
-              )}
-            </Button>
-            {previewUrl && !isUploadingPhoto && (
-              <div className="flex gap-2 mb-2">
-                <Button
-                  onClick={handleUploadPhoto}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 cursor-pointer text-white"
-                >
-                  Save Photo
-                </Button>
-                <Button
-                  onClick={() => {
-                    setPreviewUrl(null);
-                    setSelectedFile(null);
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                  className="bg-[#222] border-[#333] hover:bg-[#333] cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            <p className="text-xs text-gray-400">
-              Recommended: 200x200px, Max 5MB
-            </p>
-          </div>
-        </div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-medium">Profile Account</h2>
+        {!isEditMode && (
+          <Button
+            onClick={() => setIsEditMode(true)}
+            className="bg-purple-600 hover:bg-purple-700 cursor-pointer"
+          >
+            Edit Account
+          </Button>
+        )}
       </div>
 
-      <form onSubmit={formik.handleSubmit} className="space-y-6">
+      {isEditMode && (
+        <div className="mb-6">
+          <div className="flex items-center mb-6">
+            <div className="w-20 h-20 bg-[#222] rounded-full mr-6 flex items-center justify-center overflow-hidden">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              ) : profilePhoto && !imageError ? (
+                <img 
+                  src={profilePhoto} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  onError={() => {
+                    console.error('Failed to load profile image:', profilePhoto);
+                    setImageError(true);
+                  }}
+                />
+              ) : (
+                <User className="h-10 w-10 text-gray-400" />
+              )}
+            </div>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingPhoto}
+                variant="outline"
+                className="bg-[#222] border-[#333] hover:bg-[#333] hover:text-white mb-2 cursor-pointer transition disabled:cursor-not-allowed"
+              >
+                {isUploadingPhoto ? (
+                  "Uploading..."
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Photo
+                  </>
+                )}
+              </Button>
+              {previewUrl && !isUploadingPhoto && (
+                <div className="flex gap-2 mb-2">
+                  <Button
+                    onClick={handleUploadPhoto}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 cursor-pointer text-white"
+                  >
+                    Save Photo
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setPreviewUrl(null);
+                      setSelectedFile(null);
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                    className="bg-[#222] border-[#333] hover:bg-[#333] cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-gray-400">
+                Recommended: 200x200px, Max 5MB
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isEditMode && (
+        <div className="mb-6">
+          <div className="flex items-center mb-6">
+            <div className="w-20 h-20 bg-[#222] rounded-full mr-6 flex items-center justify-center overflow-hidden">
+              {profilePhoto && !imageError ? (
+                <img 
+                  src={profilePhoto} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  onError={() => {
+                    console.error('Failed to load profile image:', profilePhoto);
+                    setImageError(true);
+                  }}
+                />
+              ) : (
+                <User className="h-10 w-10 text-gray-400" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-gray-400">Profile Photo</p>
+              {profilePhoto ? (
+                <p className="text-sm text-green-500 flex items-center gap-2 mt-1">
+                  <CheckCircle className="w-4 h-4" />
+                  Photo uploaded
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500">No photo uploaded</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditMode && (
+        <form onSubmit={formik.handleSubmit} className="space-y-6">
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm mb-2">First Name</label>
@@ -342,14 +410,10 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
           <Input
             name="email"
             value={formik.values.email}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            className={`bg-[#222] border-[#333] focus:border-purple-600 focus:ring-purple-600 ${
-              formik.touched.email && formik.errors.email
-                ? "border-red-500"
-                : ""
-            }`}
+            disabled
+            className="bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed"
           />
+          <p className="text-xs text-gray-600 mt-1">Email cannot be changed</p>
           {formik.touched.email && formik.errors.email && (
             <div className="text-red-500 text-xs mt-1">
               {formik.errors.email as string}
@@ -443,19 +507,14 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
         </div>
 
         <div className="flex justify-end gap-3">
-          {profilePhoto && (
-            <Button
-              onClick={() => {
-                setProfilePhoto("");
-                setPreviewUrl(null);
-              }}
-              type="button"
-              variant="outline"
-              className="bg-[#222] border-[#333] hover:bg-[#333] cursor-pointer text-red-400 hover:text-red-300"
-            >
-              Remove Photo
-            </Button>
-          )}
+          <Button
+            type="button"
+            onClick={handleCancel}
+            variant="outline"
+            className="bg-[#222] border-[#333] hover:bg-[#333] cursor-pointer"
+          >
+            Cancel
+          </Button>
           <Button
             type="submit"
             className="bg-purple-600 hover:bg-purple-700 cursor-pointer disabled:cursor-not-allowed transition"
@@ -465,6 +524,66 @@ export function ProfileAccount({ initialData }: ProfileAccountProps) {
           </Button>
         </div>
       </form>
+      )}
+
+      {!isEditMode && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">First Name</label>
+              <p className="text-sm">{formik.values.firstName || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Last Name</label>
+              <p className="text-sm">{formik.values.lastName || "—"}</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-400 mb-2">Email Address</label>
+            <p className="text-sm">{formik.values.email || "—"}</p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-400 mb-2">Phone Number</label>
+            <p className="text-sm">{formik.values.phone || "—"}</p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-400 mb-2">Bio</label>
+            <p className="text-sm">{formik.values.bio || "—"}</p>
+          </div>
+
+          <div className="border-t border-[#333] pt-6 mt-6">
+            <h3 className="text-lg font-medium mb-4">ID Verification</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">ID Type</label>
+                <p className="text-sm">
+                  {idType === "national_id" && "National ID (NIN)"}
+                  {idType === "passport" && "International Passport"}
+                  {idType === "drivers_license" && "Driver's License"}
+                  {idType === "voters_card" && "Voter's Card"}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">ID Number</label>
+                <p className="text-sm">{idNumber || "—"}</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              {isVerified ? (
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-green-500 text-sm">Verification Successful</span>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm">Not verified</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ export async function processAutomaticPayouts(): Promise<{
   processed: number;
   failed: number;
   totalAmount: number;
+  errors: Array<{ payoutId: string; error: string }>;
 }> {
   try {
     // Find all orders that are delivered and have released holds
@@ -34,12 +35,13 @@ export async function processAutomaticPayouts(): Promise<{
 
     if (!releasedHolds.length) {
       console.log('No released payment holds found for processing');
-      return { processed: 0, failed: 0, totalAmount: 0 };
+      return { processed: 0, failed: 0, totalAmount: 0, errors: [] };
     }
 
     let processed = 0;
     let failed = 0;
     let totalAmount = 0;
+    const errors: Array<{ payoutId: string; error: string }> = [];
 
     for (const hold of releasedHolds) {
       try {
@@ -52,6 +54,10 @@ export async function processAutomaticPayouts(): Promise<{
 
         if (!order) {
           console.warn(`Order not found for hold ${hold.id}`);
+          errors.push({
+            payoutId: hold.id,
+            error: 'Order not found',
+          });
           failed++;
           continue;
         }
@@ -88,6 +94,10 @@ export async function processAutomaticPayouts(): Promise<{
         );
       } catch (err: any) {
         console.error(`Failed to process payout for hold ${hold.id}:`, err);
+        errors.push({
+          payoutId: hold.id,
+          error: err.message || 'Unknown error',
+        });
         failed++;
       }
     }
@@ -96,6 +106,7 @@ export async function processAutomaticPayouts(): Promise<{
       processed,
       failed,
       totalAmount,
+      errors,
     };
   } catch (err: any) {
     console.error('Automatic payout processing error:', err);

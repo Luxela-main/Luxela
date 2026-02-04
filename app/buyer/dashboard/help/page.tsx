@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, MessageCircle, FileText, AlertCircle, Search, Send, Ticket } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronDown, MessageCircle, FileText, AlertCircle, Search, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
 import { useOptimizedPolling } from '@/lib/hooks/useOptimizedPolling';
@@ -26,8 +26,6 @@ interface FAQ {
 export default function HelpCenterPage() {
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [submitEmail, setSubmitEmail] = useState('');
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
 
   // Fetch FAQs for buyer role with polling
   const faqQuery = trpc.faqs.getFAQsByRole.useQuery(
@@ -67,23 +65,6 @@ export default function HelpCenterPage() {
     [fetchedFaqs]
   );
 
-  useEffect(() => {
-    setFaqs(convertedFaqs);
-  }, [convertedFaqs]);
-
-  const handleContactSupport = async () => {
-    if (!submitEmail || !submitEmail.includes('@')) {
-      toastSvc.error('Please enter a valid email address');
-      return;
-    }
-    try {
-      toastSvc.success('Your message has been sent. We will get back to you within 24 hours.');
-      setSubmitEmail('');
-    } catch (error) {
-      toastSvc.error('Failed to send message');
-    }
-  }
-
   const handleTrackView = (faqId: string) => {
     try {
       trackViewMutation.mutate({ faqId });
@@ -92,7 +73,7 @@ export default function HelpCenterPage() {
     }
   };
 
-  const filteredFAQs = faqs.filter(faq =>
+  const filteredFAQs = convertedFaqs.filter(faq =>
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -112,12 +93,16 @@ export default function HelpCenterPage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
+          <button 
+            onClick={() => toastSvc.info('Coming Soon')}
+            className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
             <MessageCircle className="w-6 h-6 text-purple-500 mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Live Chat</p>
             <p className="text-gray-400 text-sm">Chat with our support team</p>
           </button>
-          <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
+          <button 
+            onClick={() => toastSvc.info('Coming Soon')}
+            className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
             <FileText className="w-6 h-6 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Documentation</p>
             <p className="text-gray-400 text-sm">Browse our knowledge base</p>
@@ -129,11 +114,13 @@ export default function HelpCenterPage() {
               <p className="text-gray-400 text-sm">View & create tickets</p>
             </button>
           </Link>
-          <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
-            <AlertCircle className="w-6 h-6 text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
-            <p className="text-white font-semibold">Report Issue</p>
-            <p className="text-gray-400 text-sm">Submit a support ticket</p>
-          </button>
+          <Link href="/buyer/dashboard/support-tickets">
+            <button className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full">
+              <AlertCircle className="w-6 h-6 text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
+              <p className="text-white font-semibold">Report Issue</p>
+              <p className="text-gray-400 text-sm">Submit a support ticket</p>
+            </button>
+          </Link>
         </div>
 
         {/* Search FAQs */}
@@ -195,23 +182,9 @@ export default function HelpCenterPage() {
         <div className="mt-12 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-white mb-2 text-center">Didn't find what you need?</h3>
           <p className="text-gray-400 mb-6 text-center">Create a support ticket and our team will assist you</p>
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={submitEmail}
-              onChange={(e) => setSubmitEmail(e.target.value)}
-              className="flex-1 bg-[#1a1a1a] border border-[#333333] rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
-            />
-            <button
-              onClick={handleContactSupport}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap"
-            >
-              <Send className="w-4 h-4" />
-              Send Message
-            </button>
+          <div className="flex justify-center">
             <Link href="/buyer/dashboard/support-tickets">
-              <button className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2 whitespace-nowrap">
+              <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2">
                 <Ticket className="w-4 h-4" />
                 Create Ticket
               </button>

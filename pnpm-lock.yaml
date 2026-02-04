@@ -250,9 +250,6 @@ importers:
       '@trpc/server':
         specifier: ^11.8.1
         version: 11.8.1(typescript@5.9.3)
-      '@types/antd':
-        specifier: ^0.12.32
-        version: 0.12.32
       '@types/aos':
         specifier: ^3.0.7
         version: 3.0.7
@@ -2653,9 +2650,6 @@ packages:
 
   '@tsconfig/node16@1.0.4':
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
-
-  '@types/antd@0.12.32':
-    resolution: {integrity: sha512-PcCbMdpxoZ1BCTe2sQtVoSurgdVxYjln6a0eqlAGKG38Lb/J28jOIOCB8htoCIvSgpBRReoouxB6ZPSOSbV3lg==}
 
   '@types/aos@3.0.7':
     resolution: {integrity: sha512-sEhyFqvKauUJZDbvAB3Pggynrq6g+2PS4XB3tmUr+mDL1gfDJnwslUC4QQ7/l8UD+LWpr3RxZVR/rHoZrLqZVg==}
@@ -7819,10 +7813,6 @@ snapshots:
   '@tsconfig/node14@1.0.3': {}
 
   '@tsconfig/node16@1.0.4': {}
-
-  '@types/antd@0.12.32':
-    dependencies:
-      '@types/react': 19.2.7
 
   '@types/aos@3.0.7': {}
 

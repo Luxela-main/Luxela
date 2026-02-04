@@ -116,7 +116,7 @@ export default function Notifications() {
         <div className="flex justify-between items-center p-4 border-b border-[#333]">
           <div className="flex space-x-4">
             <button
-              className={`flex items-center ${
+              className={`flex items-center cursor-pointer ${
                 activeTab === "All" ? "text-white" : "text-gray-400"
               }`}
               onClick={() => setActiveTab("All")}
@@ -127,7 +127,7 @@ export default function Notifications() {
               </span>
             </button>
             <button
-              className={`flex items-center ${
+              className={`flex items-center cursor-pointer ${
                 activeTab === "Starred" ? "text-white" : "text-gray-400"
               }`}
               onClick={() => setActiveTab("Starred")}
@@ -140,7 +140,7 @@ export default function Notifications() {
           </div>
           <div className="flex space-x-4">
             <button
-              className="flex items-center text-gray-400 hover:text-white"
+              className="flex items-center text-gray-400 hover:text-white cursor-pointer"
               onClick={markAllAsRead}
               disabled={markAllAsReadMutation.isPending}
             >

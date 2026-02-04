@@ -6,6 +6,39 @@ import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 
+// Helper function to safely extract error messages from TRPC errors and other sources
+function extractErrorMessage(error: any): string {
+  // Handle string errors
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  // Handle Zod validation errors
+  if (error?.data?.zodError) {
+    return Object.entries(error.data.zodError)
+      .map(([field, msgs]: any) => `${field}: ${msgs.join(', ')}`)
+      .join('; ');
+  }
+
+  // Handle standard Error objects
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  // Handle TRPC error response with message
+  if (error?.message) {
+    return error.message;
+  }
+
+  // Handle generic objects
+  if (typeof error === 'object' && error !== null) {
+    return String(error);
+  }
+
+  // Default fallback
+  return 'Failed to initiate return';
+}
+
 interface ReturnRequest {
   id: string;
   reason: string;
@@ -101,7 +134,7 @@ export default function ReturnsPage() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to initiate return',
+        description: extractErrorMessage(error),
         variant: 'destructive',
       });
     }
@@ -303,6 +336,17 @@ export default function ReturnsPage() {
               </div>
 
               <form onSubmit={handleInitiateReturn} className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Order ID</label>
+                  <input
+                    type="text"
+                    value={formData.orderId}
+                    onChange={(e) => setFormData({ ...formData, orderId: e.target.value })}
+                    placeholder="Enter your order ID"
+                    className="w-full bg-[#0e0e0e] border border-[#2a2a2a] rounded px-3 py-2 text-white placeholder-gray-500 hover:border-[#8451e1] focus:border-[#8451e1] transition"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-gray-300 text-sm font-medium mb-2">Return Reason</label>
                   <select

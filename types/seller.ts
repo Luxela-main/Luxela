@@ -31,17 +31,6 @@ export type SellerSetupFormData = {
   refundPolicy: "no_refunds" | "48hrs" | "72hrs" | "5_working_days" | "1week" | "14days" | "30days" | "60days" | "store_credit";
   periodUntilRefund: "24hrs" | "48hrs" | "72hrs" | "5_working_days" | "1week" | "2weeks";
 
-  // Payment Information
-  preferredPayoutMethod: "fiat_currency" | "cryptocurrency" | "both";
-  fiatPayoutMethod?: "bank" | "paypal" | "stripe" | "flutterwave" | "wise" | "mobile_money" | "local_gateway";
-  bankCountry?: string;
-  accountHolderName?: string;
-  accountNumber?: string;
-  supportedBlockchain?: "solana" | "ethereum" | "polygon" | "arbitrum" | "optimism";
-  walletType?: "phantom" | "solflare" | "backpack" | "magic_eden" | "wallet_connect" | "ledger_live";
-  walletAddress?: string;
-  preferredPayoutToken?: "USDT" | "USDC" | "DAI" | "solana" | "ETH" | "MATIC";
-
   // Additional Information
   productCategory: "men_clothing" | "women_clothing" | "men_shoes" | "women_shoes" | "accessories" | "merch" | "others";
   otherCategoryName?: string;

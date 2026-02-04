@@ -31,6 +31,7 @@ import { productsRouter } from "../routers/products";
 import { adminListingReviewRouter } from "../routers/admin-listing-review";
 import { sellerListingNotificationsRouter } from "../routers/seller-listing-notifications";
 import { buyerListingsCatalogRouter } from "../routers/buyer-listings-catalog";
+import { payoutVerificationRouter } from "../routers/payoutVerification";
 
 const t = initTRPC.context<ReturnType<typeof createTRPCContext>>().create();
 
@@ -76,6 +77,7 @@ export const appRouter = t.router({
   adminListingReview: adminListingReviewRouter,
   sellerListingNotifications: sellerListingNotificationsRouter,
   buyerListingsCatalog: buyerListingsCatalogRouter,
+  payoutVerification: payoutVerificationRouter,
 });
 
 export type AppRouter = typeof appRouter;

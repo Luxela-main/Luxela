@@ -57,9 +57,9 @@ function AdminSignInContent() {
       setUser(user);
       toast.success('Signing in...');
 
-      // Give it a moment, then check admin status
+      // Wait for toast to be displayed and then check admin status
       setIsCheckingAdmin(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const adminStatus = await checkAdminStatus();
 

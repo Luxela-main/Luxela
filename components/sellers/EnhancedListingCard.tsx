@@ -130,21 +130,21 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
           >
             <button
               onClick={onView}
-              className="p-3 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 transition-all duration-300 hover:scale-110 active:scale-95"
+              className="p-3 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
               title="View details"
             >
               <Eye className="w-5 h-5" />
             </button>
             <button
               onClick={onEdit}
-              className="p-3 rounded-full bg-[#8451E1]/30 backdrop-blur-md border border-[#8451E1]/40 text-[#8451E1] hover:bg-[#8451E1]/50 transition-all duration-300 hover:scale-110 active:scale-95"
+              className="p-3 rounded-full bg-[#8451E1]/30 backdrop-blur-md border border-[#8451E1]/40 text-[#8451E1] hover:bg-[#8451E1]/50 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
               title="Edit listing"
             >
               <SquarePen className="w-5 h-5" />
             </button>
             <button
               onClick={onDelete}
-              className="p-3 rounded-full bg-red-600/30 backdrop-blur-md border border-red-400/30 text-red-300 hover:bg-red-600/50 transition-all duration-300 hover:scale-110 active:scale-95"
+              className="p-3 rounded-full bg-red-600/30 backdrop-blur-md border border-red-400/30 text-red-300 hover:bg-red-600/50 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
               title="Delete listing"
             >
               <Trash2 className="w-5 h-5" />

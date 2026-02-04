@@ -50,8 +50,8 @@ function SignInContent() {
         
         const role = user.user_metadata?.role === "seller" ? "seller" : "buyer";
         
-        // Tiny delay to ensure state updates
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Wait for toast to be displayed before redirecting
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         router.push(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
         return;

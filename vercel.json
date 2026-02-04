@@ -1,18 +1,4 @@
 {
   "buildCommand": "pnpm run build:vercel",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "crons": [
-    {
-      "path": "/api/cron/release-holds",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/process-payouts",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/escalate-disputes",
-      "schedule": "0 0 * * *"
-    }
-  ]
+  "installCommand": "pnpm install --frozen-lockfile"
 }

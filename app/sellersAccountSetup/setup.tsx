@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Building, Truck, CreditCard, FileText, ArrowLeft, Save, Edit2Building } from "lucide-react";
+import { Building, Truck, FileText, ArrowLeft, Save, Edit2Building } from "lucide-react";
 import BuyerFooter from "@/components/buyer/footer";
 import { SellerSetupFormData } from "@/types/seller";
 import {
@@ -20,7 +20,7 @@ type SetupProps = {
 };
 
 const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
-  const [activeTab, setActiveTab] = useState<"business" | "shipping" | "payment" | "additional">("business");
+  const [activeTab, setActiveTab] = useState<"business" | "shipping" | "additional">("business");
   const [formData, setFormData] = useState<SellerSetupFormData>(initialData);
   const [socialMediaLinks, setSocialMediaLinks] = useState(
     initialData.socialMediaLinks || []
@@ -83,41 +83,6 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
         newErrors.periodUntilRefund = "Refund period is required";
     }
 
-    if (section === "payment") {
-      if (!formData.preferredPayoutMethod)
-        newErrors.preferredPayoutMethod = "Preferred payout method is required";
-
-      if (
-        formData.preferredPayoutMethod === "fiat_currency" ||
-        formData.preferredPayoutMethod === "both"
-      ) {
-        if (!formData.fiatPayoutMethod)
-          newErrors.fiatPayoutMethod = "Fiat payout method is required";
-        if (formData.fiatPayoutMethod === "bank") {
-          if (!formData.bankCountry)
-            newErrors.bankCountry = "Bank country is required";
-          if (!formData.accountHolderName?.trim())
-            newErrors.accountHolderName = "Account holder name is required";
-          if (!formData.accountNumber?.trim())
-            newErrors.accountNumber = "Account number is required";
-        }
-      }
-
-      if (
-        formData.preferredPayoutMethod === "cryptocurrency" ||
-        formData.preferredPayoutMethod === "both"
-      ) {
-        if (!formData.walletType)
-          newErrors.walletType = "Wallet type is required";
-        if (!formData.walletAddress?.trim())
-          newErrors.walletAddress = "Wallet address is required";
-        if (!formData.preferredPayoutToken)
-          newErrors.preferredPayoutToken = "Preferred payout token is required";
-        if (!formData.supportedBlockchain)
-          newErrors.supportedBlockchain = "Blockchain is required";
-      }
-    }
-
     if (section === "additional") {
       if (!formData.productCategory)
         newErrors.productCategory = "Product category is required";
@@ -177,17 +142,14 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
     if (activeTab === "business" && validateSection("business")) {
       setActiveTab("shipping");
     } else if (activeTab === "shipping" && validateSection("shipping")) {
-      setActiveTab("payment");
-    } else if (activeTab === "payment" && validateSection("payment")) {
       setActiveTab("additional");
     }
   };
 
   const handlePrevious = () => {
-    const tabOrder: Array<"business" | "shipping" | "payment" | "additional"> = [
+    const tabOrder: Array<"business" | "shipping" | "additional"> = [
       "business",
       "shipping",
-      "payment",
       "additional",
     ];
     const currentIndex = tabOrder.indexOf(activeTab);
@@ -200,7 +162,6 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
     const allTabsValid =
       validateSection("business") &&
       validateSection("shipping") &&
-      validateSection("payment") &&
       validateSection("additional");
 
     if (allTabsValid) {
@@ -213,7 +174,6 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
   const tabs = [
     { id: "business" as const, label: "Business Information", icon: Building },
     { id: "shipping" as const, label: "Shipping Information", icon: Truck },
-    { id: "payment" as const, label: "Payment Information", icon: CreditCard },
     { id: "additional" as const, label: "Additional Information", icon: FileText },
   ];
 
@@ -322,7 +282,7 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
     label: string = "State/Region",
     required: boolean = true
   ) => {
-    const states = formData.country ? getStatesForCountry(formData.country) : [];
+    const states = formData.country ? getStatesForCountry(formData.country).sort() : [];
 
     return (
       <div className="mb-6">
@@ -344,6 +304,7 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
           className={`${selectClass} ${errors.state ? "border-red-500" : ""} ${
             !formData.country ? "opacity-50 cursor-not-allowed" : ""
           }`}
+          suppressHydrationWarning
         >
           <option value="">Select state/region</option>
           {states.map((state) => (
@@ -381,6 +342,7 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
           className={`${selectClass} ${errors[fieldName] ? "border-red-500" : ""} ${
             !formData.state ? "opacity-50 cursor-not-allowed" : ""
           }`}
+          suppressHydrationWarning
         >
           <option value="">Select city</option>
           {cities.map((city) => (
@@ -390,41 +352,6 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
           ))}
         </select>
         {errors[fieldName] && <p className={errorClass}>{errors[fieldName]}</p>}
-      </div>
-    );
-  };
-
-  const renderBankCountryField = (
-    label: string = "Bank Country",
-    required: boolean = true
-  ) => {
-    const countryList = Object.entries(COUNTRIES_WITH_STATES_AND_CITIES).map(
-      ([code, data]) => ({
-        value: code,
-        label: data.label,
-      })
-    );
-
-    return (
-      <div className="mb-6">
-        <label className={labelClass}>
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        <select
-          name="bankCountry"
-          value={(formData.bankCountry as string) || ""}
-          onChange={handleInputChange}
-          className={`${selectClass} ${errors.bankCountry ? "border-red-500" : ""}`}
-        >
-          <option value="">Select country</option>
-          {countryList.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        {errors.bankCountry && <p className={errorClass}>{errors.bankCountry}</p>}
       </div>
     );
   };
@@ -469,6 +396,7 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
             className={`${selectClass} ${errors.countryCode ? "border-red-500" : ""} ${
               !formData.country ? "opacity-50 cursor-not-allowed" : ""
             }`}
+            suppressHydrationWarning
           >
             <option value="">Select country code</option>
             {PHONE_COUNTRY_CODES.map((cc) => (
@@ -605,8 +533,7 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
                 "businessType",
                 [
                   { value: "individual", label: "Individual" },
-                  { value: "business", label: "Registered Business" },
-                  { value: "sole_proprietorship", label: "Sole Proprietorship" },
+                  { value: "sole_proprietorship", label: "Registered Business" },
                   { value: "llc", label: "LLC" },
                   { value: "corporation", label: "Corporation" },
                   { value: "partnership", label: "Partnership" },
@@ -958,7 +885,6 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
                   { value: "30days", label: "Within 30 Days" },
                   { value: "60days", label: "Within 60 Days" },
                   { value: "store_credit", label: "Store Credit Only" },
-                  { value: "accept_refunds", label: "Accept Refunds" },
                 ],
                 true
               )}
@@ -975,145 +901,6 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
                   { value: "2weeks", label: "2 Weeks" },
                 ],
                 true
-              )}
-            </div>
-          )}
-
-          {activeTab === "payment" && (
-            <div>
-              <h2 className="text-lg md:text-xl font-semibold mb-6">Payment Information</h2>
-
-              <div className="mb-6">
-                <label className={labelClass}>
-                  Preferred Payout Method
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <div className="space-y-3">
-                  {[
-                    {
-                      value: "fiat_currency",
-                      label: "Fiat Currency (Bank Transfer, etc.)",
-                    },
-                    { value: "cryptocurrency", label: "Cryptocurrency Wallet" },
-                    { value: "both", label: "Both Methods" },
-                  ].map((method) => (
-                    <label
-                      key={method.value}
-                      className="flex items-center p-3 border border-[#747474] rounded cursor-pointer hover:bg-[#1a1a1a] transition-colors font-medium"
-                    >
-                      <input
-                        type="radio"
-                        name="preferredPayoutMethod"
-                        value={method.value}
-                        checked={formData.preferredPayoutMethod === method.value}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 accent-purple-600"
-                      />
-                      <span className="ml-3 text-sm">{method.label}</span>
-                    </label>
-                  ))}
-                </div>
-                {errors.preferredPayoutMethod && (
-                  <p className={errorClass}>{errors.preferredPayoutMethod}</p>
-                )}
-              </div>
-
-              {(formData.preferredPayoutMethod === "fiat_currency" ||
-                formData.preferredPayoutMethod === "both") && (
-                <div className="mb-8 p-6 bg-[#1a1a1a] rounded-lg border border-[#747474]">
-                  <h3 className="font-semibold mb-4">Fiat Currency Details</h3>
-
-                  {renderSelectField(
-                    "Preferred Fiat Method",
-                    "fiatPayoutMethod",
-                    [
-                      { value: "bank", label: "Bank Transfer" },
-                      { value: "paypal", label: "PayPal" },
-                      { value: "stripe", label: "Stripe" },
-                      { value: "flutterwave", label: "Flutterwave" },
-                      { value: "wise", label: "Wise" },
-                      { value: "mobile_money", label: "Mobile Money" },
-                      { value: "local_gateway", label: "Local Payment Gateway" },
-                    ],
-                    true
-                  )}
-
-                  {formData.fiatPayoutMethod === "bank" && (
-                    <>
-                      {renderBankCountryField("Bank Country", true)}
-                      {renderInputField(
-                        "Account Holder Name",
-                        "accountHolderName",
-                        "text",
-                        "Full name on account",
-                        true
-                      )}
-                      {renderInputField(
-                        "Account Number",
-                        "accountNumber",
-                        "text",
-                        "Bank account number",
-                        true
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-
-              {(formData.preferredPayoutMethod === "cryptocurrency" ||
-                formData.preferredPayoutMethod === "both") && (
-                <div className="mb-8 p-6 bg-[#1a1a1a] rounded-lg border border-[#747474]">
-                  <h3 className="font-semibold mb-4">Cryptocurrency Wallet Details</h3>
-
-                  {renderSelectField(
-                    "Supported Blockchain",
-                    "supportedBlockchain",
-                    [
-                      { value: "solana", label: "Solana" },
-                      { value: "ethereum", label: "Ethereum" },
-                      { value: "polygon", label: "Polygon" },
-                      { value: "arbitrum", label: "Arbitrum" },
-                      { value: "optimism", label: "Optimism" },
-                    ],
-                    true
-                  )}
-
-                  {renderSelectField(
-                    "Wallet Type",
-                    "walletType",
-                    [
-                      { value: "phantom", label: "Phantom" },
-                      { value: "solflare", label: "Solflare" },
-                      { value: "backpack", label: "Backpack" },
-                      { value: "magic_eden", label: "Magic Eden" },
-                      { value: "wallet_connect", label: "Wallet Connect" },
-                      { value: "ledger_live", label: "Ledger Live" },
-                    ],
-                    true
-                  )}
-
-                  {renderInputField(
-                    "Wallet Address",
-                    "walletAddress",
-                    "text",
-                    "Your public wallet address",
-                    true
-                  )}
-
-                  {renderSelectField(
-                    "Preferred Payout Token",
-                    "preferredPayoutToken",
-                    [
-                      { value: "USDT", label: "USDT (Tether)" },
-                      { value: "USDC", label: "USDC (USD Coin)" },
-                      { value: "DAI", label: "DAI" },
-                      { value: "solana", label: "SOL (Solana)" },
-                      { value: "ETH", label: "ETH (Ethereum)" },
-                      { value: "MATIC", label: "MATIC (Polygon)" },
-                    ],
-                    true
-                  )}
-                </div>
               )}
             </div>
           )}
@@ -1219,7 +1006,10 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
               onClick={handleSubmitPreview}
               disabled={isLoading}
               type="button"
-              className="px-8 py-2.5 bg-green-600 rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer font-medium active:scale-95"
+              className="px-8 py-2.5 rounded text-sm transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer font-medium active:scale-95"
+              style={{ backgroundColor: "#8451E1" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#7038d4"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#8451E1"}
             >
               {isLoading ? (
                 <>
@@ -1248,4 +1038,4 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
   );
 };
 
-export default SellerSetupForm;
+export default SellerSetupForm;

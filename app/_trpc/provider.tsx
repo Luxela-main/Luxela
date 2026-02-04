@@ -3,7 +3,7 @@
 import { useState, ReactNode, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc } from "./client";
-import { httpBatchLink, loggerLink } from "@trpc/client";
+import { httpLink, loggerLink } from "@trpc/client";
 import { createClient } from "@/utils/supabase/client";
 
 interface TRPCProviderProps {
@@ -34,7 +34,7 @@ async function initializeAuthToken(): Promise<void> {
   });
 }
 
-export function TRCProvider({ children }: TRPCProviderProps) {
+export function TRPCProvider({ children }: TRPCProviderProps) {
   const [queryClient] = useState(() => new QueryClient());
   const apiUrl = getApiUrl();
   const [isReady, setIsReady] = useState(false);
@@ -49,7 +49,7 @@ export function TRCProvider({ children }: TRPCProviderProps) {
             (opts.direction === "down" && opts.result instanceof Error),
         }),
 
-        httpBatchLink({
+        httpLink({
           url: apiUrl,
 
           // Add Supabase bearer token + credentials

@@ -11,6 +11,7 @@
     "dev:check-db": "ts-node-dev --respawn server/check-db.ts",
     "dev:express-server": "ts-node-dev --respawn --transpile-only server/index.ts",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx server/db/migrate.ts",
     "build": "cross-env NODE_ENV=production pnpm run build:vercel",
     "build:local": "pnpm run db:generate && pnpm run build:server && pnpm run build:client",
     "build:server": "tsc --project tsconfig.server.json",
@@ -142,7 +143,7 @@
     "@electric-sql/pglite": "^0.3.14",
     "@tailwindcss/postcss": "^4.1.18",
     "@trpc/server": "^11.8.1",
-    "@types/antd": "^0.12.32",
+
     "@types/aos": "^3.0.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/body-parser": "^1.19.6",

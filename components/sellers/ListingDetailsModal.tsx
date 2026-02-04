@@ -48,7 +48,15 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
     try {
       if (listing.imagesJson && typeof listing.imagesJson === "string") {
         const parsed = JSON.parse(listing.imagesJson);
-        return Array.isArray(parsed) ? parsed.map((img: any) => img.url || img) : [];
+        return Array.isArray(parsed) ? parsed.map((img: any) => {
+          if (typeof img === 'string') return img;
+          return img?.url || img;
+        }) : [];
+      } else if (listing.imagesJson && Array.isArray(listing.imagesJson)) {
+        return listing.imagesJson.map((img: any) => {
+          if (typeof img === 'string') return img;
+          return img?.url || img;
+        });
       } else if (listing.images) {
         return typeof listing.images === "string"
           ? JSON.parse(listing.images)

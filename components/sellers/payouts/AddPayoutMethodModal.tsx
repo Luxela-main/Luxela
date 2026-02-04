@@ -13,23 +13,130 @@ interface AddPayoutMethodModalProps {
 export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethodModalProps) {
   const [methodType, setMethodType] = useState<"bank" | "paypal" | "crypto" | "wise" | null>(null);
   const [formData, setFormData] = useState({
+    // Bank transfer fields
+    bankCountry: "",
     bankName: "",
+    bankCode: "",
+    accountHolderName: "",
     accountNumber: "",
-    accountName: "",
-    sortCode: "",
-    paypalEmail: "",
-    walletAddress: "",
-    walletNetwork: "",
+    accountType: "",
+    swiftCode: "",
+    iban: "",
+    
+    // PayPal
+    email: "",
+    
+    // Wise
     wiseEmail: "",
+    
+    // Crypto
+    walletNetwork: "",
+    walletAddress: "",
+    walletType: "",
   });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // List of African countries for account type mapping
+  const africanCountries = [
+    'Nigeria', 'Ghana', 'Kenya', 'Uganda', 'Tanzania', 'Rwanda', 'Cameroon',
+    'Senegal', 'Côte d\'Ivoire', 'Egypt', 'South Africa', 'Ethiopia', 'Sudan',
+    'Angola', 'Botswana', 'Burkina Faso', 'Burundi', 'Cape Verde', 'Chad',
+    'Comoros', 'Congo', 'Djibouti', 'Equatorial Guinea', 'Eritrea', 'Eswatini',
+    'Gabon', 'Gambia', 'Guinea', 'Guinea-Bissau', 'Lesotho', 'Liberia',
+    'Libya', 'Madagascar', 'Malawi', 'Mali', 'Mauritania', 'Mauritius',
+    'Mozambique', 'Namibia', 'Niger', 'Republic of the Congo', 'São Tomé and Príncipe',
+    'Seychelles', 'Sierra Leone', 'Somalia', 'South Sudan', 'Togo', 'Tunisia',
+    'Zambia', 'Zimbabwe'
+  ];
+
+  const isAfricanCountry = (country: string): boolean => {
+    return africanCountries.some(ac => ac.toLowerCase() === country.toLowerCase());
+  };
+
+  const getAccountTypeOptions = (): { value: string; label: string }[] => {
+    const isAfrican = isAfricanCountry(formData.bankCountry);
+    
+    if (isAfrican) {
+      return [
+        { value: 'Current Account', label: 'Current Account' },
+        { value: 'Savings Account', label: 'Savings Account' },
+        { value: 'Fixed Deposit', label: 'Fixed Deposit' },
+        { value: 'Call Deposit', label: 'Call Deposit' },
+      ];
+    } else {
+      return [
+        { value: 'Checking', label: 'Checking' },
+        { value: 'Savings', label: 'Savings' },
+        { value: 'Business', label: 'Business' },
+      ];
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const updatedData = { ...formData, [name]: value };
+    
+    // If bank country changed, reset account type since options change
+    if (name === 'bankCountry') {
+      updatedData.accountType = '';
+    }
+    
+    setFormData((prev) => ({ ...prev, ...updatedData }));
+    // Clear validation error for this field
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    switch (methodType) {
+      case "bank":
+        if (!formData.bankName.trim()) errors.bankName = "Bank name is required";
+        if (!formData.accountHolderName.trim()) errors.accountHolderName = "Account holder name is required";
+        if (!formData.accountNumber.trim()) errors.accountNumber = "Account number is required";
+        if (!formData.accountType.trim()) errors.accountType = "Account type is required";
+        break;
+      case "paypal":
+        if (!formData.email.trim()) {
+          errors.email = "PayPal email is required";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+          errors.email = "Please enter a valid email address";
+        }
+        break;
+      case "crypto":
+        if (!formData.walletNetwork.trim()) errors.walletNetwork = "Network/Token selection is required";
+        if (!formData.walletType.trim()) errors.walletType = "Wallet type is required";
+        if (!formData.walletAddress.trim()) {
+          errors.walletAddress = "Wallet address is required";
+        } else if (formData.walletAddress.trim().length < 20) {
+          errors.walletAddress = "Wallet address appears to be invalid (too short)";
+        }
+        break;
+      case "wise":
+        if (!formData.wiseEmail.trim()) {
+          errors.wiseEmail = "Wise email is required";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.wiseEmail)) {
+          errors.wiseEmail = "Please enter a valid email address";
+        }
+        break;
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
 
     let newMethod;
 
@@ -38,28 +145,36 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
         newMethod = {
           type: "bank",
           accountDetails: {
+            bankCountry: formData.bankCountry || null,
             bankName: formData.bankName,
+            bankCode: formData.bankCode || null,
+            accountHolderName: formData.accountHolderName,
             accountNumber: formData.accountNumber,
-            accountName: formData.accountName,
-            sortCode: formData.sortCode,
+            accountType: formData.accountType,
+            swiftCode: formData.swiftCode || null,
+            iban: formData.iban || null,
           },
+          isDefault: false,
         };
         break;
       case "paypal":
         newMethod = {
           type: "paypal",
           accountDetails: {
-            email: formData.paypalEmail,
+            email: formData.email,
           },
+          isDefault: false,
         };
         break;
       case "crypto":
         newMethod = {
-          type: "crypto",
+          type: "other",
           accountDetails: {
             walletNetwork: formData.walletNetwork,
             walletAddress: formData.walletAddress,
+            walletType: formData.walletType,
           },
+          isDefault: false,
         };
         break;
       case "wise":
@@ -68,6 +183,7 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
           accountDetails: {
             email: formData.wiseEmail,
           },
+          isDefault: false,
         };
         break;
       default:
@@ -81,15 +197,21 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
   const resetForm = () => {
     setMethodType(null);
     setFormData({
+      bankCountry: "",
       bankName: "",
+      bankCode: "",
+      accountHolderName: "",
       accountNumber: "",
-      accountName: "",
-      sortCode: "",
-      paypalEmail: "",
-      walletAddress: "",
-      walletNetwork: "",
+      accountType: "",
+      swiftCode: "",
+      iban: "",
+      email: "",
       wiseEmail: "",
+      walletNetwork: "",
+      walletAddress: "",
+      walletType: "",
     });
+    setValidationErrors({});
   };
 
   if (!isOpen) return null;
@@ -169,6 +291,20 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Bank Country
+                  </label>
+                  <input
+                    type="text"
+                    name="bankCountry"
+                    value={formData.bankCountry}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Nigeria, Ghana, Kenya"
+                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Bank Name *
                   </label>
                   <input
@@ -176,25 +312,53 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                     name="bankName"
                     value={formData.bankName}
                     onChange={handleInputChange}
-                    placeholder="e.g., First Bank"
+                    placeholder="e.g., First Bank, GTBank, Stanbic"
                     required
+                    className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white placeholder-gray-600 focus:outline-none ${
+                      validationErrors.bankName
+                        ? "border-red-500 focus:border-red-600"
+                        : "border-[#2a2a2a] focus:border-purple-600"
+                    }`}
+                  />
+                  {validationErrors.bankName && (
+                    <p className="text-red-400 text-sm mt-1">{validationErrors.bankName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Bank Code
+                  </label>
+                  <input
+                    type="text"
+                    name="bankCode"
+                    value={formData.bankCode}
+                    onChange={handleInputChange}
+                    placeholder="Optional - e.g., 011, 058"
                     className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Account Name *
+                    Account Holder Name *
                   </label>
                   <input
                     type="text"
-                    name="accountName"
-                    value={formData.accountName}
+                    name="accountHolderName"
+                    value={formData.accountHolderName}
                     onChange={handleInputChange}
                     placeholder="Your full name as on bank account"
                     required
-                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
+                    className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white placeholder-gray-600 focus:outline-none ${
+                      validationErrors.accountHolderName
+                        ? "border-red-500 focus:border-red-600"
+                        : "border-[#2a2a2a] focus:border-purple-600"
+                    }`}
                   />
+                  {validationErrors.accountHolderName && (
+                    <p className="text-red-400 text-sm mt-1">{validationErrors.accountHolderName}</p>
+                  )}
                 </div>
 
                 <div>
@@ -208,20 +372,80 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                     onChange={handleInputChange}
                     placeholder="Your account number"
                     required
+                    className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white placeholder-gray-600 focus:outline-none ${
+                      validationErrors.accountNumber
+                        ? "border-red-500 focus:border-red-600"
+                        : "border-[#2a2a2a] focus:border-purple-600"
+                    }`}
+                  />
+                  {validationErrors.accountNumber && (
+                    <p className="text-red-400 text-sm mt-1">{validationErrors.accountNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Account Type *
+                    {formData.bankCountry && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({isAfricanCountry(formData.bankCountry) ? 'African' : 'International'})
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    name="accountType"
+                    value={formData.accountType}
+                    onChange={handleInputChange}
+                    required
+                    className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white focus:outline-none ${
+                      validationErrors.accountType
+                        ? "border-red-500 focus:border-red-600"
+                        : "border-[#2a2a2a] focus:border-purple-600"
+                    }`}
+                  >
+                    <option value="">Select account type</option>
+                    {getAccountTypeOptions().map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.accountType && (
+                    <p className="text-red-400 text-sm mt-1">{validationErrors.accountType}</p>
+                  )}
+                  {formData.bankCountry && (
+                    <p className="text-gray-500 text-xs mt-1">
+                      {isAfricanCountry(formData.bankCountry)
+                        ? 'Showing African account types (Current, Savings, Fixed/Call Deposit)'
+                        : 'Showing International account types (Checking, Savings, Business)'}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    SWIFT Code / Sort Code
+                  </label>
+                  <input
+                    type="text"
+                    name="swiftCode"
+                    value={formData.swiftCode}
+                    onChange={handleInputChange}
+                    placeholder="Optional - e.g., WEMAUSTL"
                     className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Sort Code / SWIFT Code
+                    IBAN
                   </label>
                   <input
                     type="text"
-                    name="sortCode"
-                    value={formData.sortCode}
+                    name="iban"
+                    value={formData.iban}
                     onChange={handleInputChange}
-                    placeholder="Optional"
+                    placeholder="Optional - International Bank Account Number"
                     className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
                   />
                 </div>
@@ -235,18 +459,51 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                 </label>
                 <input
                   type="email"
-                  name="paypalEmail"
-                  value={formData.paypalEmail}
+                  name="email"
+                  value={formData.email}
                   onChange={handleInputChange}
                   placeholder="your-email@paypal.com"
                   required
-                  className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
+                  className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white placeholder-gray-600 focus:outline-none ${
+                    validationErrors.email
+                      ? "border-red-500 focus:border-red-600"
+                      : "border-[#2a2a2a] focus:border-purple-600"
+                  }`}
                 />
+                {validationErrors.email && (
+                  <p className="text-red-400 text-sm mt-1">{validationErrors.email}</p>
+                )}
               </div>
             )}
 
             {methodType === "crypto" && (
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Wallet Type *
+                  </label>
+                  <select
+                    name="walletType"
+                    value={formData.walletType}
+                    onChange={handleInputChange}
+                    required
+                    className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white focus:outline-none ${
+                      validationErrors.walletType
+                        ? "border-red-500 focus:border-red-600"
+                        : "border-[#2a2a2a] focus:border-purple-600"
+                    }`}
+                  >
+                    <option value="">Select wallet type</option>
+                    <option value="Personal">Personal Wallet</option>
+                    <option value="Exchange">Exchange Account</option>
+                    <option value="Hardware">Hardware Wallet</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {validationErrors.walletType && (
+                    <p className="text-red-400 text-sm mt-1">{validationErrors.walletType}</p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Network/Token *
@@ -256,16 +513,23 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                     value={formData.walletNetwork}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600"
+                    className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white focus:outline-none ${
+                      validationErrors.walletNetwork
+                        ? "border-red-500 focus:border-red-600"
+                        : "border-[#2a2a2a] focus:border-purple-600"
+                    }`}
                   >
                     <option value="">Select network</option>
                     <option value="USDT (TRC-20)">USDT (TRC-20)</option>
                     <option value="USDT (ERC-20)">USDT (ERC-20)</option>
                     <option value="USDC (Polygon)">USDC (Polygon)</option>
                     <option value="Bitcoin">Bitcoin</option>
-                    <option value="Solana">Solana</option>
                     <option value="Ethereum">Ethereum</option>
+                    <option value="Solana">Solana</option>
                   </select>
+                  {validationErrors.walletNetwork && (
+                    <p className="text-red-400 text-sm mt-1">{validationErrors.walletNetwork}</p>
+                  )}
                 </div>
 
                 <div>
@@ -279,8 +543,15 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                     onChange={handleInputChange}
                     placeholder="Your wallet address"
                     required
-                    className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600 font-mono text-sm"
+                    className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white placeholder-gray-600 focus:outline-none font-mono text-sm ${
+                      validationErrors.walletAddress
+                        ? "border-red-500 focus:border-red-600"
+                        : "border-[#2a2a2a] focus:border-purple-600"
+                    }`}
                   />
+                  {validationErrors.walletAddress && (
+                    <p className="text-red-400 text-sm mt-1">{validationErrors.walletAddress}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -297,8 +568,15 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                   onChange={handleInputChange}
                   placeholder="your-email@wise.com"
                   required
-                  className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-purple-600"
+                  className={`w-full px-4 py-2 bg-[#0a0a0a] border rounded-lg text-white placeholder-gray-600 focus:outline-none ${
+                    validationErrors.wiseEmail
+                      ? "border-red-500 focus:border-red-600"
+                      : "border-[#2a2a2a] focus:border-purple-600"
+                  }`}
                 />
+                {validationErrors.wiseEmail && (
+                  <p className="text-red-400 text-sm mt-1">{validationErrors.wiseEmail}</p>
+                )}
               </div>
             )}
 

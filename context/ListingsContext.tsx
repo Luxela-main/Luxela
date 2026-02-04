@@ -81,7 +81,7 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
       const { data, error: fetchError } = await supabase.from("listings")
         .select(`
           *,
-          sellers!inner (
+          sellers (
             id,
             seller_business (
               brand_name,
@@ -96,8 +96,8 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
         .eq('status', 'approved');
 
       if (fetchError) {
-        const errorMessage = fetchError.message || JSON.stringify(fetchError) || "Unknown error";
-        console.error("Supabase fetch error:", fetchError);
+        const errorMessage = fetchError.message || "Failed to fetch listings";
+        console.error("Supabase fetch error:", errorMessage, fetchError);
         throw new Error(errorMessage);
       }
 
@@ -160,4 +160,4 @@ export function useListings() {
     throw new Error("useListings must be used within a ListingsProvider");
   }
   return context;
-}
+}

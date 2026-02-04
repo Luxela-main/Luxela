@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bell, LogOut, Settings, User, ChevronDown } from "lucide-react";
-import { CurrentUser, getCurrentUser } from "@/lib/utils/getCurrentUser";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/hooks/useToast";
 import { useNotifications, usePendingOrders } from "@/modules/sellers";
+import { useSellerProfile } from "@/modules/sellers/queries/useSellerProfile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,6 @@ import {
 import Logo from "@/public/luxela.svg";
 
 export default function SellerNavbar() {
-  const [user, setUser] = useState<CurrentUser | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [open, setOpen] = useState(false);
@@ -33,20 +32,20 @@ export default function SellerNavbar() {
   // Get notification and pending order counts
   const { data: notifications = [] } = useNotifications();
   const { data: pendingOrders = [] } = usePendingOrders();
+  
+  // Get seller profile - automatically syncs when cache is invalidated
+  const { data: profileData } = useSellerProfile();
+  const user = profileData?.seller ? {
+    avatarUrl: profileData.seller.profilePhoto || '/default-avatar.png',
+    fullName: profileData.business?.fullName || 'Seller',
+    email: profileData.business?.officialEmail,
+  } : null;
 
   const unreadNotificationCount = notifications.filter(
     (n: any) => !n.isRead
   ).length;
   const pendingOrderCount = pendingOrders.length;
   const totalAlerts = unreadNotificationCount + pendingOrderCount;
-
-  useEffect(() => {
-    async function fetchUser() {
-      const data = await getCurrentUser();
-      setUser(data);
-    }
-    fetchUser();
-  }, []);
 
   const handleLogout = async () => {
     try {

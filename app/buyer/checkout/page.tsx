@@ -536,10 +536,6 @@ export default function CheckoutPage() {
                   <span>₦{((summary?.subtotalCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Tax (7.5%)</span>
-                  <span>₦{((summary?.taxCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
                   <span>₦{((summary?.shippingCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>

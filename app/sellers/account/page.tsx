@@ -8,12 +8,14 @@ import {
    Bell,
    Shield,
    HelpCircle,
+   Truck,
 } from "lucide-react";
 import { useSellerProfile } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ProfileAccount } from "./components/ProfileAccount";
 import { StoreAccount } from "./components/StoreAccount";
 import { PaymentAccount } from "./components/PaymentAccount";
+import { ShippingAccount } from "./components/ShippingAccount";
 
 export default function Account() {
   const [activeTab, setActiveTab] = useState("Profile");
@@ -66,7 +68,7 @@ export default function Account() {
         <div className="w-full md:w-64 md:pr-8 mb-6 md:mb-0">
           <div className="space-y-1">
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
+              className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer ${
                 activeTab === "Profile"
                   ? "bg-[#1a1a1a] text-white"
                   : "text-gray-400 hover:bg-[#1a1a1a]"
@@ -76,7 +78,7 @@ export default function Account() {
               <span>Profile</span>
             </button>
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
+              className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer ${
                 activeTab === "Store"
                   ? "bg-[#1a1a1a] text-white"
                   : "text-gray-400 hover:bg-[#1a1a1a]"
@@ -86,7 +88,17 @@ export default function Account() {
               <span>Store</span>
             </button>
             <button
-              className={`flex items-center w-full px-3 py-2 rounded-md ${
+              className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer ${
+                activeTab === "Shipping"
+                  ? "bg-[#1a1a1a] text-white"
+                  : "text-gray-400 hover:bg-[#1a1a1a]"
+              }`}
+              onClick={() => setActiveTab("Shipping")}>
+              <Truck className="h-5 w-5 mr-3" />
+              <span>Shipping</span>
+            </button>
+            <button
+              className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer ${
                 activeTab === "Payment"
                   ? "bg-[#1a1a1a] text-white"
                   : "text-gray-400 hover:bg-[#1a1a1a]"
@@ -101,6 +113,7 @@ export default function Account() {
         <div className="flex-1 min-h-[500px]">
           {activeTab === "Profile" && profileData && <ProfileAccount initialData={profileData} />}
           {activeTab === "Store" && profileData && <StoreAccount initialData={profileData} />}
+          {activeTab === "Shipping" && profileData && <ShippingAccount initialData={profileData} />}
           {activeTab === "Payment" && profileData && <PaymentAccount initialData={profileData} />}
         </div>
       </div>

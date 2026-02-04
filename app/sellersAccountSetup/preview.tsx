@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from "react";
-import { Building, Truck, CreditCard, FileText, ArrowLeft, Save, Edit2 } from "lucide-react";
+import { Building, Truck, FileText, ArrowLeft, Save, Edit2 } from "lucide-react";
 import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -37,9 +37,9 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
   const tabs = [
     { id: "business", label: "Business Information", icon: Building },
     { id: "shipping", label: "Shipping Information", icon: Truck },
-    { id: "payment", label: "Payment Information", icon: CreditCard },
     { id: "additional", label: "Additional Information", icon: FileText },
   ];
+  // Payment tab removed - payment is optional
 
   const productCategory = [
     { label: "Men Clothing", value: "men_clothing" as const },
@@ -629,130 +629,6 @@ const SellerAccountPreview: React.FC<SellerPreviewProps> = ({
                 "Period Until refund",
                 "periodUntilRefund",
                 editingSection === "shipping"
-              )}
-            </div>
-          )}
-
-          {activeTab === "payment" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-medium text-[#f2f2f2]">
-                  Payment Information
-                </h2>
-                {editingSection === "payment" ? (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleCancel}
-                      className="flex items-center gap-2 text-gray-400 hover:text-gray-300 transition-colors"
-                    >
-                      <span className="text-sm">Cancel</span>
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      className="flex items-center gap-2 text-purple-500 hover:text-purple-400 transition-colors"
-                    >
-                      <Save className="w-5 h-5" />
-                      <span className="text-sm">Save</span>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleEdit("payment")}
-                    className="text-purple-500 hover:text-purple-400 transition-colors"
-                  >
-                    <Edit2 className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Payment Method Selection */}
-              <div className="mb-6">
-                <p className="text-sm text-[#858585] mb-3">Payment Method</p>
-                {editingSection === "payment" ? (
-                  <div className="flex gap-8 text-[#858585]">
-                    {[
-                      {
-                        value: "fiat_currency",
-                        label: "Fiat currency (Local Currency)",
-                      },
-                      { value: "cryptocurrency", label: "Cryptocurrency" },
-                      { value: "both", label: "Both" },
-                    ].map((method) => (
-                      <label
-                        key={method.value}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="preferredPayoutMethod"
-                          value={method.value}
-                          checked={localData.preferredPayoutMethod === method.value}
-                          onChange={handleInputChange}
-                          className="w-4 h-4 accent-purple-600"
-                        />
-                        <span className="text-sm">{method.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[#f2f2f2]">
-                    {data.preferredPayoutMethod === "fiat_currency"
-                      ? "Fiat Currency (Local Currency)"
-                      : data.preferredPayoutMethod === "cryptocurrency"
-                        ? "Cryptocurrency"
-                        : data.preferredPayoutMethod === "both"
-                          ? "Both"
-                          : "Not provided"}
-                  </p>
-                )}
-              </div>
-
-              {/* Fiat Payment Section - Only show if fiat_currency or both */}
-              {(data.preferredPayoutMethod === "fiat_currency" ||
-                data.preferredPayoutMethod === "both") && (
-                <div className="mb-8">
-                  <h3 className="text-base mb-4 text-[#f2f2f2]">
-                    Fiat Payment Information
-                  </h3>
-                  {renderInfoRow(
-                    "Preferred Payout Method",
-                    "fiatPayoutMethod",
-                    "Bank Country",
-                    "bankCountry",
-                    editingSection === "payment"
-                  )}
-                  {renderInfoRow(
-                    "Account Holder Name",
-                    "accountHolderName",
-                    "Account Number",
-                    "accountNumber",
-                    editingSection === "payment"
-                  )}
-                </div>
-              )}
-
-              {/* Crypto Payment Section - Only show if cryptocurrency or both */}
-              {(data.preferredPayoutMethod === "cryptocurrency" ||
-                data.preferredPayoutMethod === "both") && (
-                <div>
-                  <h3 className="text-base mb-4 text-[#f2f2f2]">
-                    Digital Wallet (Crypto) Information
-                  </h3>
-                  {renderInfoRow(
-                    "Supported Blockchain",
-                    "supportedBlockchain",
-                    "Wallet Type",
-                    "walletType",
-                    editingSection === "payment"
-                  )}
-                  {renderInfoRow(
-                    "Wallet Address",
-                    "walletAddress",
-                    "Preferred Payout Token",
-                    "preferredPayoutToken",
-                    editingSection === "payment"
-                  )}
-                </div>
               )}
             </div>
           )}

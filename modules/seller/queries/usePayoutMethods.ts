@@ -11,8 +11,8 @@ export const usePayoutMethods = () => {
       const methods = await ((client.sales as any).getPayoutMethod as any).query();
       return methods;
     },
-    staleTime: 1000 * 60 * 10,
-    gcTime: 1000 * 60 * 15,
+    staleTime: 1000 * 30, // 30 seconds for fresher real-time updates
+    gcTime: 1000 * 60 * 5,
   });
 };
 
@@ -22,9 +22,9 @@ export const useAddPayoutMethod = () => {
 
   return useMutation({
     mutationFn: async (data: {
-      type: 'bank_transfer' | 'paypal' | 'stripe';
+      type: 'bank_transfer' | 'paypal' | 'stripe' | 'crypto' | 'wise';
       accountDetails: Record<string, string>;
-      isDefault: boolean;
+      isDefault?: boolean;
     }) => {
       const client = getTRPCClient();
       return await ((client.sales as any).addPayoutMethod as any).mutate(data);

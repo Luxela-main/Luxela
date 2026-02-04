@@ -13,8 +13,8 @@ import Image from "next/image";
 import Link from "next/link";
 import Logo from "@/public/luxela.svg";
 import { usePathname } from "next/navigation";
-import { CurrentUser, getCurrentUser } from "@/lib/utils/getCurrentUser";
-import { useState, useEffect } from "react";
+import { useSellerProfile } from "@/modules/sellers/queries/useSellerProfile";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/hooks/useToast";
@@ -44,6 +44,7 @@ export default function Sidebar() {
   // Get notification and pending order counts
   const { data: notifications = [] } = useNotifications();
   const { data: pendingOrders = [] } = usePendingOrders();
+  const { data: sellerProfileData } = useSellerProfile();
   
   const unreadNotificationCount = notifications.filter((n: any) => !n.isRead).length;
   const pendingOrderCount = pendingOrders.length;
@@ -52,24 +53,15 @@ export default function Sidebar() {
     return pathname === path;
   };
 
-  // const [user, setUser] = useState<{
-  //   fullName: string;
-  //   role: string;
-  //   email: string | undefined;
-
-  //   avatarUrl: string;
-  // } | null>(null);
-
-  const [user, setUser] = useState<CurrentUser | null>(null);
-
-  useEffect(() => {
-    async function fetchUser() {
-      const data = await getCurrentUser();
-      setUser(data);
-    }
-    fetchUser();
-  }, []);
-
+  // Use TRPC hook for seller profile data that automatically updates when cache is invalidated
+  const user = sellerProfileData?.seller && sellerProfileData.business
+    ? {
+        fullName: sellerProfileData.business.fullName || "Seller",
+        role: "seller",
+        email: sellerProfileData.business.officialEmail,
+        avatarUrl: sellerProfileData.seller.profilePhoto || "https://via.placeholder.com/30"
+      }
+    : null;
 
     const handleLogout = async () => {
     try {
@@ -296,7 +288,7 @@ export default function Sidebar() {
             <div className="relative mt-10">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="w-full flex items-center bg-stone-800/40 rounded-sm px-2 justify-between gap-3 py-2 hover:bg-stone-800/80 transition-colors"
+                className="w-full flex items-center bg-stone-800/40 rounded-sm px-2 justify-between gap-3 py-2 hover:bg-stone-800/80 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <Image
@@ -327,7 +319,7 @@ export default function Sidebar() {
                     <AlertDialogOverlay />
                     <AlertDialogTrigger asChild>
                       <button
-                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-stone-700/30 transition-colors border-gray-700"
+                    className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-stone-700/30 transition-colors border-gray-700 cursor-pointer"
                       >
                         Log out
                       </button>

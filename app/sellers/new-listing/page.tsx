@@ -68,6 +68,7 @@ const NewListing: React.FC = () => {
       internationalDays: "",
       internationalMinutes: "",
       images: [],
+      videos: [],
       collectionTitle: "",
       collectionDescription: "",
       collectionSku: "",
@@ -151,16 +152,19 @@ const NewListing: React.FC = () => {
             internationalDays: "",
             internationalMinutes: "",
             images: (response.imagesJson ? JSON.parse(response.imagesJson) : (response.image ? [response.image] : [])) as (File | string)[],
-            collectionTitle: "",
-            collectionDescription: "",
-            collectionSku: "",
-            collectionSlug: "",
-            collectionMetaDescription: "",
-            collectionBarcode: "",
-            collectionVideoUrl: "",
-            collectionCareInstructions: "",
-            collectionRefundPolicy: "",
-            collectionItems: Array.isArray(response.itemsJson) ? (response.itemsJson as any) : [],
+            collectionTitle: response.title || "",
+            collectionDescription: response.description || "",
+            collectionSku: response.sku || "",
+            collectionSlug: response.slug || "",
+            collectionMetaDescription: response.metaDescription || "",
+            collectionBarcode: response.barcode || "",
+            collectionVideoUrl: response.videoUrl || "",
+            collectionCareInstructions: response.careInstructions || "",
+            collectionRefundPolicy: response.refundPolicy || "",
+            collectionItems: Array.isArray(response.itemsJson) ? (response.itemsJson as any).map((item: any) => ({
+              ...item,
+              images: item.image ? [item.image] : (item.images || [])
+            })) : [],
             sku: response.sku || "",
             slug: response.slug || "",
             metaDescription: response.metaDescription || "",
@@ -267,6 +271,10 @@ const handleBackToListings = () => {
 
   const handleImagesChange = (images: File[]) => {
     setFormData((prev: any) => ({ ...prev, images }));
+  };
+
+  const handleVideosChange = (videos: File[]) => {
+    setFormData((prev: any) => ({ ...prev, videos }));
   };
 
   const handleNext = (): void => {
@@ -539,14 +547,75 @@ const handleSubmitSingle = async () => {
   }
 };
 
+// Helper to convert File objects to Base64 strings for serialization
+const convertCollectionItemsForSubmission = async (items: CollectionItem[]): Promise<CollectionItem[]> => {
+  return Promise.all(
+    items.map(async (item) => {
+      if (!item.images || item.images.length === 0) {
+        return item;
+      }
+
+      const convertedImages = await Promise.all(
+        item.images.map(async (image) => {
+          // If it's already a string URL, return as-is
+          if (typeof image === 'string') {
+            return image;
+          }
+          // If it's a File object, convert to Base64
+          if (image instanceof File) {
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = reader.result as string;
+                resolve(result);
+              };
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(image);
+            });
+          }
+          return undefined;
+        })
+      );
+
+      return {
+        ...item,
+        images: convertedImages.filter((img): img is string => img !== undefined),
+      };
+    })
+  );
+};
+
 // Handler for collections
 const handleSubmitCollection = async () => {
   setIsSubmitting(true);
   try {
+    // Convert File objects to Base64 strings for submission
+    const convertedItems = await convertCollectionItemsForSubmission(formData.collectionItems || []);
+    
+    // Generate slug from title if not provided
+    let collectionSlug = formData.collectionSlug || "";
+    if (!collectionSlug || collectionSlug.trim() === "") {
+      collectionSlug = (formData.collectionTitle || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+    }
+    
     await createCollectionMutation.mutateAsync({
       title: formData.collectionTitle || "",
       description: formData.collectionDescription,
-      items: formData.collectionItems || [],
+      items: convertedItems,
+      supplyCapacity: formData.supplyCapacity as any,
+      shippingOption: formData.shippingOption as any,
+      etaDomestic: formData.domesticDays ? (formData.domesticDays as any) : undefined,
+      etaInternational: formData.internationalDays ? (formData.internationalDays as any) : undefined,
+      refundPolicy: formData.collectionRefundPolicy as any,
+      sku: formData.collectionSku,
+      slug: collectionSlug,
+      metaDescription: formData.collectionMetaDescription,
+      barcode: formData.collectionBarcode,
+      videoUrl: formData.collectionVideoUrl,
+      careInstructions: formData.collectionCareInstructions,
     });
     
     setIsSubmitting(false);
@@ -563,7 +632,11 @@ const handleSubmitCollection = async () => {
   };
 
   const handleViewListings = () => {
-    router.push("/sellers/new-listing");
+    router.push("/sellers/listings");
+  };
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
   };
 
   const createSingleMutation = (trpc.listing as any).createSingle.useMutation({
@@ -674,6 +747,8 @@ const handleSubmitCollection = async () => {
           onFormChange={handleFormChange}
           images={formData.images.filter((img): img is File => img instanceof File)}
           onImagesChange={handleImagesChange}
+          videos={(formData.videos ?? []).filter((vid): vid is File => vid instanceof File)}
+          onVideosChange={handleVideosChange}
           onNext={handleNext}
           onCancel={handleCancel}
         />
@@ -683,12 +758,32 @@ const handleSubmitCollection = async () => {
   <CollectionForm
     title={formData.collectionTitle || ""}
     description={formData.collectionDescription || ""}
+    sku={formData.collectionSku || ""}
+    slug={formData.collectionSlug || ""}
+    metaDescription={formData.collectionMetaDescription || ""}
+    barcode={formData.collectionBarcode || ""}
+    videoUrl={formData.collectionVideoUrl || ""}
+    careInstructions={formData.collectionCareInstructions || ""}
+    refundPolicy={formData.collectionRefundPolicy || ""}
     items={formData.collectionItems || []}
     onTitleChange={(title) =>
       handleFormChange({ collectionTitle: title })
     }
     onDescriptionChange={(description) =>
       handleFormChange({ collectionDescription: description })
+    }
+    onSkuChange={(sku) => handleFormChange({ collectionSku: sku })}
+    onSlugChange={(slug) => handleFormChange({ collectionSlug: slug })}
+    onMetaDescriptionChange={(metaDescription) =>
+      handleFormChange({ collectionMetaDescription: metaDescription })
+    }
+    onBarcodeChange={(barcode) => handleFormChange({ collectionBarcode: barcode })}
+    onVideoUrlChange={(videoUrl) => handleFormChange({ collectionVideoUrl: videoUrl })}
+    onCareInstructionsChange={(careInstructions) =>
+      handleFormChange({ collectionCareInstructions: careInstructions })
+    }
+    onRefundPolicyChange={(refundPolicy) =>
+      handleFormChange({ collectionRefundPolicy: refundPolicy })
     }
     onItemsChange={(items) =>
       handleFormChange({ collectionItems: items })
@@ -720,7 +815,7 @@ const handleSubmitCollection = async () => {
         />
       )}
 
-      <SuccessModal isOpen={showSuccessModal} onView={handleViewListings} />
+      <SuccessModal isOpen={showSuccessModal} onClose={handleCloseSuccessModal} />
     </div>
   );
 };

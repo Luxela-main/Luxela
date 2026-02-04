@@ -1,6 +1,6 @@
 "use client";
 
-import { useListings } from "@/context/ListingsContext";
+import { useCollections } from "@/hooks/useCollections";
 import { useSearch } from "@/context/SearchContext";
 import { useAuth } from "@/context/AuthContext";
 import { useCartState } from "@/modules/cart/context";
@@ -91,14 +91,7 @@ function ProductCard({
   };
 
   let colors: Array<{ colorName: string; colorHex: string }> = [];
-  try {
-    colors = item.colors_available ? JSON.parse(item.colors_available) : [];
-  } catch (e) {}
-
   let sizes: string[] = [];
-  try {
-    sizes = item.sizes ? JSON.parse(item.sizes) : [];
-  } catch (e) {}
 
   const isValidImage =
     item.image &&
@@ -106,16 +99,16 @@ function ProductCard({
     !item.image.includes("placeholder.com");
 
   const stockStatus =
-    item.quantity_available === 0
+    item.quantityAvailable === 0
       ? "Out of Stock"
-      : item.quantity_available <= 5
-        ? `Only ${item.quantity_available} left`
+      : item.quantityAvailable <= 5
+        ? `Only ${item.quantityAvailable} left`
         : "In Stock";
 
   const stockColor =
-    item.quantity_available === 0
+    item.quantityAvailable === 0
       ? "text-red-500"
-      : item.quantity_available <= 5
+      : item.quantityAvailable <= 5
         ? "text-orange-500"
         : "text-green-500";
 
@@ -139,7 +132,7 @@ function ProductCard({
 
             {/* Badges */}
             <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-              {item.limited_edition_badge === "show_badge" && (
+              {item.limitedEditionBadge === "show_badge" && (
                 <div className="bg-[#8451E1]/90 backdrop-blur-sm px-3 py-1 rounded-lg">
                   <span className="text-white text-[9px] font-bold uppercase tracking-wider">
                     Limited
@@ -197,18 +190,13 @@ function ProductCard({
               )}
             </div>
 
-            {/* Material & Shipping */}
-            {(item.material_composition || shippingInfo?.domestic) && (
+            {/* Shipping */}
+            {shippingInfo?.domestic && (
               <div className="text-[#666] text-[10px] space-y-1 mb-3">
-                {item.material_composition && (
-                  <p className="line-clamp-1">📦 {item.material_composition}</p>
-                )}
-                {shippingInfo?.domestic && (
-                  <p className="flex items-center gap-1 line-clamp-1">
-                    <Truck className="w-3 h-3 flex-shrink-0" />
-                    {shippingInfo.domestic}
-                  </p>
-                )}
+                <p className="flex items-center gap-1 line-clamp-1">
+                  <Truck className="w-3 h-3 flex-shrink-0" />
+                  {shippingInfo.domestic}
+                </p>
               </div>
             )}
 
@@ -217,13 +205,13 @@ function ProductCard({
               <div>
                 <div className="text-[#f2f2f2] text-sm font-bold">
                   {item.currency || "NGN"}{" "}
-                  {((item.price_cents || 0) / 100).toLocaleString()}
+                  {((item.priceCents || 0) / 100).toLocaleString()}
                 </div>
               </div>
 
               <button
                 onClick={handleQuickAdd}
-                disabled={isAdding || item.quantity_available === 0}
+                disabled={isAdding || item.quantityAvailable === 0}
                 className={`
                   relative flex cursor-pointer items-center justify-center p-2.5 rounded-lg transition-all duration-300
                   ${
@@ -263,7 +251,7 @@ function ProductCard({
           <div className="flex flex-col gap-3 mt-6">
             <button
               onClick={() => router.push(`/signin?redirect=/buyer/collections`)}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition-all shadow-lg shadow-purple-500/20"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition-all shadow-lg shadow-purple-500/20 cursor-pointer"
             >
               Sign In
             </button>
@@ -275,7 +263,8 @@ function ProductCard({
 }
 
 export default function CollectionsPage() {
-  const { listings, loading } = useListings();
+  const { data: listings = [] } = useCollections() as { data: any[] };
+  const { isLoading: loading } = useCollections();
   const { searchQuery } = useSearch();
   const [sortBy, setSortBy] = useState<"newest" | "price-low" | "price-high" | "popular">("newest");
   const [showFilters, setShowFilters] = useState(false);
@@ -283,7 +272,7 @@ export default function CollectionsPage() {
   // Filter collections by search query
   const filteredCollections = useMemo(() => {
     const collections = listings.filter(
-      (listing) => listing.type === "collection"
+      (listing: any) => listing.type === "collection"
     );
 
     if (!searchQuery.trim()) {
@@ -291,30 +280,19 @@ export default function CollectionsPage() {
     }
 
     const query = searchQuery.toLowerCase();
-    return collections.filter((collection) => {
+    return collections.filter((collection: any) => {
       // Search by collection title
       if (collection.title?.toLowerCase().includes(query)) {
         return true;
       }
 
-      // Search by brand name
-      const brandName = collection.sellers?.seller_business?.[0]?.brand_name;
-      if (brandName?.toLowerCase().includes(query)) {
-        return true;
-      }
+      // Brand name search not applicable for this data structure
 
       // Search by items within the collection
-      let items: any[] = [];
-      try {
-        items = collection.items_json
-          ? Array.isArray(collection.items_json)
-            ? collection.items_json
-            : JSON.parse(collection.items_json)
-          : [];
-      } catch (e) {}
+      const items: any[] = collection.itemsJson || [];
 
       return items.some(
-        (item) =>
+        (item: any) =>
           item.title?.toLowerCase().includes(query) ||
           item.description?.toLowerCase().includes(query)
       );
@@ -372,24 +350,14 @@ export default function CollectionsPage() {
       {filteredCollections.length > 0 && (
         <div className="px-6">
           <div className="max-w-7xl mx-auto">
-            {filteredCollections.map((collection) => {
-              let items: any[] = [];
-              try {
-                items = collection.items_json
-                  ? Array.isArray(collection.items_json)
-                    ? collection.items_json
-                    : JSON.parse(collection.items_json)
-                  : [];
-              } catch (e) {
-                // Silently handle parsing error
-              }
+            {filteredCollections.map((collection: any) => {
+              const items: any[] = collection.itemsJson || [];
 
               if (items.length === 0) return null;
-              const business = collection.sellers?.seller_business?.[0];
 
               const shippingInfo = {
-                domestic: collection.eta_domestic || undefined,
-                international: collection.eta_international || undefined,
+                domestic: collection.etaDomestic || undefined,
+                international: collection.etaInternational || undefined,
               };
 
               return (
@@ -401,7 +369,7 @@ export default function CollectionsPage() {
                         <h2 className="text-2xl md:text-3xl font-bold text-white capitalize">
                           {collection.title}
                         </h2>
-                        {collection.limited_edition_badge === "show_badge" && (
+                        {collection.limitedEditionBadge === "show_badge" && (
                           <div className="bg-[#8451E1] px-3 py-1 rounded-lg">
                             <span className="text-white text-[10px] font-bold uppercase tracking-wider">
                               Limited
@@ -410,7 +378,7 @@ export default function CollectionsPage() {
                         )}
                       </div>
                       <p className="text-[#8451E1] text-sm font-medium">
-                        {business?.brand_name || "Luxela"}
+                        Luxela
                       </p>
                       {collection.description && (
                         <p className="text-[#acacac] text-sm mt-2 max-w-2xl">
@@ -422,17 +390,17 @@ export default function CollectionsPage() {
                           <Package className="w-3.5 h-3.5 text-[#8451E1]" />
                           {items.length} items
                         </span>
-                        {collection.release_duration && (
+                        {collection.releaseDuration && (
                           <span className="flex items-center gap-1">
                             <Zap className="w-3.5 h-3.5 text-[#8451E1]" />
-                            {collection.release_duration}
+                            {collection.releaseDuration}
                           </span>
                         )}
                       </div>
                     </div>
                     <Link
                       href={`/buyer/collection/${collection.id}`}
-                      className="hidden md:flex items-center gap-2 text-[#8451E1] font-semibold hover:text-purple-400 transition-colors group"
+                      className="hidden md:flex items-center gap-2 text-[#8451E1] font-semibold hover:text-purple-400 transition-colors group cursor-pointer"
                     >
                       View all
                       <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -442,13 +410,13 @@ export default function CollectionsPage() {
                   {/* Products Grid/Carousel */}
                   <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
                     <div className="flex gap-5">
-                      {items.slice(0, 6).map((item, index) => (
+                      {items.slice(0, 6).map((item: any, index: number) => (
                         <ProductCard
                           key={`${collection.id}-${index}`}
                           item={item}
                           collectionId={collection.id}
                           collectionTitle={collection.title}
-                          brandName={business?.brand_name}
+                          brandName="Luxela"
                           productId={collection.product_id || undefined}
                           shippingInfo={shippingInfo}
                         />
@@ -456,7 +424,7 @@ export default function CollectionsPage() {
                       {items.length > 6 && (
                         <Link
                           href={`/buyer/collection/${collection.id}`}
-                          className="flex-shrink-0 w-[280px] bg-[#0f0f0f] rounded-xl border-2 border-dashed border-[#333] hover:border-[#8451E1]/50 transition-colors flex items-center justify-center min-h-96 group"
+                          className="flex-shrink-0 w-[280px] bg-[#0f0f0f] rounded-xl border-2 border-dashed border-[#333] hover:border-[#8451E1]/50 transition-colors flex items-center justify-center min-h-96 group cursor-pointer"
                         >
                           <div className="text-center">
                             <ChevronRight className="w-8 h-8 text-[#666] mx-auto mb-2 group-hover:text-[#8451E1] transition-colors" />
@@ -472,7 +440,7 @@ export default function CollectionsPage() {
                   <div className="md:hidden mt-4">
                     <Link
                       href={`/buyer/collection/${collection.id}`}
-                      className="inline-flex items-center gap-2 text-[#8451E1] font-semibold hover:text-purple-400 transition-colors"
+                      className="inline-flex items-center gap-2 text-[#8451E1] font-semibold hover:text-purple-400 transition-colors cursor-pointer"
                     >
                       View all
                       <ChevronRight className="w-4 h-4" />

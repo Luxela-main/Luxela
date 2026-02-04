@@ -211,7 +211,7 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
                   value={formData.category}
                   onChange={handleInputChange}
                   disabled={submitStatus === 'loading'}
-                  className="w-full px-4 py-2.5 bg-[#0f0f0f] border border-[#333] rounded-lg text-white focus:outline-none focus:border-[#8451E1] transition-colors disabled:opacity-50"
+                  className="w-full px-4 py-2.5 bg-[#0f0f0f] border border-[#333] rounded-lg text-white focus:outline-none focus:border-[#8451E1] transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <option value="general_inquiry">General Inquiry</option>
                   <option value="technical_issue">Technical Issue</option>
@@ -235,7 +235,7 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
                   value={formData.priority}
                   onChange={handleInputChange}
                   disabled={submitStatus === 'loading'}
-                  className="w-full px-4 py-2.5 bg-[#0f0f0f] border border-[#333] rounded-lg text-white focus:outline-none focus:border-[#8451E1] transition-colors disabled:opacity-50"
+                  className="w-full px-4 py-2.5 bg-[#0f0f0f] border border-[#333] rounded-lg text-white focus:outline-none focus:border-[#8451E1] transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>

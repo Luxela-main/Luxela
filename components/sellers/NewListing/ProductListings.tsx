@@ -54,6 +54,20 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
   const { data: listings, isLoading, refetch } = useMyListings();
   const hasListings = listings && listings.length > 0;
 
+  // Helper to get the first available image from listing
+  const getFirstImage = (listing: any): string | undefined => {
+    if (listing.image) return listing.image;
+    if (listing.imagesJson) {
+      try {
+        const images = Array.isArray(listing.imagesJson) ? listing.imagesJson : JSON.parse(listing.imagesJson);
+        return images[0]?.url || images[0];
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  };
+
   const filteredListings =
     listings?.filter((listing: any) => {
       const matchesTab = listing.type === activeTab;
@@ -477,9 +491,9 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                           className="w-4 h-4 rounded border-gray-700 text-purple-600 focus:ring-purple-500 bg-gray-900 cursor-pointer"
                         />
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          {listing.image && (
+                          {getFirstImage(listing) && (
                             <img
-                              src={listing.image}
+                              src={getFirstImage(listing)!}
                               alt={listing.title}
                               className="w-8 h-8 rounded object-cover flex-shrink-0"
                             />

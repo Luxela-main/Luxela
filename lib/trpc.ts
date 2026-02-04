@@ -1,4 +1,4 @@
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import { createTRPCClient, httpLink } from '@trpc/client';
 import type { AppRouter } from '@/server/trpc/router';
 import { createClient } from '@/utils/supabase/client';
 
@@ -16,7 +16,7 @@ function getApiUrl() {
 export function getVanillaTRPCClient() {
   return createTRPCClient<AppRouter>({
     links: [
-      httpBatchLink({
+      httpLink({
         url: getApiUrl(),
         
         // Async fetch function to get the current session token

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlusCircle, Bell } from "lucide-react";
-import { useMyListings } from "@/modules/sellers";
+import { useMyListings, useMyCollections } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ErrorState } from "@/components/sellers/ErrorState";
 import { ListingDetailsModal } from "@/components/sellers/ListingDetailsModal";
@@ -24,6 +24,18 @@ import { ListingReviewStatusBadge } from "@/components/sellers/ListingReviewStat
 
 type TabType = "single" | "collection";
 
+// Helper function to parse collection items (handles both string and array formats)
+const parseCollectionItems = (itemsJson: any) => {
+  if (!itemsJson) return [];
+  try {
+    const items = typeof itemsJson === "string" ? JSON.parse(itemsJson) : itemsJson;
+    return Array.isArray(items) ? items : [];
+  } catch (e) {
+    console.error("Error parsing collection items:", e);
+    return [];
+  }
+};
+
 export default function MyListings() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("single");
@@ -35,21 +47,40 @@ export default function MyListings() {
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
 
-  const { data: listings, isLoading, error, refetch } = useMyListings();
+  // Fetch both single listings and collections separately for better control
+  const { data: listings, isLoading: listingsLoading, error: listingsError, refetch: refetchListings } = useMyListings();
+  const { data: collections, isLoading: collectionsLoading, error: collectionsError, refetch: refetchCollections } = useMyCollections();
+
+  // Determine loading and error states based on active tab
+  const isLoading = activeTab === "single" ? listingsLoading : collectionsLoading;
+  const error = activeTab === "single" ? listingsError : collectionsError;
+  const refetch = activeTab === "single" ? refetchListings : refetchCollections;
 
   const deleteMutation = (trpc.listing as any).deleteListing.useMutation({
     onSuccess: () => {
       toastSvc.success("Listing deleted successfully!");
+      setIsDeleteDialogOpen(false);
+      setListingToDelete(null);
       refetch();
     },
     onError: (error: any) => {
       toastSvc.error(error.message || "Failed to delete listing");
     },
+    onSettled: () => {
+      // Ensure refetch happens after mutation completes
+      refetch();
+    },
   });
 
   const handleViewDetails = (listing: any) => {
-    setSelectedListing(listing);
-    setIsDetailsModalOpen(true);
+    // For collections, open collection preview modal instead
+    if (listing.type === "collection") {
+      setCollectionToPreview(listing);
+      setIsCollectionModalOpen(true);
+    } else {
+      setSelectedListing(listing);
+      setIsDetailsModalOpen(true);
+    }
   };
 
   const handleEdit = (listing: any) => {
@@ -64,7 +95,6 @@ export default function MyListings() {
   const handleDeleteConfirm = () => {
     if (listingToDelete) {
       deleteMutation.mutate({ id: listingToDelete.id });
-      setListingToDelete(null);
     }
   };
 
@@ -81,7 +111,13 @@ export default function MyListings() {
     );
   }
 
-  const tabListings = listings?.filter((l: any) => l.type === activeTab) || [];
+  // Get listings for active tab - use separate sources for single vs collections
+  const tabListings = activeTab === "single" 
+    ? (listings?.filter((l: any) => l.type === "single") || [])
+    : (collections || []);
+
+  // Parse collection items safely
+  const collectionItems = collectionToPreview ? parseCollectionItems(collectionToPreview.itemsJson) : [];
 
   return (
     <div className="px-4 lg:px-6 mt-4 md:mt-0 pb-10">
@@ -174,16 +210,18 @@ export default function MyListings() {
         <CollectionPreviewModal
           collectionTitle={collectionToPreview.title || "Collection"}
           collectionDescription={collectionToPreview.description}
-          items={(collectionToPreview.items || []).map((item: any) => ({
+          items={collectionItems.map((item: any) => ({
             title: item.title || "",
             price: item.priceCents || 0,
             currency: item.currency || "NGN",
             image: item.image,
             quantity: item.quantityAvailable || 1,
+            sku: item.sku,
+            description: item.description,
           }))}
-          totalPrice={collectionToPreview.priceCents || 0}
-          currency={collectionToPreview.currency || "NGN"}
-          itemCount={collectionToPreview.items?.length || 0}
+          totalPrice={collectionItems.reduce((sum: number, item: any) => sum + (item.priceCents || 0), 0)}
+          currency={collectionToPreview.currency || (collectionItems[0]?.currency) || "NGN"}
+          itemCount={collectionItems?.length || 0}
           isOpen={isCollectionModalOpen}
           onClose={() => {
             setIsCollectionModalOpen(false);

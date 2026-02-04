@@ -27,7 +27,7 @@ export default function OrdersPage() {
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const itemsPerPage = 10;
 
-  const { data: ordersData, refetch } = trpc.buyer.getPurchaseHistory.useQuery({}, {
+  const { data: ordersData, refetch } = trpc.buyer.getPurchaseHistory.useQuery({ page: 1, limit: 10 }, {
     retry: 1,
   });
 
