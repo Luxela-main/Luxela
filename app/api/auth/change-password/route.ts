@@ -44,6 +44,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify current password by attempting to sign in
+    // This ensures the user knows their current password before changing it
+    const clientSubabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
+    const { error: signInError } = await clientSubabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      return NextResponse.json(
+        { message: 'Current password is incorrect' },
+        { status: 401 }
+      );
+    }
+
     // Update password using Supabase Admin API
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       user.id,
