@@ -1,22 +1,11 @@
 import { db } from "../db";
-import { sellers } from "../db/schema";
+import { sellers, buyers } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { v4 as uuidv4 } from "uuid";
 
-/**
- * Get a seller record for a given user ID.
- * 
- * This function ensures that every user with the 'seller' role has a corresponding
- * seller record in the database. If no seller profile exists, it automatically creates one.
- * 
- * @param userId - The user ID to get a seller for
- * @returns The seller record
- * @throws Error if seller retrieval or creation fails
- */
 export async function getSeller(userId: string): Promise<typeof sellers.$inferSelect> {
   try {
-    // Check if seller exists
     const existingSeller = await db
       .select()
       .from(sellers)
@@ -26,7 +15,6 @@ export async function getSeller(userId: string): Promise<typeof sellers.$inferSe
       return existingSeller[0];
     }
 
-    // Auto-create seller profile if it doesn't exist
     const newSeller = {
       id: uuidv4(),
       userId,
@@ -44,6 +32,35 @@ export async function getSeller(userId: string): Promise<typeof sellers.$inferSe
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Failed to get or create seller profile",
+    });
+  }
+}
+
+export async function getBuyer(userId: string): Promise<typeof buyers.$inferSelect> {
+  try {
+    const existingBuyer = await db
+      .select()
+      .from(buyers)
+      .where(eq(buyers.userId, userId));
+
+    if (existingBuyer.length > 0) {
+      return existingBuyer[0];
+    }
+
+    const newBuyer = {
+      id: uuidv4(),
+      userId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await db.insert(buyers).values(newBuyer);
+    return newBuyer;
+  } catch (err: any) {
+    console.error("Error in getBuyer:", err);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to get or create buyer profile",
     });
   }
 }
