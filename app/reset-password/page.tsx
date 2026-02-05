@@ -167,8 +167,8 @@ function ResetPasswordFormContent() {
 
               <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
 
-              <h2 className="text-2xl font-semibold">Reset your password</h2>
-              <p className="text-sm text-zinc-400 mb-6">
+              <h2 className="text-2xl font-semibold border-b-2 border-[#ECBEE3] pb-3 inline-block">Reset your password</h2>
+              <p className="text-sm text-[#EA795B] mb-6 mt-3">
                 Enter a new password for your account. Make sure it's strong and secure.
               </p>
 

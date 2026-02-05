@@ -58,11 +58,11 @@ export default function PayoutsPage() {
   return (
     <div className="relative">
       {/* Header Section */}
-      <div className="mb-8 mt-12 md:mt-0">
+      <div className="mb-8 mt-12 md:mt-0 pb-6 border-b-2 border-[#ECBEE3]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Payouts</h1>
-            <p className="text-gray-400 mt-2">Manage your earnings and payout settings</p>
+            <h1 className="text-3xl font-bold text-white">Payouts</h1>
+            <p className="text-[#EA795B] mt-2 font-medium">Manage your earnings and payout settings</p>
           </div>
           <div className="w-full md:w-auto flex gap-3">
             <div className="w-full md:w-60 lg:w-80">
@@ -80,7 +80,7 @@ export default function PayoutsPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6 hover:border-purple-600/50 transition-colors">
+        <div className="bg-[#1a1a1a] border-l-4 border-l-[#ECBEE3] rounded-lg p-6 hover:border-l-[#EA795B] transition-colors">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm font-medium">Available Balance</p>
@@ -92,7 +92,7 @@ export default function PayoutsPage() {
           </div>
         </div>
 
-        <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6 hover:border-green-600/50 transition-colors">
+        <div className="bg-[#1a1a1a] border-l-4 border-l-[#BEE3EC] rounded-lg p-6 hover:border-l-[#BEECE3] transition-colors">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm font-medium">Total Paid Out</p>

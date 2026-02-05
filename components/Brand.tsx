@@ -101,72 +101,95 @@ export default function Brand() {
             visible: { transition: { staggerChildren: 0.25 } },
           }}
         >
-          {brands.map((brand) => (
-            <motion.div
-              key={brand.title}
-              variants={{
-                hidden: { opacity: 0, y: 60 },
-                visible: { opacity: 1, y: 0 },
-              }}
-              transition={{ duration: 0.9, ease: "easeOut" }}
-              className="min-w-[90%] md:min-w-[800px] p-4 md:p-6 bg-gradient-to-t from-[#141414] to-[#2c2b2b] rounded-[16px] md:rounded-[20px] flex flex-col md:flex-row items-center border border-[#8451E1]/60 hover:border-[#8451E1] hover:shadow-[0_0_20px_#8451E1]/30 transition-all duration-300"
-            >
-              <div className="md:w-[500px] flex-1">
-                <motion.h3
-                  className="text-lg md:text-[2rem] font-semibold text-[#F9F9F9]"
-                  initial={{ opacity: 0, x: -50 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  viewport={{ once: true }}
-                >
-                  {brand.title}
-                </motion.h3>
+          {brands.map((brand, index) => {
+            const accentColors = ["#BEECE3", "#BEE3EC", "#ECBEE3"];
+            const accentColor = accentColors[index % accentColors.length];
 
-                <motion.p
-                  className="text-sm md:text-lg text-[#BFBFBF] my-4 md:pr-2 md:my-9"
-                  initial={{ opacity: 0, x: 50 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                  viewport={{ once: true }}
-                >
-                  {brand.description}
-                </motion.p>
+            return (
+              <motion.div
+                key={brand.title}
+                variants={{
+                  hidden: { opacity: 0, y: 60 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                transition={{ duration: 0.9, ease: "easeOut" }}
+                className="min-w-[90%] md:min-w-[800px] p-4 md:p-6 rounded-[16px] md:rounded-[20px] flex flex-col md:flex-row items-center border-2 transition-all duration-300 hover:shadow-lg relative overflow-hidden group"
+                style={{
+                  borderColor: accentColor,
+                  background: `linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(44, 43, 43, 0.9)), linear-gradient(to right, ${accentColor}08, transparent)`,
+                }}
+              >
+                {/* Gradient overlay on hover */}
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{
+                    background: `linear-gradient(135deg, ${accentColor}10, transparent)`,
+                  }}
+                ></div>
 
+                <div className="md:w-[500px] flex-1 relative z-10">
+                  <motion.h3
+                    className="text-lg md:text-[2rem] font-semibold text-[#F9F9F9]"
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    viewport={{ once: true }}
+                  >
+                    {brand.title}
+                  </motion.h3>
+
+                  <motion.p
+                    className="text-sm md:text-lg text-[#BFBFBF] my-4 md:pr-2 md:my-9"
+                    initial={{ opacity: 0, x: 50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                    viewport={{ once: true }}
+                  >
+                    {brand.description}
+                  </motion.p>
+
+                  <Link
+                    href="/signup"
+                    className="hidden md:inline-flex cursor-pointer items-center justify-center mt-4 md:mt-6 h-[38px] md:h-[42px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5 md:px-6"
+                    style={{
+                      boxShadow: `inset 0 0 10px ${accentColor}20`,
+                    }}
+                  >
+                    {brand.cta}
+                  </Link>
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.4 }}
+                  viewport={{ once: true }}
+                  className="max-w-[400px] relative z-10"
+                >
+                  <Image
+                    src={brand.image}
+                    width={500}
+                    height={402}
+                    alt={`Photo of ${brand.title}`}
+                    className="rounded-xl object-cover aspect-[4/3] w-full border-2 transition-all duration-300 group-hover:scale-105"
+                    style={{
+                      borderColor: accentColor,
+                    }}
+                  />
+                </motion.div>
+
+                {/* Mobile CTA */}
                 <Link
                   href="/signup"
-                  className="hidden md:inline-flex cursor-pointer items-center justify-center mt-4 md:mt-6 h-[38px] md:h-[42px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5 md:px-6"
+                  className="md:hidden w-full flex items-center justify-center mt-4 h-[38px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5 relative z-10"
                 >
                   {brand.cta}
                 </Link>
-              </div>
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                viewport={{ once: true }}
-                className="max-w-[400px] "
-              >
-                <Image
-                  src={brand.image}
-                  width={500}
-                  height={402}
-                  alt={`Photo of ${brand.title}`}
-                  className="rounded-xl object-cover aspect-[4/3] w-full"
-                />
               </motion.div>
-
-              {/* Mobile CTA */}
-              <Link
-                href="/signup"
-                className="md:hidden w-full flex items-center justify-center mt-4 h-[38px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/30 transition text-white rounded-[6px] px-5"
-              >
-                {brand.cta}
-              </Link>
-            </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
       </main>
     </section>
   );
-}
+}

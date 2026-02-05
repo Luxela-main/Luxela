@@ -15,9 +15,16 @@ export default function About() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
             viewport={{ once: true, amount: 0.5 }}
-            className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] tracking-[-0.03em] font-bold"
+            className="text-[#F9F9F9] leading-[120%] text-2xl md:text-[2rem] tracking-[-0.03em] font-bold relative pb-4"
           >
             About Luxela
+            <span
+              className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-1 rounded-full"
+              style={{
+                width: "80px",
+                background: "linear-gradient(to right, #BEE3EC, #EA795B)",
+              }}
+            ></span>
           </motion.h2>
 
           <motion.p
@@ -25,7 +32,7 @@ export default function About() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             viewport={{ once: true, amount: 0.5 }}
-            className="text-sm md:text-lg lg:w-[80%] mx-auto text-[#BFBFBF] mt-5 mb-16"
+            className="text-sm md:text-lg lg:w-[80%] mx-auto text-[#BFBFBF] mt-8 mb-16"
           >
             Luxela is a fashion marketplace where buyers connect directly with
             designers and shop exclusive collections. Enjoy seamless payments
@@ -41,15 +48,27 @@ export default function About() {
           whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
           transition={{ duration: 0.9, ease: "easeOut" }}
           viewport={{ once: true, amount: 0.4 }}
-          className="w-full flex justify-center"
+          className="w-full flex justify-center group"
         >
-          <Image
-            src="/images/about-1240x802.png"
-            width={1440}
-            height={802}
-            alt="Luxela."
-            className="rounded-2xl shadow-lg"
-          />
+          <div className="relative">
+            <Image
+              src="/images/about-1240x802.png"
+              width={1440}
+              height={802}
+              alt="Luxela."
+              className="rounded-2xl shadow-lg border-2 transition-all duration-500 group-hover:shadow-[0_0_30px_#BEE3EC]/40 group-hover:scale-105"
+              style={{
+                borderColor: "#BEE3EC",
+              }}
+            />
+            {/* Gradient overlay on hover */}
+            <div
+              className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-30 transition-opacity duration-500 pointer-events-none"
+              style={{
+                background: "linear-gradient(135deg, #BEE3EC, #EA795B)",
+              }}
+            ></div>
+          </div>
         </motion.div>
       </div>
     </section>

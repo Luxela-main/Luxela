@@ -11,6 +11,7 @@ import { useNotificationsCount } from '@/modules/buyer';
 
 interface SidebarProps {
   activeItem?: string;
+  hideMobileMenu?: boolean;
 }
 
 interface MenuItem {
@@ -21,7 +22,7 @@ interface MenuItem {
   badge?: number;
 }
 
-export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
+export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -32,13 +33,15 @@ export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
 
   const handleLogout = useCallback(async () => {
     try {
+      closeMobileMenu();
+      setShowLogoutConfirm(false);
       await logout();
-      router.push('/signin');
     } catch (err) {
       console.error('Logout failed:', err);
       setShowLogoutConfirm(false);
     }
-  }, [logout, router]);
+  }, [logout]);
+
 
   const handleProfileClick = useCallback(() => {
     router.push('/buyer/profile');
@@ -76,15 +79,17 @@ export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
   return (
     <>
       {/* Mobile Menu Button - Fixed in header area */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 bg-[#1a1a1a] text-white hover:bg-[#222] rounded-lg transition-colors"
-          aria-label="Toggle menu"
-        >
-          {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </div>
+      {!hideMobileMenu && (
+        <div className="lg:hidden fixed top-4 left-4 z-50">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 bg-[#1a1a1a] text-white hover:bg-[#222] rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      )}
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
@@ -98,7 +103,7 @@ export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
       {/* Sidebar - Mobile drawer and desktop sidebar */}
       <aside
         className={cn(
-          'bg-[#0e0e0e] border-r border-[#212121] min-h-screen flex flex-col',
+          'bg-[#0e0e0e] border-r-2 border-[#ECBEE3] min-h-screen flex flex-col',
           'fixed lg:relative left-0 top-0 w-64 lg:w-[240px]',
           'transition-transform duration-300 ease-in-out z-40',
           'lg:translate-x-0 pt-16 lg:pt-0',
@@ -185,7 +190,10 @@ export function Sidebar({ activeItem = 'my-account' }: SidebarProps) {
             </div>
           ) : (
             <button
-              onClick={() => setShowLogoutConfirm(true)}
+              onClick={() => {
+                closeMobileMenu();
+                setShowLogoutConfirm(true);
+              }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-[#ff5e5e] hover:text-[#ff5e5e] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />

@@ -100,10 +100,10 @@ export default function SupportAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b border-[#2B2B2B] p-4 sm:p-8">
+      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#ECBEE3] p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-4xl font-bold">Support Dashboard</h1>
+            <h1 className="text-4xl font-bold text-white">Support Dashboard</h1>
             <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${wsConnected ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
               <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
               <span className="text-sm">

@@ -63,46 +63,86 @@ export default function GettingStarted() {
         </motion.div>
 
         {/* Cards */}
-        <div className="flex flex-wrap justify-center md:justify-start lg:justify-between">
-          {gettingStarted.map((started, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 60 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: index * 0.2, ease: "easeOut" }}
-              viewport={{ once: true, amount: 0.3 }}
-              className="flex flex-col justify-between rounded-[12px] bg-[#1A1A1A] overflow-hidden text-center border border-[#8451E1]/20 hover:border-[#8451E1]/40 transition-all duration-300 w-full sm:w-[calc(50%-1.125rem)] lg:w-[calc(33.333%-1.125rem)]"
-            >
-              {/* Image */}
-              <div className="max-w-[432px]">
-                <Image
-                  width={432}
-                  height={349}
-                  src={started.image}
-                  alt={started.title}
-                  className="w-fyll h-[349px] object-cover object-center"
-                />
-              </div>
+        <div className="flex flex-wrap justify-center md:justify-start lg:justify-between gap-4">
+          {gettingStarted.map((started, index) => {
+            const accentColors = ["#ECBEE3", "#EA795B", "#ECE3BE"];
+            const accentColor = accentColors[index % accentColors.length];
 
-              {/* Content */}
-              <div className="px-6 py-8 h-full flex flex-col gap-3 justify-start">
-                <h3 className="text-lg text-[#F6F6F6] font-semibold">
-                  {started.title}
-                </h3>
-                <p className="text-sm text-[#BFBFBF]">{started.description}</p>
-                {started.href && (
-                  <Link
-                    href={started.href}
-                    className="mt-auto inline-flex items-center justify-center w-full h-[42px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] text-white font-medium rounded-[6px] hover:shadow-[0_0_20px_#8451E1]/30 transition"
-                  >
-                    {started.cta}
-                  </Link>
-                )}
-              </div>
-            </motion.div>
-          ))}
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 60 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: index * 0.2, ease: "easeOut" }}
+                viewport={{ once: true, amount: 0.3 }}
+                className="flex flex-col justify-between rounded-[12px] bg-[#1A1A1A] overflow-hidden text-center border-2 hover:shadow-lg transition-all duration-300 w-full sm:w-[calc(50%-1.125rem)] lg:w-[calc(33.333%-1.125rem)] group relative"
+                style={{
+                  borderColor: accentColor + "40",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor =
+                    accentColor + "80";
+                  (e.currentTarget as HTMLElement).style.boxShadow = `0 10px 30px ${accentColor}30`;
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor =
+                    accentColor + "40";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                }}
+              >
+                {/* Accent corner decoration */}
+                <div
+                  className="absolute top-0 right-0 w-1 h-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: `linear-gradient(to bottom, ${accentColor}, transparent)`,
+                  }}
+                ></div>
+                <div
+                  className="absolute bottom-0 left-0 w-12 h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: `linear-gradient(to right, ${accentColor}, transparent)`,
+                  }}
+                ></div>
+
+                {/* Image */}
+                <div className="max-w-[432px] overflow-hidden">
+                  <Image
+                    width={432}
+                    height={349}
+                    src={started.image}
+                    alt={started.title}
+                    className="w-full h-[349px] object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                  />
+                </div>
+
+                {/* Content */}
+                <div className="px-6 py-8 h-full flex flex-col gap-3 justify-start">
+                  <h3 className="text-lg text-[#F6F6F6] font-semibold relative pb-2">
+                    {started.title}
+                    <span
+                      className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 w-0 group-hover:w-12 transition-all duration-300"
+                      style={{
+                        backgroundColor: accentColor,
+                      }}
+                    ></span>
+                  </h3>
+                  <p className="text-sm text-[#BFBFBF]">{started.description}</p>
+                  {started.href && (
+                    <Link
+                      href={started.href}
+                      className="mt-auto inline-flex items-center justify-center w-full h-[42px] bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] text-white font-medium rounded-[6px] hover:shadow-[0_0_20px_#8451E1]/30 transition border border-[#8451E1]/30 hover:border-[#8451E1]/60"
+                      style={{
+                        boxShadow: `inset 0 0 10px ${accentColor}15`,
+                      }}
+                    >
+                      {started.cta}
+                    </Link>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
-
       </main>
     </section>
   );

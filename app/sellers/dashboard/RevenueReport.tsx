@@ -33,18 +33,18 @@ export function RevenueReport() {
   const step = maxIncome / 10;
 
   return (
-    <div className="bg-[#1a1a1a] rounded-lg p-4">
+    <div className="bg-[#1a1a1a] rounded-lg p-4 border-2 border-l-4 border-l-[#EA795B] bg-gradient-to-br from-[#EA795B]/10 via-transparent to-[#ECBEE3]/5 border-[#EA795B]/40">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Revenue Report</h3>
+        <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#EA795B] to-[#ECBEE3]">Revenue Report</h3>
         <div className="flex items-center">
           <div className="flex items-center mr-4">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+            <div className="w-3 h-3 bg-gradient-to-r from-[#EA795B] to-[#ECBEE3] rounded-full mr-2"></div>
             <span className="text-sm text-gray-400">Income</span>
           </div>
           <div className="relative" ref={dropdownRef}>
             <Button
               variant="outline"
-              className="bg-[#222] border-[#333] text-white hover:bg-[#333] hover:text-white"
+              className="bg-[#222] border-[#BEECE3]/40 text-white hover:bg-[#BEECE3]/20 hover:border-[#BEECE3]/60"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
               {timeframe}
@@ -68,7 +68,7 @@ export function RevenueReport() {
               </svg>
             </Button>
             {isDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-32 bg-[#222] border border-[#333] rounded-lg shadow-lg z-10">
+              <div className="absolute top-full right-0 mt-2 w-32 bg-[#222] border border-[#BEECE3]/40 rounded-lg shadow-lg z-10">
                 {timeframeOptions.map((option) => (
                   <button
                     key={option}
@@ -78,8 +78,8 @@ export function RevenueReport() {
                     }}
                     className={`block w-full text-left px-4 py-2 text-sm ${
                       timeframe === option
-                        ? "bg-blue-500 text-white"
-                        : "text-gray-400 hover:bg-[#333] hover:text-white"
+                        ? "bg-gradient-to-r from-[#EA795B] to-[#ECBEE3] text-white"
+                        : "text-gray-400 hover:bg-[#BEECE3]/20 hover:text-white"
                     }`}
                   >
                     {option}
@@ -96,7 +96,7 @@ export function RevenueReport() {
             return (
               <div key={index} className="flex-1 flex flex-col items-center">
                 <div
-                  className="w-6 bg-blue-500 rounded-t"
+                  className="w-6 bg-gradient-to-t from-[#EA795B] via-[#ECBEE3] to-[#BEE3EC] rounded-t hover:shadow-lg hover:shadow-[#EA795B]/40 transition-all"
                   style={{
                     height:
                       maxIncome > 0

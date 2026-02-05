@@ -93,6 +93,10 @@ interface FaqItemComponentProps {
 }
 
 function FaqItem({ faq, index, isOpen, onToggle }: FaqItemComponentProps) {
+  const accentColors = ["#ECBEE3", "#BEECE3", "#BEE3EC", "#EA795B", "#ECE3BE"];
+  const accentColor = accentColors[index % accentColors.length];
+  const accentColorLight = accentColor + "15";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
@@ -102,7 +106,14 @@ function FaqItem({ faq, index, isOpen, onToggle }: FaqItemComponentProps) {
       className="w-full"
     >
       <div
-        className="rounded-[16px] bg-gradient-to-t from-[#141414] to-[#2e2d2d] text-[#F6F6F6] flex items-center py-5 px-5 cursor-pointer border border-[#8451E1]/30 hover:border-[#8451E1]/50 transition-all duration-300"
+        className="rounded-[16px] bg-gradient-to-t from-[#141414] to-[#2e2d2d] text-[#F6F6F6] flex items-center py-5 px-5 cursor-pointer border-2 transition-all duration-300 hover:shadow-lg group"
+        style={{
+          borderColor: isOpen ? accentColor : accentColor + "50",
+          boxShadow: isOpen
+            ? `0 0 15px ${accentColor}30, inset 0 0 10px ${accentColorLight}`
+            : "none",
+          background: `linear-gradient(to right, #141414, #2e2d2d), linear-gradient(to right, ${accentColorLight}, transparent)`,
+        }}
         onClick={() => onToggle(index)}
       >
         <h3 className="font-medium text-sm md:text-base flex-1 tracking-tight">
@@ -110,8 +121,12 @@ function FaqItem({ faq, index, isOpen, onToggle }: FaqItemComponentProps) {
         </h3>
 
         <ChevronDown
-          className={`h-5 w-5 ml-auto text-[#BFBFBF] transition-transform duration-300 ${isOpen ? "rotate-180 text-[#8451E1]" : ""
-            }`}
+          className={`h-5 w-5 ml-auto transition-all duration-300 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          style={{
+            color: isOpen ? accentColor : "#BFBFBF",
+          }}
         />
       </div>
 
@@ -122,9 +137,13 @@ function FaqItem({ faq, index, isOpen, onToggle }: FaqItemComponentProps) {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.1, ease: "easeOut" }}
-            className="px-5 pt-3 text-[#BFBFBF] text-xs md:text-sm overflow-hidden border-l border-[#8451E1]/30 ml-2"
+            className="px-5 pt-3 text-[#BFBFBF] text-xs md:text-sm overflow-hidden ml-2 border-l-2 border-b-2 rounded-b-lg"
+            style={{
+              borderColor: accentColor,
+              backgroundColor: accentColorLight,
+            }}
           >
-            <p>{faq.answer}</p>
+            <p className="pb-4">{faq.answer}</p>
           </motion.div>
         )}
       </AnimatePresence>

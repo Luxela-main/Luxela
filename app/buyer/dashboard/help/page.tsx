@@ -96,7 +96,7 @@ export default function HelpCenterPage() {
           <button 
             onClick={() => toastSvc.info('Coming Soon')}
             className="bg-[#1a1a1a] border border-[#333333] rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group">
-            <MessageCircle className="w-6 h-6 text-purple-500 mb-2 group-hover:scale-110 transition-transform" />
+            <MessageCircle className="w-6 h-6 text-[#ECBEE3] mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Live Chat</p>
             <p className="text-gray-400 text-sm">Chat with our support team</p>
           </button>

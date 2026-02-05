@@ -26,9 +26,7 @@ function SignInContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-
-
- const { setUser } = useAuth(); // Get setUser from context
+  const { setUser } = useAuth();
   const router = useRouter();
   const toast = useToast();
 
@@ -42,7 +40,6 @@ function SignInContent() {
       const { success, error, user } = await authActions.signinAction(email, password);
 
       if (success && user) {
-        // Set user in context BEFORE redirecting
         setUser(user);
         
         toast.success("Welcome back!");
@@ -50,14 +47,12 @@ function SignInContent() {
         
         const role = user.user_metadata?.role === "seller" ? "seller" : "buyer";
         
-        // Wait for toast to be displayed before redirecting
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         router.push(role === "seller" ? "/sellers/dashboard" : "/buyer/profile");
         return;
       }
 
-      // Handle unverified email
       if (error?.toLowerCase().includes("not verified")) {
         setUnverifiedEmail(email);
         setDialogOpen(true);
@@ -65,65 +60,83 @@ function SignInContent() {
         toast.error(error || "Invalid email or password");
       }
     
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      toast.error(err.message || "Sign-in failed unexpectedly");
-    } else {
-      toast.error("Sign-in failed unexpectedly");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error(err.message || "Sign-in failed unexpectedly");
+      } else {
+        toast.error("Sign-in failed unexpectedly");
+      }
+    } finally {
+      setSubmitting(false);
     }
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
-const handleResendVerification = async () => {
-  if (!unverifiedEmail) return;
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
 
-  setIsResending(true);
-  try {
-    const { success, error } = await authActions.resendVerificationAction(unverifiedEmail);
+    setIsResending(true);
+    try {
+      const { success, error } = await authActions.resendVerificationAction(unverifiedEmail);
 
-    if (success) {
-      toast.success("Verification email resent! Check your inbox.");
-      setDialogOpen(false);
-    } else {
-      toast.error(error || "Failed to resend verification email");
+      if (success) {
+        toast.success("Verification email resent! Check your inbox.");
+        setDialogOpen(false);
+      } else {
+        toast.error(error || "Failed to resend verification email");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) toast.error(err.message || "Failed to resend verification email");
+      else toast.error("Failed to resend verification email");
+    } finally {
+      setIsResending(false);
     }
-  } catch (err: unknown) {
-    if (err instanceof Error) toast.error(err.message || "Failed to resend verification email");
-    else toast.error("Failed to resend verification email");
-  } finally {
-    setIsResending(false);
-  }
-};
+  };
 
   return (
     <>
       <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
-        {/* Left Side */}
-        <div className="relative md:flex items-center justify-center p-10 hidden">
+        {/* Left Side - Enhanced with Gradients */}
+        <div className="relative md:flex items-center justify-center p-10 hidden overflow-hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
-          <div className="relative z-10 max-w-md p-10 rounded-2xl border border-purple-500 backdrop-blur-md bg-black/30">
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#ECBEE3]/25 via-[#8451E1]/10 to-[#BEE3EC]/25" />
+          {/* Corner Decorations */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#EA795B]/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#BEECE3]/10 rounded-full blur-3xl" />
+          
+          <div className="relative z-10 max-w-md p-10 rounded-2xl border-2 border-[#ECE3BE]/40 backdrop-blur-md bg-black/50 hover:border-[#ECBEE3]/60 transition-colors duration-300">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
             <h2 className="text-3xl font-semibold mb-4">
-              Embrace The Future of <span className="text-purple-500">Fashion</span>
+              Embrace The Future of <span className="text-[#EA795B]">Fashion</span>
             </h2>
             <p className="text-zinc-300 text-sm leading-relaxed">
               We're reimagining what it means to shop and sell fashion globally.
               Exploring, supporting, and connecting with the global community of
               creators on Luxela.
             </p>
+            {/* Accent Line */}
+            <div className="mt-6 h-1 w-12 bg-gradient-to-r from-[#ECBEE3] via-[#8451E1] to-[#BEE3EC] rounded-full" />
           </div>
         </div>
 
-        {/* Right Side */}
-        <div className="flex items-center justify-center p-8">
-          <div className="w-full max-w-sm">
+        {/* Right Side - Form with Enhanced Colors */}
+        <div className="flex items-center justify-center p-8 relative">
+          {/* Background Accent */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-[#ECE3BE]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#BEE3EC]/5 rounded-full blur-3xl" />
+          
+          <div className="w-full max-w-sm relative z-10">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
-            <h2 className="text-2xl font-semibold">Welcome back</h2>
-            <p className="text-sm text-zinc-400 mb-6">
-              Enter your email and password to access your account
-            </p>
+            
+            <div className="mb-6 pb-6 border-b-2 border-[#ECE3BE]/20">
+              <h2 className="text-2xl font-semibold relative pb-2">
+                Welcome back
+                <span className="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-[#EA795B] to-[#ECBEE3]"></span>
+              </h2>
+              <p className="text-sm text-zinc-400 mt-3">
+                Enter your email and password to access your account
+              </p>
+            </div>
 
             <Formik
               initialValues={signInInitialValues}
@@ -132,33 +145,33 @@ const handleResendVerification = async () => {
             >
               {({ errors, touched, isSubmitting }) => (
                 <Form className="space-y-4">
-                  {/* Email */}
-                  <div>
-                    <Label htmlFor="email" className="mb-1">Email</Label>
+                  {/* Email - Cyan Border */}
+                  <div className="group">
+                    <Label htmlFor="email" className="mb-2 block text-[#BEE3EC] font-medium">Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-[#BEE3EC]/60 group-focus-within:text-[#BEE3EC]" />
                       <Field
                         as={Input}
                         name="email"
                         type="email"
                         placeholder="Enter your email"
-                        className={`pl-10 ${errors.email && touched.email ? "border-destructive" : ""}`}
+                        className={`pl-10 border-2 transition-all ${errors.email && touched.email ? "border-destructive bg-destructive/5" : "border-[#BEE3EC]/30 focus:border-[#BEE3EC]/60 focus:bg-[#BEE3EC]/5"}`}
                       />
                     </div>
                     <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
                   </div>
 
-                  {/* Password */}
-                  <div>
-                    <Label htmlFor="password" className="mb-1">Password</Label>
+                  {/* Password - Pink Border */}
+                  <div className="group">
+                    <Label htmlFor="password" className="mb-2 block text-[#ECBEE3] font-medium">Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-[#ECBEE3]/60 group-focus-within:text-[#ECBEE3]" />
                       <Field
                         as={Input}
                         name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
-                        className={`pl-10 pr-10 ${errors.password && touched.password ? "border-destructive" : ""}`}
+                        className={`pl-10 pr-10 border-2 transition-all ${errors.password && touched.password ? "border-destructive bg-destructive/5" : "border-[#ECBEE3]/30 focus:border-[#ECBEE3]/60 focus:bg-[#ECBEE3]/5"}`}
                       />
                       <Button
                         type="button"
@@ -173,19 +186,21 @@ const handleResendVerification = async () => {
                     <ErrorMessage name="password" component="div" className="text-sm text-destructive mt-1" />
                   </div>
 
-                  {/* Remember & Forgot */}
-                  <div className="flex items-center justify-between text-sm">
+                  {/* Remember & Forgot - Mint Border */}
+                  <div className="flex items-center justify-between text-sm p-3 rounded-lg bg-[#BEECE3]/5 border-2 border-[#BEECE3]/30 hover:border-[#BEECE3]/50 hover:bg-[#BEECE3]/10 transition-all duration-300">
                     <div className="flex items-center">
-                      <input type="checkbox" id="rememberMe" className="mr-2 accent-purple-600" />
-                      <Label htmlFor="rememberMe">Remember me</Label>
+                      <input type="checkbox" id="rememberMe" className="mr-2 accent-[#8451E1] cursor-pointer" />
+                      <Label htmlFor="rememberMe" className="cursor-pointer">Remember me</Label>
                     </div>
-                    <Link href="/forgot-password" className="text-purple-400 hover:underline">Forgot password?</Link>
+                    <Link href="/forgot-password" className="text-[#ECE3BE] hover:text-[#EA795B] font-medium transition-colors underline">
+                      Forgot password?
+                    </Link>
                   </div>
 
-                  {/* Submit */}
+                  {/* Submit Button */}
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-b from-purple-600 to-purple-400 via-purple-500 hover:from-purple-700 hover:to-purple-500"
+                    className="w-full bg-gradient-to-b from-[#8451E1] to-[#7240D0] hover:from-[#9468F2] hover:to-[#8451E1] text-white font-semibold py-6 mt-6 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/50"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Signing In..." : "Sign In"}
@@ -194,22 +209,24 @@ const handleResendVerification = async () => {
               )}
             </Formik>
 
-            {/* Divider */}
-            <div className="flex items-center my-4">
-              <div className="flex-grow border-t border-zinc-700" />
-              <span className="px-2 text-zinc-500 text-sm">Or</span>
-              <div className="flex-grow border-t border-zinc-700" />
+            {/* Divider with Accent Colors */}
+            <div className="flex items-center my-6">
+              <div className="flex-1 h-px bg-gradient-to-r from-[#EA795B]/30 via-transparent to-transparent" />
+              <span className="px-3 text-[#ECE3BE] text-sm font-medium">Or</span>
+              <div className="flex-1 h-px bg-gradient-to-l from-[#BEE3EC]/30 via-transparent to-transparent" />
             </div>
 
             <GoogleSignInButton />
 
-            {/* Not registered */}
-            <p className="text-center text-zinc-500 text-sm mt-4">
-              Not a registered user?{" "}
-              <Link href="/signup" className="text-purple-400 underline">
-                Sign Up <ArrowRight className="h-4 w-4 inline-block" />
-              </Link>
-            </p>
+            {/* Not registered - Coral Border */}
+            <div className="mt-6 p-4 rounded-lg border-2 border-[#EA795B]/30 bg-[#EA795B]/5 hover:border-[#EA795B]/50 hover:bg-[#EA795B]/10 transition-all duration-300">
+              <p className="text-center text-zinc-400 text-sm">
+                Not a registered user?{" "}
+                <Link href="/signup" className="text-[#EA795B] hover:text-[#ECBEE3] font-bold underline transition-colors">
+                  Sign Up <ArrowRight className="h-4 w-4 inline-block ml-1" />
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

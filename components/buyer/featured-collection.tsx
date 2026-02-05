@@ -118,24 +118,27 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
   }
 
   return (
-    <section className="mb-16">
-      <div className="flex items-center justify-between mb-8">
-       <h2 className="text-[18px] lg:text-xl capitalize font-medium text-white">
-  {searchQuery ? (
-    <span className="text-sm text-[#dcdcdc] font-medium">
-      Collections ({collections.length})
-    </span>
-  ) : (
-    <span className="">Featured Collections</span>
-  )}
-</h2>
+    <section className="mb-16 relative">
+      {/* Background Accent */}
+      <div className="absolute -top-20 left-0 w-80 h-80 bg-[#BEECE3]/5 rounded-full blur-3xl" />
+      
+      <div className="flex items-center justify-between mb-8 relative z-10">
+        <h2 className="text-[18px] lg:text-xl capitalize font-medium text-white">
+          {searchQuery ? (
+            <span className="text-sm text-[#dcdcdc] font-medium">
+              Collections ({collections.length})
+            </span>
+          ) : (
+            <span className="">Featured Collections</span>
+          )}
+        </h2>
         <div className="flex items-center gap-4">
           <button
             onClick={() => scroll("left")}
             disabled={!canScrollLeft}
             className={`p-2 rounded-full transition-all ${
               canScrollLeft
-                ? "bg-[#8451E1] text-white hover:bg-[#8451E1]"
+                ? "bg-[#8451E1] text-white hover:bg-[#9468F2] hover:shadow-lg hover:shadow-[#8451E1]/50"
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
@@ -148,7 +151,7 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
             disabled={!canScrollRight}
             className={`p-2 rounded-full transition-all ${
               canScrollRight
-                ? "bg-[#8451E1] text-white hover:bg-[#8451E1]"
+                ? "bg-[#8451E1] text-white hover:bg-[#9468F2] hover:shadow-lg hover:shadow-[#8451E1]/50"
                 : "bg-gray-800 text-gray-500 cursor-not-allowed"
             }`}
           >
@@ -158,14 +161,14 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
           </button>
           <Link
             href="/buyer/collections"
-            className="text-sm text-[#8451E1] hover:text-[#8451E1] transition-colors flex items-center gap-1 ml-2"
+            className="text-sm text-[#8451E1] hover:text-[#9468F2] transition-colors flex items-center gap-1 ml-2 font-medium"
           >
             See all →
           </Link>
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative z-5">
         <div
           ref={carouselRef}
           className="py-6 flex gap-5 overflow-x-auto scrollbar-hide transition-all duration-200"
@@ -179,30 +182,34 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
                 href={`/buyer/collection/${collection.id}`}
                 className="group cursor-pointer min-w-[280px] flex-shrink-0"
               >
-                <div className="relative aspect-[3/4] bg-[#161616] rounded-2xl overflow-hidden mb-3">
+                <div className="relative aspect-[3/4] bg-[#161616] border-2 border-[#ECE3BE]/30 rounded-2xl overflow-hidden mb-3 hover:border-[#ECE3BE]/60 transition-all duration-300">
                   <img
                     src={collection.image || "/images/baz1.svg"}
                     alt={collection.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
 
-                  <div className="absolute top-3 left-3 bg-[#8451E1CC] px-3 py-1.5 rounded-lg">
+                  {/* Badge with gradient */}
+                  <div className="absolute top-3 left-3 bg-gradient-to-r from-[#EA795B] to-[#ECBEE3] px-3 py-1.5 rounded-lg shadow-lg">
                     <span className="text-white text-xs font-medium uppercase">
                       {getBadgeText(collection)}
                     </span>
                   </div>
+
+                  {/* Overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#ECBEE3]/20 via-transparent to-transparent group-hover:from-[#EA795B]/30 transition-all duration-300" />
                 </div>
 
                 <div>
-                  <h3 className="text-base font-semibold text-[#dcdcdc] mb-1 capitalize">
+                  <h3 className="text-base font-semibold text-[#dcdcdc] mb-1 capitalize group-hover:text-[#ECE3BE] transition-colors">
                     {collection.title}
                   </h3>
-                  <p className="text-sm text-[#8451e1]">
+                  <p className="text-sm text-[#BEE3EC] font-medium">
                     {brand?.brand_name || "Featured Brand"}
                   </p>
-                  <Button className="w-full mt-4 text-white py-3 px-1.5 font-medium flex items-center justify-between gap-2">
+                  <Button className="w-full mt-4 text-white py-3 px-1.5 font-medium flex items-center justify-between gap-2 bg-gradient-to-b from-[#8451E1] to-[#7240D0] hover:from-[#9468F2] hover:to-[#8451E1] transition-all hover:shadow-lg hover:shadow-[#8451E1]/50">
                     View Collection
-                    <span className="bg-black p-1.5 rounded">
+                    <span className="bg-black p-1.5 rounded hover:bg-[#8451E1]/20 transition-colors">
                       <MoveRight className="w-6 h-6 text-white" />
                     </span>
                   </Button>

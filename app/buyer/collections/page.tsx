@@ -313,15 +313,15 @@ export default function CollectionsPage() {
   return (
     <div className="bg-black min-h-screen py-12 mt-8">
       {/* Header Section */}
-      <div className="px-6 mb-12">
+      <div className="px-6 mb-12 pb-6 border-b-2 border-[#BEECE3]">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
             Collections
           </h1>
-          <p className="text-[#acacac] text-lg">
+          <p className="text-[#ECBEE3] text-lg font-medium">
             Curated collections from top brands and sellers
           </p>
-          <p className="text-[#666] text-sm mt-2">
+          <p className="text-[#EA795B] text-sm mt-2 font-semibold">
             {filteredCollections.length}{" "}
             {filteredCollections.length === 1 ? "collection" : "collections"}{" "}
             available
@@ -363,10 +363,10 @@ export default function CollectionsPage() {
               return (
                 <div key={collection.id} className="mb-16">
                   {/* Collection Header */}
-                  <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#222]">
+                  <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-[#ECE3BE]">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-2xl md:text-3xl font-bold text-white capitalize">
+                        <h2 className="text-2xl md:text-3xl font-bold text-white capitalize border-l-4 border-[#BEECE3] pl-4">
                           {collection.title}
                         </h2>
                         {collection.limitedEditionBadge === "show_badge" && (
@@ -377,11 +377,11 @@ export default function CollectionsPage() {
                           </div>
                         )}
                       </div>
-                      <p className="text-[#8451E1] text-sm font-medium">
-                        Luxela
+                      <p className="text-[#EA795B] text-sm font-bold uppercase tracking-widest">
+                        Luxela Exclusive
                       </p>
                       {collection.description && (
-                        <p className="text-[#acacac] text-sm mt-2 max-w-2xl">
+                        <p className="text-[#ECBEE3] text-sm mt-2 max-w-2xl font-medium">
                           {collection.description}
                         </p>
                       )}

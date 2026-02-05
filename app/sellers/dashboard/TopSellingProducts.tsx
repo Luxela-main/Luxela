@@ -31,17 +31,17 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
   };
 
   return (
-    <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
-      <div className="flex justify-between items-center p-4">
-        <h3 className="text-lg font-medium">Top Selling Product</h3>
+    <div className="bg-[#1a1a1a] rounded-lg overflow-hidden border-2 border-l-4 border-l-[#ECE3BE] bg-gradient-to-br from-[#ECE3BE]/10 via-transparent border-[#ECE3BE]/40">
+      <div className="flex justify-between items-center p-4 border-b-2 border-b-[#ECE3BE]/30">
+        <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#ECE3BE] to-[#ECBEE3]">Top Selling Product</h3>
         <Button
           variant="outline"
-          className="bg-transparent border-[#333] hover:bg-[#222] hover:text-white text-sm"
+          className="bg-transparent border-[#ECE3BE]/40 text-white hover:bg-[#ECE3BE]/20 hover:border-[#ECE3BE]/60 text-sm"
         >
           View All
         </Button>
       </div>
-      <div className="grid grid-cols-6 gap-4 p-4 border-b border-[#333] text-gray-400 text-sm">
+      <div className="grid grid-cols-6 gap-4 p-4 border-b-2 border-b-[#ECE3BE]/30 text-gray-400 text-sm bg-gradient-to-r from-[#ECE3BE]/5 to-transparent">
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -58,7 +58,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
 
       {currentProducts.length > 0 ? (
         currentProducts.map((product, index) => (
-          <div key={product.id || index} className="border-b border-[#333]">
+          <div key={product.id || index} className="border-b border-[#ECE3BE]/20 hover:bg-[#ECE3BE]/5 transition-colors">
             <div className="grid grid-cols-6 gap-4 p-4 items-center">
               <div className="flex items-center">
                 <input
@@ -66,8 +66,8 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
                   className="mr-3 h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
                 />
                 <div className="flex items-center">
-                  <div className="bg-[#222] p-1 rounded-md mr-2">
-                    <Shirt className="h-5 w-5" />
+                  <div className="bg-gradient-to-br from-[#ECE3BE]/30 to-[#ECBEE3]/30 p-1 rounded-md mr-2">
+                    <Shirt className="h-5 w-5 text-[#ECE3BE]" />
                   </div>
                   <span>{product.name}</span>
                 </div>
@@ -86,12 +86,12 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
                   }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                    className={`w-2 h-2 rounded-full mr-1.5 ${
                       product.status === "In stock"
-                        ? "bg-green-600"
+                        ? "bg-[#BEECE3]"
                         : product.status === "Low stock"
-                        ? "bg-yellow-600"
-                        : "bg-red-600"
+                        ? "bg-[#ECE3BE]"
+                        : "bg-[#EA795B]"
                     }`}
                   ></span>
                   {product.status}
@@ -100,7 +100,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
               <div>
                 <Button
                   variant="outline"
-                  className="bg-transparent border-[#333] hover:bg-[#222] hover:text-white text-sm"
+                  className="bg-transparent border-[#ECE3BE]/40 text-white hover:bg-[#ECE3BE]/20 hover:border-[#ECE3BE]/60 text-sm"
                 >
                   View
                 </Button>
@@ -114,7 +114,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
         </div>
       )}
 
-      <div className="flex justify-between items-center bg-[#1a1a1a] p-4 text-sm border-t border-[#333]"> 
+      <div className="flex justify-between items-center bg-[#1a1a1a] p-4 text-sm border-t-2 border-t-[#ECE3BE]/30"> 
         <div className="text-gray-400">
           {products.length > 0
             ? `Result ${startIndex + 1} - ${Math.min(
@@ -129,7 +129,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
             size="sm"
             onClick={goToPreviousPage}
             disabled={currentPage === 1}
-            className="bg-transparent border-[#333] hover:bg-[#222] hover:text-white disabled:opacity-50"
+            className="bg-transparent border-[#ECE3BE]/40 hover:bg-[#ECE3BE]/20 hover:border-[#ECE3BE]/60 disabled:opacity-50"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Previous
@@ -144,7 +144,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
             size="sm"
             onClick={goToNextPage}
             disabled={currentPage === totalPages || totalPages === 0}
-            className="bg-transparent border-[#333] hover:bg-[#222] hover:text-white disabled:opacity-50"
+            className="bg-transparent border-[#ECE3BE]/40 hover:bg-[#ECE3BE]/20 hover:border-[#ECE3BE]/60 disabled:opacity-50"
           >
             Next
             <ChevronRight className="h-4 w-4 ml-1" />
@@ -153,4 +153,4 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
       </div>
     </div>
   );
-}
+}

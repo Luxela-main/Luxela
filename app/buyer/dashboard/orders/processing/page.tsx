@@ -13,7 +13,7 @@ export default function ProcessingOrdersPage() {
         items={[{ label: "Home", href: "/buyer/dashboard" }, { label: "Orders", href: "/buyer/dashboard/orders" }, { label: "Processing Orders" }]}
       />
 
-      <h1 className="text-white text-2xl font-semibold mb-8">Orders</h1>
+      <h1 className="text-white text-2xl font-semibold mb-8 pb-4 border-b-2 border-[#EA795B]">Orders</h1>
 
       <div className="flex items-center justify-between mb-8">
         <OrderTabs />

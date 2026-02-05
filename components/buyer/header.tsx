@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Bell, ChevronDown, Search, ShoppingCart, Menu, X, ShoppingBag, Heart, Package, Ticket, Home, Users, FolderOpen, HelpCircle, User, FileText, Settings, LogOut, Bookmark } from "lucide-react";
 import Image from "next/image";
@@ -30,6 +31,7 @@ import { useToast } from "@/components/hooks/useToast";
 import { useProfile } from "@/context/ProfileContext";
 import { useCartState } from "@/modules/cart/context";
 import { Button } from "../ui/button";
+import router from "next/router";
 
 const NAVLINKS = [
   { name: "Home", href: "/buyer" },
@@ -46,13 +48,16 @@ const USER_DROPDOWN = [
 const BuyerHeader = () => {
   const { user, logout } = useAuth();
   const toast = useToast();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [mobileLogoutOpen, setMobileLogoutOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { profile, loading } = useProfile();
   const { cart } = useCartState();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
   const itemCount = cart?.items?.length || 0;
+  const isCreateProfileRoute = pathname?.includes('/buyer/profile/create');
 
   useEffect(() => {
     setMounted(true);
@@ -67,6 +72,7 @@ const BuyerHeader = () => {
     try {
       await logout();
       toast.success("You have been successfully logged out.");
+      router.push('/signin');
     } catch (err) {
       toast.error("Something went wrong while logging out.");
     } finally {
@@ -79,16 +85,18 @@ const BuyerHeader = () => {
       <nav className="z-[999] bg-[#0E0E0E] px-3 lg:px-6 py-[18px] border-b border-[#2B2B2B] w-full">
         <div className="w-full flex items-center justify-between gap-4 max-w-[1400px] mx-auto">
           {/* Mobile: Hamburger Menu */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0"
-          >
-            {mobileMenuOpen ? (
-              <X stroke="#DCDCDC" className="size-6" />
-            ) : (
-              <Menu strokeWidth={1} stroke="#DCDCDC" className="size-6" />
-            )}
-          </button>
+          {!isCreateProfileRoute && (
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0"
+            >
+              {mobileMenuOpen ? (
+                <X stroke="#DCDCDC" className="size-6" />
+              ) : (
+                <Menu strokeWidth={1} stroke="#DCDCDC" className="size-6" />
+              )}
+            </button>
+          )}
 
           {/* Desktop: Left Links */}
           <div className="hidden lg:flex items-center gap-6 flex-shrink-0">
@@ -245,36 +253,12 @@ const BuyerHeader = () => {
                     ))}
                   </DropdownMenuGroup>
 
-                  <AlertDialog open={open} onOpenChange={setOpen}>
-                    <AlertDialogOverlay />
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem
-                        onSelect={(e) => e.preventDefault()}
-                        className="cursor-pointer text-red-400 hover:bg-red-600! hover:text-white!"
-                      >
-                        Log out
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-[#0E0E0E] border border-[#2B2B2B] text-white">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-400">
-                          Are you sure you want to log out of your account?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-[#141414] text-white border border-[#2B2B2B] hover:bg-[#1a1a1a]">
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleLogout}
-                          className="bg-red-500 hover:bg-red-600 text-white"
-                        >
-                          Log out
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <DropdownMenuItem
+                    asChild
+                    className="cursor-pointer text-red-400 hover:bg-red-600! hover:text-white!"
+                  >
+                    <Link href="/signin">Log out</Link>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : mounted ? (
@@ -291,7 +275,7 @@ const BuyerHeader = () => {
       </nav>
 
       {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
+      {mobileMenuOpen && !isCreateProfileRoute && (
         <>
           <div
             className="fixed inset-0 bg-black/60 z-[998] lg:hidden"
@@ -338,7 +322,7 @@ const BuyerHeader = () => {
               </div>
 
               {/* Dashboard Links */}
-              {user && (
+              {user && !isCreateProfileRoute && (
                 <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
                   <h3 className="text-xs text-gray-500 uppercase tracking-wider">
                     Dashboard
@@ -379,34 +363,36 @@ const BuyerHeader = () => {
               )}
 
               {/* Shopping & Support */}
-              <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
-                <Link
-                  href="/cart"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Shopping Cart
-                </Link>
-                <Link
-                  href="/buyer/dashboard/support-tickets"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
-                >
-                  <Ticket className="w-4 h-4" />
-                  Support Tickets
-                </Link>
-                <Link
-                  href="/buyer/dashboard/help"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
-                >
-                  <HelpCircle className="w-4 h-4" />
-                  Help & Support
-                </Link>
-              </div>
+              {!isCreateProfileRoute && (
+                <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
+                  <Link
+                    href="/cart"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Shopping Cart
+                  </Link>
+                  <Link
+                    href="/buyer/dashboard/support-tickets"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <Ticket className="w-4 h-4" />
+                    Support Tickets
+                  </Link>
+                  <Link
+                    href="/buyer/dashboard/help"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                    Help & Support
+                  </Link>
+                </div>
+              )}
 
-              {user && (
+              {user && !isCreateProfileRoute && (
                 <div className="space-y-3 pt-4 border-t border-[#2B2B2B]">
                   <h3 className="text-xs text-gray-500 uppercase tracking-wider">
                     Account
@@ -438,16 +424,10 @@ const BuyerHeader = () => {
                       </Link>
                     );
                   })}
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      setOpen(true);
-                    }}
-                    className="flex items-center gap-2 w-full text-left text-red-400 text-sm py-2 hover:text-red-300 transition-colors"
-                  >
+                  <Link href="/signin" className="flex items-center gap-2 w-full text-left text-red-400 text-sm py-2 hover:text-red-300 transition-colors cursor-pointer">
                     <LogOut className="w-4 h-4" />
                     Log out
-                  </button>
+                  </Link>
                 </div>
               )}
             </div>

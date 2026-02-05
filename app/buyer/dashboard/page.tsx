@@ -14,14 +14,21 @@ function Dashboard() {
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "My Account" }]} />
 
       {/* Page Title */}
-      <h1 className="text-white text-2xl font-semibold mb-8">
-        Account Overview
-      </h1>
+      <div className="mb-8 pb-6 border-b-2 border-[#ECBEE3]">
+        <h1 className="text-white text-2xl font-semibold mb-2">
+          Account Overview
+        </h1>
+        <p className="text-[#EA795B] text-sm font-medium">Manage your account settings and preferences</p>
+      </div>
 
       {/* Content */}
       <div className="space-y-6 max-w-4xl">
-        <AccountDetails />
-        <BillingAddress />
+        <div className="border-l-4 border-[#ECBEE3] bg-gradient-to-r from-[#ECBEE3]/5 to-transparent rounded-lg">
+          <AccountDetails />
+        </div>
+        <div className="border-l-4 border-[#BEE3EC] bg-gradient-to-r from-[#BEE3EC]/5 to-transparent rounded-lg">
+          <BillingAddress />
+        </div>
       </div>
     </div>
   );

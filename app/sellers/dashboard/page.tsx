@@ -26,9 +26,9 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="mb-6 md:max-lg:pt-10">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-gray-400 mt-1">
+      <div className="mb-6 md:max-lg:pt-10 pb-6 border-b-2 border-[#ECBEE3]">
+        <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
+        <p className="text-[#EA795B] mt-1 font-medium">
           Monitor your sales, track payouts, and manage your listings—all in one place
         </p>
       </div>

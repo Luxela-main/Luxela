@@ -74,14 +74,14 @@ const AccountContent = () => {
     <div className="min-h-screen bg-black text-white py-12 px-6 md:px-20">
       <div className="max-w-3xl mx-auto bg-zinc-900 rounded-xl shadow-md p-8">
         {/* Header */}
-        <div className="flex items-center space-x-4 mb-8">
+        <div className="flex items-center space-x-4 mb-8 pb-6 border-b-2 border-[#ECE3BE]">
           <div>
             <ArrowLeft
-              className="h-8 w-8 cursor-pointer"
+              className="h-8 w-8 cursor-pointer hover:text-[#EA795B] transition"
               onClick={router.back}
             />
           </div>
-          <div className="h-16 w-16 rounded-full overflow-hidden border border-white/20">
+          <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-[#ECBEE3] shadow-lg shadow-[#ECBEE3]/30">
             {userPicture ? (
               <Image
                 src={userPicture}
@@ -108,7 +108,7 @@ const AccountContent = () => {
         <div className="space-y-4">
           <button
             onClick={() => router.push("/buyer/dashboard/orders")}
-            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition border-l-4 border-[#ECBEE3] hover:border-[#EA795B]">
             <div className="flex items-center space-x-2">
               <ShoppingBag className="h-4 w-4" />
               <span>My Orders</span>
@@ -118,7 +118,7 @@ const AccountContent = () => {
 
           <button
             onClick={() => router.push("/buyer/dashboard/favorite-items")}
-            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition border-l-4 border-[#EA795B] hover:border-[#BEECE3]">
             <div className="flex items-center space-x-2">
               <Store className="h-4 w-4" />
               <span>Favorite Items</span>
@@ -128,7 +128,7 @@ const AccountContent = () => {
 
           <button
             onClick={() => router.push("/buyer/dashboard/profile")}
-            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition">
+            className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 rounded px-5 py-3 text-left transition border-l-4 border-[#BEECE3] hover:border-[#BEE3EC]">
             <div className="flex items-center space-x-2">
               <List className="h-4 w-4" />
               <span>My Listings</span>

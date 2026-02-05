@@ -181,15 +181,15 @@ export default function ListingDetailPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-[#ECBEE3]">
           <Link href="/admin/listings">
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="border-[#2B2B2B] text-gray-700 hover:bg-[#ECBEE3] hover:text-black">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{listing.title}</h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-[#EA795B] mt-1">
               By <span className="font-medium">{listing.seller?.brandName || 'Unknown Seller'}</span>
             </p>
           </div>

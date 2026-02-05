@@ -278,12 +278,12 @@ export default function BuyerSupportTicketsPage() {
     <div className="min-h-screen bg-[#0E0E0E] p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-4 border-b-2 border-[#ECE3BE]">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">
               Support Tickets
             </h1>
-            <p className="text-[#808080]">
+            <p className="text-[#EA795B]">
               Manage your support requests and track their status
             </p>
           </div>
@@ -409,7 +409,7 @@ export default function BuyerSupportTicketsPage() {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-[#141414] rounded-lg border-l-4 border-[#BEECE3]">
           <div className="relative">
             <Search className="absolute left-3 top-3 w-4 h-4 text-[#808080]" />
             <Input

@@ -38,7 +38,6 @@ const footerLinks: FooterLinkSection[] = [
     links: [
       { name: "Terms of Service", route: "#" },
       { name: "Privacy Policy", route: "#" },
-      // { name: "Cookie Policy", route: "#" }
     ]
   }
 ];
@@ -64,33 +63,37 @@ export default function Footer() {
           {/* newsletter */}
           <div className='max-w-[580px] '>
             <p className='text-xs md:text-sm text-[#DCDCDC] mb-2'>Subscribe to our newsletter</p>
-            <div className="relative w-full max-w-md">
+            <div className="relative w-full max-w-md p-4 rounded-[12px] border-2 border-[#ECBEE3] bg-gradient-to-r from-[#ECBEE3]/5 to-transparent group hover:border-[#ECBEE3] hover:shadow-[0_0_15px_#ECBEE3]/20 transition-all duration-300">
               <Input
                 type="text"
                 placeholder="Enter your email"
                 className="w-full pr-[120px] h-[42px] rounded-[10px] border border-[#2F2F2F] focused:ring-0 focus-visible:ring-0 bg-[#2B2B2B] text-[#ACACAC] text-sm "
               />
               <Button
-                className="absolute top-0 right-0 h-[42px] px-6 text-white bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] rounded-[10px] transition"
+                className="absolute top-2 right-2 h-[42px] px-6 text-white bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] rounded-[10px] transition hover:shadow-[0_0_15px_#8451E1]/40"
               >
                 Subscribe
               </Button>
             </div>
             <div className='mt-10 grid grid-cols-2 md:grid-cols-3 gap-20 md:gap-10'>
-              {footerLinks.map((section) => (
-                <div key={section.title} className="space-y-4">
-                  <h3 className="text-sm md:text-base text-[#FBFBFB] font-semibold">{section.title}</h3>
-                  <ul className="space-y-2">
-                    {section.links.map((link) => (
-                      <li key={link.name + link.route}>
-                        <Link href={link.route} prefetch={true} className="text-xs md:text-sm text-[#BFBFBF] hover:text-purple-500 transition">
-                          {link.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {footerLinks.map((section, idx) => {
+                const sectionColors = ['#EA795B', '#ECE3BE', '#BEECE3'];
+                const sectionColor = sectionColors[idx % sectionColors.length];
+                return (
+                  <div key={section.title} className="space-y-4 pl-4 border-l-2 transition-all duration-300 hover:pl-6 group" style={{borderColor: sectionColor}}>
+                    <h3 className="text-sm md:text-base text-[#FBFBFB] font-semibold group-hover:text-[#FBFBFB] transition-colors" style={{color: sectionColor}}>{section.title}</h3>
+                    <ul className="space-y-2">
+                      {section.links.map((link) => (
+                        <li key={link.name + link.route}>
+                          <Link href={link.route} prefetch={true} className="text-xs md:text-sm text-[#BFBFBF] hover:text-[#FBFBFB] transition">
+                            {link.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

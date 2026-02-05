@@ -40,13 +40,13 @@ type OrderWithDetails = Sale & {
 function getStatusColor(status: string): string {
   switch (status) {
     case "pending":
-      return "bg-yellow-900/30 text-yellow-200 border-yellow-700/30"
+      return "bg-[#EA795B]/20 text-[#EA795B] border-[#EA795B]/30"
     case "confirmed":
-      return "bg-blue-900/30 text-blue-200 border-blue-700/30"
+      return "bg-[#BEECE3]/20 text-[#BEECE3] border-[#BEECE3]/30"
     case "processing":
-      return "bg-purple-900/30 text-purple-200 border-purple-700/30"
+      return "bg-[#ECBEE3]/20 text-[#ECBEE3] border-[#ECBEE3]/30"
     case "shipped":
-      return "bg-cyan-900/30 text-cyan-200 border-cyan-700/30"
+      return "bg-[#BEE3EC]/20 text-[#BEE3EC] border-[#BEE3EC]/30"
     case "delivered":
       return "bg-green-900/30 text-green-200 border-green-700/30"
     case "canceled":

@@ -254,13 +254,13 @@ function SettingsPageContent() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-8 border-b-2 border-[#ECBEE3] pb-6">
           <h1 className="text-3xl font-bold text-white">Settings</h1>
-          <p className="text-[#acacac] mt-2">Manage your account and preferences</p>
+          <p className="text-[#EA795B] mt-2">Manage your account and preferences</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-[#1a1a1a] border-b border-[#212121]">
+          <TabsList className="grid w-full grid-cols-3 bg-[#1a1a1a] border-b-2 border-[#BEECE3]">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>

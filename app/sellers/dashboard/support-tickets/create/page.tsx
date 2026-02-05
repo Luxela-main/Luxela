@@ -86,12 +86,12 @@ export default function CreateSupportTicketPage() {
     <div className="min-h-screen bg-[#0E0E0E] p-6">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-8 pb-4 border-b-2 border-[#ECBEE3]">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => router.back()}
-            className="text-[#808080] hover:text-white"
+            className="text-[#808080] hover:text-[#EA795B] transition"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>

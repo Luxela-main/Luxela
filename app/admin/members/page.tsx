@@ -50,24 +50,24 @@ export default function AdminMembersPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#0E0E0E] to-[#1a1a1a] p-4 sm:p-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-6 sm:mb-8 pb-6 border-b-2 border-[#ECBEE3]">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#8451E1] hover:text-[#9461f1] mb-3 sm:mb-4 font-medium transition-colors text-sm sm:text-base cursor-pointer"
+            className="flex items-center gap-2 text-[#EA795B] hover:text-[#ECE3BE] mb-3 sm:mb-4 font-medium transition-colors text-sm sm:text-base cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             Back
           </button>
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-[#8451E1]" />
+            <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-[#ECBEE3]" />
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Members</h1>
           </div>
-          <p className="text-sm sm:text-base text-[#DCDCDC]">Grant admin access to team members</p>
+          <p className="text-sm sm:text-base text-[#BEE3EC]">Grant admin access to team members</p>
         </div>
 
         {/* Grant Admin Card */}
-        <Card className="border-0 shadow-lg mb-6 sm:mb-8 bg-[#1a1a1a] border border-[#2B2B2B]">
-          <CardHeader className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b border-[#2B2B2B]">
+        <Card className="border-0 shadow-lg mb-6 sm:mb-8 bg-[#1a1a1a] border-l-4 border-l-[#ECBEE3]">
+          <CardHeader className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#BEE3EC]">
             <CardTitle className="flex items-center gap-2 text-white">
               <Mail className="w-5 h-5 text-[#8451E1]" />
               Add New Admin

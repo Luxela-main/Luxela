@@ -25,7 +25,7 @@ export function OrderTabs() {
   }
 
   return (
-    <div className="flex gap-8 border-b border-[#212121]">
+    <div className="flex gap-8 border-b-2 border-[#BEE3EC] bg-gradient-to-r from-[#BEE3EC]/5 to-transparent">
       {tabs.map((tab) => (
         <Link
           key={tab.id}
@@ -35,9 +35,9 @@ export function OrderTabs() {
           }`}
         >
           {tab.label}
-          {isActive(tab.href) && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8451e1]" />}
+          {isActive(tab.href) && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#BEE3EC] via-[#ECBEE3] to-[#EA795B]" />}
         </Link>
       ))}
     </div>
   )
-}
+}

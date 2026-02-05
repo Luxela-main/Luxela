@@ -229,10 +229,10 @@ export default function SellerSupportTicketsPage() {
     <div className="min-h-screen bg-[#0f0f0f] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-[#ECBEE3]">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Support Tickets</h1>
-            <p className="text-gray-400">Manage customer inquiries and track resolution</p>
+            <p className="text-[#EA795B]">Manage customer inquiries and track resolution</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}

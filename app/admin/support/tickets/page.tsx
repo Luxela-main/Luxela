@@ -254,10 +254,10 @@ export default function AdminTicketsPage() {
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b border-[#2B2B2B] p-4 sm:p-8">
+      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#ECBEE3] p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-1 sm:mb-2">Support Tickets</h1>
-          <p className="text-sm sm:text-base text-[#DCDCDC]">Manage and respond to customer support tickets</p>
+          <h1 className="text-2xl sm:text-4xl font-bold mb-1 sm:mb-2 text-white">Support Tickets</h1>
+          <p className="text-sm sm:text-base text-[#EA795B]">Manage and respond to customer support tickets</p>
         </div>
       </div>
 

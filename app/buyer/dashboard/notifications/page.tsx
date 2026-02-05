@@ -129,7 +129,7 @@ export default function NotificationsPage() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold text-white">Notifications</h1>
             {unreadCount > 0 && (
-              <div className="bg-[#8451e1] text-white px-3 py-1 rounded-full text-sm">
+              <div className="bg-[#EA795B] text-white px-3 py-1 rounded-full text-sm font-bold">
                 {unreadCount} unread
               </div>
             )}
@@ -185,7 +185,7 @@ export default function NotificationsPage() {
                         </p>
                       </div>
                       {!notification.isRead && (
-                        <div className="w-2 h-2 bg-[#8451e1] rounded-full flex-shrink-0 mt-2" />
+                        <div className="w-2 h-2 bg-[#EA795B] rounded-full flex-shrink-0 mt-2" />
                       )}
                     </div>
                     <p className="text-gray-500 text-xs mt-2">

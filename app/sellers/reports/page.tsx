@@ -129,9 +129,9 @@ export default function Reports() {
   return (
     <div className="px-6 mt-4 md:mt-0">
       {/* Header */}
-      <div className="mb-6 md:max-lg:pt-10">
-        <h1 className="text-2xl font-semibold">Reports & Analytics</h1>
-        <p className="text-gray-400 mt-1">View detailed reports and analytics for your store.</p>
+      <div className="mb-6 md:max-lg:pt-10 pb-6 border-b-2 border-[#ECBEE3]">
+        <h1 className="text-2xl font-semibold text-white">Reports & Analytics</h1>
+        <p className="text-[#EA795B] mt-1 font-medium">View detailed reports and analytics for your store.</p>
       </div>
 
       {/* Filters */}

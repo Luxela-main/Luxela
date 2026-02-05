@@ -45,10 +45,10 @@ export default function Header() {
         <div className="z-10 px-2 relative flex flex-col pt-20 items-center justify-center">
           <div className="relative w-[194px] !h-12">
             {/* Gradient border container */}
-            <div className="rounded-full h-full bg-gradient-to-r from-[#6F42C1] via-[#9675D2] to-[#B8A3E1] p-0.5">
+            <div className="rounded-full h-full bg-gradient-to-r from-[#8451E1] via-[#ECBEE3] to-[#8451E1] p-0.5">
               {/* btn Content */}
               <div className="rounded-full h-full text-sm font-medium bg-[#1C1111] flex items-center justify-center">
-                <span className='bg-gradient-to-r h-full flex items-center from-[#F8DFFC] to-[#FEC5F3] text-center font-[400] leading-[100%] text-transparent bg-clip-text'>
+                <span className='bg-gradient-to-r h-full flex items-center from-[#ECBEE3] to-[#BEE3EC] text-center font-[400] leading-[100%] text-transparent bg-clip-text'>
                   Pay With Crypto
                 </span>
               </div>
@@ -204,4 +204,4 @@ export default function Header() {
       </header>
     </>
   );
-}
+}

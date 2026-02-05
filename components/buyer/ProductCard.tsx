@@ -43,14 +43,18 @@ export default function ProductCard({ product }: { product: Listing }) {
 
   const business = product.sellers?.seller_business?.[0];
 
+  // Accent color for this card (consistent based on product ID)
+  const accentColors = ["#ECBEE3", "#EA795B", "#BEE3EC"];
+  const cardAccent = accentColors[(product.id.charCodeAt(0) + product.id.charCodeAt(product.id.length - 1)) % accentColors.length];
+
   const handleQuickAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-if (!user || !user.id) {
-    setShowAuthModal(true);
-    return;
-  }
+    if (!user || !user.id) {
+      setShowAuthModal(true);
+      return;
+    }
 
     if (isAdding) return;
 
@@ -81,7 +85,7 @@ if (!user || !user.id) {
   const colors = useMemo(() => {
     if (!product.colors_available) return [];
     try {
-      // Handles JSON: "[{"colorName":"red","colorHex":""}]"
+      // Handles JSON: "[{\"colorName\":\"red\",\"colorHex\":\"\"}]"
       const parsed = JSON.parse(product.colors_available);
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
@@ -96,7 +100,21 @@ if (!user || !user.id) {
   return (
     <>
       <Link href={`/buyer/product/${product.id}`} className="block">
-        <div className="group bg-[#161616] rounded-lg overflow-hidden hover:ring-2 hover:ring-[#8451E1]/50 transition-all duration-300 shadow-lg relative">
+        <div 
+          className="group bg-[#161616] rounded-lg overflow-hidden transition-all duration-300 shadow-lg relative border-2 hover:shadow-lg"
+          style={{
+            borderColor: cardAccent + "40",
+            boxShadow: `0 4px 20px ${cardAccent}10`,
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = cardAccent + "80";
+            (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 30px ${cardAccent}30`;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = cardAccent + "40";
+            (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${cardAccent}10`;
+          }}
+        >
           {/* Image Section */}
           <div className="h-80 md:h-96 bg-[#222] relative overflow-hidden">
             {isValidImage ? (
@@ -112,10 +130,14 @@ if (!user || !user.id) {
             )}
 
             {product.limited_edition_badge === "show_badge" && (
-              <div className="absolute top-3 left-3 bg-[#8451E1CC] px-3 py-1.5 rounded-lg">
-                    <span className="text-white text-xs font-medium uppercase">
-                  Limited
-                </span>
+              <div 
+                className="absolute top-3 left-3 px-3 py-1.5 rounded-lg font-medium uppercase text-white text-xs"
+                style={{
+                  backgroundColor: cardAccent,
+                  boxShadow: `0 0 15px ${cardAccent}40`,
+                }}
+              >
+                Limited
               </div>
             )}
           </div>
@@ -125,7 +147,14 @@ if (!user || !user.id) {
             {/* Category & Seller Verification Row */}
             <div className="flex items-center justify-between mb-2">
               {product.category && (
-                <span className="text-[#8451E1] text-[9px] font-bold uppercase tracking-widest bg-[#8451E1]/10 px-2 py-1 rounded-full">
+                <span 
+                  className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full text-white"
+                  style={{
+                    backgroundColor: cardAccent + "20",
+                    color: cardAccent,
+                    border: `1px solid ${cardAccent}40`,
+                  }}
+                >
                   {product.category}
                 </span>
               )}
@@ -149,7 +178,7 @@ if (!user || !user.id) {
                 </h3>
                 {product.description && (
                   <p className="text-[#acacac] text-[12px] line-clamp-1 mt-1">
-                    {product.description.substring(0, 100)}{product.description.length > 100 ? '...' : ''}
+                    {product.description.substring(0, 100)}{product.description.length > 100 ? "..." : ""}
                   </p>
                 )}
               </div>
@@ -169,10 +198,13 @@ if (!user || !user.id) {
                         key={`${product.id}-${i}`}
                         title={color.colorName}
                         className={`
-                          flex items-center justify-center rounded-full border border-black shadow-sm transition-transform hover:z-10
+                          flex items-center justify-center rounded-full border-2 shadow-sm transition-transform hover:z-10 hover:scale-125
                           ${finalColor ? "w-3.5 h-3.5" : "w-5 h-5 bg-zinc-800"}
                         `}
-                        style={{ backgroundColor: finalColor || undefined }}
+                        style={{ 
+                          backgroundColor: finalColor || undefined,
+                          borderColor: cardAccent + "60",
+                        }}
                       >
                         {!finalColor && (
                           <span className="text-[8px] text-white font-bold uppercase">
@@ -202,8 +234,8 @@ if (!user || !user.id) {
                           key={i}
                           className={`w-3 h-3 ${
                             i < Math.round(product.rating || 0)
-                              ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-gray-600'
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-600"
                           }`}
                         />
                       ))}
@@ -232,7 +264,7 @@ if (!user || !user.id) {
                   {product.currency}{" "}
                   {(product.price_cents / 100).toLocaleString()}
                 </span>
-                {product.supply_capacity === 'limited' && product.quantity_available <= 5 && product.quantity_available > 0 && (
+                {product.supply_capacity === "limited" && product.quantity_available <= 5 && product.quantity_available > 0 && (
                   <span className="text-orange-500 text-[10px] font-medium">
                     ⚠️ Only {product.quantity_available} left
                   </span>
@@ -247,15 +279,23 @@ if (!user || !user.id) {
               <button
                 onClick={handleQuickAdd}
                 disabled={isAdding}
-            className={`
+                className={`
     relative flex cursor-pointer items-center justify-center p-3 rounded-xl transition-all duration-300
     ${
       added
         ? "bg-green-500 scale-105"
-        : "bg-[linear-gradient(180deg,#8451E1_0%,#8451E1_44.78%,#5C2EAF_90.62%)] hover:brightness-110 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+        : "hover:brightness-110 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
     }
     disabled:opacity-70 disabled:cursor-not-allowed
   `}
+                style={{
+                  background: added 
+                    ? undefined 
+                    : `linear-gradient(180deg, #8451E1 0%, #8451E1 44.78%, #5C2EAF 90.62%)`,
+                  boxShadow: added 
+                    ? undefined 
+                    : `0 0 15px ${cardAccent}40, inset 0 0 10px ${cardAccent}20`,
+                }}
               >
                 {isAdding ? (
                   <Loader2 className="w-4 h-4 text-white animate-spin" />

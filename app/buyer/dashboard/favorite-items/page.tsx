@@ -100,16 +100,16 @@ export default function FavoriteItemsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-[#1a1a1a] rounded-lg p-4">
-              <p className="text-gray-400 text-sm">Total Items</p>
+            <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#ECBEE3]">
+              <p className="text-[#EA795B] text-sm font-bold uppercase tracking-widest">Total Items</p>
               <p className="text-2xl font-bold text-white mt-2">{favorites.length}</p>
             </div>
-            <div className="bg-[#1a1a1a] rounded-lg p-4">
-              <p className="text-gray-400 text-sm">Total Value</p>
-              <p className="text-2xl font-bold text-white mt-2">${totalValue.toFixed(2)}</p>
+            <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#ECE3BE]">
+              <p className="text-[#BEECE3] text-sm font-bold uppercase tracking-widest">Total Value</p>
+              <p className="text-2xl font-bold text-[#BEE3EC] mt-2">${totalValue.toFixed(2)}</p>
             </div>
-            <div className="bg-[#1a1a1a] rounded-lg p-4">
-              <p className="text-gray-400 text-sm">Available Items</p>
+            <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#BEE3EC]">
+              <p className="text-[#ECBEE3] text-sm font-bold uppercase tracking-widest">Available Items</p>
               <p className="text-2xl font-bold text-white mt-2">{availableItems}</p>
             </div>
           </div>

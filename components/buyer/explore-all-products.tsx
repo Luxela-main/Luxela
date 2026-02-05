@@ -123,9 +123,12 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
   }
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-[18px] lg:text-xl capitalize font-semibold text-white">
+    <section className="relative">
+      {/* Background Accents */}
+      <div className="absolute -top-10 right-0 w-96 h-96 bg-[#BEE3EC]/5 rounded-full blur-3xl" />
+      
+      <div className="flex items-center justify-between mb-8 relative z-10">
+        <h2 className="text-[18px] lg:text-xl capitalize font-semibold text-white relative pb-3">
           {searchQuery ? (
             <>
               <span className="text-sm text-[#dcdcdc] font-medium">
@@ -134,26 +137,29 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
               </span>
             </>
           ) : (
-            <span className="">Explore All</span>
+            <span className="">
+              Explore All
+              <span className="absolute bottom-0 left-0 w-20 h-0.5 bg-gradient-to-r from-[#BEECE3] to-[#ECE3BE] rounded-full"></span>
+            </span>
           )}
         </h2>
         <Link
           href="/buyer/brands"
-          className="text-sm text-[#8451E1] hover:text-[#7240D0] transition-colors flex items-center gap-1"
+          className="text-sm text-[#8451E1] hover:text-[#9468F2] transition-colors flex items-center gap-1 font-medium"
         >
           See all →
         </Link>
       </div>
 
-      {/* Sort Dropdown */}
+      {/* Sort Dropdown - Enhanced */}
       <div className="relative flex justify-end mb-6">
         <button
           onClick={() => setShowSortMenu(!showSortMenu)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#161616] hover:bg-[#1f1f1f] rounded-lg transition-colors text-gray-300 text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[#161616] border-2 border-[#BEECE3]/30 hover:border-[#BEECE3]/60 rounded-lg transition-all text-gray-300 text-sm hover:bg-[#1f1f1f]"
         >
           <span>
             Sort by:{" "}
-            <span className="text-white">
+            <span className="text-[#BEECE3] font-medium">
               {sortOptions.find((o) => o.value === sortBy)?.label}
             </span>
           </span>
@@ -165,19 +171,19 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
         </button>
 
         {showSortMenu && (
-          <div className="absolute right-0 top-full mt-2 w-56 bg-[#161616] border border-gray-800 rounded-lg shadow-xl z-10">
-            {sortOptions.map((option) => (
+          <div className="absolute right-0 top-full mt-2 w-56 bg-[#161616] border-2 border-[#BEECE3]/30 rounded-lg shadow-xl z-10 overflow-hidden">
+            {sortOptions.map((option, index) => (
               <button
                 key={option.value}
                 onClick={() => {
                   setSortBy(option.value);
                   setShowSortMenu(false);
                 }}
-                className={`w-full text-left px-4 py-3 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                className={`w-full text-left px-4 py-3 text-sm transition-all ${
                   sortBy === option.value
-                    ? "bg-[#8451E1] text-white"
-                    : "text-gray-300 hover:bg-[#1f1f1f]"
-                }`}
+                    ? "bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white font-medium"
+                    : "text-gray-300 hover:bg-[#1f1f1f] hover:text-[#BEECE3]"
+                } ${index !== sortOptions.length - 1 ? "border-b border-[#2B2B2B]" : ""}`}
               >
                 {option.label}
               </button>
@@ -187,7 +193,7 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 relative z-5">
         {displayedProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
@@ -196,4 +202,4 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
   );
 };
 
-export default ExploreAllProducts;
+export default ExploreAllProducts;

@@ -9,7 +9,7 @@ export function AccountDetails() {
   // Show loading state
   if (loading) {
     return (
-      <Card className="bg-[#1a1a1a] border-[#212121] p-6">
+      <Card className="bg-[#1a1a1a] border-2 border-[#ECBEE3]/30 bg-gradient-to-br from-[#ECBEE3]/5 to-transparent p-6">
         <h2 className="text-white text-lg font-semibold mb-6">Account Details</h2>
         <div className="text-[#7e7e7e]">Loading account details...</div>
       </Card>
@@ -19,7 +19,7 @@ export function AccountDetails() {
   // If no profile, show placeholder or message
   if (!profile) {
     return (
-      <Card className="bg-[#1a1a1a] border-[#212121] p-6">
+      <Card className="bg-[#1a1a1a] border-2 border-[#ECBEE3]/30 bg-gradient-to-br from-[#ECBEE3]/5 to-transparent p-6">
         <h2 className="text-white text-lg font-semibold mb-6">Account Details</h2>
         <div className="text-[#7e7e7e]">No profile found</div>
       </Card>
@@ -36,8 +36,8 @@ export function AccountDetails() {
     : 'N/A';
 
   return (
-    <Card className="bg-[#1a1a1a] border-[#212121] p-6">
-      <h2 className="text-white text-lg font-semibold mb-6">Account Details</h2>
+    <Card className="bg-[#1a1a1a] border-2 border-l-4 border-l-[#EA795B] border-t-[#ECBEE3] border-r-[#BEE3EC] border-[#EA795B]/30 bg-gradient-to-br from-[#ECBEE3]/5 via-[#BEECE3]/3 to-transparent p-6">
+      <h2 className="text-white text-lg font-semibold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-[#ECBEE3] via-[#EA795B] to-[#BEE3EC]">Account Details</h2>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-6">
         <div>

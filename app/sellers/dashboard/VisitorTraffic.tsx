@@ -14,8 +14,8 @@ export function VisitorTraffic() {
   const { visitorTraffic } = displayData;
 
   const timeframeOptions = ["Month", "Quarter", "Year"];
-  const colors = ["bg-blue-500", "bg-[#B8A179]", "bg-gray-400", "bg-pink-200"];
-  const strokeColors = ["#3B82F6", "#B8A179", "#9CA3AF", "#FFC0CB"];
+  const colors = ["bg-[#ECBEE3]", "bg-[#EA795B]", "bg-[#BEECE3]", "bg-[#BEE3EC]"];
+  const strokeColors = ["#ECBEE3", "#EA795B", "#BEECE3", "#BEE3EC"];
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -32,9 +32,9 @@ export function VisitorTraffic() {
   }, [isDropdownOpen]);
 
   return (
-    <div className="bg-[#1a1a1a] rounded-lg p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Visitors Traffic</h3>
+    <div className="bg-[#1a1a1a] rounded-lg p-4 border-2 border-l-4 border-l-[#BEECE3] bg-gradient-to-br from-[#BEECE3]/10 via-transparent border-[#BEECE3]/40">
+      <div className="flex justify-between items-center mb-4 border-b border-[#BEECE3]/20 pb-4">
+        <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#BEECE3] to-[#BEE3EC]">Visitors Traffic</h3>
         <div className="relative" ref={dropdownRef}>
           <Button
             variant="outline"

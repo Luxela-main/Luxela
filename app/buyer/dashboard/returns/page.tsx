@@ -172,17 +172,17 @@ export default function ReturnsPage() {
           <h1 className="text-3xl font-bold text-white mb-6">Returns & Refunds</h1>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-[#1a1a1a] rounded-lg p-4">
-              <p className="text-gray-400 text-sm">Active Returns</p>
+            <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#ECBEE3]">
+              <p className="text-[#EA795B] text-sm font-bold uppercase tracking-widest">Active Returns</p>
               <p className="text-2xl font-bold text-white mt-2">{activeReturns}</p>
             </div>
-            <div className="bg-[#1a1a1a] rounded-lg p-4">
-              <p className="text-gray-400 text-sm">Total Refunded</p>
-              <p className="text-2xl font-bold text-[#8451e1] mt-2">${totalRefunded.toFixed(2)}</p>
+            <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#ECE3BE]">
+              <p className="text-[#BEECE3] text-sm font-bold uppercase tracking-widest">Total Refunded</p>
+              <p className="text-2xl font-bold text-[#BEE3EC] mt-2">${totalRefunded.toFixed(2)}</p>
             </div>
-            <div className="bg-[#1a1a1a] rounded-lg p-4">
-              <p className="text-gray-400 text-sm">Processing Refunds</p>
-              <p className="text-2xl font-bold text-yellow-400 mt-2">${totalProcessing.toFixed(2)}</p>
+            <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#BEE3EC]">
+              <p className="text-[#ECBEE3] text-sm font-bold uppercase tracking-widest">Processing Refunds</p>
+              <p className="text-2xl font-bold text-white mt-2">${totalProcessing.toFixed(2)}</p>
             </div>
           </div>
         </div>

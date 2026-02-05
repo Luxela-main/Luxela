@@ -21,10 +21,10 @@ interface TicketStatus {
 }
 
 const TICKET_STATUSES: TicketStatus[] = [
-  { value: "open", label: "Open", color: "bg-blue-500" },
-  { value: "in_progress", label: "In Progress", color: "bg-yellow-500" },
-  { value: "resolved", label: "Resolved", color: "bg-green-500" },
-  { value: "closed", label: "Closed", color: "bg-gray-500" },
+  { value: "open", label: "Open", color: "bg-[#BEE3EC]" },
+  { value: "in_progress", label: "In Progress", color: "bg-[#EA795B]" },
+  { value: "resolved", label: "Resolved", color: "bg-[#BEECE3]" },
+  { value: "closed", label: "Closed", color: "bg-[#ECBEE3]" },
 ];
 
 const PRIORITIES = {
@@ -82,10 +82,10 @@ export default function SellerSupportTicketsPage() {
     <div className="min-h-screen bg-[#0E0E0E] p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 pb-4 border-b-2 border-[#ECBEE3]">
           <div>
             <h1 className="text-4xl font-bold text-white mb-2">Support Tickets</h1>
-            <p className="text-[#808080]">
+            <p className="text-[#EA795B]">
               Manage your support tickets and communicate with the admin team
             </p>
           </div>
