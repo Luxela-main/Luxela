@@ -22,7 +22,7 @@ export default function About() {
               className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-1 rounded-full"
               style={{
                 width: "80px",
-                background: "linear-gradient(to right, #BEE3EC, #EA795B)",
+                background: "linear-gradient(to right, #E5E7EB, #6B7280)",
               }}
             ></span>
           </motion.h2>
@@ -56,16 +56,16 @@ export default function About() {
               width={1440}
               height={802}
               alt="Luxela."
-              className="rounded-2xl shadow-lg border-2 transition-all duration-500 group-hover:shadow-[0_0_30px_#BEE3EC]/40 group-hover:scale-105"
+              className="rounded-2xl shadow-lg border-2 transition-all duration-500 group-hover:shadow-[0_0_30px_#E5E7EB]/40 group-hover:scale-105"
               style={{
-                borderColor: "#BEE3EC",
+                borderColor: "#E5E7EB",
               }}
             />
             {/* Gradient overlay on hover */}
             <div
               className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-30 transition-opacity duration-500 pointer-events-none"
               style={{
-                background: "linear-gradient(135deg, #BEE3EC, #EA795B)",
+                background: "linear-gradient(135deg, #E5E7EB, #6B7280)",
               }}
             ></div>
           </div>

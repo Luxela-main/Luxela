@@ -203,7 +203,20 @@ export default function TicketDetailPage() {
   }
 
   const StatusIcon = STATUS_CONFIG[ticket.status].icon;
-  const statusColor = STATUS_CONFIG[ticket.status].color;
+  const getStatusClasses = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'text-xs px-2 py-1 rounded whitespace-nowrap text-blue-400 bg-blue-500/10';
+      case 'in_progress':
+        return 'text-xs px-2 py-1 rounded whitespace-nowrap text-yellow-400 bg-yellow-500/10';
+      case 'resolved':
+        return 'text-xs px-2 py-1 rounded whitespace-nowrap text-green-400 bg-green-500/10';
+      case 'closed':
+        return 'text-xs px-2 py-1 rounded whitespace-nowrap text-gray-400 bg-gray-500/10';
+      default:
+        return 'text-xs px-2 py-1 rounded whitespace-nowrap text-gray-400 bg-gray-500/10';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] p-6">
@@ -232,9 +245,7 @@ export default function TicketDetailPage() {
             <div>
               <p className="text-[#808080] text-sm mb-1">Status</p>
               <div className="flex items-center gap-2">
-                <span
-                  className={`px-3 py-1 rounded text-white text-xs font-medium ${statusColor}`}
-                >
+                <span className={getStatusClasses(ticket.status)}>
                   {ticket.status.toUpperCase().replace("_", " ")}
                 </span>
               </div>

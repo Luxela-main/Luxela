@@ -62,7 +62,7 @@ export default function Navbar() {
                 >
                   {item.name}
                   <span
-                    className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-[#ECBEE3] to-[#EA795B] transition-all duration-300 group-hover:w-full"
+                    className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-[#E5E7EB] to-[#6B7280] transition-all duration-300 group-hover:w-full"
                     style={{
                       width: activeNavItem === item.name ? "100%" : "0%",
                     }}
@@ -95,12 +95,12 @@ export default function Navbar() {
             className="hidden sm:flex h-10 items-center text-sm text-white hover:text-white transition px-4 relative pb-1 group"
           >
             Sell
-            <span className="absolute bottom-0 left-0 h-0.5 bg-[#BEE3EC] transition-all duration-300 w-0 group-hover:w-full"></span>
+            <span className="absolute bottom-0 left-0 h-0.5 bg-[#E5E7EB] transition-all duration-300 w-0 group-hover:w-full"></span>
           </Link>
 
           <Link
             href="/buyer"
-            className="h-10 flex items-center space-x-2 border-2 border-[#ECBEE3]/40 hover:border-[#ECBEE3]/80 transition-all duration-300 rounded-md px-4 text-sm text-white hover:shadow-[0_0_15px_#ECBEE3]/30"
+            className="h-10 flex items-center space-x-2 border-2 border-[#E5E7EB]/40 hover:border-[#E5E7EB]/80 transition-all duration-300 rounded-md px-4 text-sm text-white hover:shadow-[0_0_15px_#E5E7EB]/30"
           >
             <span className="hidden sm:block">Shop now</span>
             <ShoppingCart className="h-4 w-4" />
@@ -115,7 +115,7 @@ export default function Navbar() {
                   ? "/admin/dashboard"
                   : "/buyer/dashboard"
               }
-              className="h-10 w-10 rounded-full overflow-hidden border-2 border-[#BEE3EC]/40 hover:border-[#BEE3EC]/80 transition-all duration-300 hover:shadow-[0_0_15px_#BEE3EC]/30"
+              className="h-10 w-10 rounded-full overflow-hidden border-2 border-[#E5E7EB]/40 hover:border-[#E5E7EB]/80 transition-all duration-300 hover:shadow-[0_0_15px_#E5E7EB]/30"
             >
               {user.user_metadata?.avatar_url ? (
                 <Image
@@ -170,7 +170,7 @@ export default function Navbar() {
             {/* Menu items */}
             <ul className="mt-10 flex flex-col space-y-6 text-lg font-medium">
               {navItems.map((item, idx) => {
-                const colors = ["#ECBEE3", "#EA795B", "#ECE3BE"];
+                const colors = ["#E5E7EB", "#6B7280", "#D1D5DB"];
                 const color = colors[idx % colors.length];
                 return (
                   <li key={item.name + item.route}>
@@ -208,7 +208,7 @@ export default function Navbar() {
             {/* Bottom CTA */}
             <Link
               href="/buyer"
-              className="mt-auto h-12 flex items-center justify-center space-x-2 bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/40 transition text-white rounded-lg border border-[#ECBEE3]/30 hover:border-[#ECBEE3]/60"
+              className="mt-auto h-12 flex items-center justify-center space-x-2 bg-gradient-to-b from-[#8451E1] via-[#8451E1] to-[#5C2EAF] hover:shadow-[0_0_20px_#8451E1]/40 transition text-white rounded-lg border border-[#E5E7EB]/30 hover:border-[#E5E7EB]/60"
             >
               <span>Shop now</span>
               <ShoppingCart className="h-5 w-5" />

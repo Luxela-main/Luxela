@@ -130,11 +130,11 @@ export default function MyListings() {
           </span>
         </div>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="border-b-2 border-[#ECBEE3] pb-6 w-full">
+          <div className="border-b-2 border-[#E5E7EB] pb-6 w-full">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent mb-3">
               My Listings
             </h1>
-            <p className="text-[#EA795B] text-lg font-medium">
+            <p className="text-[#6B7280] text-lg font-medium">
               Manage and track all your product listings with advanced analytics
             </p>
           </div>

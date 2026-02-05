@@ -47,18 +47,32 @@ interface ClientProvidersProps {
 export default function ClientProviders({ children }: ClientProvidersProps) {
   const [queryClient] = useState(() => createQueryClient());
   
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL 
+    ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
+    : '/api/trpc';
+  
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`,
+          url: apiUrl,
           async headers() {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
+            // Only try to access browser APIs in browser environment
+            if (typeof window === 'undefined') {
+              return {};
+            }
+            
+            try {
+              const supabase = createClient();
+              const { data: { session } } = await supabase.auth.getSession();
 
-            return {
-              authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
-            };
+              return {
+                authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
+              };
+            } catch (error) {
+              // If there's any error accessing auth, return empty headers
+              return {};
+            }
           },
         }),
       ],

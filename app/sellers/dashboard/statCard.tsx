@@ -23,10 +23,10 @@ export const StatCard: React.FC<StatCardProps> = ({
       : "text-green-500";
 
   const colorVariants = {
-    0: { bg: 'from-[#ECBEE3]/20 to-transparent', border: 'border-[#ECBEE3]/40', icon: 'bg-[#ECBEE3]/20', text: 'text-[#ECBEE3]' },
-    1: { bg: 'from-[#EA795B]/20 to-transparent', border: 'border-[#EA795B]/40', icon: 'bg-[#EA795B]/20', text: 'text-[#EA795B]' },
-    2: { bg: 'from-[#ECE3BE]/20 to-transparent', border: 'border-[#ECE3BE]/40', icon: 'bg-[#ECE3BE]/20', text: 'text-[#ECE3BE]' },
-    3: { bg: 'from-[#BEECE3]/20 to-transparent', border: 'border-[#BEECE3]/40', icon: 'bg-[#BEECE3]/20', text: 'text-[#BEECE3]' },
+    0: { bg: 'from-[#E5E7EB]/20 to-transparent', border: 'border-[#E5E7EB]/40', icon: 'bg-[#E5E7EB]/20', text: 'text-[#E5E7EB]' },
+    1: { bg: 'from-[#6B7280]/20 to-transparent', border: 'border-[#6B7280]/40', icon: 'bg-[#6B7280]/20', text: 'text-[#6B7280]' },
+    2: { bg: 'from-[#D1D5DB]/20 to-transparent', border: 'border-[#D1D5DB]/40', icon: 'bg-[#D1D5DB]/20', text: 'text-[#D1D5DB]' },
+    3: { bg: 'from-[#9CA3AF]/20 to-transparent', border: 'border-[#9CA3AF]/40', icon: 'bg-[#9CA3AF]/20', text: 'text-[#9CA3AF]' },
   } as const;
   
   // Determine which color variant to use based on title hash

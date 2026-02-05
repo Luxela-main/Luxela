@@ -20,7 +20,7 @@ export default function Header() {
   }, [router]);
 
   return (
-    <header className="bg-[#1a1a1a] border-b-2 border-[#ECBEE3] px-6 py-4">
+    <header className="bg-[#1a1a1a] border-b-2 border-[#E5E7EB] px-6 py-4">
       <div className="flex justify-between items-center">
         <h1 className="text-white text-2xl font-bold">Dashboard</h1>
         

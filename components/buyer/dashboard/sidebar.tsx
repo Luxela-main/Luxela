@@ -103,7 +103,7 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
       {/* Sidebar - Mobile drawer and desktop sidebar */}
       <aside
         className={cn(
-          'bg-[#0e0e0e] border-r-2 border-[#ECBEE3] min-h-screen flex flex-col',
+          'bg-[#0e0e0e] border-r-2 border-[#E5E7EB] min-h-screen flex flex-col',
           'fixed lg:relative left-0 top-0 w-64 lg:w-[240px]',
           'transition-transform duration-300 ease-in-out z-40',
           'lg:translate-x-0 pt-16 lg:pt-0',

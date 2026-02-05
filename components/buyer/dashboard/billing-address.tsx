@@ -48,7 +48,7 @@ export function BillingAddress() {
   // Show loading state
   if (loading) {
     return (
-      <Card className="bg-[#1a1a1a] border-2 border-[#BEE3EC]/30 bg-gradient-to-br from-[#BEE3EC]/5 to-transparent p-6">
+      <Card className="bg-[#1a1a1a] border-2 border-[#E5E7EB]/30 bg-gradient-to-br from-[#E5E7EB]/5 to-transparent p-6">
         <h2 className="text-white text-lg font-semibold mb-6">Billing Address</h2>
         <div className="text-[#7e7e7e]">Loading billing address...</div>
       </Card>
@@ -112,9 +112,9 @@ export function BillingAddress() {
   const isLoading = createBillingAddressMutation.isPending || updateBillingAddressMutation.isPending;
 
   return (
-    <Card className="bg-[#1a1a1a] border-2 border-l-4 border-l-[#BEECE3] border-t-[#BEE3EC] border-r-[#EA795B] border-[#BEECE3]/30 bg-gradient-to-br from-[#BEECE3]/5 via-[#BEE3EC]/3 to-transparent p-6">
+    <Card className="bg-[#1a1a1a] border-2 border-l-4 border-l-[#9CA3AF] border-t-[#E5E7EB] border-r-[#6B7280] border-[#9CA3AF]/30 bg-gradient-to-br from-[#9CA3AF]/5 via-[#E5E7EB]/3 to-transparent p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-white text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-[#BEECE3] via-[#ECBEE3] to-[#BEE3EC]">Billing Address</h2>
+        <h2 className="text-white text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-[#9CA3AF] via-[#E5E7EB] to-[#E5E7EB]">Billing Address</h2>
         {!isEditing ? (
           <Button
             variant="outline"

@@ -71,9 +71,20 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const [supabase] = useState(() => {
+    // Safely initialize Supabase client only on client-side
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return createClient();
+  });
 
   const fetchListings = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -125,7 +136,7 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchListings();
-  }, []);
+  }, [supabase]);
 
   const getListingById = (id: string) => {
     return listings.find((listing) => listing.id === id);
@@ -160,4 +171,4 @@ export function useListings() {
     throw new Error("useListings must be used within a ListingsProvider");
   }
   return context;
-}
+}

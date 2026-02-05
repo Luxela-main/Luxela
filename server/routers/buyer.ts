@@ -411,23 +411,35 @@ export const buyerRouter = createTRPCRouter({
 
         const buyer = existingBuyer[0];
 
-        const [accountDetails, billingAddress] = await Promise.all([
-          db
+        let accountDetails, billingAddress;
+        try {
+          [accountDetails, billingAddress] = await Promise.all([
+            db
+              .select()
+              .from(buyerAccountDetails)
+              .where(eq(buyerAccountDetails.buyerId, buyer.id))
+              .then((r) => r[0] || null),
+            db
+              .select()
+              .from(buyerBillingAddress)
+              .where(
+                and(
+                  eq(buyerBillingAddress.buyerId, buyer.id),
+                  eq(buyerBillingAddress.isDefault, true)
+                )
+              )
+              .then((r) => r[0] || null),
+          ]);
+        } catch (dbError: any) {
+          // If connection pool is exhausted, fetch only accountDetails
+          console.error("Connection pool error, fetching fallback data:", dbError.message);
+          accountDetails = await db
             .select()
             .from(buyerAccountDetails)
             .where(eq(buyerAccountDetails.buyerId, buyer.id))
-            .then((r) => r[0] || null),
-          db
-            .select()
-            .from(buyerBillingAddress)
-            .where(
-              and(
-                eq(buyerBillingAddress.buyerId, buyer.id),
-                eq(buyerBillingAddress.isDefault, true)
-              )
-            )
-            .then((r) => r[0] || null),
-        ]);
+            .then((r) => r[0] || null);
+          billingAddress = null;
+        }
 
         // If no account details, return null (profile not yet created)
         if (!accountDetails) {
@@ -675,21 +687,6 @@ export const buyerRouter = createTRPCRouter({
         const buyer = await getBuyer(userId);
         const offset = (input.page - 1) * input.limit;
 
-        // const [addresses, totalResult] = await Promise.all([
-        //   db
-        //     .select()
-        //     .from(buyerBillingAddress)
-        //     .where(eq(buyerBillingAddress.buyerId, buyer.id))
-        //     .limit(input.limit)
-        //     .offset(offset),
-        //   db
-        //     .select({ count: (db as any).fn.count().as("count") })
-        //     .from(buyerBillingAddress)
-        //     .where(eq(buyerBillingAddress.buyerId, buyer.id)),
-        // ]);
-
-// HI, THIS IS TOLU, THIS WORKED SO I AM LEAVING IT AS IS NOW, YOU CAN CHECK AND CLEAN UP LATER IF NEEDED
-// Inside getBillingAddresses query
 const [addresses, totalResult] = await Promise.all([
   db
     .select()
@@ -697,12 +694,11 @@ const [addresses, totalResult] = await Promise.all([
     .where(eq(buyerBillingAddress.buyerId, buyer.id))
     .limit(input.limit)
     .offset(offset),
-  // Changed this line to use a more direct SQL count approach
   db.execute(sql`SELECT count(*) as count FROM ${buyerBillingAddress} WHERE buyer_id = ${buyer.id}`)
 ]);
 
 // Most reliable way to extract count across different SQL drivers:
-const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+const rawCount = ((totalResult as any)?.rows?.[0]?.count ?? 0);
 const total = Number(rawCount);
 
 return {
@@ -719,25 +715,6 @@ return {
   totalPages: Math.ceil(total / input.limit) || 1,
 };
 
-
-
-
-
-        // const total = totalResult[0]?.count || 0;
-
-        // return {
-        //   data: addresses.map((a) => ({
-        //     id: a.id,
-        //     houseAddress: a.houseAddress,
-        //     city: a.city,
-        //     postalCode: a.postalCode,
-        //     isDefault: a.isDefault,
-        //   })),
-        //   total,
-        //   page: input.page,
-        //   limit: input.limit,
-        //   totalPages: Math.ceil(total / input.limit),
-        // };
       } catch (err: any) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -1023,7 +1000,7 @@ return {
           db.execute(sql`SELECT count(*) as count FROM ${buyerFavorites} WHERE buyer_id = ${buyer.id}`),
         ]);
 
-        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const rawCount = ((totalResult as any)?.rows?.[0]?.count ?? 0);
         const total = Number(rawCount);
 
         return {
@@ -1318,7 +1295,7 @@ return {
           db.execute(sql`SELECT count(*) as count FROM ${orders} WHERE buyer_id = ${buyer.id}`),
         ]);
 
-        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const rawCount = ((totalResult as any)?.rows?.[0]?.count ?? 0);
         const total = Number(rawCount);
 
         return {
@@ -1510,7 +1487,7 @@ return {
           db.execute(sql`SELECT count(*) as count FROM ${orders} WHERE buyer_id = ${buyer.id} AND order_status = ${input.status}`),
         ]);
 
-        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const rawCount = ((totalResult as any)?.rows?.[0]?.count ?? 0);
         const total = Number(rawCount);
 
         return {
@@ -1618,7 +1595,7 @@ return {
           db.execute(sql`SELECT count(*) as count FROM ${notifications} WHERE buyer_id = ${buyer.id} AND seller_id IS NULL`),
         ]);
 
-        const rawCount = totalResult?.[0]?.count ?? (totalResult as any)?.rows?.[0]?.count ?? 0;
+        const rawCount = ((totalResult as any)?.rows?.[0]?.count ?? 0);
         const total = Number(rawCount);
 
         return {
@@ -2164,4 +2141,4 @@ return {
         });
       }
     }),
-});
+});

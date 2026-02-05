@@ -167,7 +167,7 @@ export default function BrandPage({
               onClick={() => setActiveTab("products")}
               className={`px-6 py-3 text-sm font-medium transition-all relative ${
                 activeTab === "products"
-                  ? "text-[#EA795B] border-b-2 border-[#EA795B]"
+                  ? "text-[#6B7280] border-b-2 border-[#6B7280]"
                   : "text-gray-500 hover:text-gray-300"
               }`}
             >
@@ -177,7 +177,7 @@ export default function BrandPage({
               onClick={() => setActiveTab("collections")}
               className={`px-6 py-3 text-sm font-medium transition-all relative ${
                 activeTab === "collections"
-                  ? "text-[#ECE3BE] border-b-2 border-[#ECE3BE]"
+                  ? "text-[#D1D5DB] border-b-2 border-[#D1D5DB]"
                   : "text-gray-500 hover:text-gray-300"
               }`}
             >

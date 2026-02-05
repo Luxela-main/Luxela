@@ -102,9 +102,9 @@ export default function Notifications() {
           <SearchBar search={search} setSearch={setSearch} />
         </div>
       </div>
-      <div className="mb-6 md:max-lg:pt-10 pb-6 border-b-2 border-[#ECBEE3]">
+      <div className="mb-6 md:max-lg:pt-10 pb-6 border-b-2 border-[#E5E7EB]">
         <h1 className="text-2xl font-semibold text-white">Notifications</h1>
-        <p className="text-[#EA795B] mt-1 font-medium">See all listing and purchase notifications</p>
+        <p className="text-[#6B7280] mt-1 font-medium">See all listing and purchase notifications</p>
       </div>
 
       <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">

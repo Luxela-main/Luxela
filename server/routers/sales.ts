@@ -15,6 +15,21 @@ const OrderFilterEnum = z.enum([
   "returned",
 ]);
 
+const sellerCache = new Map<string, { id: string; data: any; timestamp: number }>();
+const CACHE_DURATION = 30000;
+
+function getCachedSeller(userId: string) {
+  const cached = sellerCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedSeller(userId: string, data: any) {
+  sellerCache.set(userId, { id: userId, data, timestamp: Date.now() });
+}
+
 export const salesRouter = createTRPCRouter({
   getAllSales: protectedProcedure
     .meta({ openapi: { method: "GET", path: "/sales" } })
@@ -41,16 +56,20 @@ export const salesRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        let seller = getCachedSeller(userId);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Seller not found",
+            });
+          setCachedSeller(userId, seller);
+        }
 
         const status = input?.status ?? "all";
         const limit = input?.limit ?? 50;
@@ -105,16 +124,20 @@ export const salesRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        let seller = getCachedSeller(userId);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Seller not found",
+            });
+          setCachedSeller(userId, seller);
+        }
 
         const rows = await db
           .select()
@@ -170,16 +193,20 @@ export const salesRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        let seller = getCachedSeller(userId);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Seller not found",
+            });
+          setCachedSeller(userId, seller);
+        }
 
         const rows = await db
           .select()
@@ -231,16 +258,20 @@ export const salesRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        let seller = getCachedSeller(userId);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Seller not found",
+            });
+          setCachedSeller(userId, seller);
+        }
 
         const rows = await db
           .select()
@@ -268,13 +299,17 @@ export const salesRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, ctx.user.id));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+        let seller = getCachedSeller(ctx.user.id);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, ctx.user.id));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+          setCachedSeller(ctx.user.id, seller);
+        }
 
         // Fetch from the actual database table with error handling
         let methods: any[] = [];
@@ -327,13 +362,17 @@ export const salesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, ctx.user.id));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+        let seller = getCachedSeller(ctx.user.id);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, ctx.user.id));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+          setCachedSeller(ctx.user.id, seller);
+        }
 
         // Check if this will be the default method with error handling
         let existingMethods: any[] = [];
@@ -451,13 +490,17 @@ export const salesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, ctx.user.id));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+        let seller = getCachedSeller(ctx.user.id);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, ctx.user.id));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+          setCachedSeller(ctx.user.id, seller);
+        }
 
         // Verify the method belongs to this seller
         let method: any[] = [];
@@ -553,13 +596,17 @@ export const salesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, ctx.user.id));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+        let seller = getCachedSeller(ctx.user.id);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, ctx.user.id));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Seller not found" });
+          setCachedSeller(ctx.user.id, seller);
+        }
 
         // Verify the method belongs to this seller
         let method: any[] = [];
@@ -646,16 +693,20 @@ export const salesRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        let seller = getCachedSeller(userId);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Seller not found",
+            });
+          setCachedSeller(userId, seller);
+        }
 
         const rows = await db
           .select()
@@ -724,16 +775,20 @@ export const salesRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        const sellerRow = await db
-          .select()
-          .from(sellers)
-          .where(eq(sellers.userId, userId));
-        const seller = sellerRow[0];
-        if (!seller)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Seller not found",
-          });
+        let seller = getCachedSeller(userId);
+        if (!seller) {
+          const sellerRow = await db
+            .select()
+            .from(sellers)
+            .where(eq(sellers.userId, userId));
+          seller = sellerRow[0];
+          if (!seller)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Seller not found",
+            });
+          setCachedSeller(userId, seller);
+        }
 
         const rows = await db
           .select()

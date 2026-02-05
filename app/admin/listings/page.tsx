@@ -25,10 +25,8 @@ export default function AdminListingsReview() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("pending");
   const pageSize = 20;
 
-  // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = trpc.adminListingReview.getDashboardStats.useQuery();
 
-  // Fetch pending listings
   const { data: listingsData, isLoading: listingsLoading, refetch } = trpc.adminListingReview.getPendingListings.useQuery({
     page: currentPage,
     limit: pageSize,
@@ -72,9 +70,9 @@ export default function AdminListingsReview() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 pb-6 border-b-2 border-[#ECBEE3] bg-gradient-to-r from-[#0E0E0E] to-[#1a1a1a]">
+        <div className="mb-8 pb-6 border-b-2 border-[#E5E7EB] bg-gradient-to-r from-[#0E0E0E] to-[#1a1a1a]">
           <h1 className="text-3xl font-bold text-white">Listing Review Dashboard</h1>
-          <p className="text-[#EA795B] mt-2 font-medium">
+          <p className="text-[#6B7280] mt-2 font-medium">
             Review and manage seller listings before they go live
           </p>
         </div>

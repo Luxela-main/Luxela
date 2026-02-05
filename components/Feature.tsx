@@ -49,7 +49,7 @@ export default function Feature() {
     >
       <main className="grid gap-12 sm:gap-20 lg:gap-32 xl:gap-40 layout mx-auto">
         {features.map((feature, index) => {
-          const accentColors = ["#ECBEE3", "#EA795B", "#ECE3BE"];
+          const accentColors = ["#E5E7EB", "#6B7280", "#D1D5DB"];
           const accentColor = accentColors[index % accentColors.length];
           const borderColor = accentColor + "40";
           const glowColor = accentColor + "20";

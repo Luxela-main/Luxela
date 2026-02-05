@@ -120,7 +120,7 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
   return (
     <section className="mb-16 relative">
       {/* Background Accent */}
-      <div className="absolute -top-20 left-0 w-80 h-80 bg-[#BEECE3]/5 rounded-full blur-3xl" />
+      <div className="absolute -top-20 left-0 w-80 h-80 bg-[#9CA3AF]/5 rounded-full blur-3xl" />
       
       <div className="flex items-center justify-between mb-8 relative z-10">
         <h2 className="text-[18px] lg:text-xl capitalize font-medium text-white">
@@ -182,7 +182,7 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
                 href={`/buyer/collection/${collection.id}`}
                 className="group cursor-pointer min-w-[280px] flex-shrink-0"
               >
-                <div className="relative aspect-[3/4] bg-[#161616] border-2 border-[#ECE3BE]/30 rounded-2xl overflow-hidden mb-3 hover:border-[#ECE3BE]/60 transition-all duration-300">
+                <div className="relative aspect-[3/4] bg-[#161616] border-2 border-[#D1D5DB]/30 rounded-2xl overflow-hidden mb-3 hover:border-[#D1D5DB]/60 transition-all duration-300">
                   <img
                     src={collection.image || "/images/baz1.svg"}
                     alt={collection.title}
@@ -190,21 +190,21 @@ const FeaturedCollection = ({ searchQuery = '' }: FeaturedCollectionProps) => {
                   />
 
                   {/* Badge with gradient */}
-                  <div className="absolute top-3 left-3 bg-gradient-to-r from-[#EA795B] to-[#ECBEE3] px-3 py-1.5 rounded-lg shadow-lg">
+                  <div className="absolute top-3 left-3 bg-gradient-to-r from-[#6B7280] to-[#E5E7EB] px-3 py-1.5 rounded-lg shadow-lg">
                     <span className="text-white text-xs font-medium uppercase">
                       {getBadgeText(collection)}
                     </span>
                   </div>
 
                   {/* Overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#ECBEE3]/20 via-transparent to-transparent group-hover:from-[#EA795B]/30 transition-all duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#E5E7EB]/20 via-transparent to-transparent group-hover:from-[#6B7280]/30 transition-all duration-300" />
                 </div>
 
                 <div>
-                  <h3 className="text-base font-semibold text-[#dcdcdc] mb-1 capitalize group-hover:text-[#ECE3BE] transition-colors">
+                  <h3 className="text-base font-semibold text-[#dcdcdc] mb-1 capitalize group-hover:text-[#D1D5DB] transition-colors">
                     {collection.title}
                   </h3>
-                  <p className="text-sm text-[#BEE3EC] font-medium">
+                  <p className="text-sm text-[#E5E7EB] font-medium">
                     {brand?.brand_name || "Featured Brand"}
                   </p>
                   <Button className="w-full mt-4 text-white py-3 px-1.5 font-medium flex items-center justify-between gap-2 bg-gradient-to-b from-[#8451E1] to-[#7240D0] hover:from-[#9468F2] hover:to-[#8451E1] transition-all hover:shadow-lg hover:shadow-[#8451E1]/50">

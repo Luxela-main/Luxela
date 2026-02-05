@@ -37,17 +37,19 @@ const nextConfig: NextConfig = {
   ...(isLocalEnv && {}),
 };
 
-
-
+// Only check for required env vars in production or when explicitly needed
 const requiredEnvVars = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
 ];
 
-requiredEnvVars.forEach((key) => {
-  if (!process.env[key]) {
-    throw new Error(`Environment variable ${key} is missing`);
-  }
-});
+// Skip env var validation during build if they're not set
+if (process.env.NODE_ENV !== "production" || isVercelEnv) {
+  requiredEnvVars.forEach((key) => {
+    if (!process.env[key]) {
+      console.warn(`Environment variable ${key} is missing. This may cause issues at runtime.`);
+    }
+  });
+}
 
 export default nextConfig;

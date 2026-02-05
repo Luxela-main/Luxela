@@ -86,7 +86,7 @@ export default function SellerSupportPage() {
     <div className="min-h-screen bg-[#0e0e0e] p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8" style={{borderLeft: '4px solid #ECBEE3', paddingLeft: '12px'}}>
+        <div className="mb-8" style={{borderLeft: '4px solid #E5E7EB', paddingLeft: '12px'}}>
           <h1 className="text-3xl font-bold text-white mb-2">Seller Support Center</h1>
           <p className="text-gray-400">Find answers to common questions and get support</p>
         </div>
@@ -95,27 +95,27 @@ export default function SellerSupportPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <button 
             onClick={() => toastSvc.info('Coming Soon')}
-            className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group" style={{borderColor: '#ECBEE3'}}>
+            className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group" style={{borderColor: '#E5E7EB'}}>
             <MessageCircle className="w-6 h-6 text-purple-500 mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Live Chat</p>
             <p className="text-gray-400 text-sm">Chat with our support team</p>
           </button>
           <button 
             onClick={() => toastSvc.info('Coming Soon')}
-            className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group" style={{borderColor: '#EA795B'}}>
+            className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group" style={{borderColor: '#6B7280'}}>
             <FileText className="w-6 h-6 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Seller Guide</p>
             <p className="text-gray-400 text-sm">Browse our documentation</p>
           </button>
           <Link href="/sellers/dashboard/support-tickets">
-            <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#BEECE3'}}>
+            <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#9CA3AF'}}>
               <Ticket className="w-6 h-6 text-green-500 mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-white font-semibold">Support Tickets</p>
               <p className="text-gray-400 text-sm">View & create tickets</p>
             </button>
           </Link>
           <Link href="/sellers/dashboard/support-tickets">
-            <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#BEE3EC'}}>
+            <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#E5E7EB'}}>
               <AlertCircle className="w-6 h-6 text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-white font-semibold">Report Issue</p>
               <p className="text-gray-400 text-sm">Submit a support ticket</p>
@@ -139,7 +139,7 @@ export default function SellerSupportPage() {
 
         {/* FAQs */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold mb-4" style={{color: '#ECE3BE'}}>Frequently Asked Questions</h2>
+          <h2 className="text-xl font-semibold mb-4" style={{color: '#D1D5DB'}}>Frequently Asked Questions</h2>
           {isLoading ? (
             <div className="bg-[#1a1a1a] rounded-lg p-8 text-center text-gray-400">
               Loading FAQs...
@@ -179,7 +179,7 @@ export default function SellerSupportPage() {
         </div>
 
         {/* Contact Support */}
-        <div className="mt-12 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-2 rounded-lg p-6" style={{borderColor: '#ECBEE3'}}>
+        <div className="mt-12 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-2 rounded-lg p-6" style={{borderColor: '#E5E7EB'}}>
           <h3 className="text-xl font-semibold text-white mb-2 text-center">Didn't find what you need?</h3>
           <p className="text-gray-400 mb-6 text-center">Create a support ticket and our team will assist you</p>
           <div className="flex justify-center">

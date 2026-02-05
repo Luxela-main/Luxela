@@ -63,7 +63,7 @@ export default function Footer() {
           {/* newsletter */}
           <div className='max-w-[580px] '>
             <p className='text-xs md:text-sm text-[#DCDCDC] mb-2'>Subscribe to our newsletter</p>
-            <div className="relative w-full max-w-md p-4 rounded-[12px] border-2 border-[#ECBEE3] bg-gradient-to-r from-[#ECBEE3]/5 to-transparent group hover:border-[#ECBEE3] hover:shadow-[0_0_15px_#ECBEE3]/20 transition-all duration-300">
+            <div className="relative w-full max-w-md p-4 rounded-[12px] border-2 border-[#E5E7EB] bg-gradient-to-r from-[#E5E7EB]/5 to-transparent group hover:border-[#E5E7EB] hover:shadow-[0_0_15px_#E5E7EB]/20 transition-all duration-300">
               <Input
                 type="text"
                 placeholder="Enter your email"
@@ -77,7 +77,7 @@ export default function Footer() {
             </div>
             <div className='mt-10 grid grid-cols-2 md:grid-cols-3 gap-20 md:gap-10'>
               {footerLinks.map((section, idx) => {
-                const sectionColors = ['#EA795B', '#ECE3BE', '#BEECE3'];
+                const sectionColors = ['#6B7280', '#D1D5DB', '#9CA3AF'];
                 const sectionColor = sectionColors[idx % sectionColors.length];
                 return (
                   <div key={section.title} className="space-y-4 pl-4 border-l-2 transition-all duration-300 hover:pl-6 group" style={{borderColor: sectionColor}}>

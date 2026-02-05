@@ -120,10 +120,10 @@ export default function Sales() {
     <div className="min-h-screen bg-[#0e0e0e] pb-8">
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-6 border-b-2 border-[#ECBEE3]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-6 border-b-2 border-[#E5E7EB]">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Sales</h1>
-            <p className="text-[#EA795B] mt-1 text-sm font-medium">Manage and track all your sales</p>
+            <p className="text-[#6B7280] mt-1 text-sm font-medium">Manage and track all your sales</p>
           </div>
           <div className="w-full sm:w-64 lg:w-80">
             <SearchBar search={search} setSearch={setSearch} />
@@ -132,7 +132,7 @@ export default function Sales() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#ECBEE3] hover:border-l-[#EA795B] transition-colors">
+          <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#E5E7EB] hover:border-l-[#6B7280] transition-colors">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Sales</p>
@@ -144,7 +144,7 @@ export default function Sales() {
             </div>
           </div>
 
-          <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#BEE3EC] hover:border-l-[#BEECE3] transition-colors">
+          <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#E5E7EB] hover:border-l-[#9CA3AF] transition-colors">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Orders</p>
@@ -154,7 +154,7 @@ export default function Sales() {
             </div>
           </div>
 
-          <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#EA795B] hover:border-l-[#ECE3BE] transition-colors">
+          <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#6B7280] hover:border-l-[#D1D5DB] transition-colors">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Delivered</p>
@@ -164,7 +164,7 @@ export default function Sales() {
             </div>
           </div>
 
-          <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#2a2a2a]">
+          <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#6B7280] hover:border-l-[#D1D5DB] transition-colors">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Pending</p>

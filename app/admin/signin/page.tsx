@@ -108,8 +108,8 @@ function AdminSignInContent() {
             <Shield className="w-8 h-8 text-amber-500" />
             <img src="/luxela.svg" alt="Luxela Logo" className="w-24" />
           </div>
-          <h2 className="text-2xl font-semibold border-b-2 border-[#ECBEE3] pb-3 inline-block">Admin Access</h2>
-          <p className="text-sm text-[#EA795B] mb-6 mt-3">
+          <h2 className="text-2xl font-semibold border-b-2 border-[#E5E7EB] pb-3 inline-block">Admin Access</h2>
+          <p className="text-sm text-[#6B7280] mb-6 mt-3">
             Sign in to access the admin dashboard and support tools
           </p>
 

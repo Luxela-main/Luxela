@@ -13,42 +13,100 @@ console.log(
 
 export const redis = new Redis(REDIS_URL, {
   tls: REDIS_URL.startsWith("rediss://") ? {} : undefined,
+
   retryStrategy(times) {
-    const delay = Math.min(times * 200, 2000);
-    console.warn(`Redis reconnect attempt #${times}, retrying in ${delay}ms`);
+    const delay = Math.min(times * 50, 2000);
+    if (times > 20) {
+      console.error(`Redis: Failed to reconnect after ${times} attempts`);
+      return undefined;
+    }
+    if (times > 5) {
+      console.warn(`Redis reconnect attempt #${times}, retrying in ${delay}ms`);
+    }
     return delay;
   },
-  maxRetriesPerRequest: 5,
-  enableReadyCheck: true,
-  connectTimeout: 15000,
+  
+  // Connection pool and request settings
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  enableOfflineQueue: true,
+  
+  // Timeouts
+  connectTimeout: 10000,
+  commandTimeout: 5000,
+  
+  // Initialization
   lazyConnect: false,
+  
+  // Keep-alive for steady connections
+  keepAlive: 30000,
+  noDelay: true,
+  
+  family: 4, 
+  
+  // Automatic reconnection on errors
+  reconnectOnError: (err) => {
+    const targetError = 'READONLY';
+    if (err.message.includes(targetError)) {
+      return true; 
+    }
+    return false;
+  },
 });
 
+redis.setMaxListeners(100); 
+
+// --- CONNECTION MONITORING ---
 redis.on("connect", () => console.log("Redis connecting..."));
-redis.on("ready", () => console.log("Redis connected successfully"));
-redis.on("close", () => console.warn("Redis connection closed"));
-redis.on("reconnecting", () => console.log("Redis reconnecting..."));
+redis.on("ready", () => console.log("✓ Redis connected successfully"));
+redis.on("close", () => console.warn("⚠ Redis connection closed"));
+redis.on("reconnecting", () => console.log("↻ Redis reconnecting..."));
 redis.on("error", (err) => {
-  console.error("Redis connection error:", err.message);
+  console.error("❌ Redis error:", err.message);
   if (err.message.includes("ECONNREFUSED") || err.message.includes("ENOTFOUND")) {
-    console.error("Check if your REDIS_URL is correct and accessible.");
+    console.error("   Check if your REDIS_URL is correct and accessible.");
   }
 });
+
+let connectionStable = true;
+let lastStatusCheck = Date.now();
+
+// Health check every 5 seconds
+const healthCheckInterval = setInterval(() => {
+  const now = Date.now();
+  const timeSinceLastCheck = now - lastStatusCheck;
+  lastStatusCheck = now;
+  
+  if (redis.status !== "ready" && connectionStable) {
+    connectionStable = false;
+    console.warn("⚠️ Redis connection lost at", new Date().toISOString());
+  } else if (redis.status === "ready" && !connectionStable) {
+    connectionStable = true;
+    console.log("✓ Redis connection restored at", new Date().toISOString());
+  }
+  
+  // Log status every 60 seconds
+  if (now % 60000 < 5000) {
+    console.log(`[Health Check] Redis status: ${redis.status}, Uptime: ${timeSinceLastCheck}ms`);
+  }
+}, 5000);
 
 // --- GRACEFUL SHUTDOWN ---
 const gracefulShutdown = async () => {
   try {
+    clearInterval(healthCheckInterval);
     console.log("Shutting down Redis connection...");
     await redis.quit();
     console.log("Redis disconnected cleanly");
   } catch (err) {
     console.error("Error during Redis shutdown:", err);
   } finally {
-    // process.exit removed for Edge compatibility
+    process.exit(0);
   }
 };
 
-// process.once removed for Edge compatibility
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
 
 // --- RATE LIMITING UTILS ---
 interface RateLimitConfig {

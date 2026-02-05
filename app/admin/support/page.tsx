@@ -100,7 +100,7 @@ export default function SupportAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#ECBEE3] p-4 sm:p-8">
+      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#E5E7EB] p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-4xl font-bold text-white">Support Dashboard</h1>

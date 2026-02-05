@@ -270,13 +270,13 @@ export default function CheckoutPage() {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow">
           {/* Header */}
-          <div className="border-b-4 border-b-[#ECBEE3] bg-gradient-to-r from-[#ECBEE3]/10 via-transparent px-6 py-8">
+          <div className="border-b-4 border-b-[#E5E7EB] bg-gradient-to-r from-[#E5E7EB]/10 via-transparent px-6 py-8">
             <h1 className="text-3xl font-bold">Checkout</h1>
             <p className="text-gray-600 mt-2">Review your order and complete payment</p>
           </div>
 
           {/* Shipping Address */}
-          <div className="px-6 py-8 border-l-4 border-l-[#EA795B]">
+          <div className="px-6 py-8 border-l-4 border-l-[#6B7280]">
             <h2 className="text-xl font-semibold mb-6">Shipping Address</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

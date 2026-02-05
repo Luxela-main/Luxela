@@ -107,15 +107,15 @@ export default function AdminSetupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-3 sm:p-4">
       <div className="w-full max-w-md">
-        <div className="bg-slate-800 rounded-xl border-2 border-[#ECBEE3] p-4 sm:p-8">
-          <div className="text-center mb-6 sm:mb-8 pb-4 border-b-2 border-[#EA795B]">
+        <div className="bg-slate-800 rounded-xl border-2 border-[#E5E7EB] p-4 sm:p-8">
+          <div className="text-center mb-6 sm:mb-8 pb-4 border-b-2 border-[#6B7280]">
             <img
               src="/luxela.svg"
               alt="Luxela"
               className="w-24 sm:w-32 mx-auto mb-3 sm:mb-4"
             />
             <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">Admin Setup</h1>
-            <p className="text-xs sm:text-sm text-[#ECE3BE]">
+            <p className="text-xs sm:text-sm text-[#D1D5DB]">
               Grant yourself admin access to the support dashboard
             </p>
           </div>

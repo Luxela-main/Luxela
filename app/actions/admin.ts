@@ -4,10 +4,8 @@ import { createClient as createServerClient, createAdminClient } from "@/utils/s
 
 export async function setAdminRole(email: string, adminPassword: string) {
   try {
-    // Create a service role client to update user metadata
     const supabase = await createServerClient();
 
-    // Get the current user
     const {
       data: { user: currentUser },
     } = await supabase.auth.getUser();
@@ -16,7 +14,6 @@ export async function setAdminRole(email: string, adminPassword: string) {
       return { success: false, error: "Not authenticated" };
     }
 
-    // Check if there are any existing admins in the system
     const { data: admins, error: adminCheckError } = await supabase
       .from("users")
       .select("id")
@@ -25,9 +22,7 @@ export async function setAdminRole(email: string, adminPassword: string) {
 
     const hasExistingAdmin = admins && admins.length > 0;
 
-    // If there are existing admins, require admin password
     if (hasExistingAdmin) {
-      // Admin password should be set in environment variables
       const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
       
       if (!ADMIN_PASSWORD || adminPassword !== ADMIN_PASSWORD) {
@@ -37,7 +32,6 @@ export async function setAdminRole(email: string, adminPassword: string) {
         };
       }
 
-      // Also verify that the user requesting is already an admin
       if (currentUser.user_metadata?.role !== "admin") {
         return {
           success: false,
@@ -46,7 +40,6 @@ export async function setAdminRole(email: string, adminPassword: string) {
       }
     }
 
-    // Update the current user's metadata to make them admin
     const { error: updateError } = await supabase.auth.updateUser({
       data: { role: "admin" },
     });
@@ -71,7 +64,6 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
   try {
     const supabase = await createServerClient();
 
-    // Get the current user (who is granting the role)
     const {
       data: { user: currentUser },
     } = await supabase.auth.getUser();
@@ -80,7 +72,6 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
       return { success: false, error: "Not authenticated" };
     }
 
-    // Verify the current user is an admin
     if (currentUser.user_metadata?.role !== "admin") {
       return {
         success: false,
@@ -88,7 +79,6 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
       };
     }
 
-    // Verify admin password
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
     if (!ADMIN_PASSWORD || adminPassword !== ADMIN_PASSWORD) {
       return {
@@ -97,7 +87,6 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
       };
     }
 
-    // Get the target user by email using admin API (requires service role key)
     const adminClient = createAdminClient();
     const { data: users, error: listError } = await adminClient.auth.admin.listUsers();
 
@@ -117,7 +106,6 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
       };
     }
 
-    // Update the target user's metadata using admin client
     const { error: updateError } = await adminClient.auth.admin.updateUserById(targetUser.id, {
       user_metadata: { role: "admin" },
     });

@@ -112,6 +112,36 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
     return listing.quantityAvailable;
   };
 
+  // Get category for both single items and collections
+  const getCategory = (listing: Listing): string => {
+    if (listing.category) return listing.category;
+    
+    // For collections, try to get category from first item
+    if (listing.type === "collection" && listing.itemsJson) {
+      try {
+        const items = typeof listing.itemsJson === 'string' ? JSON.parse(listing.itemsJson) : listing.itemsJson;
+        if (Array.isArray(items) && items.length > 0 && items[0].category) {
+          return items[0].category;
+        }
+      } catch {
+        return "—";
+      }
+    }
+    
+    return "—";
+  };
+
+    // Helper to calculate total price for collections
+  const getCollectionTotalPrice = (listing: any): number => {
+    if (listing.type !== "collection" || !listing.itemsJson) return 0;
+    try {
+      const items = Array.isArray(listing.itemsJson) ? listing.itemsJson : JSON.parse(listing.itemsJson);
+      return items.reduce((total: number, item: any) => total + (item.priceCents || 0), 0);
+    } catch {
+      return 0;
+    }
+  };
+
   // Filter listings
   const filteredListings = useMemo(() => {
     return listings.filter((listing) => {
@@ -121,11 +151,11 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
       // Search filter
       const matchesSearch =
         listing.title.toLowerCase().includes(search.toLowerCase()) ||
-        listing.category?.toLowerCase().includes(search.toLowerCase());
+        getCategory(listing).toLowerCase().includes(search.toLowerCase());
       if (!matchesSearch) return false;
 
       // Category filter
-      if (filterCategory && listing.category !== filterCategory) return false;
+      if (filterCategory && getCategory(listing) !== filterCategory) return false;
 
       // Stock status filter
       const stock = listing.quantityAvailable;
@@ -169,9 +199,13 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
 
   // Get unique categories
   const categories = useMemo(() => {
-    const cats = new Set(
-      listings.map((l) => l.category).filter((c): c is string => !!c)
-    );
+    const cats = new Set<string>();
+    listings.forEach((l) => {
+      const cat = getCategory(l);
+      if (cat && cat !== "—") {
+        cats.add(cat);
+      }
+    });
     return Array.from(cats).sort();
   }, [listings]);
 
@@ -435,7 +469,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
               key={listing.id}
               id={listing.id}
               title={listing.title}
-              category={listing.category}
+              category={getCategory(listing)}
               image={getImage(listing)}
               price={listing.priceCents}
               quantity={listing.quantityAvailable}
@@ -482,11 +516,13 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                   </span>
                 </div>
                 <div className="text-gray-400 truncate">
-                  {listing.category?.replace(/_/g, " ") || "—"}
+                  {getCategory(listing).replace(/_/g, " ")}
                 </div>
                 <div className="text-white font-semibold">
                   {listing.type === "single" && listing.priceCents
                     ? `₦${(listing.priceCents / 100).toLocaleString()}`
+                    : listing.type === "collection"
+                    ? `₦${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
                     : "—"}
                 </div>
                 <div className="text-white font-medium">

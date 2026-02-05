@@ -66,14 +66,14 @@ export default function SelectRolePage() {
   return (
     <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center p-4">
       <div className="max-w-2xl w-full flex flex-col items-center">
-        <div className="text-center mb-12 pb-6 border-b-2 border-[#ECE3BE]">
+        <div className="text-center mb-12 pb-6 border-b-2 border-[#D1D5DB]">
           <img
             src="/luxela.svg"
             alt="Luxela Logo"
             className="w-40 mx-auto mb-6"
           />
           <h1 className="text-3xl font-bold mb-2 text-white">Welcome to Luxela!</h1>
-          <p className="text-[#EA795B]">
+          <p className="text-[#6B7280]">
             Choose how you'd like to use Luxela
           </p>
         </div>
@@ -82,8 +82,8 @@ export default function SelectRolePage() {
           <button
             onClick={() => setSelectedRole("buyer")}
             className={`p-8 rounded-xl border-2 transition-all ${selectedRole === "buyer"
-                ? "border-[#BEECE3] bg-[#BEECE3]/10"
-                : "border-[#ECE3BE] hover:border-[#BEECE3]"
+                ? "border-[#9CA3AF] bg-[#9CA3AF]/10"
+                : "border-[#D1D5DB] hover:border-[#9CA3AF]"
               }`}
           >
             <div className="flex flex-col items-center space-y-4">
@@ -97,8 +97,8 @@ export default function SelectRolePage() {
           <button
             onClick={() => setSelectedRole("seller")}
             className={`p-8 rounded-xl border-2 transition-all ${selectedRole === "seller"
-                ? "border-[#BEE3EC] bg-[#BEE3EC]/10"
-                : "border-[#ECE3BE] hover:border-[#BEE3EC]"
+                ? "border-[#E5E7EB] bg-[#E5E7EB]/10"
+                : "border-[#D1D5DB] hover:border-[#E5E7EB]"
               }`}
           >
             <div className="flex flex-col items-center space-y-4">

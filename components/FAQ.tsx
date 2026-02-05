@@ -93,7 +93,7 @@ interface FaqItemComponentProps {
 }
 
 function FaqItem({ faq, index, isOpen, onToggle }: FaqItemComponentProps) {
-  const accentColors = ["#ECBEE3", "#BEECE3", "#BEE3EC", "#EA795B", "#ECE3BE"];
+  const accentColors = ["#E5E7EB", "#9CA3AF", "#E5E7EB", "#6B7280", "#D1D5DB"];
   const accentColor = accentColors[index % accentColors.length];
   const accentColorLight = accentColor + "15";
 

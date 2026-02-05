@@ -148,7 +148,6 @@ export async function checkEmailRegistration(email: string) {
     const supabase = await createClient();
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check Supabase auth users first (faster)
     const {
       data: { users },
       error: authError,
@@ -156,7 +155,7 @@ export async function checkEmailRegistration(email: string) {
 
     if (!authError && users) {
       const existingUser = users.find(
-        (u) => u.email?.toLowerCase() === normalizedEmail
+        (u: any) => u.email?.toLowerCase() === normalizedEmail
       );
 
       if (existingUser) {

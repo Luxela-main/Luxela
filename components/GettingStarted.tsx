@@ -65,7 +65,7 @@ export default function GettingStarted() {
         {/* Cards */}
         <div className="flex flex-wrap justify-center md:justify-start lg:justify-between gap-4">
           {gettingStarted.map((started, index) => {
-            const accentColors = ["#ECBEE3", "#EA795B", "#ECE3BE"];
+            const accentColors = ["#E5E7EB", "#6B7280", "#D1D5DB"];
             const accentColor = accentColors[index % accentColors.length];
 
             return (

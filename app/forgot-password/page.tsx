@@ -88,8 +88,8 @@ export default function ForgotPasswordPage() {
 
           {!emailSent ? (
             <>
-              <h2 className="text-2xl font-semibold border-b-2 border-[#ECBEE3] pb-3 inline-block">Forgot your password?</h2>
-              <p className="text-sm text-[#EA795B] mb-6 mt-3">
+              <h2 className="text-2xl font-semibold border-b-2 border-[#E5E7EB] pb-3 inline-block">Forgot your password?</h2>
+              <p className="text-sm text-[#6B7280] mb-6 mt-3">
                 Enter your email address and we'll send you a link to reset your
                 password.
               </p>

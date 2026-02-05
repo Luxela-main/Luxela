@@ -1,5 +1,5 @@
-import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "server/db/schema";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -8,19 +8,25 @@ if (!DATABASE_URL) {
   throw new Error("DATABASE_URL is not defined");
 }
 
-// A global variable for serverless environments
 declare global {
-  var _pgClient: ReturnType<typeof postgres> | undefined;
+  var _pgPool: InstanceType<typeof Pool> | undefined;
   var _db: ReturnType<typeof drizzle<typeof schema>> | undefined;
 }
 
-const client = global._pgClient ?? postgres(DATABASE_URL, {
-  max_lifetime: 5 * 60, 
-  idle_timeout: 10,
+const pool = global._pgPool ?? new Pool({
+  connectionString: DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
 });
-if (!global._pgClient) global._pgClient = client;
 
-export const db = global._db ?? drizzle(client, { schema });
+if (!global._pgPool) global._pgPool = pool;
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
+export const db = global._db ?? drizzle(pool, { schema });
 if (!global._db) global._db = db;
 
-export { client as rawPgClient };
+export { pool as rawPgPool };

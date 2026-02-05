@@ -1,12 +1,24 @@
-import { type Config } from "tailwindcss";
+import type { Config } from "tailwindcss";
+import animatePlugin from "tailwindcss-animate";
 
-const config: Config = {
+const config: Config & { safelist?: string[] } = {
   content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}",
-    "./app/**/*.{js,ts,jsx,tsx}",
-    "./src/**/*.{ts,tsx}",
-    "*.{js,ts,jsx,tsx,mdx}",
+  "./pages/**/*.{ts,tsx,js,jsx}",
+  "./components/**/*.{ts,tsx,js,jsx}",
+  "./app/**/*.{ts,tsx,js,jsx}",
+  "./src/**/*.{ts,tsx,js,jsx}",
+  "./lib/**/*.{ts,tsx,js,jsx}",
+  "./utils/**/*.{ts,tsx,js,jsx}",
+  ],
+  safelist: [
+    // status colors
+    'text-blue-400','bg-blue-500/10','text-yellow-400','bg-yellow-500/10','text-green-400','bg-green-500/10','text-gray-400','bg-gray-500/10',
+    // priority / restock / stock statuses
+    'text-red-500','bg-red-500/10','border-red-500/30','text-orange-500','bg-orange-500/10','border-orange-500/30','text-yellow-500','bg-yellow-500/10','text-blue-500','bg-blue-500/10','text-green-500','bg-green-500/10',
+    // admin support variants
+    'text-orange-400','text-red-400','bg-red-500/20',
+    // scrollbar utility
+    'scrollbar-thin','scrollbar-thumb-gray-700','scrollbar-track-gray-900/50','hover:scrollbar-thumb-gray-600'
   ],
   prefix: "",
   theme: {
@@ -86,7 +98,20 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config
+  plugins: [
+    animatePlugin,
+    function ({ addUtilities }: any) {
+      addUtilities({
+        ".scrollbar-hide": {
+          "-ms-overflow-style": "none",
+          "scrollbar-width": "none",
+          "&::-webkit-scrollbar": {
+            display: "none",
+          },
+        },
+      });
+    },
+  ],
+} satisfies Config & { safelist?: string[] }
 
 export default config

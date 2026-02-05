@@ -69,6 +69,52 @@ const PRIORITY_CONFIG = {
   urgent: { label: 'Urgent', color: 'text-red-500', bg: 'bg-red-500/20', bold: true },
 };
 
+const getPriorityText = (priority: string) => {
+  switch (priority) {
+    case 'low':
+      return 'text-green-400';
+    case 'medium':
+      return 'text-yellow-400';
+    case 'high':
+      return 'text-red-400';
+    case 'urgent':
+      return 'text-red-500';
+    default:
+      return 'text-gray-400';
+  }
+};
+
+const getPriorityBadge = (priority: string) => {
+  switch (priority) {
+    case 'low':
+      return 'text-sm px-3 py-1 rounded text-green-400 bg-green-500/10';
+    case 'medium':
+      return 'text-sm px-3 py-1 rounded text-yellow-400 bg-yellow-500/10';
+    case 'high':
+      return 'text-sm px-3 py-1 rounded text-red-400 bg-red-500/10';
+    case 'urgent':
+      return 'text-sm px-3 py-1 rounded text-red-500 bg-red-500/20';
+    default:
+      return 'text-sm px-3 py-1 rounded text-gray-400 bg-gray-500/10';
+  }
+};
+
+// Return combined classes for a status (static strings for Tailwind to keep)
+const getStatusClasses = (status: string) => {
+  switch (status) {
+    case 'open':
+      return 'text-xs px-2 py-1 rounded whitespace-nowrap text-blue-400 bg-blue-500/10';
+    case 'in_progress':
+      return 'text-xs px-2 py-1 rounded whitespace-nowrap text-yellow-400 bg-yellow-500/10';
+    case 'resolved':
+      return 'text-xs px-2 py-1 rounded whitespace-nowrap text-green-400 bg-green-500/10';
+    case 'closed':
+      return 'text-xs px-2 py-1 rounded whitespace-nowrap text-gray-400 bg-gray-500/10';
+    default:
+      return 'text-xs px-2 py-1 rounded whitespace-nowrap text-gray-400 bg-gray-500/10';
+  }
+};
+
 export default function SellerSupportTicketsPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -229,10 +275,10 @@ export default function SellerSupportTicketsPage() {
     <div className="min-h-screen bg-[#0f0f0f] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-[#ECBEE3]">
+        <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-[#E5E7EB]">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Support Tickets</h1>
-            <p className="text-[#EA795B]">Manage customer inquiries and track resolution</p>
+            <p className="text-[#6B7280]">Manage customer inquiries and track resolution</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -320,18 +366,14 @@ export default function SellerSupportTicketsPage() {
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-medium text-white text-sm truncate">{ticket.subject}</h3>
-                          <span
-                            className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
-                              STATUS_CONFIG[ticket.status].color
-                            } ${STATUS_CONFIG[ticket.status].bg}`}
-                          >
+                          <h3 className="font-medium text-sm">{ticket.subject}</h3>
+                          <span className={getStatusClasses(ticket.status)}>
                             {STATUS_CONFIG[ticket.status].label}
                           </span>
                         </div>
                         <p className="text-gray-400 text-xs mb-2 line-clamp-2">{ticket.description}</p>
                         <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span className={PRIORITY_CONFIG[ticket.priority].color}>
+                          <span className={getPriorityText(ticket.priority)}>
                             {PRIORITY_CONFIG[ticket.priority].label}
                           </span>
                           <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
@@ -356,14 +398,10 @@ export default function SellerSupportTicketsPage() {
                       <p className="text-gray-400 text-sm mb-4">{selectedTicket.description}</p>
                     </div>
                     <div className="flex flex-col gap-2 text-right">
-                      <span
-                        className={`text-sm px-3 py-1 rounded ${STATUS_CONFIG[selectedTicket.status].color} ${STATUS_CONFIG[selectedTicket.status].bg}`}
-                      >
+                      <span className={`text-sm px-3 py-1 rounded ${getStatusClasses(selectedTicket.status)}`}>
                         {STATUS_CONFIG[selectedTicket.status].label}
                       </span>
-                      <span
-                        className={`text-sm px-3 py-1 rounded ${PRIORITY_CONFIG[selectedTicket.priority].color} ${PRIORITY_CONFIG[selectedTicket.priority].bg}`}
-                      >
+                      <span className={getPriorityBadge(selectedTicket.priority)}>
                         {PRIORITY_CONFIG[selectedTicket.priority].label}
                       </span>
                     </div>

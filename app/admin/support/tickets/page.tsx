@@ -69,6 +69,36 @@ const PRIORITY_CONFIG = {
   urgent: { color: 'text-red-400', bg: 'bg-red-500/10' },
 };
 
+const getPriorityText = (priority: string) => {
+  switch (priority) {
+    case 'low':
+      return 'text-blue-400';
+    case 'medium':
+      return 'text-yellow-400';
+    case 'high':
+      return 'text-orange-400';
+    case 'urgent':
+      return 'text-red-400';
+    default:
+      return 'text-gray-400';
+  }
+};
+
+const getPriorityBadge = (priority: string) => {
+  switch (priority) {
+    case 'low':
+      return 'text-xs font-bold px-2 py-1 rounded whitespace-nowrap bg-blue-500/10 text-blue-400';
+    case 'medium':
+      return 'text-xs font-bold px-2 py-1 rounded whitespace-nowrap bg-yellow-500/10 text-yellow-400';
+    case 'high':
+      return 'text-xs font-bold px-2 py-1 rounded whitespace-nowrap bg-orange-500/10 text-orange-400';
+    case 'urgent':
+      return 'text-xs font-bold px-2 py-1 rounded whitespace-nowrap bg-red-500/10 text-red-400';
+    default:
+      return 'text-xs font-bold px-2 py-1 rounded whitespace-nowrap bg-gray-500/10 text-gray-400';
+  }
+};
+
 export default function AdminTicketsPage() {
   const toast = useToast();
   const [tickets, setTickets] = useState<TicketWithReplies[]>([]);
@@ -254,10 +284,10 @@ export default function AdminTicketsPage() {
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#ECBEE3] p-4 sm:p-8">
+      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#E5E7EB] p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl sm:text-4xl font-bold mb-1 sm:mb-2 text-white">Support Tickets</h1>
-          <p className="text-sm sm:text-base text-[#EA795B]">Manage and respond to customer support tickets</p>
+          <p className="text-sm sm:text-base text-[#6B7280]">Manage and respond to customer support tickets</p>
         </div>
       </div>
 
@@ -361,7 +391,7 @@ export default function AdminTicketsPage() {
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h3 className="text-sm font-medium text-white line-clamp-2 flex-1">{ticket.subject}</h3>
-                        <span className={`text-xs font-bold px-2 py-1 rounded whitespace-nowrap ${PRIORITY_CONFIG[ticket.priority]?.bg} ${PRIORITY_CONFIG[ticket.priority]?.color}`}>
+                        <span className={getPriorityBadge(ticket.priority)}>
                           {ticket.priority.toUpperCase()}
                         </span>
                       </div>
@@ -412,7 +442,7 @@ export default function AdminTicketsPage() {
                       </div>
                       <div>
                         <p className="text-xs text-[#808080] mb-1">Priority</p>
-                        <span className={`inline-block text-xs font-bold px-2 py-1 rounded ${PRIORITY_CONFIG[selectedTicket.priority]?.bg} ${PRIORITY_CONFIG[selectedTicket.priority]?.color}`}>
+                        <span className={getPriorityBadge(selectedTicket.priority)}>
                           {selectedTicket.priority.toUpperCase()}
                         </span>
                       </div>
@@ -583,7 +613,7 @@ export default function AdminTicketsPage() {
                         >
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <h3 className="text-sm font-medium text-white line-clamp-2 flex-1">{ticket.subject}</h3>
-                            <span className={`text-xs font-bold px-2 py-1 rounded whitespace-nowrap ${PRIORITY_CONFIG[ticket.priority]?.bg} ${PRIORITY_CONFIG[ticket.priority]?.color}`}>
+                            <span className={getPriorityBadge(ticket.priority)}>
                               {ticket.priority.toUpperCase()}
                             </span>
                           </div>
@@ -631,7 +661,7 @@ export default function AdminTicketsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[#808080] mb-1">Priority</p>
-                      <span className={`inline-block text-xs font-bold px-2 py-1 rounded ${PRIORITY_CONFIG[selectedTicket.priority]?.bg} ${PRIORITY_CONFIG[selectedTicket.priority]?.color}`}>
+                      <span className={getPriorityBadge(selectedTicket.priority)}>
                         {selectedTicket.priority.toUpperCase()}
                       </span>
                     </div>

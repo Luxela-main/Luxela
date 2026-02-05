@@ -102,7 +102,7 @@ const FeaturedBrands = ({ searchQuery = '' }: FeaturedBrandsProps) => {
   return (
     <section className="mb-16 relative">
       {/* Background Accent */}
-      <div className="absolute -top-20 -right-20 w-80 h-80 bg-[#EA795B]/5 rounded-full blur-3xl" />
+      <div className="absolute -top-20 -right-20 w-80 h-80 bg-[#6B7280]/5 rounded-full blur-3xl" />
       
       <div className="flex items-center justify-between mb-8 relative z-10">
         <h2 className="text-[18px] lg:text-xl capitalize font-medium text-white">
@@ -159,16 +159,16 @@ const FeaturedBrands = ({ searchQuery = '' }: FeaturedBrandsProps) => {
           {brands.map((brand) => (
             <div
               key={brand.brand_name}
-              className="min-w-[320px] md:min-w-[480px] lg:min-w-[600px] bg-[#161616] border-2 border-[#ECBEE3]/30 rounded-[20px] p-8 overflow-hidden shadow-xl hover:shadow-2xl hover:border-[#ECBEE3]/60 transition-all duration-300 hover:scale-[1.01] flex flex-col md:flex-row gap-6 relative group"
+              className="min-w-[320px] md:min-w-[480px] lg:min-w-[600px] bg-[#161616] border-2 border-[#E5E7EB]/30 rounded-[20px] p-8 overflow-hidden shadow-xl hover:shadow-2xl hover:border-[#E5E7EB]/60 transition-all duration-300 hover:scale-[1.01] flex flex-col md:flex-row gap-6 relative group"
             >
               {/* Accent gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#EA795B]/5 via-transparent to-[#BEE3EC]/5 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#6B7280]/5 via-transparent to-[#E5E7EB]/5 pointer-events-none" />
               
               <div className="flex-1 py-8 flex flex-col justify-between relative z-10">
                 <div>
                   <h3 className="text-white font-medium text-xl mb-3 relative pb-2">
                     {brand.brand_name}
-                    <span className="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-[#EA795B] to-[#ECBEE3] group-hover:w-12 transition-all duration-300"></span>
+                    <span className="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-[#6B7280] to-[#E5E7EB] group-hover:w-12 transition-all duration-300"></span>
                   </h3>
                   <p className="text-[#DCDCDC] text-sm">
                     {brand.store_description || 'Discover our unique collection of premium products.'}
@@ -182,13 +182,13 @@ const FeaturedBrands = ({ searchQuery = '' }: FeaturedBrandsProps) => {
                 </Link>
               </div>
 
-              <div className="flex-1 min-h-[250px] md:min-h-[300px] relative overflow-hidden rounded-lg border-2 border-[#BEE3EC]/30">
+              <div className="flex-1 min-h-[250px] md:min-h-[300px] relative overflow-hidden rounded-lg border-2 border-[#E5E7EB]/30">
                 <img
                   src={brand.store_logo}
                   alt={`${brand.brand_name} brand showcase`}
                   className="absolute inset-0 w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#ECBEE3]/20 via-transparent to-[#BEE3EC]/10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#E5E7EB]/20 via-transparent to-[#E5E7EB]/10" />
               </div>
             </div>
           ))}

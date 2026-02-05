@@ -151,15 +151,15 @@ const handleResendVerification = async () => {
         <div className="relative md:flex items-center justify-center p-10 hidden overflow-hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#ECE3BE]/25 via-[#8451E1]/10 to-[#BEECE3]/25" />
+          <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#D1D5DB]/25 via-[#8451E1]/10 to-[#9CA3AF]/25" />
           {/* Corner Decorations */}
-          <div className="absolute top-0 left-0 w-40 h-40 bg-[#BEE3EC]/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-32 h-32 bg-[#ECE3BE]/10 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-0 w-40 h-40 bg-[#E5E7EB]/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-0 w-32 h-32 bg-[#D1D5DB]/10 rounded-full blur-3xl" />
           
-          <div className="relative z-10 max-w-md p-10 rounded-2xl border-2 border-[#BEECE3]/40 backdrop-blur-md bg-black/50 hover:border-[#BEE3EC]/60 transition-colors duration-300">
+          <div className="relative z-10 max-w-md p-10 rounded-2xl border-2 border-[#9CA3AF]/40 backdrop-blur-md bg-black/50 hover:border-[#E5E7EB]/60 transition-colors duration-300">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
             <h2 className="text-3xl font-semibold mb-4">
-              Embrace The Future of <span className="text-[#BEE3EC]">Fashion</span>
+              Embrace The Future of <span className="text-[#E5E7EB]">Fashion</span>
             </h2>
             <p className="text-zinc-300 text-sm leading-relaxed">
               We're reimagining what it means to shop and sell fashion globally.
@@ -167,23 +167,23 @@ const handleResendVerification = async () => {
               creators on Luxela.
             </p>
             {/* Accent Line */}
-            <div className="mt-6 h-1 w-12 bg-gradient-to-r from-[#BEE3EC] via-[#8451E1] to-[#ECBEE3] rounded-full" />
+            <div className="mt-6 h-1 w-12 bg-gradient-to-r from-[#E5E7EB] via-[#8451E1] to-[#E5E7EB] rounded-full" />
           </div>
         </div>
 
         {/* Right side - Form */}
         <div className="flex items-center justify-center p-8 relative">
           {/* Background Accent */}
-          <div className="absolute top-0 left-0 w-40 h-40 bg-[#EA795B]/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#ECE3BE]/5 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-0 w-40 h-40 bg-[#6B7280]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-0 w-40 h-40 bg-[#D1D5DB]/5 rounded-full blur-3xl" />
           
           <div className="w-full max-w-sm relative z-10">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
             
-            <div className="mb-6 pb-6 border-b-2 border-[#BEECE3]/20">
+            <div className="mb-6 pb-6 border-b-2 border-[#9CA3AF]/20">
               <h2 className="text-2xl font-semibold relative pb-2">
                 Create your account
-                <span className="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-[#BEE3EC] to-[#ECBEE3]"></span>
+                <span className="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-[#E5E7EB] to-[#E5E7EB]"></span>
               </h2>
               <p className="text-sm text-zinc-400 mt-3">
                 Join Luxela and start your fashion journey
@@ -205,15 +205,15 @@ const handleResendVerification = async () => {
                 <Form className="space-y-4">
                   {/* Email */}
                   <div className="group">
-                    <Label htmlFor="email" className="mb-2 block text-[#ECE3BE] font-medium">Email</Label>
+                    <Label htmlFor="email" className="mb-2 block text-[#D1D5DB] font-medium">Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-[#ECE3BE]/60 group-focus-within:text-[#ECE3BE]" />
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-[#D1D5DB]/60 group-focus-within:text-[#D1D5DB]" />
                       <Field
                         as={Input}
                         name="email"
                         type="email"
                         placeholder="Enter your email"
-                        className={`pl-10 border-2 transition-all ${errors.email && touched.email ? "border-destructive bg-destructive/5" : "border-[#ECE3BE]/30 focus:border-[#ECE3BE]/60 focus:bg-[#ECE3BE]/5"}`}
+                        className={`pl-10 border-2 transition-all ${errors.email && touched.email ? "border-destructive bg-destructive/5" : "border-[#D1D5DB]/30 focus:border-[#D1D5DB]/60 focus:bg-[#D1D5DB]/5"}`}
                       />
                     </div>
                     <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
@@ -221,15 +221,15 @@ const handleResendVerification = async () => {
 
                   {/* Password */}
                   <div className="group">
-                    <Label htmlFor="password" className="mb-2 block text-[#EA795B] font-medium">Password</Label>
+                    <Label htmlFor="password" className="mb-2 block text-[#6B7280] font-medium">Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-[#EA795B]/60 group-focus-within:text-[#EA795B]" />
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-[#6B7280]/60 group-focus-within:text-[#6B7280]" />
                       <Field
                         as={Input}
                         name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
-                        className={`pl-10 pr-10 border-2 transition-all ${errors.password && touched.password ? "border-destructive bg-destructive/5" : "border-[#EA795B]/30 focus:border-[#EA795B]/60 focus:bg-[#EA795B]/5"}`}
+                        className={`pl-10 pr-10 border-2 transition-all ${errors.password && touched.password ? "border-destructive bg-destructive/5" : "border-[#6B7280]/30 focus:border-[#6B7280]/60 focus:bg-[#6B7280]/5"}`}
                       />
                       <Button
                         type="button"
@@ -246,15 +246,15 @@ const handleResendVerification = async () => {
 
                   {/* Confirm Password */}
                   <div className="group">
-                    <Label htmlFor="confirmPassword" className="mb-2 block text-[#ECBEE3] font-medium">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword" className="mb-2 block text-[#E5E7EB] font-medium">Confirm Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-[#ECBEE3]/60 group-focus-within:text-[#ECBEE3]" />
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-[#E5E7EB]/60 group-focus-within:text-[#E5E7EB]" />
                       <Field
                         as={Input}
                         name="confirmPassword"
                         type={showPassword ? "text" : "password"}
                         placeholder="Confirm your password"
-                        className={`pl-10 pr-10 border-2 transition-all ${errors.confirmPassword && touched.confirmPassword ? "border-destructive bg-destructive/5" : "border-[#ECBEE3]/30 focus:border-[#ECBEE3]/60 focus:bg-[#ECBEE3]/5"}`}
+                        className={`pl-10 pr-10 border-2 transition-all ${errors.confirmPassword && touched.confirmPassword ? "border-destructive bg-destructive/5" : "border-[#E5E7EB]/30 focus:border-[#E5E7EB]/60 focus:bg-[#E5E7EB]/5"}`}
                       />
                     </div>
                     <ErrorMessage name="confirmPassword" component="div" className="text-sm text-destructive mt-1" />
@@ -262,13 +262,13 @@ const handleResendVerification = async () => {
 
                   {/* Role */}
                   <div className="group">
-                    <Label htmlFor="role" className="mb-2 block text-[#BEE3EC] font-medium">I am a</Label>
+                    <Label htmlFor="role" className="mb-2 block text-[#E5E7EB] font-medium">I am a</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-[#BEE3EC]/60" />
+                      <User className="absolute left-3 top-3 h-4 w-4 text-[#E5E7EB]/60" />
                       <Field
                         as="select"
                         name="role"
-                        className={`w-full bg-black mt-1 rounded-md border-2 px-10 py-2 text-sm transition-all ${errors.role && touched.role ? "border-destructive" : "border-[#BEE3EC]/30 focus:border-[#BEE3EC]/60"}`}
+                        className={`w-full bg-black mt-1 rounded-md border-2 px-10 py-2 text-sm transition-all ${errors.role && touched.role ? "border-destructive" : "border-[#E5E7EB]/30 focus:border-[#E5E7EB]/60"}`}
                       >
                         <option value="" disabled>Select role</option>
                         <option value="buyer">Buyer</option>
@@ -279,7 +279,7 @@ const handleResendVerification = async () => {
                   </div>
 
                   {/* Terms */}
-                  <div className="flex items-center text-sm p-3 rounded-lg bg-[#BEECE3]/5 border-2 border-[#BEECE3]/30 hover:border-[#BEECE3]/50 transition-all">
+                  <div className="flex items-center text-sm p-3 rounded-lg bg-[#9CA3AF]/5 border-2 border-[#9CA3AF]/30 hover:border-[#9CA3AF]/50 transition-all">
                     <Field
                       type="checkbox"
                       id="agreeTerms"
@@ -288,7 +288,7 @@ const handleResendVerification = async () => {
                     />
                     <Label htmlFor="agreeTerms" className="cursor-pointer">
                       I agree to all{" "}
-                      <a href="/terms" className="text-[#EA795B] hover:text-[#ECBEE3] underline transition-colors">Terms and Conditions</a>
+                      <a href="/terms" className="text-[#6B7280] hover:text-[#E5E7EB] underline transition-colors">Terms and Conditions</a>
                     </Label>
                   </div>
                   <ErrorMessage name="agreeTerms" component="div" className="text-sm text-destructive" />
@@ -307,18 +307,18 @@ const handleResendVerification = async () => {
 
             {/* Divider */}
             <div className="flex items-center my-6">
-              <div className="flex-1 h-px bg-gradient-to-r from-[#ECE3BE]/30 via-transparent to-transparent" />
-              <span className="px-3 text-[#BEE3EC] text-sm font-medium">Or</span>
-              <div className="flex-1 h-px bg-gradient-to-l from-[#BEECE3]/30 via-transparent to-transparent" />
+              <div className="flex-1 h-px bg-gradient-to-r from-[#D1D5DB]/30 via-transparent to-transparent" />
+              <span className="px-3 text-[#E5E7EB] text-sm font-medium">Or</span>
+              <div className="flex-1 h-px bg-gradient-to-l from-[#9CA3AF]/30 via-transparent to-transparent" />
             </div>
 
             <GoogleSignInButton />
 
             {/* Already have account */}
-            <div className="mt-6 p-4 rounded-lg border-2 border-[#BEE3EC]/30 bg-[#BEE3EC]/5 hover:border-[#BEE3EC]/50 hover:bg-[#BEE3EC]/10 transition-all duration-300">
+            <div className="mt-6 p-4 rounded-lg border-2 border-[#E5E7EB]/30 bg-[#E5E7EB]/5 hover:border-[#E5E7EB]/50 hover:bg-[#E5E7EB]/10 transition-all duration-300">
               <p className="text-center text-zinc-400 text-sm">
                 Already have an account?{" "}
-                <Link href="/signin" className="text-[#BEE3EC] hover:text-[#ECE3BE] font-bold underline transition-colors">
+                <Link href="/signin" className="text-[#E5E7EB] hover:text-[#D1D5DB] font-bold underline transition-colors">
                   Log in <ArrowRight className="h-4 w-4 inline-block ml-1" />
                 </Link>
               </p>

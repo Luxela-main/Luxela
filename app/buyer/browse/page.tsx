@@ -88,9 +88,9 @@ export default function BrowsePage() {
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 pb-6 border-b-2 border-[#ECBEE3]">
+        <div className="mb-8 pb-6 border-b-2 border-[#E5E7EB]">
           <h1 className="text-3xl font-bold mb-2 text-white">Browse Products</h1>
-          <p className="text-[#EA795B] text-sm font-medium">
+          <p className="text-[#6B7280] text-sm font-medium">
             Discover {filteredListings.length} {filteredListings.length === 1 ? "product" : "products"}
           </p>
         </div>
@@ -101,7 +101,7 @@ export default function BrowsePage() {
           <div className="relative w-full md:w-48">
             <button
               onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border-l-4 border-l-[#ECBEE3] rounded-lg text-white flex items-center justify-between hover:bg-[#252525] transition-colors"
+              className="w-full px-4 py-3 bg-[#1a1a1a] border-l-4 border-l-[#E5E7EB] rounded-lg text-white flex items-center justify-between hover:bg-[#252525] transition-colors"
             >
               <span className="text-sm">
                 {CATEGORIES.find((c) => c.value === selectedCategory)?.label || "All Categories"}
@@ -114,7 +114,7 @@ export default function BrowsePage() {
             </button>
 
             {showCategoryDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border-l-4 border-l-[#ECBEE3] rounded-lg shadow-lg z-10">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border-l-4 border-l-[#E5E7EB] rounded-lg shadow-lg z-10">
                 {CATEGORIES.map((category) => (
                   <button
                     key={category.value}
@@ -122,9 +122,9 @@ export default function BrowsePage() {
                       setSelectedCategory(category.value);
                       setShowCategoryDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-[#ECBEE3]/20 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-[#E5E7EB]/20 transition-colors first:rounded-t-lg last:rounded-b-lg ${
                       selectedCategory === category.value
-                        ? "bg-[#ECBEE3]/30 text-[#ECBEE3]"
+                        ? "bg-[#E5E7EB]/30 text-[#E5E7EB]"
                         : "text-gray-300"
                     }`}
                   >
@@ -139,7 +139,7 @@ export default function BrowsePage() {
           <div className="relative w-full md:w-48">
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border-l-4 border-l-[#BEE3EC] rounded-lg text-white flex items-center justify-between hover:bg-[#252525] transition-colors"
+              className="w-full px-4 py-3 bg-[#1a1a1a] border-l-4 border-l-[#E5E7EB] rounded-lg text-white flex items-center justify-between hover:bg-[#252525] transition-colors"
             >
               <span className="text-sm">
                 {SORT_OPTIONS.find((s) => s.value === sortBy)?.label || "Sort"}
@@ -152,7 +152,7 @@ export default function BrowsePage() {
             </button>
 
             {showSortDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border-l-4 border-l-[#BEE3EC] rounded-lg shadow-lg z-10">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border-l-4 border-l-[#E5E7EB] rounded-lg shadow-lg z-10">
                 {SORT_OPTIONS.map((option) => (
                   <button
                     key={option.value}
@@ -160,9 +160,9 @@ export default function BrowsePage() {
                       setSortBy(option.value);
                       setShowSortDropdown(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-[#BEE3EC]/20 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-[#E5E7EB]/20 transition-colors first:rounded-t-lg last:rounded-b-lg ${
                       sortBy === option.value
-                        ? "bg-[#BEE3EC]/30 text-[#BEE3EC]"
+                        ? "bg-[#E5E7EB]/30 text-[#E5E7EB]"
                         : "text-gray-300"
                     }`}
                   >

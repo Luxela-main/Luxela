@@ -726,11 +726,11 @@ const handleSubmitCollection = async () => {
       </span>
     </div>
 
-     <div className="mb-8 pb-4 border-b-2 border-[#ECBEE3]">
+     <div className="mb-8 pb-4 border-b-2 border-[#E5E7EB]">
   <h1 className="text-xl font-semibold mb-2 text-white">
     {formData.type === "collection" ? "Add Collection" : "New Listing"}
   </h1>
-  <p className="text-[#EA795B]">
+  <p className="text-[#6B7280]">
     {formData.type === "collection" 
       ? "Create a collection and add items to it"
       : "List product and fill in your listing details"

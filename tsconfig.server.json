@@ -3,7 +3,7 @@
     "outDir": "dist",
     "module": "ESNext",
     "target": "ES2022",
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,

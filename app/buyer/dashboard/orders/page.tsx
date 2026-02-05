@@ -190,7 +190,7 @@ export default function OrdersPage() {
               {paginatedOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="bg-[#1a1a1a] rounded-lg p-4 sm:p-6 hover:bg-[#252525] transition cursor-pointer border-l-4 border-[#EA795B]"
+                  className="bg-[#1a1a1a] rounded-lg p-4 sm:p-6 hover:bg-[#252525] transition cursor-pointer border-l-4 border-[#6B7280]"
                   onClick={() => setSelectedOrder(order.id)}
                 >
                   <div className="flex items-start justify-between mb-4 gap-3">

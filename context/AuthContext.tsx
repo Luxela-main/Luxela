@@ -15,12 +15,22 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [supabase] = useState(() => createClient()); 
+  const [supabase] = useState(() => {
+    if (typeof window === 'undefined') {
+      return null as any;
+    }
+    return createClient();
+  }); 
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     (async () => {
       try {
@@ -32,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       if (!mounted) return;
       setUser(session?.user ?? null);
       setLoading(false);
@@ -42,10 +52,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       listener?.subscription?.unsubscribe?.();
     };
-  }, []); 
+  }, [supabase]); 
   
 
   const logout = async () => {
+    if (!supabase) return;
     try {
       setUser(null);
       await supabase.auth.signOut();

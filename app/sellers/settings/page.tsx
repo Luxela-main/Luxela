@@ -24,7 +24,7 @@ interface PasswordRequirements {
   hasSpecialChar: boolean;
 }
 
-const getRequirementColor = (met: boolean) => met ? 'text-[#BEECE3]' : 'text-gray-500';
+const getRequirementColor = (met: boolean) => met ? 'text-[#9CA3AF]' : 'text-gray-500';
 
 export default function SellerSecuritySettings() {
   const router = useRouter();

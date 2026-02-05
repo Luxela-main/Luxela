@@ -55,9 +55,9 @@ export default function Account() {
 
   return (
     <div className="pt-16 lg:pt-0 p-6">
-      <div className="flex items-center mb-6 pb-4 border-b-2 border-[#ECBEE3]">
+      <div className="flex items-center mb-6 pb-4 border-b-2 border-[#E5E7EB]">
         <div>
-          <h1 className="text-2xl font-semibold text-[#ECBEE3]">My Account</h1>
+          <h1 className="text-2xl font-semibold text-[#E5E7EB]">My Account</h1>
           <p className="text-gray-400 mt-1">
             Manage your account and store Account
           </p>
@@ -70,8 +70,8 @@ export default function Account() {
             <button
               className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer border-l-4 ${
                 activeTab === "Profile"
-                  ? "bg-[#1a1a1a] text-white border-[#ECBEE3]"
-                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#EA795B]"
+                  ? "bg-[#1a1a1a] text-white border-[#E5E7EB]"
+                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#6B7280]"
               }`}
               onClick={() => setActiveTab("Profile")}>
               <User className="h-5 w-5 mr-3" />
@@ -80,8 +80,8 @@ export default function Account() {
             <button
               className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer border-l-4 ${
                 activeTab === "Store"
-                  ? "bg-[#1a1a1a] text-white border-[#EA795B]"
-                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#ECE3BE]"
+                  ? "bg-[#1a1a1a] text-white border-[#6B7280]"
+                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#D1D5DB]"
               }`}
               onClick={() => setActiveTab("Store")}>
               <Store className="h-5 w-5 mr-3" />
@@ -90,8 +90,8 @@ export default function Account() {
             <button
               className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer border-l-4 ${
                 activeTab === "Shipping"
-                  ? "bg-[#1a1a1a] text-white border-[#BEECE3]"
-                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#BEE3EC]"
+                  ? "bg-[#1a1a1a] text-white border-[#9CA3AF]"
+                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#E5E7EB]"
               }`}
               onClick={() => setActiveTab("Shipping")}>
               <Truck className="h-5 w-5 mr-3" />
@@ -100,8 +100,8 @@ export default function Account() {
             <button
               className={`flex items-center w-full px-3 py-2 rounded-md cursor-pointer border-l-4 ${
                 activeTab === "Payment"
-                  ? "bg-[#1a1a1a] text-white border-[#ECE3BE]"
-                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#BEECE3]"
+                  ? "bg-[#1a1a1a] text-white border-[#D1D5DB]"
+                  : "text-gray-400 hover:bg-[#1a1a1a] border-transparent hover:border-[#9CA3AF]"
               }`}
               onClick={() => setActiveTab("Payment")}>
               <CreditCard className="h-5 w-5 mr-3" />

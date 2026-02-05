@@ -1,4 +1,5 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
+// @ts-ignore - uuid v13 module resolution
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
 import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews } from "../db/schema";
@@ -151,6 +152,21 @@ const CollectionItemInput = z.object({
 });
 
 // ---------- HELPERS ----------
+const sellerCache = new Map<string, { id: string; data: any; timestamp: number }>();
+const CACHE_DURATION = 30000;
+
+function getCachedSeller(userId: string) {
+  const cached = sellerCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedSeller(userId: string, data: any) {
+  sellerCache.set(userId, { id: userId, data, timestamp: Date.now() });
+}
+
 function computeStockStatus(
   supplyCapacity: "no_max" | "limited" | null,
   quantity: number | null
@@ -165,9 +181,15 @@ function computeStockStatus(
 async function fetchSeller(ctx: TRPCContext) {
   const userId = ctx.user?.id;
   if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
-  const sellerRows = await db.select().from(sellers).where(eq(sellers.userId, userId));
-  if (!sellerRows?.length) throw new TRPCError({ code: "FORBIDDEN", message: "Seller not found" });
-  return sellerRows[0];
+  
+  let seller = getCachedSeller(userId);
+  if (!seller) {
+    const sellerRows = await db.select().from(sellers).where(eq(sellers.userId, userId));
+    if (!sellerRows?.length) throw new TRPCError({ code: "FORBIDDEN", message: "Seller not found" });
+    seller = sellerRows[0];
+    setCachedSeller(userId, seller);
+  }
+  return seller;
 }
 
 // ---------- ROUTER ----------
@@ -722,7 +744,76 @@ export const listingRouter = createTRPCRouter({
       const seller = await fetchSeller(ctx);
       const myListings = await db.select().from(listings).where(eq(listings.sellerId, seller.id));
 
-      return await Promise.all(myListings.map(async (l) => {
+      // Batch fetch all product images and collection data upfront to avoid N+1 queries
+      const singleListingProductIds = myListings
+        .filter(l => l.type === 'single' && l.productId)
+        .map(l => l.productId);
+      
+      const collectionListingIds = myListings
+        .filter(l => l.type === 'collection' && l.collectionId)
+        .map(l => l.collectionId);
+      
+      const productImagesByProductId: Record<string, typeof productImages.$inferSelect[]> = {};
+      const collectionItemsByCollectionId: Record<string, typeof collectionItems.$inferSelect[]> = {};
+      const productsById: Record<string, typeof products.$inferSelect> = {};
+      
+      // Fetch all product images for single listings in one query
+      if (singleListingProductIds.length > 0) {
+        const allProductImages = await db
+          .select()
+          .from(productImages)
+          .where(inArray(productImages.productId, singleListingProductIds as string[]));
+        
+        allProductImages.forEach(img => {
+          if (!productImagesByProductId[img.productId]) {
+            productImagesByProductId[img.productId] = [];
+          }
+          productImagesByProductId[img.productId].push(img);
+        });
+      }
+      
+      // Fetch all collection items in one query
+      if (collectionListingIds.length > 0) {
+        const allCollectionItems = await db
+          .select()
+          .from(collectionItems)
+          .where(inArray(collectionItems.collectionId, collectionListingIds as string[]));
+        
+        allCollectionItems.forEach(item => {
+          if (!collectionItemsByCollectionId[item.collectionId]) {
+            collectionItemsByCollectionId[item.collectionId] = [];
+          }
+          collectionItemsByCollectionId[item.collectionId].push(item);
+        });
+        
+        // Fetch all unique product IDs from collection items
+        const collectionProductIds = [...new Set(allCollectionItems.map(item => item.productId))];
+        if (collectionProductIds.length > 0) {
+          const collectionProducts = await db
+            .select()
+            .from(products)
+            .where(inArray(products.id, collectionProductIds as string[]));
+          
+          collectionProducts.forEach(p => {
+            productsById[p.id] = p;
+          });
+          
+          // Fetch all product images for collection products in one query
+          const collectionProductImages = await db
+            .select()
+            .from(productImages)
+            .where(inArray(productImages.productId, collectionProductIds as string[]));
+          
+          collectionProductImages.forEach(img => {
+            if (!productImagesByProductId[img.productId]) {
+              productImagesByProductId[img.productId] = [];
+            }
+            productImagesByProductId[img.productId].push(img);
+          });
+        }
+      }
+      
+      return Promise.all(myListings.map(async (l) => {
         try {
           const result: any = {
             id: l.id,

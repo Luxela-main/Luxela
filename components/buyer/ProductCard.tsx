@@ -44,7 +44,7 @@ export default function ProductCard({ product }: { product: Listing }) {
   const business = product.sellers?.seller_business?.[0];
 
   // Accent color for this card (consistent based on product ID)
-  const accentColors = ["#ECBEE3", "#EA795B", "#BEE3EC"];
+  const accentColors = ["#E5E7EB", "#6B7280", "#E5E7EB"];
   const cardAccent = accentColors[(product.id.charCodeAt(0) + product.id.charCodeAt(product.id.length - 1)) % accentColors.length];
 
   const handleQuickAdd = async (e: React.MouseEvent) => {

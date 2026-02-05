@@ -99,15 +99,15 @@ function SignInContent() {
         <div className="relative md:flex items-center justify-center p-10 hidden overflow-hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#ECBEE3]/25 via-[#8451E1]/10 to-[#BEE3EC]/25" />
+          <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#E5E7EB]/25 via-[#8451E1]/10 to-[#E5E7EB]/25" />
           {/* Corner Decorations */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#EA795B]/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#BEECE3]/10 rounded-full blur-3xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#6B7280]/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#9CA3AF]/10 rounded-full blur-3xl" />
           
-          <div className="relative z-10 max-w-md p-10 rounded-2xl border-2 border-[#ECE3BE]/40 backdrop-blur-md bg-black/50 hover:border-[#ECBEE3]/60 transition-colors duration-300">
+          <div className="relative z-10 max-w-md p-10 rounded-2xl border-2 border-[#D1D5DB]/40 backdrop-blur-md bg-black/50 hover:border-[#E5E7EB]/60 transition-colors duration-300">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-40 mb-8" />
             <h2 className="text-3xl font-semibold mb-4">
-              Embrace The Future of <span className="text-[#EA795B]">Fashion</span>
+              Embrace The Future of <span className="text-[#6B7280]">Fashion</span>
             </h2>
             <p className="text-zinc-300 text-sm leading-relaxed">
               We're reimagining what it means to shop and sell fashion globally.
@@ -115,23 +115,23 @@ function SignInContent() {
               creators on Luxela.
             </p>
             {/* Accent Line */}
-            <div className="mt-6 h-1 w-12 bg-gradient-to-r from-[#ECBEE3] via-[#8451E1] to-[#BEE3EC] rounded-full" />
+            <div className="mt-6 h-1 w-12 bg-gradient-to-r from-[#E5E7EB] via-[#8451E1] to-[#E5E7EB] rounded-full" />
           </div>
         </div>
 
         {/* Right Side - Form with Enhanced Colors */}
         <div className="flex items-center justify-center p-8 relative">
           {/* Background Accent */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-[#ECE3BE]/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#BEE3EC]/5 rounded-full blur-3xl" />
+          <div className="absolute top-0 right-0 w-40 h-40 bg-[#D1D5DB]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#E5E7EB]/5 rounded-full blur-3xl" />
           
           <div className="w-full max-w-sm relative z-10">
             <img src="/luxela.svg" alt="Luxela Logo" className="w-32 mb-6" />
             
-            <div className="mb-6 pb-6 border-b-2 border-[#ECE3BE]/20">
+            <div className="mb-6 pb-6 border-b-2 border-[#D1D5DB]/20">
               <h2 className="text-2xl font-semibold relative pb-2">
                 Welcome back
-                <span className="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-[#EA795B] to-[#ECBEE3]"></span>
+                <span className="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-[#6B7280] to-[#E5E7EB]"></span>
               </h2>
               <p className="text-sm text-zinc-400 mt-3">
                 Enter your email and password to access your account
@@ -147,15 +147,15 @@ function SignInContent() {
                 <Form className="space-y-4">
                   {/* Email - Cyan Border */}
                   <div className="group">
-                    <Label htmlFor="email" className="mb-2 block text-[#BEE3EC] font-medium">Email</Label>
+                    <Label htmlFor="email" className="mb-2 block text-[#E5E7EB] font-medium">Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-[#BEE3EC]/60 group-focus-within:text-[#BEE3EC]" />
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-[#E5E7EB]/60 group-focus-within:text-[#E5E7EB]" />
                       <Field
                         as={Input}
                         name="email"
                         type="email"
                         placeholder="Enter your email"
-                        className={`pl-10 border-2 transition-all ${errors.email && touched.email ? "border-destructive bg-destructive/5" : "border-[#BEE3EC]/30 focus:border-[#BEE3EC]/60 focus:bg-[#BEE3EC]/5"}`}
+                        className={`pl-10 border-2 transition-all ${errors.email && touched.email ? "border-destructive bg-destructive/5" : "border-[#E5E7EB]/30 focus:border-[#E5E7EB]/60 focus:bg-[#E5E7EB]/5"}`}
                       />
                     </div>
                     <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
@@ -163,15 +163,15 @@ function SignInContent() {
 
                   {/* Password - Pink Border */}
                   <div className="group">
-                    <Label htmlFor="password" className="mb-2 block text-[#ECBEE3] font-medium">Password</Label>
+                    <Label htmlFor="password" className="mb-2 block text-[#E5E7EB] font-medium">Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-[#ECBEE3]/60 group-focus-within:text-[#ECBEE3]" />
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-[#E5E7EB]/60 group-focus-within:text-[#E5E7EB]" />
                       <Field
                         as={Input}
                         name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
-                        className={`pl-10 pr-10 border-2 transition-all ${errors.password && touched.password ? "border-destructive bg-destructive/5" : "border-[#ECBEE3]/30 focus:border-[#ECBEE3]/60 focus:bg-[#ECBEE3]/5"}`}
+                        className={`pl-10 pr-10 border-2 transition-all ${errors.password && touched.password ? "border-destructive bg-destructive/5" : "border-[#E5E7EB]/30 focus:border-[#E5E7EB]/60 focus:bg-[#E5E7EB]/5"}`}
                       />
                       <Button
                         type="button"
@@ -187,12 +187,12 @@ function SignInContent() {
                   </div>
 
                   {/* Remember & Forgot - Mint Border */}
-                  <div className="flex items-center justify-between text-sm p-3 rounded-lg bg-[#BEECE3]/5 border-2 border-[#BEECE3]/30 hover:border-[#BEECE3]/50 hover:bg-[#BEECE3]/10 transition-all duration-300">
+                  <div className="flex items-center justify-between text-sm p-3 rounded-lg bg-[#9CA3AF]/5 border-2 border-[#9CA3AF]/30 hover:border-[#9CA3AF]/50 hover:bg-[#9CA3AF]/10 transition-all duration-300">
                     <div className="flex items-center">
                       <input type="checkbox" id="rememberMe" className="mr-2 accent-[#8451E1] cursor-pointer" />
                       <Label htmlFor="rememberMe" className="cursor-pointer">Remember me</Label>
                     </div>
-                    <Link href="/forgot-password" className="text-[#ECE3BE] hover:text-[#EA795B] font-medium transition-colors underline">
+                    <Link href="/forgot-password" className="text-[#D1D5DB] hover:text-[#6B7280] font-medium transition-colors underline">
                       Forgot password?
                     </Link>
                   </div>
@@ -211,18 +211,18 @@ function SignInContent() {
 
             {/* Divider with Accent Colors */}
             <div className="flex items-center my-6">
-              <div className="flex-1 h-px bg-gradient-to-r from-[#EA795B]/30 via-transparent to-transparent" />
-              <span className="px-3 text-[#ECE3BE] text-sm font-medium">Or</span>
-              <div className="flex-1 h-px bg-gradient-to-l from-[#BEE3EC]/30 via-transparent to-transparent" />
+              <div className="flex-1 h-px bg-gradient-to-r from-[#6B7280]/30 via-transparent to-transparent" />
+              <span className="px-3 text-[#D1D5DB] text-sm font-medium">Or</span>
+              <div className="flex-1 h-px bg-gradient-to-l from-[#E5E7EB]/30 via-transparent to-transparent" />
             </div>
 
             <GoogleSignInButton />
 
             {/* Not registered - Coral Border */}
-            <div className="mt-6 p-4 rounded-lg border-2 border-[#EA795B]/30 bg-[#EA795B]/5 hover:border-[#EA795B]/50 hover:bg-[#EA795B]/10 transition-all duration-300">
+            <div className="mt-6 p-4 rounded-lg border-2 border-[#6B7280]/30 bg-[#6B7280]/5 hover:border-[#6B7280]/50 hover:bg-[#6B7280]/10 transition-all duration-300">
               <p className="text-center text-zinc-400 text-sm">
                 Not a registered user?{" "}
-                <Link href="/signup" className="text-[#EA795B] hover:text-[#ECBEE3] font-bold underline transition-colors">
+                <Link href="/signup" className="text-[#6B7280] hover:text-[#E5E7EB] font-bold underline transition-colors">
                   Sign Up <ArrowRight className="h-4 w-4 inline-block ml-1" />
                 </Link>
               </p>

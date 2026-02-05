@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Package,
@@ -50,6 +50,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [isRestocking, setIsRestocking] = useState(false);
+  const [listingStatuses, setListingStatuses] = useState<Record<string, string>>({});
 
   const { data: listings, isLoading, refetch } = useMyListings();
   const hasListings = listings && listings.length > 0;
@@ -68,12 +69,42 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
     return undefined;
   };
 
+  // Helper to get category for both single items and collections
+  const getCategory = (listing: any): string => {
+    if (listing.category) return listing.category;
+    
+    // For collections, try to get category from first item
+    if (listing.type === "collection" && listing.itemsJson) {
+      try {
+        const items = Array.isArray(listing.itemsJson) ? listing.itemsJson : JSON.parse(listing.itemsJson);
+        if (items.length > 0 && items[0].category) {
+          return items[0].category;
+        }
+      } catch {
+        return "—";
+      }
+    }
+    
+    return "—";
+  };
+
+  // Helper to calculate total price for collections
+  const getCollectionTotalPrice = (listing: any): number => {
+    if (listing.type !== "collection" || !listing.itemsJson) return 0;
+    try {
+      const items = Array.isArray(listing.itemsJson) ? listing.itemsJson : JSON.parse(listing.itemsJson);
+      return items.reduce((total: number, item: any) => total + (item.priceCents || 0), 0);
+    } catch {
+      return 0;
+    }
+  };
+
   const filteredListings =
     listings?.filter((listing: any) => {
       const matchesTab = listing.type === activeTab;
       const matchesSearch =
         listing.title.toLowerCase().includes(search.toLowerCase()) ||
-        listing.category?.toLowerCase().includes(search.toLowerCase());
+        getCategory(listing).toLowerCase().includes(search.toLowerCase());
       return matchesTab && matchesSearch;
     }) || [];
 
@@ -94,6 +125,40 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
     setCurrentPage(1);
     setSelectedItems(new Set());
   }, [activeTab, search]);
+
+  // Poll for real-time status updates
+  React.useEffect(() => {
+    if (!listings || listings.length === 0) return;
+
+    // Set initial statuses
+    const initialStatuses: Record<string, string> = {};
+    listings.forEach((listing: any) => {
+      initialStatuses[listing.id] = listing.status || "pending";
+    });
+    setListingStatuses(initialStatuses);
+
+    // Set up polling interval for status updates - refetch fresh data
+    const pollingInterval = setInterval(() => {
+      refetch();
+    }, 5000); 
+
+    return () => clearInterval(pollingInterval);
+  }, [listings, refetch]);
+
+  // Update status display when listing data changes
+  React.useEffect(() => {
+    if (listings && listings.length > 0) {
+      setListingStatuses((prev) => {
+        const updated = { ...prev };
+        listings.forEach((listing: any) => {
+          if (listing.status) {
+            updated[listing.id] = listing.status;
+          }
+        });
+        return updated;
+      });
+    }
+  }, [listings]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -179,6 +244,60 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
       newSelected.delete(id);
     }
     setSelectedItems(newSelected);
+  };
+
+  // Helper to get available actions based on listing status
+  const getAvailableActions = (listing: any) => {
+    const status = listingStatuses[listing.id] || "pending";
+    const actions = [];
+
+    // Restock is always available (primary action)
+    actions.push({
+      id: "restock",
+      label: "Restock",
+      icon: "↻",
+      color: "text-blue-300",
+      bgColor: "hover:bg-blue-600/20",
+      action: () => handleRestock(listing),
+    });
+
+    // Edit is always available
+    actions.push({
+      id: "edit",
+      label: "Edit",
+      icon: "✎",
+      color: "text-purple-300",
+      bgColor: "hover:bg-purple-600/20",
+      action: () => handleEdit(listing),
+    });
+
+    // View feedback for rejected or revision requested
+    if (status === "rejected" || status === "revision_requested") {
+      actions.push({
+        id: "feedback",
+        label: "View Feedback",
+        icon: "ℹ",
+        color: "text-orange-300",
+        bgColor: "hover:bg-orange-600/20",
+        action: () => {
+          toastSvc.info("Review feedback will be shown here. Please check your email or dashboard.");
+          setOpenActionMenu(null);
+        },
+      });
+    }
+
+    // Delete is always available (last action with border)
+    actions.push({
+      id: "delete",
+      label: "Delete",
+      icon: "🗑",
+      color: "text-red-400",
+      bgColor: "hover:bg-red-600/20",
+      action: () => handleDeleteClick(listing),
+      hasBorder: true,
+    });
+
+    return actions;
   };
 
   if (isLoading) {
@@ -433,7 +552,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
           )}
 
           {/* Listings Table */}
-          <div className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] rounded-xl overflow-hidden border border-gray-800/50 shadow-2xl shadow-black/20 backdrop-blur-sm">
+          <div className="hidden md:block bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] rounded-xl overflow-hidden border border-gray-800/50 shadow-2xl shadow-black/20 backdrop-blur-sm">
             <div className="min-w-[800px] overflow-x-auto">
               <div className="grid grid-cols-6 bg-gradient-to-r from-[#1a1a1a] to-[#151515] text-sm gap-4 px-6 py-4 border-b border-gray-800/50 text-gray-400 font-semibold sticky top-0">
                 <div className="flex items-center gap-3">
@@ -451,8 +570,8 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                 <div className="text-gray-500">Category</div>
                 <div className="text-gray-500">Price</div>
                 <div className="text-gray-500">Stock</div>
-                <div className="text-gray-500">Status</div>
-                <div className="text-gray-500">Actions</div>
+                <div className="text-gray-500 text-center">Status</div>
+                <div className="text-gray-500 text-center">Actions</div>
               </div>
 
               {filteredListings.length === 0 ? (
@@ -505,14 +624,14 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                       </div>
                       <div className="text-gray-500 group-hover:text-gray-400 transition-colors">
                         <span className="text-xs bg-gray-900/50 px-2 py-1 rounded capitalize">
-                          {listing.category || "—"}
+                          {getCategory(listing)}
                         </span>
                       </div>
                       <div className="text-white font-semibold">
                         {listing.type === "single" && listing.priceCents
                           ? `₦${(listing.priceCents / 100).toLocaleString()}`
                           : listing.type === "collection"
-                          ? "—"
+                          ? `₦${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
                           : "—"}
                       </div>
                       <div className="text-gray-400 font-medium">
@@ -520,47 +639,48 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                           ? listing.quantityAvailable || 0
                           : listing.itemsJson?.length || 0}
                       </div>
-                      <div>
-                        {listing.type === "single" ? (
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm transition-all ${
-                              (listing.quantityAvailable || 0) > 10
-                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                                : (listing.quantityAvailable || 0) > 0
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                                : "bg-red-500/20 text-red-300 border border-red-500/30"
-                            }`}
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full animate-pulse ${
-                                (listing.quantityAvailable || 0) > 10
-                                  ? "bg-emerald-400"
-                                  : (listing.quantityAvailable || 0) > 0
-                                  ? "bg-amber-400"
-                                  : "bg-red-400"
-                              }`}
-                            ></span>
-                            {(listing.quantityAvailable || 0) > 10
-                              ? "In stock"
-                              : (listing.quantityAvailable || 0) > 0
-                              ? "Low stock"
-                              : "Sold out"}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 backdrop-blur-sm">
-                            <span className="h-1.5 w-1.5 rounded-full bg-blue-400"></span>
-                            Collection
-                          </span>
-                        )}
+                      <div className="flex justify-center">
+                        {(() => {
+                          const status = listingStatuses[listing.id] || "pending";
+                          const statusConfig: Record<string, any> = {
+                            pending: {
+                              label: "Pending",
+                              color: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+                              dotColor: "bg-amber-400",
+                            },
+                            approved: {
+                              label: "Listed",
+                              color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                              dotColor: "bg-emerald-400",
+                            },
+                            rejected: {
+                              label: "Rejected",
+                              color: "bg-red-500/20 text-red-300 border-red-500/30",
+                              dotColor: "bg-red-400",
+                            },
+                            revision_requested: {
+                              label: "Revision",
+                              color: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+                              dotColor: "bg-orange-400",
+                            },
+                          };
+                          const config = statusConfig[status] || statusConfig.pending;
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm transition-all border ${config.color}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${config.dotColor}`}></span>
+                              {config.label}
+                            </span>
+                          );
+                        })()}
                       </div>
-                      <div className="flex items-center justify-end relative">
+                      <div className="flex justify-center items-center relative">
                         <button
                           onClick={() =>
                             setOpenActionMenu(
                               openActionMenu === listing.id ? null : listing.id
                             )
                           }
-                          className="p-2 hover:bg-purple-600/20 rounded-lg transition-all duration-200 border border-transparent hover:border-purple-500/30 cursor-pointer"
+                          className="p-1.5 hover:bg-purple-600/20 rounded-lg transition-all duration-200 border border-transparent hover:border-purple-500/30 cursor-pointer"
                           title="More actions"
                         >
                           <svg
@@ -575,35 +695,32 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                         </button>
 
                         {openActionMenu === listing.id && (
-                          <div className="z-50 absolute right-0 top-10 mt-2 w-48 bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-gray-800 rounded-lg shadow-2xl shadow-black/50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                            <button
-                              onClick={() => handleRestock(listing)}
-                              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-purple-300 transition-all duration-200 text-left cursor-pointer group/item"
-                              title="Restock inventory"
-                            >
-                              <svg
-                                className="w-4 h-4 group-hover/item:text-purple-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                          <div className="z-50 absolute left-0 top-10 mt-2 w-56 max-h-64 bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-gray-800 rounded-lg shadow-2xl shadow-black/50 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900/50 hover:scrollbar-thumb-gray-600">
+                            {getAvailableActions(listing).map((action, index) => (
+                              <button
+                                key={action.id}
+                                onClick={() => {
+                                  action.action();
+                                  setOpenActionMenu(null);
+                                }}
+                                className={`w-full flex items-center gap-2 px-4 py-3 text-sm ${action.color} ${action.bgColor} transition-all duration-200 text-left cursor-pointer group/item ${action.hasBorder ? "border-t border-gray-800/50" : ""}`}
+                                title={action.label}
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                              </svg>
-                              <span>Restock</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(listing)}
-                              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-red-600/20 transition-all duration-200 text-left border-t border-gray-800/50 cursor-pointer group/item"
-                              title="Delete this listing"
-                            >
-                              <Trash2 className="h-4 w-4 group-hover/item:text-red-300" />
-                              <span>Delete</span>
-                            </button>
+                                {action.id === "edit" && <SquarePen className="h-4 w-4" />}
+                                {action.id === "restock" && (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  </svg>
+                                )}
+                                {action.id === "feedback" && (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                )}
+                                {action.id === "delete" && <Trash2 className="h-4 w-4" />}
+                                <span>{action.label}</span>
+                              </button>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -612,6 +729,136 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                 ))
               )}
             </div>
+          </div>
+
+          {/* Mobile Card Layout */}
+          <div className="md:hidden space-y-4 mt-8">
+            {filteredListings.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <Package className="h-10 w-10 opacity-20 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-400 mb-1">
+                  No {activeTab === "single" ? "products" : "collections"} found
+                </p>
+              </div>
+            ) : (
+              paginatedListings.map((listing: any) => (
+                <div
+                  key={listing.id}
+                  className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-gray-800/30 rounded-lg overflow-hidden hover:bg-gradient-to-b hover:from-[#252525] hover:to-[#151515] transition-all duration-300"
+                >
+                  {/* Product Image */}
+                  {getFirstImage(listing) && (
+                    <div className="w-full h-32 flex items-center justify-center bg-gray-900">
+                      <img
+                        src={getFirstImage(listing)!}
+                        alt={listing.title}
+                        className="w-full h-full object-contain p-2"
+                      />
+                    </div>
+                  )}
+
+                  {/* Card Content */}
+                  <div className="p-4">
+                    <div className="flex items-start gap-3 mb-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(listing.id)}
+                        onChange={(e) => handleSelectItem(listing.id, e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-700 text-purple-600 focus:ring-purple-500 bg-gray-900 cursor-pointer mt-1 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium text-sm truncate">{listing.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">{getCategory(listing)}</p>
+                      </div>
+                    </div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-4 text-xs p-3 bg-gray-950/50 rounded">
+                    <div>
+                      <p className="text-gray-500 mb-1 text-xs">Price</p>
+                      <p className="text-white font-semibold">
+                        {listing.type === "single" && listing.priceCents
+                          ? `₦${(listing.priceCents / 100).toLocaleString()}`
+                          : listing.type === "collection"
+                          ? `₦${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-1 text-xs">Stock</p>
+                      <p className="text-gray-300 font-semibold">
+                        {listing.type === "single"
+                          ? listing.quantityAvailable || 0
+                          : listing.itemsJson?.length || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 mb-1 text-xs">Status</p>
+                      {(() => {
+                        const status = listingStatuses[listing.id] || "pending";
+                        const statusConfig: Record<string, any> = {
+                          pending: {
+                            label: "Pending",
+                            color: "bg-amber-500/20 text-amber-300",
+                            dotColor: "bg-amber-400",
+                          },
+                          approved: {
+                            label: "Listed",
+                            color: "bg-emerald-500/20 text-emerald-300",
+                            dotColor: "bg-emerald-400",
+                          },
+                          rejected: {
+                            label: "Rejected",
+                            color: "bg-red-500/20 text-red-300",
+                            dotColor: "bg-red-400",
+                          },
+                          revision_requested: {
+                            label: "Revision",
+                            color: "bg-orange-500/20 text-orange-300",
+                            dotColor: "bg-orange-400",
+                          },
+                        };
+                        const config = statusConfig[status] || statusConfig.pending;
+                        return (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold backdrop-blur-sm ${config.color}`}>
+                            <span className={`h-1 w-1 rounded-full animate-pulse ${config.dotColor}`}></span>
+                            {config.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={() => handleRestock(listing)}
+                        className="flex-1 px-3 py-2.5 bg-blue-600/20 text-blue-300 hover:bg-blue-600/40 rounded-lg text-sm font-medium transition-all cursor-pointer border border-blue-500/20 hover:border-blue-500/40"
+                        title="Restock inventory"
+                      >
+                        Restock
+                      </button>
+                      {((listingStatuses[listing.id] || "pending") === "rejected" || (listingStatuses[listing.id] || "pending") === "revision_requested") && (
+                        <button
+                          onClick={() => {
+                            toastSvc.info("Review feedback will be shown here. Please check your email or dashboard.");
+                          }}
+                          className="flex-1 px-3 py-2.5 bg-orange-600/20 text-orange-300 hover:bg-orange-600/40 rounded-lg text-sm font-medium transition-all cursor-pointer border border-orange-500/20 hover:border-orange-500/40"
+                          title="View feedback"
+                        >
+                          Feedback
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteClick(listing)}
+                        className="flex-1 px-3 py-2.5 bg-red-600/20 text-red-400 hover:bg-red-600/40 rounded-lg text-sm font-medium transition-all cursor-pointer border border-red-500/20 hover:border-red-500/40"
+                        title="Delete listing"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Premium Pagination */}

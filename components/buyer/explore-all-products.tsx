@@ -125,7 +125,7 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
   return (
     <section className="relative">
       {/* Background Accents */}
-      <div className="absolute -top-10 right-0 w-96 h-96 bg-[#BEE3EC]/5 rounded-full blur-3xl" />
+      <div className="absolute -top-10 right-0 w-96 h-96 bg-[#E5E7EB]/5 rounded-full blur-3xl" />
       
       <div className="flex items-center justify-between mb-8 relative z-10">
         <h2 className="text-[18px] lg:text-xl capitalize font-semibold text-white relative pb-3">
@@ -139,7 +139,7 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
           ) : (
             <span className="">
               Explore All
-              <span className="absolute bottom-0 left-0 w-20 h-0.5 bg-gradient-to-r from-[#BEECE3] to-[#ECE3BE] rounded-full"></span>
+              <span className="absolute bottom-0 left-0 w-20 h-0.5 bg-gradient-to-r from-[#9CA3AF] to-[#D1D5DB] rounded-full"></span>
             </span>
           )}
         </h2>
@@ -155,11 +155,11 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
       <div className="relative flex justify-end mb-6">
         <button
           onClick={() => setShowSortMenu(!showSortMenu)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#161616] border-2 border-[#BEECE3]/30 hover:border-[#BEECE3]/60 rounded-lg transition-all text-gray-300 text-sm hover:bg-[#1f1f1f]"
+          className="flex items-center gap-2 px-4 py-2 bg-[#161616] border-2 border-[#9CA3AF]/30 hover:border-[#9CA3AF]/60 rounded-lg transition-all text-gray-300 text-sm hover:bg-[#1f1f1f]"
         >
           <span>
             Sort by:{" "}
-            <span className="text-[#BEECE3] font-medium">
+            <span className="text-[#9CA3AF] font-medium">
               {sortOptions.find((o) => o.value === sortBy)?.label}
             </span>
           </span>
@@ -171,7 +171,7 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
         </button>
 
         {showSortMenu && (
-          <div className="absolute right-0 top-full mt-2 w-56 bg-[#161616] border-2 border-[#BEECE3]/30 rounded-lg shadow-xl z-10 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 w-56 bg-[#161616] border-2 border-[#9CA3AF]/30 rounded-lg shadow-xl z-10 overflow-hidden">
             {sortOptions.map((option, index) => (
               <button
                 key={option.value}
@@ -182,7 +182,7 @@ const ExploreAllProducts = ({ searchQuery = "" }: ExploreAllProductsProps) => {
                 className={`w-full text-left px-4 py-3 text-sm transition-all ${
                   sortBy === option.value
                     ? "bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white font-medium"
-                    : "text-gray-300 hover:bg-[#1f1f1f] hover:text-[#BEECE3]"
+                    : "text-gray-300 hover:bg-[#1f1f1f] hover:text-[#9CA3AF]"
                 } ${index !== sortOptions.length - 1 ? "border-b border-[#2B2B2B]" : ""}`}
               >
                 {option.label}

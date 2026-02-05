@@ -102,7 +102,7 @@ export default function Brand() {
           }}
         >
           {brands.map((brand, index) => {
-            const accentColors = ["#BEECE3", "#BEE3EC", "#ECBEE3"];
+            const accentColors = ["#9CA3AF", "#E5E7EB", "#E5E7EB"];
             const accentColor = accentColors[index % accentColors.length];
 
             return (
