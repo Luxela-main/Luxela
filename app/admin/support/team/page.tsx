@@ -305,10 +305,10 @@ export default function SupportTeamPage() {
                         )}
                       </div>
                       <div className="flex gap-2 ml-4">
-                        <button className="p-2 hover:bg-[#0E0E0E] rounded transition-colors">
+                        <button className="p-2 hover:bg-[#0E0E0E] rounded transition-colors cursor-pointer">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-2 hover:bg-red-500/10 rounded transition-colors text-red-400">
+                        <button className="p-2 hover:bg-red-500/10 rounded transition-colors text-red-400 cursor-pointer">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -426,10 +426,10 @@ export default function SupportTeamPage() {
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <button className="p-2 hover:bg-[#0E0E0E] rounded transition-colors">
+                        <button className="p-2 hover:bg-[#0E0E0E] rounded transition-colors cursor-pointer">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-2 hover:bg-red-500/10 rounded transition-colors text-red-400">
+                        <button className="p-2 hover:bg-red-500/10 rounded transition-colors text-red-400 cursor-pointer">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>

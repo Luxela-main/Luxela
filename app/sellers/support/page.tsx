@@ -102,13 +102,13 @@ export default function SellerSupportPage() {
           </button>
           <button 
             onClick={() => toastSvc.info('Coming Soon')}
-            className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group" style={{borderColor: '#6B7280'}}>
+            className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group" style={{borderColor: '#E5E7EB'}}>
             <FileText className="w-6 h-6 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
             <p className="text-white font-semibold">Seller Guide</p>
             <p className="text-gray-400 text-sm">Browse our documentation</p>
           </button>
           <Link href="/sellers/dashboard/support-tickets">
-            <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#9CA3AF'}}>
+            <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#E5E7EB'}}>
               <Ticket className="w-6 h-6 text-green-500 mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-white font-semibold">Support Tickets</p>
               <p className="text-gray-400 text-sm">View & create tickets</p>

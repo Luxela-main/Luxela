@@ -1,4 +1,10 @@
 {
   "buildCommand": "pnpm run build:vercel",
-  "installCommand": "pnpm install --frozen-lockfile"
+  "installCommand": "pnpm install --frozen-lockfile",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**": {
+      "maxDuration": 300
+    }
+  }
 }

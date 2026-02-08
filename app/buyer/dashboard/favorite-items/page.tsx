@@ -106,7 +106,7 @@ export default function FavoriteItemsPage() {
             </div>
             <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#D1D5DB]">
               <p className="text-[#9CA3AF] text-sm font-bold uppercase tracking-widest">Total Value</p>
-              <p className="text-2xl font-bold text-[#E5E7EB] mt-2">${totalValue.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-[#E5E7EB] mt-2">₦{totalValue.toFixed(2)}</p>
             </div>
             <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-[#E5E7EB]">
               <p className="text-[#E5E7EB] text-sm font-bold uppercase tracking-widest">Available Items</p>

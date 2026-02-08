@@ -7,59 +7,22 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { createClient } from "@/utils/supabase/client";
-
-interface SellerBusiness {
-  brand_name: string;
-  business_type: string;
-  store_description: string | null;
-  store_logo: string;
-  store_banner: string;
-  bio: string | null;
-}
-
-export interface Listing {
-  id: string;
-  title: string;
-  description: string | null;
-  image: string;
-  imagesJson?: string | null;
-  price_cents: number;
-  currency: string;
-  category: string;
-  colors_available: string | null;
-  type: string;
-  quantity_available: number;
-  sizes_json: string | null;
-  material_composition: string | null;
-  limited_edition_badge: string | null;
-  shipping_option: string | null;
-  eta_domestic: string | null;
-  eta_international: string | null;
-  additional_target_audience: string | null;
-  supply_capacity: string | null;
-  release_duration: string | null;
-  refund_policy: string | null;
-  local_pricing: string | null;
-  items_json: string | null;
-  created_at: string;
-  updated_at: string;
-  seller_id: string;
-  product_id: string | null;
-  status: "draft" | "pending_review" | "approved" | "rejected" | "archived";
-  sellers: {
-    id: string;
-    seller_business: SellerBusiness[];
-  };
-}
+import { trpc, vanillaTrpc } from "@/lib/trpc";
+import type { Listing } from "@/types/listing";
 
 interface ListingsContextType {
   listings: Listing[];
+  approvedListings: Listing[];
   loading: boolean;
   error: string | null;
   refetchListings: () => Promise<void>;
   getListingById: (id: string) => Listing | undefined;
+  getApprovedListingById: (id: string, fetchIfMissing?: boolean) => Promise<Listing | undefined>;
   getListingsByBrand: (brandName: string) => Listing[];
+  isListingApproved: (id: string) => boolean;
+  validateProductForCart: (id: string) => { valid: boolean; reason?: string };
+  fetchListingDetailsById: (id: string) => Promise<Listing | undefined>;
+  invalidateCatalogCache: () => void;
 }
 
 const ListingsContext = createContext<ListingsContextType | undefined>(
@@ -68,78 +31,385 @@ const ListingsContext = createContext<ListingsContextType | undefined>(
 
 export function ListingsProvider({ children }: { children: ReactNode }) {
   const [listings, setListings] = useState<Listing[]>([]);
+  const [approvedListings, setApprovedListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const [fetchAttempts, setFetchAttempts] = useState(0);
+  const [cachedListings, setCachedListings] = useState<Record<string, Listing>>({});
 
-  const [supabase] = useState(() => {
-    // Safely initialize Supabase client only on client-side
-    if (typeof window === 'undefined') {
-      return null;
+  // Use tRPC to fetch approved listings with seller/brand data
+  const { 
+    data: catalogData, 
+    isLoading: isCatalogLoading, 
+    isFetching,
+    isError: isCatalogError, 
+    error: catalogError,
+    refetch: refetchCatalog
+  } = trpc.buyerListingsCatalog.getApprovedListingsCatalog.useQuery(
+    {
+      page: currentPage,
+      limit: 100,
+      sortBy: 'newest',
+    },
+    {
+      enabled: true,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 2,
     }
-    return createClient();
-  });
+  );
 
-  const fetchListings = async () => {
-    if (!supabase) {
-      setLoading(false);
-      return;
+  // Log catalog data availability
+  useEffect(() => {
+    console.log('[ListingsContext] Catalog data updated:', {
+      hasCatalogData: !!catalogData,
+      listingsCount: catalogData?.listings?.length ?? 0,
+      isLoading: isCatalogLoading,
+      isFetching,
+      isError: isCatalogError,
+      errorMessage: catalogError?.message || 'none',
+    });
+  }, [catalogData, isCatalogLoading, isFetching, isCatalogError, catalogError]);
+
+  const transformCatalogItemToListing = (item: any): Listing => {
+    const createdAtDate = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
+    
+    const defaultImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
+    let primaryImage = item.image;
+    if (!primaryImage && item.imagesJson) {
+      try {
+        const images = JSON.parse(item.imagesJson);
+        if (Array.isArray(images) && images.length > 0) {
+          primaryImage = images[0]?.imageUrl || images[0]?.url || images[0];
+        }
+      } catch (e) {
+        console.warn('[ListingsContext] Failed to parse imagesJson');
+      }
+    }
+    
+    let parsedSizes = null;
+    if (item.sizes) {
+      try {
+        parsedSizes = Array.isArray(item.sizes) ? item.sizes : JSON.parse(item.sizes);
+      } catch (e) {
+        parsedSizes = item.sizes;
+      }
+    }
+
+    let parsedColors = null;
+    if (item.colors) {
+      try {
+        parsedColors = Array.isArray(item.colors) ? item.colors : JSON.parse(item.colors);
+      } catch (e) {
+        parsedColors = item.colors;
+      }
+    }
+
+    return {
+      id: item.id,
+      title: item.title,
+      description: item.description || null,
+      image: primaryImage || defaultImage,
+      imagesJson: item.imagesJson || null,
+      price_cents: item.price_cents ?? Math.round((item.price ?? 0) * 100),
+      currency: item.currency || 'NGN',
+      category: item.category || null,
+      colors_available: parsedColors ? JSON.stringify(parsedColors) : null,
+      type: item.type || 'single',
+      quantity_available: item.quantity_available ?? 0,
+      sizes_json: parsedSizes ? JSON.stringify(parsedSizes) : null,
+      material_composition: item.materialComposition || null,
+      limited_edition_badge: item.limitedEditionBadge || null,
+      shipping_option: item.shippingOption || null,
+      eta_domestic: item.etaDomestic || null,
+      eta_international: item.etaInternational || null,
+      additional_target_audience: item.additionalTargetAudience || null,
+      supply_capacity: item.supplyCapacity || null,
+      release_duration: item.releaseDuration || null,
+      refund_policy: item.refundPolicy || null,
+      local_pricing: item.localPricing || null,
+      items_json: null,
+      created_at: createdAtDate.toISOString(),
+      updated_at: createdAtDate.toISOString(),
+      seller_id: item.seller.id,
+      product_id: null,
+      sku: item.sku || null,
+      barcode: item.barcode || null,
+      slug: item.slug || null,
+      meta_description: item.metaDescription || null,
+      video_url: item.videoUrl || null,
+      care_instructions: item.careInstructions || null,
+      status: item.status || 'approved',
+      sellers: {
+        id: item.seller.id,
+        seller_business: item.seller.brandName
+          ? [
+              {
+                brand_name: item.seller.brandName,
+                business_type: 'retail',
+                store_description: null,
+                store_logo: '',
+                store_banner: '',
+                bio: null,
+              },
+            ]
+          : [],
+      },
+    };
+  };
+
+  const fetchListingDetailsById = async (id: string): Promise<Listing | undefined> => {
+    // Check cache first
+    if (cachedListings[id]) {
+      console.log('[ListingsContext.fetchListingDetailsById] Returning cached listing:', id);
+      return cachedListings[id];
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      console.log('[ListingsContext.fetchListingDetailsById] Fetching from server:', id);
+      const response = await vanillaTrpc.buyerListingsCatalog.getListingById.query({
+        listingId: id,
+      });
 
-      const { data, error: fetchError } = await supabase.from("listings")
-        .select(`
-          *,
-          sellers (
-            id,
-            seller_business (
-              brand_name,
-              business_type,
-              store_description,
-              store_logo,
-              store_banner,
-              bio
-            )
-          )
-        `)
-        .eq('status', 'approved');
-
-      if (fetchError) {
-        const errorMessage = fetchError.message || "Failed to fetch listings";
-        console.error("Supabase fetch error:", errorMessage, fetchError);
-        throw new Error(errorMessage);
+      if (!response) {
+        console.warn('[ListingsContext.fetchListingDetailsById] No response for listing:', id);
+        return undefined;
       }
 
-      // Parse JSON fields for proper data structure
-      const parsedData = (data || []).map((listing: any) => ({
-        ...listing,
-        sizes_json: listing.sizes_json ? (typeof listing.sizes_json === 'string' ? JSON.parse(listing.sizes_json) : listing.sizes_json) : null,
-        colors_available: listing.colors_available ? (typeof listing.colors_available === 'string' ? JSON.parse(listing.colors_available) : listing.colors_available) : null,
-        items_json: listing.items_json ? (typeof listing.items_json === 'string' ? JSON.parse(listing.items_json) : listing.items_json) : null,
+      // Transform response to Listing format
+      const transformed = transformCatalogItemToListing(response);
+      
+      // Cache the listing
+      setCachedListings(prev => ({
+        ...prev,
+        [id]: transformed,
       }));
 
-      setListings(parsedData);
+      console.log('[ListingsContext.fetchListingDetailsById] Successfully fetched and cached:', {
+        id,
+        title: transformed.title,
+        hasMaterialComposition: !!transformed.material_composition,
+        hasCareInstructions: !!transformed.care_instructions,
+        hasVideoUrl: !!transformed.video_url,
+      });
+
+      return transformed;
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to fetch listing details';
+      console.error('[ListingsContext.fetchListingDetailsById] Error:', {
+        id,
+        message: errorMessage,
+      });
+      return undefined;
+    }
+  };
+
+  const fetchListings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const startTime = performance.now();
+      console.log('[ListingsContext.fetchListings] Started - catalogData available:', !!catalogData);
+
+      if (!catalogData?.listings) {
+        console.warn('[ListingsContext.fetchListings] No catalog data available');
+        setListings([]);
+        setApprovedListings([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('[ListingsContext.fetchListings] Processing', catalogData.listings.length, 'listings from approved catalog');
+
+      // Note: The getApprovedListingsCatalog endpoint already returns only approved listings
+      // The status field here contains stock status ('in_stock', 'low_stock', 'sold_out'), not approval status
+      const approvedItems = catalogData.listings; // Use all items as they're already approved
+
+      // Transform tRPC catalog data to Listing format
+      const transformedListings: Listing[] = approvedItems.map((item: any, index: number) => {
+        // Ensure createdAt is properly handled
+        const createdAtDate = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
+        
+        // Provide default placeholder image if none exists
+        const defaultImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
+        // Get primary image, with fallback to first image from gallery
+        let primaryImage = item.image;
+        if (!primaryImage && item.imagesJson) {
+          try {
+            const images = JSON.parse(item.imagesJson);
+            if (Array.isArray(images) && images.length > 0) {
+              primaryImage = images[0]?.url || images[0];
+            }
+          } catch (e) {
+            console.warn('[ListingsContext] Failed to parse imagesJson for item:', item.id);
+          }
+        }
+        
+        // Parse sizes if available
+        let parsedSizes = null;
+        if (item.sizes) {
+          try {
+            parsedSizes = Array.isArray(item.sizes) ? item.sizes : JSON.parse(item.sizes);
+          } catch (e) {
+            parsedSizes = item.sizes;
+          }
+        }
+
+        // Parse colors if available
+        let parsedColors = null;
+        if (item.colors) {
+          try {
+            parsedColors = Array.isArray(item.colors) ? item.colors : JSON.parse(item.colors);
+          } catch (e) {
+            parsedColors = item.colors;
+          }
+        }
+
+        const transformed: Listing = {
+          id: item.id,
+          title: item.title,
+          description: item.description || null,
+          image: primaryImage || defaultImage,
+          price_cents: item.price_cents ?? Math.round((item.price ?? 0) * 100),
+          currency: item.currency || 'NGN',
+          category: item.category || null,
+          colors_available: parsedColors ? JSON.stringify(parsedColors) : null,
+          type: item.type || 'single',
+          quantity_available: item.quantity_available ?? 0,
+          sizes_json: parsedSizes ? JSON.stringify(parsedSizes) : null,
+          material_composition: item.materialComposition || null,
+          limited_edition_badge: item.limitedEditionBadge || null,
+          shipping_option: item.shippingOption || null,
+          eta_domestic: item.etaDomestic || null,
+          eta_international: item.etaInternational || null,
+          additional_target_audience: item.additionalTargetAudience || null,
+          supply_capacity: item.supplyCapacity || null,
+          release_duration: item.releaseDuration || null,
+          refund_policy: item.refundPolicy || null,
+          local_pricing: item.localPricing || null,
+          items_json: null,
+          created_at: createdAtDate.toISOString(),
+          updated_at: createdAtDate.toISOString(),
+          seller_id: item.seller.id,
+          product_id: null,
+          sku: item.sku || null,
+          barcode: item.barcode || null,
+          slug: item.slug || null,
+          meta_description: item.metaDescription || null,
+          video_url: item.videoUrl || null,
+          care_instructions: item.careInstructions || null,
+          sellers: {
+            id: item.seller.id,
+            seller_business: item.seller.brandName
+              ? [
+                  {
+                    brand_name: item.seller.brandName,
+                    business_type: 'retail',
+                    store_description: null,
+                    store_logo: '',
+                    store_banner: '',
+                    bio: null,
+                  },
+                ]
+              : [],
+          },
+        };
+        
+        if (index === 0) {
+          console.log('[ListingsContext.fetchListings] First listing transformed:', {
+            id: transformed.id,
+            title: transformed.title,
+            brandName: transformed.sellers?.seller_business?.[0]?.brand_name,
+            sellerId: transformed.seller_id,
+            price_cents: transformed.price_cents,
+            hasSku: !!transformed.sku,
+            hasMaterialComposition: !!transformed.material_composition,
+            hasCareInstructions: !!transformed.care_instructions,
+            hasVideoUrl: !!transformed.video_url,
+          });
+        }
+        
+        return transformed;
+      });
+
+      const perfTime = performance.now() - startTime;
+      console.log('[ListingsContext.fetchListings] Transformation complete:', {
+        count: transformedListings.length,
+        approvedCount: transformedListings.length,
+        withBrandData: transformedListings.filter(l => l.sellers?.seller_business?.length).length,
+        totalPages: catalogData.totalPages,
+        currentPage: catalogData.page,
+        processingTime: `${perfTime.toFixed(2)}ms`,
+      });
+      
+      // Set both listings and approved listings (since these are all approved)
+      console.log('[ListingsContext.fetchListings] About to set state with', transformedListings.length, 'listings');
+      setListings(transformedListings);
+      setApprovedListings(transformedListings);
+      console.log('[ListingsContext.fetchListings] State updated, listings now available');
+      setLastFetchTime(Date.now());
+      setFetchAttempts(0);
+      
+      if (catalogData.page < catalogData.totalPages) {
+        setHasMorePages(true);
+      } else {
+        setHasMorePages(false);
+      }
     } catch (err: any) {
       const errorMessage = err?.message || (err instanceof Error ? err.message : JSON.stringify(err) || "Failed to fetch listings");
       setError(errorMessage);
-      console.error("Error fetching listings:", {
-        error: err,
+      console.error('[ListingsContext.fetchListings] Error:', {
         message: errorMessage,
-        stack: err?.stack,
+        catalogDataAvailable: !!catalogData,
+        errorType: err?.constructor?.name,
       });
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial fetch and update when catalogData changes
   useEffect(() => {
-    fetchListings();
-  }, [supabase]);
+    console.log('[ListingsContext] useEffect triggered - catalogData changed');
+    if (catalogData) {
+      fetchListings();
+    }
+  }, [catalogData]);
+
+  // Cache approved listing in memory when it's loaded from context
+  useEffect(() => {
+    const newCache: Record<string, Listing> = {};
+    approvedListings.forEach(listing => {
+      newCache[listing.id] = listing;
+    });
+    setCachedListings(newCache);
+  }, [approvedListings]);
 
   const getListingById = (id: string) => {
     return listings.find((listing) => listing.id === id);
+  };
+
+  const getApprovedListingById = async (id: string, fetchIfMissing: boolean = true): Promise<Listing | undefined> => {
+    // First check in-memory cache
+    let listing = approvedListings.find((listing) => listing.id === id);
+    if (listing) {
+      console.log('[ListingsContext.getApprovedListingById] Found in memory:', id);
+      return listing;
+    }
+
+    // Check if we should fetch from server
+    if (!fetchIfMissing) {
+      console.warn(
+        `[ListingsContext] Attempted to access non-approved or non-existent listing: ${id}`
+      );
+      return undefined;
+    }
+
+    // Fetch complete details from server
+    console.log('[ListingsContext.getApprovedListingById] Not in memory, fetching from server:', id);
+    return await fetchListingDetailsById(id);
   };
 
   const getListingsByBrand = (brandName: string) => {
@@ -149,15 +419,52 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const isListingApproved = (id: string): boolean => {
+    return approvedListings.some((listing) => listing.id === id);
+  };
+
+  const validateProductForCart = (
+    id: string
+  ): { valid: boolean; reason?: string } => {
+    const listing = approvedListings.find((l) => l.id === id);
+
+    if (!listing) {
+      return {
+        valid: false,
+        reason: 'Product is not available or has been removed from the catalog',
+      };
+    }
+
+    if ((listing.quantity_available || 0) <= 0) {
+      return {
+        valid: false,
+        reason: 'This product is currently out of stock',
+      };
+    }
+
+    return { valid: true };
+  };
+
+  const invalidateCatalogCache = () => {
+    console.log('[ListingsContext.invalidateCatalogCache] Refetching approved listings catalog after approval');
+    refetchCatalog();
+  };
+
   return (
     <ListingsContext.Provider
       value={{
         listings,
-        loading,
+        approvedListings,
+        loading: loading || isCatalogLoading || isFetching,
         error,
         refetchListings: fetchListings,
         getListingById,
+        getApprovedListingById,
         getListingsByBrand,
+        isListingApproved,
+        validateProductForCart,
+        fetchListingDetailsById,
+        invalidateCatalogCache,
       }}
     >
       {children}

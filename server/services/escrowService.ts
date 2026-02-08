@@ -16,6 +16,9 @@ import { TRPCError } from '@trpc/server';
 import { recordSale, recordRefund } from './paymentService';
 import { verifyPayment as verifyTsaraPayment } from './tsara';
 
+// Valid product category enum values
+const VALID_PRODUCT_CATEGORIES = ['men_clothing', 'women_clothing', 'men_shoes', 'women_shoes', 'accessories', 'merch', 'others'] as const;
+
 /**
  * Escrow Service - Manages the complete payment lifecycle with Tsara
  * Ensures funds are held safely during order processing and released upon completion
@@ -72,7 +75,12 @@ export async function createOrderFromCart(
   let currency = '';
 
   const result = await db.transaction(async (tx) => {
-    // Verify all items and calculate total
+    // Verify all items, validate seller, and collect product data
+    let primaryListing: any = null;
+    let productTitle = '';
+    let productImage = '';
+    let productCategory: 'men_clothing' | 'women_clothing' | 'men_shoes' | 'women_shoes' | 'accessories' | 'merch' | 'others' = 'accessories';
+
     for (const item of cartItems_) {
       const [listing] = await tx
         .select()
@@ -86,11 +94,34 @@ export async function createOrderFromCart(
         });
       }
 
+      // Validate seller matches the listing owner
+      if (listing.sellerId !== sellerId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `Seller mismatch for listing ${item.listingId}`,
+        });
+      }
+
       if (listing.type !== 'single') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `Listing ${item.listingId} is not a single product`,
         });
+      }
+
+      // Capture primary listing details
+      if (!primaryListing) {
+        primaryListing = listing;
+        productTitle = listing.title || 'Product';
+        productImage = listing.image || '';
+        
+        // Validate and set product category - ensure it's a valid enum value
+        let category = listing.category || 'accessories';
+        if (!VALID_PRODUCT_CATEGORIES.includes(category as any)) {
+          console.warn(`Invalid product category '${category}' for listing ${item.listingId}, defaulting to 'accessories'`);
+          category = 'accessories';
+        }
+        productCategory = category as 'men_clothing' | 'women_clothing' | 'men_shoes' | 'women_shoes' | 'accessories' | 'merch' | 'others';
       }
 
       totalAmountCents += item.unitPriceCents * item.quantity;
@@ -106,9 +137,9 @@ export async function createOrderFromCart(
       buyerId,
       sellerId,
       listingId: cartItems_[0].listingId, // Primary listing
-      productTitle: cartItems_[0].listingId, // Will be fetched from listing
-      productImage: '',
-      productCategory: 'accessories', // Default, should be fetched
+      productTitle: productTitle,
+      productImage: productImage,
+      productCategory: productCategory,
       customerName,
       customerEmail,
       orderDate: now,
@@ -117,8 +148,6 @@ export async function createOrderFromCart(
       currency,
       payoutStatus: 'in_escrow',
       deliveryStatus: 'not_shipped',
-      createdAt: now,
-      updatedAt: now,
     });
 
     return { orderId, totalAmountCents, totalCurrency: currency };

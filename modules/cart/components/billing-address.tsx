@@ -92,12 +92,14 @@ export function BillingAddressStep({ onNext }: BillingAddressStepProps) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold text-white mb-6">
-            Shipping details
-          </h2>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-8">
+              Shipping details
+            </h2>
+          </div>
           <div className="space-y-5">
             {/* FULL NAME */}
             <div>
@@ -202,16 +204,18 @@ export function BillingAddressStep({ onNext }: BillingAddressStepProps) {
           </div>
         </div>
 
-        <Button
-          type="submit"
-          disabled={createAddressMutation.isPending}
-          className="w-full text-white py-6 text-sm"
-        >
-          {createAddressMutation.isPending
-            ? "Processing..."
-            : "Confirm shipping Address"}
-        </Button>
+        <div className="pt-4">
+          <Button
+            type="submit"
+            disabled={createAddressMutation.isPending}
+            className="w-full text-white py-3 text-base font-semibold"
+          >
+            {createAddressMutation.isPending
+              ? "Processing..."
+              : "Confirm shipping Address"}
+          </Button>
+        </div>
       </form>
     </div>
   );
-}
+}

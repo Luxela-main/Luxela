@@ -14,13 +14,14 @@ export async function setAdminRole(email: string, adminPassword: string) {
       return { success: false, error: "Not authenticated" };
     }
 
-    const { data: admins, error: adminCheckError } = await supabase
+    // Check if there are existing admins in the system
+    const { data: adminUsers, error: adminCheckError } = await supabase
       .from("users")
       .select("id")
       .eq("role", "admin")
       .limit(1);
 
-    const hasExistingAdmin = admins && admins.length > 0;
+    const hasExistingAdmin = adminUsers && adminUsers.length > 0;
 
     if (hasExistingAdmin) {
       const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -32,7 +33,7 @@ export async function setAdminRole(email: string, adminPassword: string) {
         };
       }
 
-      if (currentUser.user_metadata?.role !== "admin") {
+      if (currentUser.user_metadata?.admin !== true) {
         return {
           success: false,
           error: "Only existing admins can grant admin role to others",
@@ -40,17 +41,34 @@ export async function setAdminRole(email: string, adminPassword: string) {
       }
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: { role: "admin" },
+    // Update user metadata with admin flag
+    const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
+      data: { admin: true },
     });
 
     if (updateError) {
       return { success: false, error: updateError.message };
     }
 
+    // Get a fresh session to ensure JWT is updated
+    const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+    
+    if (sessionError) {
+      console.warn("Session refresh warning:", sessionError.message);
+      // Don't fail - the metadata was updated, session will refresh on next request
+    }
+
+    // Verify the update was successful by fetching the updated user
+    const { data: verifyUser, error: verifyError } = await supabase.auth.getUser();
+    
+    if (verifyError) {
+      console.error("Error verifying admin role:", verifyError);
+    }
+
     return {
       success: true,
       message: "Admin role has been set successfully",
+      isAdmin: verifyUser?.user?.user_metadata?.admin === true,
     };
   } catch (error: any) {
     return {
@@ -72,7 +90,7 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
       return { success: false, error: "Not authenticated" };
     }
 
-    if (currentUser.user_metadata?.role !== "admin") {
+    if (currentUser.user_metadata?.admin !== true) {
       return {
         success: false,
         error: "Only admins can grant admin role to others",
@@ -107,7 +125,7 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
     }
 
     const { error: updateError } = await adminClient.auth.admin.updateUserById(targetUser.id, {
-      user_metadata: { role: "admin" },
+      user_metadata: { admin: true },
     });
 
     if (updateError) {
@@ -141,7 +159,7 @@ export async function checkAdminStatus() {
       return { success: false, isAdmin: false, error: "Not authenticated" };
     }
 
-    const isAdmin = user.user_metadata?.role === "admin";
+    const isAdmin = user.user_metadata?.admin === true;
 
     return {
       success: true,

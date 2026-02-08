@@ -2,6 +2,7 @@ export * from './useSellerProfile';
 export * from './useMyListings';
 export * from './useMyCollections';
 export * from './useSales';
+export * from './useSellerOrders';
 export * from './useNotifications';
 export * from './useListingStatusNotifications';
 export * from './useUnifiedNotifications';

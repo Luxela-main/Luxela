@@ -22,6 +22,7 @@ export default function CartPage() {
     removeItem,
     clearCart,
     applyDiscount,
+    hasUnapprovedItems,
   } = useCartState();
 
   const handleApplyDiscount = (code: string) => {
@@ -31,6 +32,15 @@ export default function CartPage() {
   const CartReviewStep = ({ onNext }: { onNext: () => void }) => (
     <div className=" flex flex-col lg:flex-row  lg:justify-between gap-8 lg:items-start">
       <div className="flex-1 rounded-xl border border-[#212121] ">
+        {/* Unapproved Items Warning */}
+        {hasUnapprovedItems && (
+          <div className="p-4 mb-4 rounded-lg bg-red-500/10 border border-red-500/30">
+            <p className="text-sm text-red-400 font-medium">
+              ⚠️ Some products in your cart are no longer available. Please remove them before checkout.
+            </p>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4 p-4">
           <h2 className="text-base text-gray-200">Cart items</h2>
           {items.length > 0 && (
@@ -81,7 +91,7 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      <div className="flex flex-col items-center justify-center min-h-screen py-10 px-4">
+      <div className="flex flex-col items-center justify-center min-h-screen py-8 sm:py-10 px-3 sm:px-4">
         <div className="text-center mb-10 space-y-2">
           <h1 className="text-3xl font-bold text-white">Checkout</h1>
           <p className="text-gray-400 text-sm md:text-base">
@@ -95,7 +105,7 @@ export default function CartPage() {
           className="w-full max-w-6xl mx-auto"
         >
           {/* Progress Header */}
-          <div className="w-full max-w-3xl mx-auto mb-12 relative">
+          <div className="w-full max-w-4xl mx-auto mb-12 relative px-2">
             <TabsList className="bg-transparent h-auto w-full relative flex justify-between items-center border-none p-0">
               {/* 1. The Background Connecting Line (Gray) */}
               <div className="absolute top-4 left-0 w-full h-[2px] bg-gray-800 z-0" />
@@ -244,4 +254,4 @@ export default function CartPage() {
       </div>
     </div>
   );
-}
+}

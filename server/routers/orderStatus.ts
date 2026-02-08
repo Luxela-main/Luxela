@@ -211,6 +211,32 @@ export const orderStatusRouter = createTRPCRouter({
   // Get order by ID
   getOrderById: protectedProcedure
     .input(z.object({ orderId: z.string() }))
+    .output(
+      z.object({
+        id: z.string(),
+        buyer_id: z.string().nullable(),
+        seller_id: z.string().nullable(),
+        listing_id: z.string().nullable(),
+        product_title: z.string().nullable(),
+        product_image: z.string().nullable(),
+        customer_name: z.string().nullable(),
+        customer_email: z.string().nullable(),
+        order_status: z.string(),
+        delivery_status: z.string().nullable(),
+        amount_cents: z.number(),
+        currency: z.string().nullable(),
+        shipping_address: z.string().nullable(),
+        tracking_number: z.string().nullable(),
+        order_date: z.string().nullable(),
+        delivered_date: z.string().nullable(),
+        payment_method: z.string().nullable(),
+        payout_status: z.string().nullable(),
+        product_category: z.string().nullable(),
+        created_at: z.string().nullable(),
+        updated_at: z.string().nullable(),
+        shipped_at: z.string().nullable(),
+      }).passthrough()
+    )
     .query(async ({ ctx, input }) => {
       try {
         const { data: order, error } = await ctx.supabase

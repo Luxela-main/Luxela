@@ -1,5 +1,10 @@
 import { z } from "zod";
 import {
+  // Enums
+  notificationTypeEnum,
+  notificationCategoryEnum,
+  notificationSeverityEnum,
+  listingStatusEnum,
   // Schemas
   userSchema,
   buyerSchema,
@@ -8,6 +13,7 @@ import {
   buyerBillingAddressSchema,
   buyerShippingSchema,
   buyerFavoritesSchema,
+  buyerBrandFollowsSchema,
   sellerSchema,
   sellerBusinessSchema,
   sellerShippingSchema,
@@ -26,6 +32,7 @@ import {
   ordersSchema,
   paymentsSchema,
   refundsSchema,
+  disputeSchema,
   paymentHoldsSchema,
   financialLedgerSchema,
   scheduledPayoutsSchema,
@@ -35,6 +42,9 @@ import {
   cartsSchema,
   cartItemsSchema,
   notificationsSchema,
+  buyerNotificationsSchema,
+  adminNotificationsSchema,
+  sellerNotificationsSchema,
   reviewsSchema,
   discountSchema,
   supportTicketsSchema,
@@ -58,6 +68,7 @@ import {
   loyaltyNFTsSchema,
   listingReviewSchema,
   listingActivityLogSchema,
+  adminSettingsSchema,
 } from "./zodSchemas";
 
 // ===================== USER TYPES =====================
@@ -70,6 +81,7 @@ export type BuyerAccountDetails = z.infer<typeof buyerAccountDetailsSchema>;
 export type BuyerBillingAddress = z.infer<typeof buyerBillingAddressSchema>;
 export type BuyerShipping = z.infer<typeof buyerShippingSchema>;
 export type Favorite = z.infer<typeof buyerFavoritesSchema>;
+export type BuyerBrandFollow = z.infer<typeof buyerBrandFollowsSchema>;
 
 // ===================== SELLER TYPES =====================
 export type Seller = z.infer<typeof sellerSchema>;
@@ -93,6 +105,7 @@ export type Inventory = z.infer<typeof inventorySchema>;
 
 // ===================== LISTING TYPES =====================
 export type Listing = z.infer<typeof listingsSchema>;
+export type ListingStatus = z.infer<typeof listingStatusEnum>;
 export type ListingReview = z.infer<typeof listingReviewSchema>;
 export type ListingActivityLog = z.infer<typeof listingActivityLogSchema>;
 
@@ -100,6 +113,7 @@ export type ListingActivityLog = z.infer<typeof listingActivityLogSchema>;
 export type Order = z.infer<typeof ordersSchema>;
 export type Payment = z.infer<typeof paymentsSchema>;
 export type Refund = z.infer<typeof refundsSchema>;
+export type Dispute = z.infer<typeof disputeSchema>;
 export type PaymentHold = z.infer<typeof paymentHoldsSchema>;
 export type FinancialLedger = z.infer<typeof financialLedgerSchema>;
 export type ScheduledPayout = z.infer<typeof scheduledPayoutsSchema>;
@@ -111,6 +125,12 @@ export type CartItem = z.infer<typeof cartItemsSchema>;
 
 // ===================== NOTIFICATION & REVIEW TYPES =====================
 export type Notification = z.infer<typeof notificationsSchema>;
+export type NotificationType = z.infer<typeof notificationTypeEnum>;
+export type NotificationCategory = z.infer<typeof notificationCategoryEnum>;
+export type NotificationSeverity = z.infer<typeof notificationSeverityEnum>;
+export type BuyerNotification = z.infer<typeof buyerNotificationsSchema>;
+export type AdminNotification = z.infer<typeof adminNotificationsSchema>;
+export type SellerNotification = z.infer<typeof sellerNotificationsSchema>;
 export type Review = z.infer<typeof reviewsSchema>;
 
 // ===================== DISCOUNT TYPES =====================
@@ -155,8 +175,17 @@ export type SupportAnalytics = z.infer<typeof supportAnalyticsSchema>;
 export type FAQ = z.infer<typeof faqsSchema>;
 export type LoyaltyNFT = z.infer<typeof loyaltyNFTsSchema>;
 
-// ===================== RE-EXPORTS FOR RUNTIME VALIDATION =====================
+// ===================== ADMIN & SETTINGS TYPES =====================
+export type AdminSettings = z.infer<typeof adminSettingsSchema>;
+
+// ===================== RE-EXPORTS FOR RUNTIME & ENUM VALIDATION =====================
 export {
+  // Enums
+  notificationTypeEnum,
+  notificationCategoryEnum,
+  notificationSeverityEnum,
+  listingStatusEnum,
+  // Schemas
   userSchema,
   buyerSchema,
   profileSchema,
@@ -164,6 +193,7 @@ export {
   buyerBillingAddressSchema,
   buyerShippingSchema,
   buyerFavoritesSchema,
+  buyerBrandFollowsSchema,
   sellerSchema,
   sellerBusinessSchema,
   sellerShippingSchema,
@@ -182,6 +212,7 @@ export {
   ordersSchema,
   paymentsSchema,
   refundsSchema,
+  disputeSchema,
   paymentHoldsSchema,
   financialLedgerSchema,
   scheduledPayoutsSchema,
@@ -191,6 +222,9 @@ export {
   cartsSchema,
   cartItemsSchema,
   notificationsSchema,
+  buyerNotificationsSchema,
+  adminNotificationsSchema,
+  sellerNotificationsSchema,
   reviewsSchema,
   discountSchema,
   supportTicketsSchema,
@@ -214,4 +248,5 @@ export {
   loyaltyNFTsSchema,
   listingReviewSchema,
   listingActivityLogSchema,
+  adminSettingsSchema,
 };

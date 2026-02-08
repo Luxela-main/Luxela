@@ -1,9 +1,10 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useMemo, useState, useEffect } from "react";
 import { useListings } from "@/context/ListingsContext";
 import { useCartState } from "@/modules/cart/context";
 import { useAuth } from "@/context/AuthContext";
+import { useCollectionProducts } from "@/modules/buyer/queries/useCollectionProducts";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -42,13 +43,36 @@ export default function CollectionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { getListingById, loading } = useListings();
+  const { getListingById, loading, fetchListingDetailsById } = useListings();
+  const { data: collectionProductsData, products, isLoading: productsLoading } = useCollectionProducts({ collectionId: id });
   const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [filterColor, setFilterColor] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showSchemas, setShowSchemas] = useState(false);
+  const [collectionDetails, setCollectionDetails] = useState<any>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(true);
 
-  if (loading)
+  const isLoadingPage = loading || productsLoading || isLoadingDetails;
+  const collection = collectionDetails || collectionProductsData || getListingById(id);
+
+  useEffect(() => {
+    const loadDetails = async () => {
+      try {
+        setIsLoadingDetails(true);
+        const details = await fetchListingDetailsById(id);
+        if (details) {
+          setCollectionDetails(details);
+        }
+      } catch (error) {
+        console.error('[Collection Page] Error:', error);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    };
+    loadDetails();
+  }, [id, fetchListingDetailsById]);
+
+  if (isLoadingPage)
     return (
       <div className="bg-black min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -57,8 +81,6 @@ export default function CollectionDetailPage({
         </div>
       </div>
     );
-
-  const collection = getListingById(id);
 
   if (!collection)
     return (
@@ -77,19 +99,26 @@ export default function CollectionDetailPage({
       </div>
     );
 
+  // Use products from the new hook with all images
   let items: any[] = [];
-  try {
-    const itemsJsonData = collection.items_json;
-    items = itemsJsonData
-      ? Array.isArray(itemsJsonData)
-        ? itemsJsonData
-        : JSON.parse(itemsJsonData)
-      : [];
-  } catch (e) {
-    // Silently handle parsing error
+  if (products && products.length > 0) {
+    items = products.map((product) => ({
+      id: product.id,
+      title: product.name,
+      name: product.name,
+      priceCents: product.price * 100, // Convert to cents
+      price_cents: product.price * 100, // Legacy: Convert to cents
+      currency: product.currency,
+      image: product.images?.[0]?.imageUrl || null,
+      colors_available: product.variants || [],
+      sizes: product.variants?.map((v: any) => v.size).filter((s: any, i: number, arr: any[]) => arr.indexOf(s) === i) || [],
+      material_composition: product.description,
+      quantity_available: product.inventory?.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0) || 0,
+      inStock: product.inStock,
+      images: product.images || [],
+      itemsJson: product.itemsJson,
+    }));
   }
-
-  const business = collection.sellers?.seller_business?.[0];
 
   // Extract all unique colors from all items
   const allColors = useMemo(() => {
@@ -146,7 +175,7 @@ export default function CollectionDetailPage({
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: SITE.url },
     { name: "Collections", url: `${SITE.url}/buyer/collections` },
-    { name: collection.title || "Collection", url: `${SITE.url}/buyer/collection/${collection.id}` },
+    { name: collectionProductsData?.name ?? "Collection", url: `${SITE.url}/buyer/collection/${id}` },
   ]);
 
   return (
@@ -170,11 +199,11 @@ export default function CollectionDetailPage({
       <div className="px-6 py-12">
         <div className="max-w-7xl mx-auto">
           {/* Collection Image */}
-          {collection.image && (
+          {collectionProductsData?.brandHero && (
             <div className="relative w-full h-72 md:h-96 rounded-2xl overflow-hidden mb-12 border border-[#222] shadow-2xl">
               <img
-                src={collection.image}
-                alt={collection.title}
+                src={collectionProductsData.brandHero}
+                alt={collectionProductsData?.name ?? "Collection"}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -184,19 +213,12 @@ export default function CollectionDetailPage({
                 <div className="flex items-end justify-between">
                   <div>
                     <p className="text-[#8451E1] text-sm font-bold uppercase tracking-wider mb-2">
-                      {business?.brand_name || "Luxela"}
+                      {collectionProductsData?.brandName ?? "Luxela"}
                     </p>
                     <h1 className="text-4xl md:text-5xl font-bold text-white capitalize mb-3">
-                      {collection.title}
+                      {collectionProductsData?.name}
                     </h1>
-                    {collection.limited_edition_badge === "show_badge" && (
-                      <div className="inline-flex items-center gap-2 bg-[#8451E1] px-4 py-2 rounded-lg">
-                        <Zap className="w-4 h-4 text-white" />
-                        <span className="text-white text-xs font-bold uppercase tracking-wider">
-                          Limited Edition Collection
-                        </span>
-                      </div>
-                    )}
+
                   </div>
                   <div className="flex gap-3">
                     <button className="p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors backdrop-blur-sm border border-white/10">
@@ -218,15 +240,9 @@ export default function CollectionDetailPage({
               <h2 className="text-lg font-semibold text-white mb-3">
                 About This Collection
               </h2>
-              {collection.description && (
+              {(collectionProductsData?.description ?? collection?.description) && (
                 <p className="text-[#acacac] leading-relaxed text-sm">
-                  {collection.description}
-                </p>
-              )}
-              {collection.supply_capacity && (
-                <p className="text-[#666] text-xs mt-4 flex items-center gap-2">
-                  <Package className="w-3.5 h-3.5 text-[#8451E1]" />
-                  Supply Capacity: {collection.supply_capacity}
+                  {collectionProductsData?.description ?? collection?.description}
                 </p>
               )}
             </div>
@@ -250,27 +266,10 @@ export default function CollectionDetailPage({
                     Avg Price
                   </p>
                   <p className="text-2xl font-bold text-[#8451E1]">
-                    {collection.currency || "NGN"} {avgPrice.toLocaleString()}
+                    {items.length > 0 ? `NGN ${avgPrice.toLocaleString()}` : "N/A"}
                   </p>
                 </div>
-                {collection.release_duration && (
-                  <div>
-                    <p className="text-[#666] text-xs uppercase tracking-wider mb-1">
-                      Duration
-                    </p>
-                    <p className="text-sm text-white font-medium">
-                      {collection.release_duration}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-[#666] text-xs uppercase tracking-wider mb-1">
-                    Shipping
-                  </p>
-                  <p className="text-xs text-[#acacac]">
-                    {collection.eta_domestic || "N/A"}
-                  </p>
-                </div>
+
               </div>
             </div>
           </div>
@@ -339,9 +338,9 @@ export default function CollectionDetailPage({
                 <CollectionItemCard
                   key={index}
                   item={item}
-                  collectionId={collection.id}
-                  productId={collection.product_id}
-                  brandName={business?.brand_name}
+                  collectionId={id}
+                  productId={item.id}
+                  brandName={collectionProductsData?.brandName ?? undefined}
                   index={index}
                   itemNumber={items.indexOf(item) + 1}
                   onSelect={setSelectedItem}
@@ -350,52 +349,7 @@ export default function CollectionDetailPage({
             </div>
           )}
 
-          {/* Shipping & Return Info */}
-          <div className="bg-[#0f0f0f] rounded-xl border border-[#222] p-8 mb-12">
-            <h3 className="text-lg font-semibold text-white mb-6">
-              Shipping & Policy Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {collection.eta_domestic && (
-                <div>
-                  <p className="text-[#666] text-xs uppercase tracking-wider mb-2">
-                    Domestic Shipping
-                  </p>
-                  <p className="text-white font-medium flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-[#8451E1]" />
-                    {collection.eta_domestic}
-                  </p>
-                </div>
-              )}
-              {collection.eta_international && (
-                <div>
-                  <p className="text-[#666] text-xs uppercase tracking-wider mb-2">
-                    International Shipping
-                  </p>
-                  <p className="text-white font-medium flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-[#8451E1]" />
-                    {collection.eta_international}
-                  </p>
-                </div>
-              )}
-              {collection.shipping_option && (
-                <div>
-                  <p className="text-[#666] text-xs uppercase tracking-wider mb-2">
-                    Shipping Option
-                  </p>
-                  <p className="text-white font-medium">{collection.shipping_option}</p>
-                </div>
-              )}
-              {collection.refund_policy && (
-                <div>
-                  <p className="text-[#666] text-xs uppercase tracking-wider mb-2">
-                    Refund Policy
-                  </p>
-                  <p className="text-white font-medium">{collection.refund_policy}</p>
-                </div>
-              )}
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -404,7 +358,7 @@ export default function CollectionDetailPage({
         <ItemDetailModal
           item={selectedItem}
           collection={collection}
-          brandName={business?.brand_name}
+          brandName={collectionProductsData?.brandName ?? undefined}
           onClose={() => setSelectedItem(null)}
         />
       )}
@@ -484,7 +438,7 @@ function CollectionItemCard({
   } catch (e) {}
 
   const stockStatus =
-    item.quantity_available === 0
+    item.quantity_available === 0 || !item.inStock
       ? "Out of Stock"
       : item.quantity_available <= 5
         ? `${item.quantity_available} left`
@@ -535,7 +489,7 @@ function CollectionItemCard({
           {/* Info */}
           <div className="p-4 bg-black">
             <p className="text-[#999] text-[10px] font-bold uppercase tracking-widest mb-2">
-              {brandName || "Exclusive"}
+              {brandName ?? "Exclusive"}
             </p>
 
             <h3 className="text-[#f2f2f2] capitalize font-semibold text-sm line-clamp-2 leading-snug mb-3 h-10">
@@ -576,9 +530,9 @@ function CollectionItemCard({
             {/* Price & Action */}
             <div className="flex items-center justify-between">
               <span className="text-[#f2f2f2] font-bold text-sm">
-                {item.currency || "NGN"}{" "}
+                {item.currency ?? "NGN"}{" "}
                 {(
-                  (item.priceCents || item.price_cents || 0) / 100
+                  (item.priceCents ?? item.price_cents ?? 0) / 100
                 ).toLocaleString()}
               </span>
 
@@ -705,8 +659,8 @@ function ItemDetailModal({
                 Price
               </p>
               <p className="text-xl font-bold text-[#8451E1]">
-                {item.currency || "NGN"}{" "}
-                {((item.price_cents || 0) / 100).toLocaleString()}
+                {item.currency ?? "NGN"}{" "}
+                {((item.priceCents ?? item.price_cents ?? 0) / 100).toLocaleString()}
               </p>
             </div>
 

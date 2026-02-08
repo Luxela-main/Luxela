@@ -97,21 +97,6 @@ export function useBrandListings(brandId: string) {
   });
 }
 
-export function useCollections() {
-  return useQuery({
-    queryKey: productQueryKeys.collections(),
-    queryFn: async () => {
-      try {
-        const result = await ((trpc.product as any).getAllCollections as any).query();
-        return result;
-      } catch (err) {
-        throw err;
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-}
-
 export function useCollectionById(collectionId: string) {
   return useQuery({
     queryKey: productQueryKeys.collectionById(collectionId),

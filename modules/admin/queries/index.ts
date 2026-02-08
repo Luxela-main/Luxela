@@ -4,3 +4,4 @@
  */
 
 export { useWebhookEvents } from './useWebhookEvents';
+export { useAdminNotificationsCount } from './useNotifications';

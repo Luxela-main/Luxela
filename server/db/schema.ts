@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, uuid, integer, numeric, unique, jsonb } from 'drizzle-orm/pg-core';
+﻿import { pgTable, serial, text, varchar, timestamp, boolean, pgEnum, uuid, integer, numeric, unique, jsonb, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -33,7 +33,9 @@ export const ticketCategoryEnum = pgEnum('ticket_category', ['general_inquiry', 
 
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto','paypal','stripe','flutterwave','tsara']);
-export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder','order_confirmed','payment_failed','refund_issued','delivery_confirmed']);
+export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder','order_confirmed','payment_failed','refund_issued','delivery_confirmed','listing_approved','listing_rejected','listing_revision_requested','dispute_opened','dispute_resolved','return_initiated','return_completed','payment_processed']);
+export const notificationCategoryEnum = pgEnum('notification_category', ['order_confirmed','order_processing','shipment_ready','in_transit','out_for_delivery','delivered','delivery_failed','return_request','refund_processed','review_request','product_back_in_stock','price_drop','dispute','payment_failed','system_alert','urgent_ticket','sla_breach','escalation','team_capacity','new_reply']);
+export const notificationSeverityEnum = pgEnum('notification_severity', ['info','warning','critical']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','completed','failed','refunded']);
 export const WebhookEventStatusEnum = pgEnum('webhook_event_status', ['pending', 'processed', 'failed']);
 export const paymentProviderEnum = pgEnum('payment_provider', ['tsara','flutterwave','stripe','paypal']);
@@ -391,6 +393,28 @@ export const refunds = pgTable('refunds', {
 });
 
 // =======================
+// DISPUTES
+// =======================
+export const disputes = pgTable('disputes', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  subject: varchar('subject', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  evidence: text('evidence'),
+  status: disputeStatusEnum('status').default('open').notNull(),
+  resolution: disputeResolutionEnum('resolution'),
+  resolutionNote: text('resolution_note'),
+  amountInDispute: integer('amount_in_dispute'),
+  currency: varchar('currency', { length: 16 }),
+  openedAt: timestamp('opened_at').defaultNow().notNull(),
+  closedAt: timestamp('closed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// =======================
 // PAYMENT HOLDS
 // =======================
 export const paymentHolds = pgTable('payment_holds', {
@@ -552,6 +576,86 @@ export const notifications = pgTable('notifications', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Buyer notifications - persistent storage for real-time updates
+export const buyerNotifications = pgTable('buyer_notifications', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+  type: notificationCategoryEnum('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  isStarred: boolean('is_starred').default(false).notNull(),
+  relatedEntityId: uuid('related_entity_id'),
+  relatedEntityType: varchar('related_entity_type', { length: 50 }),
+  actionUrl: text('action_url'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('buyer_notifications_buyer_id_idx').on(t.buyerId),
+  index('buyer_notifications_is_read_idx').on(t.isRead),
+  index('buyer_notifications_created_at_idx').on(t.createdAt),
+]);
+
+// Admin notifications - persistent storage for real-time updates
+export const adminNotifications = pgTable('admin_notifications', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  adminId: uuid('admin_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: notificationCategoryEnum('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  severity: notificationSeverityEnum('severity').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  isStarred: boolean('is_starred').default(false).notNull(),
+  relatedEntityId: uuid('related_entity_id'),
+  relatedEntityType: varchar('related_entity_type', { length: 50 }),
+  actionUrl: text('action_url'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('admin_notifications_admin_id_idx').on(t.adminId),
+  index('admin_notifications_is_read_idx').on(t.isRead),
+  index('admin_notifications_created_at_idx').on(t.createdAt),
+]);
+
+// Seller notifications - persistent storage for real-time updates
+export const sellerNotifications = pgTable('seller_notifications', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: uuid('seller_id').notNull().references(() => sellers.id, { onDelete: 'cascade' }),
+  type: notificationCategoryEnum('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  severity: notificationSeverityEnum('severity').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  isStarred: boolean('is_starred').default(false).notNull(),
+  relatedEntityId: uuid('related_entity_id'),
+  relatedEntityType: varchar('related_entity_type', { length: 50 }),
+  actionUrl: text('action_url'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('seller_notifications_seller_id_idx').on(t.sellerId),
+  index('seller_notifications_is_read_idx').on(t.isRead),
+  index('seller_notifications_created_at_idx').on(t.createdAt),
+]);
+
+// Admin settings - persistent storage for admin configuration
+export const adminSettings = pgTable('admin_settings', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: varchar('setting_key', { length: 255 }).notNull().unique(),
+  settingValue: jsonb('setting_value').notNull(),
+  description: text('description'),
+  category: varchar('category', { length: 100 }).notNull(),
+  updatedBy: uuid('updated_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('admin_settings_category_idx').on(t.category),
+  index('admin_settings_setting_key_idx').on(t.settingKey),
+]);
+
 export const reviews = pgTable('review', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
@@ -587,6 +691,24 @@ export const buyerFavorites = pgTable('buyer_favorites', {
   listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// =======================
+// BUYER BRAND FOLLOWS
+// =======================
+export const buyerBrandFollows = pgTable(
+  'buyer_brand_follows',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+    brandId: uuid('brand_id').notNull().references(() => brands.id, { onDelete: 'cascade' }),
+    followedAt: timestamp('followed_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueFollows: unique('buyer_brand_follows_unique').on(t.buyerId, t.brandId),
+    buyerIdIdx: index('idx_buyer_brand_follows_buyer_id').on(t.buyerId),
+    brandIdIdx: index('idx_buyer_brand_follows_brand_id').on(t.brandId),
+  })
+);
 
 // =======================
 // SELLER PAYMENT CONFIG
@@ -984,7 +1106,7 @@ export const listingActivityLog = pgTable('listing_activity_log', {
 // RELATIONS
 // =======================
 
-// Users → Buyers & Sellers
+// Users ? Buyers & Sellers
 export const usersRelations = relations(users, ({ many }) => ({
   buyers: many(buyers),
   sellers: many(sellers),
@@ -1000,6 +1122,7 @@ export const buyersRelations = relations(buyers, ({ one, many }) => ({
   payments: many(payments),
   sales: many(sales),
   reviews: many(reviews),
+  disputes: many(disputes),
   loyaltyNFTs: many(loyaltyNFTs),
 }));
 
@@ -1016,6 +1139,7 @@ export const sellersRelations = relations(sellers, ({ one, many }) => ({
   payments: many(payments),
   notifications: many(notifications),
   sales: many(sales),
+  disputes: many(disputes),
   brands: many(brands),
   shippingRates: many(shippingRates),
   scheduledPayouts: many(scheduledPayouts),
@@ -1024,21 +1148,21 @@ export const sellersRelations = relations(sellers, ({ one, many }) => ({
 }));
 
 
-// Brands → Collections & Products
+// Brands ? Collections & Products
 export const brandsRelations = relations(brands, ({ one, many }) => ({
   seller: one(sellers),
   collections: many(collections),
   products: many(products),
 }));
 
-// Collections → Products & Items
+// Collections ? Products & Items
 export const collectionsRelations = relations(collections, ({ one, many }) => ({
   brand: one(brands),
   products: many(products),
   items: many(collectionItems),
 }));
 
-// Products → Collections, Variants, Listings, Images
+// Products ? Collections, Variants, Listings, Images
 export const productsRelations = relations(products, ({ one, many }) => ({
   brand: one(brands),
   collection: one(collections),
@@ -1049,20 +1173,20 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   collectionItems: many(collectionItems),
 }));
 
-// Product Variants → Inventory
+// Product Variants ? Inventory
 export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
   product: one(products),
   inventory: many(inventory),
 }));
 
-// Inventory → Variants & Reservations
+// Inventory ? Variants & Reservations
 export const inventoryRelations = relations(inventory, ({ one, many }) => ({
   variant: one(productVariants),
   product: one(products),
   reservations: many(inventoryReservations),
 }));
 
-// Listings → Seller, Product, Collection, Reviews, Activity
+// Listings ? Seller, Product, Collection, Reviews, Activity
 export const listingsRelations = relations(listings, ({ one, many }) => ({
   seller: one(sellers),
   product: one(products),
@@ -1077,7 +1201,7 @@ export const listingsRelations = relations(listings, ({ one, many }) => ({
   activityLog: many(listingActivityLog),
 }));
 
-// Orders → Buyer, Seller, Listing
+// Orders ? Buyer, Seller, Listing
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   buyer: one(buyers),
   seller: one(sellers),
@@ -1086,9 +1210,10 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   sales: many(sales),
   reservations: many(inventoryReservations),
   stateTransitions: many(orderStateTransitions),
+  disputes: many(disputes),
 }));
 
-// Payments → Buyer, Listing, Order
+// Payments ? Buyer, Listing, Order
 export const paymentsRelations = relations(payments, ({ one, many }) => ({
   buyer: one(buyers),
   listing: one(listings),
@@ -1097,7 +1222,7 @@ export const paymentsRelations = relations(payments, ({ one, many }) => ({
   holds: many(paymentHolds),
 }));
 
-// Refunds → Buyer, Seller, Order, Payment
+// Refunds ? Buyer, Seller, Order, Payment
 export const refundsRelations = relations(refunds, ({ one }) => ({
   buyer: one(buyers),
   seller: one(sellers),
@@ -1105,23 +1230,30 @@ export const refundsRelations = relations(refunds, ({ one }) => ({
   payment: one(payments),
 }));
 
-// Payment Holds → Order, Payment
+// Disputes ? Buyer, Seller, Order
+export const disputesRelations = relations(disputes, ({ one }) => ({
+  buyer: one(buyers),
+  seller: one(sellers),
+  order: one(orders),
+}));
+
+// Payment Holds ? Order, Payment
 export const paymentHoldsRelations = relations(paymentHolds, ({ one }) => ({
   order: one(orders),
   payment: one(payments),
 }));
 
-// Financial Ledger → Seller, Order, Payment
+// Financial Ledger ? Seller, Order, Payment
 export const financialLedgerRelations = relations(financialLedger, ({ one }) => ({
   seller: one(sellers),
   order: one(orders),
   payment: one(payments),
 }));
 
-// Webhook Events → none
+// Webhook Events ? none
 export const webhookEventsRelations = relations(webhookEvents, ({}) => ({}));
 
-// Webhook Logs → Payments & Orders
+// Webhook Logs ? Payments & Orders
 export const webhookLogsRelations = relations(webhookLogs, ({ one }) => ({
   payment: one(payments, {
     fields: [webhookLogs.paymentId],
@@ -1133,7 +1265,7 @@ export const webhookLogsRelations = relations(webhookLogs, ({ one }) => ({
   }),
 }));
 
-// Sales → Buyer, Seller, Listing, Order
+// Sales ? Buyer, Seller, Listing, Order
 export const salesRelations = relations(sales, ({ one }) => ({
   buyer: one(buyers),
   seller: one(sellers),
@@ -1142,86 +1274,86 @@ export const salesRelations = relations(sales, ({ one }) => ({
   payment: one(payments),
 }));
 
-// Carts → Buyer & Items
+// Carts ? Buyer & Items
 export const cartRelations = relations(carts, ({ one, many }) => ({
   buyer: one(buyers, { fields: [carts.buyerId], references: [buyers.id] }),
   discount: one(discounts, { fields: [carts.discountId], references: [discounts.id] }),
   items: many(cartItems),
 }));
 
-// Cart Items → Cart & Listing
+// Cart Items ? Cart & Listing
 export const cartItemRelations = relations(cartItems, ({ one }) => ({
   cart: one(carts),
   listing: one(listings),
 }));
 
-// Reviews → Buyer & Listing
+// Reviews ? Buyer & Listing
 export const reviewsRelations = relations(reviews, ({ one }) => ({
   buyer: one(buyers),
   listing: one(listings),
 }));
 
-// Notifications → Seller
+// Notifications ? Seller
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   seller: one(sellers),
 }));
 
-// Buyer Account Details → Buyer
+// Buyer Account Details ? Buyer
 export const buyerAccountDetailsRelations = relations(buyerAccountDetails, ({ one }) => ({
   buyer: one(buyers),
 }));
 
-// Loyalty NFTs → Buyer
+// Loyalty NFTs ? Buyer
 export const loyaltyNFTsRelations = relations(loyaltyNFTs, ({ one }) => ({
   buyer: one(buyers),
 }));
 
-// Buyer Shipping → Buyer
+// Buyer Shipping ? Buyer
 export const buyerShippingRelations = relations(buyerShipping, ({ one }) => ({
   buyer: one(buyers),
 }));
 
-// Buyer Favorites → Buyer & Listing
+// Buyer Favorites ? Buyer & Listing
 export const buyerFavoritesRelations = relations(buyerFavorites, ({ one }) => ({
   buyer: one(buyers),
   listing: one(listings),
 }));
 
-// Seller Payment Config → Seller
+// Seller Payment Config ? Seller
 export const sellerPaymentConfigRelations = relations(sellerPaymentConfig, ({ one }) => ({
   seller: one(sellers),
 }));
 
-// Seller Payout Methods → Seller
+// Seller Payout Methods ? Seller
 export const sellerPayoutMethodsRelations = relations(sellerPayoutMethods, ({ one }) => ({
   seller: one(sellers),
 }));
 
-// Seller Crypto Payout Methods → Seller
+// Seller Crypto Payout Methods ? Seller
 export const sellerCryptoPayoutMethodsRelations = relations(sellerCryptoPayoutMethods, ({ one }) => ({
   seller: one(sellers),
 }));
 
-// Seller Additional → Seller
+// Seller Additional ? Seller
 export const sellerAdditionalRelations = relations(sellerAdditional, ({ one }) => ({
   seller: one(sellers),
 }));
 
-// Discounts → none (referenced by carts)
+// Discounts ? none (referenced by carts)
 export const discountsRelations = relations(discounts, ({}) => ({}));
 
-// Product Images → Product
+// Product Images ? Product
 export const productImagesRelations = relations(productImages, ({ one }) => ({
   product: one(products),
 }));
 
-// Collection Items → Collection & Product
+// Collection Items ? Collection & Product
 export const collectionItemsRelations = relations(collectionItems, ({ one }) => ({
   collection: one(collections),
   product: one(products),
 }));
 
-// Support Tickets → Buyer, Seller, Order
+// Support Tickets ? Buyer, Seller, Order
 export const supportTicketsRelations = relations(supportTickets, ({ one, many }) => ({
   buyer: one(buyers),
   seller: one(sellers),
@@ -1234,38 +1366,38 @@ export const supportTicketsRelations = relations(supportTickets, ({ one, many })
   replies: many(supportTicketReplies),
 }));
 
-// Support Ticket Replies → Ticket
+// Support Ticket Replies ? Ticket
 export const supportTicketRepliesRelations = relations(supportTicketReplies, ({ one }) => ({
   ticket: one(supportTickets),
 }));
 
-// Inventory Reservations → Inventory & Order
+// Inventory Reservations ? Inventory & Order
 export const inventoryReservationsRelations = relations(inventoryReservations, ({ one }) => ({
   inventory: one(inventory),
   order: one(orders),
 }));
 
-// Order State Transitions → Order
+// Order State Transitions ? Order
 export const orderStateTransitionsRelations = relations(orderStateTransitions, ({ one }) => ({
   order: one(orders),
 }));
 
-// Shipping Rates → Seller
+// Shipping Rates ? Seller
 export const shippingRatesRelations = relations(shippingRates, ({ one }) => ({
   seller: one(sellers),
 }));
 
-// Categories → Subcategories
+// Categories ? Subcategories
 export const categoriesRelations = relations(categories, ({ many }) => ({
   subcategories: many(subcategories),
 }));
 
-// Subcategories → Category
+// Subcategories ? Category
 export const subcategoriesRelations = relations(subcategories, ({ one }) => ({
   category: one(categories),
 }));
 
-// Follows → Sellers
+// Follows ? Sellers
 export const followsRelations = relations(follows, ({ one }) => ({
   follower: one(sellers, {
     fields: [follows.followerId],
@@ -1279,14 +1411,14 @@ export const followsRelations = relations(follows, ({ one }) => ({
   }),
 }));
 
-// Conversations → Buyer & Seller
+// Conversations ? Buyer & Seller
 export const conversationsRelations = relations(conversations, ({ one, many }) => ({
   buyer: one(buyers),
   seller: one(sellers),
   messages: many(messages),
 }));
 
-// Messages → Conversation
+// Messages ? Conversation
 export const messagesRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations),
 }));
@@ -1295,44 +1427,52 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 // ENTERPRISE SUPPORT - RELATIONS
 // =======================
 
-// Support Team Members → none
+// Support Team Members ? none
 export const supportTeamMembersRelations = relations(supportTeamMembers, ({}) => ({}));
 
-// SLA Metrics → SLA Tracking
+// SLA Metrics ? SLA Tracking
 export const slaMetricsRelations = relations(slaMetrics, ({ many }) => ({
   tracking: many(slaTracking),
 }));
 
-// SLA Tracking → Metrics & Tickets
+// SLA Tracking ? Metrics & Tickets
 export const slaTrackingRelations = relations(slaTracking, ({ one }) => ({
   slaMetric: one(slaMetrics),
   ticket: one(supportTickets),
 }));
 
-// Escalation Rules → none
+// Escalation Rules ? none
 export const escalationRulesRelations = relations(escalationRules, ({}) => ({}));
 
-// Support Audit Logs → Tickets
+// Support Audit Logs ? Tickets
 export const supportAuditLogsRelations = relations(supportAuditLogs, ({ one }) => ({
   ticket: one(supportTickets),
 }));
 
-// Scheduled Payouts → Seller
+// Scheduled Payouts ? Seller
 export const scheduledPayoutsRelations = relations(scheduledPayouts, ({ one }) => ({
   seller: one(sellers),
 }));
 
-// Support Analytics → none
+// Support Analytics ? none
 export const supportAnalyticsRelations = relations(supportAnalytics, ({}) => ({}));
 
-// Listing Reviews → Listing & Seller
+// Listing Reviews ? Listing & Seller
 export const listingReviewsRelations = relations(listingReviews, ({ one }) => ({
   listing: one(listings),
   seller: one(sellers),
 }));
 
-// Listing Activity Log → Listing & Seller
+// Listing Activity Log ? Listing & Seller
 export const listingActivityLogRelations = relations(listingActivityLog, ({ one }) => ({
   listing: one(listings),
   seller: one(sellers),
+}));
+
+// Buyer Brand Follows ? Buyer & Brand
+export const buyerBrandFollowsRelations = relations(buyerBrandFollows, ({ one }) => ({
+  buyer: one(buyers),
+  brand: one(brands),
 }));
+
+

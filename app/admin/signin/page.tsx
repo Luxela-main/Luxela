@@ -63,12 +63,18 @@ function AdminSignInContent() {
 
       const adminStatus = await checkAdminStatus();
 
-      if (adminStatus.isAdmin) {
+      if (adminStatus.success && adminStatus.isAdmin) {
         // Already admin, go directly to dashboard
+        // Add a small delay to ensure session is established
+        await new Promise(resolve => setTimeout(resolve, 500));
         router.push('/admin/support');
-      } else {
+      } else if (adminStatus.success && !adminStatus.isAdmin) {
         // Not admin yet, go to setup page to grant access
         router.push('/admin/setup');
+      } else {
+        // Error checking admin status
+        toast.error(adminStatus.error || 'Failed to verify admin status');
+        setIsCheckingAdmin(false);
       }
     } catch (err: unknown) {
       if (err instanceof Error) {

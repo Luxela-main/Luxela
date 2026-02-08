@@ -6,7 +6,7 @@ import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 
-type NotificationType = 'purchase' | 'review' | 'comment' | 'reminder' | 'order_confirmed' | 'payment_failed' | 'refund_issued' | 'delivery_confirmed';
+type NotificationType = 'purchase' | 'review' | 'comment' | 'reminder' | 'order_confirmed' | 'payment_failed' | 'refund_issued' | 'delivery_confirmed' | 'listing_approved' | 'listing_rejected' | 'listing_revision_requested' | 'dispute_opened' | 'dispute_resolved' | 'return_initiated' | 'return_completed' | 'payment_processed';
 
 interface Notification {
   id: string;
@@ -27,6 +27,14 @@ const notificationIcons: Record<NotificationType, string> = {
   payment_failed: '❌',
   refund_issued: '💰',
   delivery_confirmed: '📦',
+  listing_approved: '✔️',
+  listing_rejected: '⛔',
+  listing_revision_requested: '📝',
+  dispute_opened: '⚖️',
+  dispute_resolved: '✅',
+  return_initiated: '↩️',
+  return_completed: '✅',
+  payment_processed: '💳',
 };
 
 export default function NotificationsPage() {

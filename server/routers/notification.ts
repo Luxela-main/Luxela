@@ -16,7 +16,7 @@ const NotificationOutput = z.object({
   sellerId: z.string().uuid(),
   buyerId: z.string().uuid().nullable(),
   orderId: z.string().uuid().nullable(),
-  type: z.enum(["purchase", "review", "comment", "reminder", "order_confirmed", "payment_failed", "refund_issued", "delivery_confirmed"]),
+  type: z.enum(["purchase", "review", "comment", "reminder", "order_confirmed", "payment_failed", "refund_issued", "delivery_confirmed", "listing_approved", "listing_rejected", "listing_revision_requested", "dispute_opened", "dispute_resolved", "return_initiated", "return_completed", "payment_processed"]),
   message: z.string(),
   isRead: z.boolean(),
   isStarred: z.boolean(),

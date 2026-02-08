@@ -5,10 +5,10 @@ import { trpc } from "@/lib/trpc";
 
 export const useMyListings = () => {
   return (trpc.listing as any).getMyListings.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    refetchInterval: undefined, // Disable auto-refetch
-    refetchOnWindowFocus: false, // Disable window focus refetch
+    staleTime: 3 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 5 * 1000,
+    refetchOnWindowFocus: true,
     refetchOnReconnect: true, 
     retry: 2,
     retryDelay: 1000,

@@ -27,9 +27,10 @@ const ticketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
 const ticketCategoryEnum = z.enum(['general_inquiry', 'technical_issue', 'payment_problem', 'order_issue', 'refund_request', 'account_issue', 'listing_help', 'other']);
 const deliveryStatusEnum = z.enum(['not_shipped', 'in_transit', 'delivered']);
 const paymentMethodEnum = z.enum(['card', 'bank_transfer', 'crypto', 'paypal', 'stripe', 'flutterwave', 'tsara']);
-const notificationTypeEnum = z.enum(['purchase', 'review', 'comment', 'reminder', 'order_confirmed', 'payment_failed', 'refund_issued', 'delivery_confirmed']);
+export const notificationTypeEnum = z.enum(['purchase', 'review', 'comment', 'reminder', 'order_confirmed', 'payment_failed', 'refund_issued', 'delivery_confirmed', 'listing_approved', 'listing_rejected', 'listing_revision_requested', 'dispute_opened', 'dispute_resolved', 'return_initiated', 'return_completed', 'payment_processed']);
+export const notificationCategoryEnum = z.enum(['order_confirmed', 'order_processing', 'shipment_ready', 'in_transit', 'out_for_delivery', 'delivered', 'delivery_failed', 'return_request', 'refund_processed', 'review_request', 'product_back_in_stock', 'price_drop', 'dispute', 'payment_failed', 'system_alert', 'urgent_ticket', 'sla_breach', 'escalation', 'team_capacity', 'new_reply']);
+export const notificationSeverityEnum = z.enum(['info', 'warning', 'critical']);
 const paymentStatusEnum = z.enum(['pending', 'processing', 'completed', 'failed', 'refunded']);
-const webhookEventStatusEnum = z.enum(['pending', 'processed', 'failed']);
 const paymentProviderEnum = z.enum(['tsara', 'flutterwave', 'stripe', 'paypal']);
 const refundStatusEnum = z.enum(['pending', 'return_requested', 'return_approved', 'return_rejected', 'refunded', 'canceled']);
 const ledgerStatusEnum = z.enum(['pending', 'completed', 'failed', 'reversed']);
@@ -44,7 +45,22 @@ const discountTypeEnum = z.enum(['percentage', 'fixed_amount', 'buy_one_get_one'
 const discountStatusEnum = z.enum(['active', 'inactive', 'expired']);
 const payoutScheduleEnum = z.enum(['immediate', 'daily', 'weekly', 'bi_weekly', 'monthly']);
 const blockchainEnum = z.enum(['solana', 'ethereum', 'polygon', 'bitcoin', 'other']);
+export const listingStatusEnum = z.enum(['draft', 'pending_review', 'approved', 'rejected', 'archived']);
 const listingReviewStatusEnum = z.enum(['pending', 'approved', 'rejected', 'revision_requested']);
+const disputeStatusEnum = z.enum(['open', 'under_review', 'resolved', 'closed']);
+const disputeResolutionEnum = z.enum(['refund_issued', 'case_closed', 'buyer_compensated', 'seller_warning']);
+const paymentFrequencyEnum = z.enum(['weekly', 'bi_weekly', 'monthly', 'quarterly']);
+const slaPriorityEnum = z.enum(['low', 'medium', 'high', 'critical']);
+const escalationStatusEnum = z.enum(['pending', 'triggered', 'resolved', 'cancelled']);
+const inventoryAdjustmentReasonEnum = z.enum(['stock_take', 'damaged_goods', 'lost_items', 'theft', 'supplier_return', 'other']);
+const transactionStatusEnum = z.enum(['pending', 'completed', 'failed', 'reversed']);
+const auditActionEnum = z.enum(['create', 'update', 'delete', 'login', 'logout', 'password_change', 'role_change']);
+const auditEntityEnum = z.enum(['user', 'order', 'payment', 'refund', 'listing', 'brand', 'buyer', 'seller']);
+const auditOutcomeEnum = z.enum(['success', 'failure']);
+const paymentChannelEnum = z.enum(['web', 'mobile', 'api', 'pos']);
+const settlementStatusEnum = z.enum(['pending', 'completed', 'failed', 'in_review']);
+const rolesInOrgEnum = z.enum(['member', 'manager', 'admin', 'owner']);
+const webhookEventStatusEnum = z.enum(['pending', 'processed', 'failed']);
 
 // ========================== USERS ==========================
 export const userSchema = z.object({
@@ -132,11 +148,20 @@ export const buyerFavoritesSchema = z.object({
   createdAt: z.date().optional(),
 });
 
+// ========================== BUYER BRAND FOLLOWS ==========================
+export const buyerBrandFollowsSchema = z.object({
+  id: z.string().uuid().optional(),
+  buyerId: z.string().uuid(),
+  brandId: z.string().uuid(),
+  followedAt: z.date().optional(),
+});
+
 // ========================== SELLERS ==========================
 export const sellerSchema = z.object({
   id: z.string().uuid().optional(),
   userId: z.string().uuid(),
   brandId: z.string().uuid().nullable().optional(),
+  profilePhoto: z.string().nullable().optional(),
   payoutMethods: z.string().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -153,14 +178,19 @@ export const sellerBusinessSchema = z.object({
   phoneNumber: z.string(),
   countryCode: z.string().nullable().optional(),
   country: z.string(),
-  state: z.string().nullable().optional(),
-  city: z.string().nullable().optional(),
   socialMediaPlatform: socialMediaPlatformEnum.nullable().optional(),
   socialMedia: z.string().nullable().optional(),
   fullName: z.string(),
   idType: idTypeEnum,
   idNumber: z.string().nullable().optional(),
   idVerified: z.boolean().optional(),
+  verificationStatus: z.string().nullable().optional(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  dateOfBirth: z.string().nullable().optional(),
+  verificationCountry: z.string().nullable().optional(),
+  verificationDate: z.date().nullable().optional(),
+  dojahResponse: z.record(z.string(), z.any()).nullable().optional(),
   bio: z.string().nullable().optional(),
   storeDescription: z.string().nullable().optional(),
   storeLogo: z.string().nullable().optional(),
@@ -189,9 +219,9 @@ export const sellerShippingSchema = z.object({
 export const sellerPaymentConfigSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
-  payoutMethod: preferredPayoutMethodEnum,
-  payoutSchedule: payoutScheduleEnum.default('monthly'),
-  minimumPayoutThreshold: z.number().positive().nullable().optional(),
+  preferredPayoutMethod: preferredPayoutMethodEnum,
+  payoutSchedule: payoutScheduleEnum.default('weekly'),
+  minimumPayoutThreshold: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -202,23 +232,27 @@ export const sellerPayoutMethodsSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
   methodType: fiatPayoutMethodEnum,
+  isDefault: z.boolean().default(false),
+  isVerified: z.boolean().default(false),
+  verificationToken: z.string().nullable().optional(),
+  // Bank Transfer Details
   bankCountry: z.string().nullable().optional(),
+  bankName: z.string().nullable().optional(),
   bankCode: z.string().nullable().optional(),
   accountHolderName: z.string().nullable().optional(),
   accountNumber: z.string().nullable().optional(),
-  bankSortCode: z.string().nullable().optional(),
-  ibanCode: z.string().nullable().optional(),
+  accountType: z.string().nullable().optional(),
   swiftCode: z.string().nullable().optional(),
-  digitalServiceEmail: z.string().email().nullable().optional(),
-  digitalServiceAccountId: z.string().nullable().optional(),
-  mobileMoney: z.boolean().default(false),
+  iban: z.string().nullable().optional(),
+  // Digital Payment Service Details
+  email: z.string().nullable().optional(),
+  accountId: z.string().nullable().optional(),
+  // Mobile Money Details
+  phoneNumber: z.string().nullable().optional(),
   mobileMoneyProvider: z.string().nullable().optional(),
-  mobileMoneyNumber: z.string().nullable().optional(),
+  // Metadata
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-  verificationToken: z.string().nullable().optional(),
-  isVerified: z.boolean().default(false),
-  isDefault: z.boolean().default(false),
-  lastUsed: z.date().nullable().optional(),
+  lastUsedAt: z.date().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -228,14 +262,13 @@ export const sellerCryptoPayoutMethodsSchema = z.object({
   id: z.string().uuid().optional(),
   sellerId: z.string().uuid(),
   walletType: walletTypeEnum,
+  blockchainNetwork: z.string(),
   walletAddress: z.string(),
-  blockchain: blockchainEnum,
-  supportedTokens: z.array(payoutTokenEnum),
-  isVerified: z.boolean().default(false),
-  verificationToken: z.string().nullable().optional(),
+  payoutToken: payoutTokenEnum,
   isDefault: z.boolean().default(false),
-  lastUsed: z.date().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  isVerified: z.boolean().default(false),
+  verificationSignature: z.string().nullable().optional(),
+  lastUsedAt: z.date().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -295,7 +328,7 @@ export const productsSchema = z.object({
   slug: z.string(),
   description: z.string().nullable().optional(),
   category: productCategoryEnum.nullable().optional(),
-  price: z.string(),
+  priceCents: z.number().int(),
   currency: z.string().default('SOL'),
   type: z.string().nullable().optional(),
   sku: z.string(),
@@ -359,14 +392,14 @@ export const listingsSchema = z.object({
   refundPolicy: refundPolicyEnum.nullable().optional(),
   localPricing: localPricingEnum.nullable().optional(),
   itemsJson: z.string().nullable().optional(),
-  status: listingReviewStatusEnum.default('pending'),
+  status: listingStatusEnum.default('pending_review'),
   // Enterprise-level fields
   sku: z.string().nullable().optional(),
   slug: z.string().nullable().optional(),
   metaDescription: z.string().nullable().optional(),
   barcode: z.string().nullable().optional(),
-  views: z.number().int().default(0),
-  conversions: z.number().int().default(0),
+  videoUrl: z.string().nullable().optional(),
+  careInstructions: z.string().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -442,15 +475,38 @@ export const refundsSchema = z.object({
   createdAt: z.date().optional(),
 });
 
+// ========================== DISPUTES ==========================
+export const disputeSchema = z.object({
+  id: z.string().uuid().optional(),
+  orderId: z.string().uuid(),
+  buyerId: z.string().uuid(),
+  sellerId: z.string().uuid(),
+  subject: z.string(),
+  description: z.string(),
+  evidence: z.string().nullable().optional(),
+  status: disputeStatusEnum.default('open'),
+  resolution: disputeResolutionEnum.nullable().optional(),
+  resolutionNote: z.string().nullable().optional(),
+  amountInDispute: z.number().int().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  openedAt: z.date().optional(),
+  closedAt: z.date().nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
 // ========================== PAYMENT HOLDS ==========================
 export const paymentHoldsSchema = z.object({
   id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
   orderId: z.string().uuid(),
   paymentId: z.string().uuid(),
   amountCents: z.number().int(),
   currency: z.string(),
   holdStatus: holdStatusEnum.default('active'),
   reason: z.string().nullable().optional(),
+  heldAt: z.date().optional(),
+  releaseableAt: z.date().nullable().optional(),
   refundedAt: z.date().nullable().optional(),
   releasedAt: z.date().nullable().optional(),
   createdAt: z.date().optional(),
@@ -567,6 +623,59 @@ export const notificationsSchema = z.object({
   createdAt: z.date().optional(),
 });
 
+// ========================== BUYER NOTIFICATIONS ==========================
+export const buyerNotificationsSchema = z.object({
+  id: z.string().uuid().optional(),
+  buyerId: z.string().uuid(),
+  type: notificationCategoryEnum,
+  title: z.string(),
+  message: z.string(),
+  isRead: z.boolean().default(false),
+  isStarred: z.boolean().default(false),
+  relatedEntityId: z.string().uuid().nullable().optional(),
+  relatedEntityType: z.string().nullable().optional(),
+  actionUrl: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.any()).nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== ADMIN NOTIFICATIONS ==========================
+export const adminNotificationsSchema = z.object({
+  id: z.string().uuid().optional(),
+  adminId: z.string().uuid(),
+  type: notificationCategoryEnum,
+  title: z.string(),
+  message: z.string(),
+  severity: notificationSeverityEnum,
+  isRead: z.boolean().default(false),
+  isStarred: z.boolean().default(false),
+  relatedEntityId: z.string().uuid().nullable().optional(),
+  relatedEntityType: z.string().nullable().optional(),
+  actionUrl: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.any()).nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// ========================== SELLER NOTIFICATIONS ==========================
+export const sellerNotificationsSchema = z.object({
+  id: z.string().uuid().optional(),
+  sellerId: z.string().uuid(),
+  type: notificationCategoryEnum,
+  title: z.string(),
+  message: z.string(),
+  severity: notificationSeverityEnum,
+  isRead: z.boolean().default(false),
+  isStarred: z.boolean().default(false),
+  relatedEntityId: z.string().uuid().nullable().optional(),
+  relatedEntityType: z.string().nullable().optional(),
+  actionUrl: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.any()).nullable().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
 // ========================== REVIEWS ==========================
 export const reviewsSchema = z.object({
   id: z.string().uuid().optional(),
@@ -625,7 +734,7 @@ export const loyaltyNFTsSchema = z.object({
 // ========================== SUPPORT TICKETS ==========================
 export const supportTicketsSchema = z.object({
   id: z.string().uuid().optional(),
-  buyerId: z.string().uuid(),
+  buyerId: z.string().uuid().nullable().optional(),
   sellerId: z.string().uuid().nullable().optional(),
   orderId: z.string().uuid().nullable().optional(),
   subject: z.string(),
@@ -757,8 +866,6 @@ export const emailOtpsSchema = z.object({
 });
 
 // ========================== ENTERPRISE SUPPORT ==========================
-const slaPriorityEnum = z.enum(['low', 'medium', 'high', 'critical']);
-const escalationStatusEnum = z.enum(['pending', 'triggered', 'resolved', 'cancelled']);
 
 export const supportTeamMembersSchema = z.object({
   id: z.string().uuid().optional(),
@@ -847,7 +954,7 @@ export const listingReviewSchema = z.object({
   listingId: z.string().uuid(),
   sellerId: z.string().uuid(),
   reviewedBy: z.string().uuid().optional(),
-  status: z.enum(['pending', 'approved', 'rejected', 'revision_requested']),
+  status: listingReviewStatusEnum,
   comments: z.string().nullable().optional(),
   rejectionReason: z.string().nullable().optional(),
   revisionRequests: z.record(z.string(), z.any()).nullable().optional(),
@@ -860,11 +967,23 @@ export const listingReviewSchema = z.object({
 export const listingActivityLogSchema = z.object({
   id: z.string().uuid().optional(),
   listingId: z.string().uuid(),
+  sellerId: z.string().uuid(),
   action: z.string(),
-  performedBy: z.string().uuid().optional(),
-  performedByRole: z.enum(['seller', 'buyer', 'admin']).optional(),
-  oldStatus: z.enum(['draft', 'pending_review', 'approved', 'rejected', 'archived']).nullable().optional(),
-  newStatus: z.enum(['draft', 'pending_review', 'approved', 'rejected', 'archived']).nullable().optional(),
+  actionType: z.string(),
   details: z.record(z.string(), z.any()).nullable().optional(),
+  performedBy: z.string().uuid().optional(),
+  performedByRole: rolesEnum.optional(),
   createdAt: z.date().optional(),
+});
+
+// ========================== ADMIN SETTINGS ==========================
+export const adminSettingsSchema = z.object({
+  id: z.string().uuid().optional(),
+  settingKey: z.string(),
+  settingValue: z.record(z.string(), z.any()),
+  description: z.string().nullable().optional(),
+  category: z.string(),
+  updatedBy: z.string().uuid(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });

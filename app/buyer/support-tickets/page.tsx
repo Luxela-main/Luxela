@@ -88,14 +88,15 @@ export default function BuyerSupportTicketsPage() {
     { refetchInterval: 30000 }
   );
 
-  // Fetch ticket details and replies
+  // Fetch ticket details and replies - use stable key
+  const ticketId = selectedTicket?.id || '';
   const detailsQuery = trpc.support.getTicket.useQuery(
-    { ticketId: selectedTicket?.id || '' },
+    { ticketId },
     { enabled: !!selectedTicket?.id, refetchInterval: 15000 }
   );
 
   const repliesQuery = trpc.support.getTicketReplies.useQuery(
-    { ticketId: selectedTicket?.id || '' },
+    { ticketId },
     { enabled: !!selectedTicket?.id, refetchInterval: 15000 }
   );
 
@@ -125,6 +126,7 @@ export default function BuyerSupportTicketsPage() {
       detailsQuery.refetch();
     },
     onError: (error) => {
+      console.error('[Buyer Support] Reply error:', error);
       toastSvc.error(error.message || 'Failed to send reply');
     },
   });
@@ -146,9 +148,9 @@ export default function BuyerSupportTicketsPage() {
     }
   }, [ticketsQuery.data]);
 
-  // Update selected ticket details
+  // Update selected ticket details and show notification when new replies arrive
   useEffect(() => {
-    if (selectedTicket && detailsQuery.data && repliesQuery.data) {
+    if (selectedTicket && detailsQuery.data) {
       const updatedTicket: SupportTicket = {
         ...selectedTicket,
         ...detailsQuery.data,
@@ -157,14 +159,27 @@ export default function BuyerSupportTicketsPage() {
         assignedTo: detailsQuery.data.assignedTo ?? null,
         priority: detailsQuery.data.priority as 'low' | 'medium' | 'high' | 'urgent',
         status: detailsQuery.data.status as 'open' | 'in_progress' | 'resolved' | 'closed',
-        replies: repliesQuery.data.map(r => ({
-          ...r,
-          createdAt: new Date(r.createdAt),
-        })),
+        replies: repliesQuery.data
+          ? repliesQuery.data.map(r => ({
+              ...r,
+              createdAt: new Date(r.createdAt),
+            }))
+          : selectedTicket.replies || [],
         createdAt: new Date(detailsQuery.data.createdAt),
         updatedAt: new Date(detailsQuery.data.updatedAt),
         resolvedAt: detailsQuery.data.resolvedAt ? new Date(detailsQuery.data.resolvedAt) : null,
       };
+      
+      // Check if new replies have arrived from admin/seller
+      const prevReplyCount = selectedTicket.replies?.length || 0;
+      const newReplyCount = repliesQuery.data?.length || 0;
+      if (newReplyCount > prevReplyCount && repliesQuery.data && repliesQuery.data.length > 0) {
+        const lastReply = repliesQuery.data[0];
+        if (lastReply.senderRole !== 'buyer') {
+          toastSvc.success(`New reply from ${lastReply.senderRole === 'admin' ? 'Admin' : 'Seller'}!`);
+        }
+      }
+      
       setSelectedTicket(updatedTicket);
     }
   }, [detailsQuery.data, repliesQuery.data]);

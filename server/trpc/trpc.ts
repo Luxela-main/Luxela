@@ -8,7 +8,10 @@ export const publicProcedure = t.procedure;
 
 // PROTECTED PROCEDURE
 // -------------------------------
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = t.procedure.use(async (opts: any) => {
+  const ctx = opts.ctx as TRPCContext;
+  const next = opts.next as (opts: { ctx: TRPCContext }) => Promise<any>;
+  
   if (!ctx.user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
@@ -27,7 +30,10 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 
 // ADMIN PROCEDURE
 // --------------------------------
-export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+export const adminProcedure = t.procedure.use(async (opts: any) => {
+  const ctx = opts.ctx as TRPCContext;
+  const next = opts.next as (opts: { ctx: TRPCContext }) => Promise<any>;
+  
   if (!ctx.user || ctx.user.role !== 'admin') {
     throw new TRPCError({
       code: 'FORBIDDEN',

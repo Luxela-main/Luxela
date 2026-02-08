@@ -1,6 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import type { TRPCContext } from '../trpc/context';
 import { db } from '../db';
 import { payments, orders, refunds, paymentHolds, financialLedger, sellers } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -16,7 +17,8 @@ export const refundRouter = createTRPCRouter({
         amount: z.number().positive().optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { orderId: string; reason: string; refundType: string; amount?: number } };
       try {
         const userId = ctx.user?.id;
         if (!userId) {
@@ -137,7 +139,8 @@ export const refundRouter = createTRPCRouter({
 
   getRefundStatus: protectedProcedure
     .input(z.object({ orderId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
+    .query(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { orderId: string } };
       try {
         const [refund] = await db
           .select()
@@ -174,7 +177,8 @@ export const refundRouter = createTRPCRouter({
         images: z.array(z.string().url()).optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { orderId: string; reason: 'damaged' | 'defective' | 'not_as_described' | 'wrong_item' | 'changed_mind' | 'no_longer_needed'; description: string; images?: string[] } };
       try {
         const buyerId = ctx.user?.id;
         if (!buyerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -278,7 +282,8 @@ export const refundRouter = createTRPCRouter({
         restockPercentage: z.number().min(0).max(100).default(100),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { refundId: string; approved: boolean; sellerNote?: string; restockPercentage: number } };
       try {
         const sellerId = ctx.user?.id;
         if (!sellerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -370,7 +375,8 @@ export const refundRouter = createTRPCRouter({
         notes: z.string().optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { refundId: string; receivedCondition?: 'excellent' | 'good' | 'acceptable' | 'poor'; notes?: string } };
       try {
         const sellerId = ctx.user?.id;
         if (!sellerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -443,7 +449,8 @@ export const refundRouter = createTRPCRouter({
         amount: z.number().positive().optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { orderId: string; reason: string; refundType: string; amount?: number } };
       try {
         const buyerId = ctx.user?.id;
         if (!buyerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -554,7 +561,8 @@ export const refundRouter = createTRPCRouter({
         offset: z.number().default(0),
       })
     )
-    .query(async ({ ctx, input }) => {
+    .query(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { limit: number; offset: number } };
       try {
         const buyerId = ctx.user?.id;
         if (!buyerId) throw new TRPCError({ code: 'UNAUTHORIZED' });

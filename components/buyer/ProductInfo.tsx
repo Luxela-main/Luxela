@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Listing } from "@/types/listing";
-import { Minus, Plus, ShoppingCart, Check, LogIn } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Check, LogIn, Heart } from "lucide-react";
+import { addToFavorites, removeFromFavorites, isFavorite } from "@/server/actions/favorites";
 import { useCartState } from "@/modules/cart/context";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/hooks/useToast";
@@ -43,11 +44,28 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isFav, setIsFav] = useState(false);
+  const [loadingFav, setLoadingFav] = useState(false);
 
   const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
   const { addToCart } = useCartState();
+
+  // Check if product is favorited
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!user) return;
+      try {
+        const result = await isFavorite(product.id);
+        setIsFav(result.isFavorite);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+
+    checkFavorite();
+  }, [product.id, user]);
 
   const sizes = useMemo(() => {
     if (!product.sizes_json) return [];
@@ -130,6 +148,39 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    try {
+      setLoadingFav(true);
+      if (isFav) {
+        const result = await removeFromFavorites(product.id);
+        if (result.success) {
+          setIsFav(false);
+          toast.success('Removed from favorites');
+        } else {
+          toast.error(result.error || 'Failed to remove from favorites');
+        }
+      } else {
+        const result = await addToFavorites(product.id);
+        if (result.success) {
+          setIsFav(true);
+          toast.success('Added to favorites');
+        } else {
+          toast.error(result.error || 'Failed to add to favorites');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Failed to update favorites');
+    } finally {
+      setLoadingFav(false);
+    }
+  };
+
   const incrementQuantity = () => {
     if (quantity < product.quantity_available) setQuantity(quantity + 1);
   };
@@ -139,242 +190,276 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-md border border-[#212121] p-4 flex flex-col gap-4">
-        {/* Title */}
+    <div className="space-y-8">
+      {/* Title & Brand Section - Premium */}
+      <section className="rounded-2xl border border-[#1a1a1a] bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] p-8 flex flex-col gap-6">
         <div>
-          <h1 className="text-xl font-medium mb-2">
-            {product.title} <span className="text-sm">by</span>
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">
+            Premium Collection
+          </p>
+          <h1 className="text-3xl lg:text-4xl font-light mb-3 leading-tight">
+            {product.title}
           </h1>
           <Link
             href={`/buyer/brand/${business?.brand_name
               ?.toLowerCase()
               .replace(/\s+/g, "-")}`}
-            className="text-[#8451E1] hover:text-[#8451E1] text-sm transition-colors"
+            className="text-[#8451E1] hover:text-[#9665F5] text-sm font-medium transition-colors uppercase tracking-wide"
           >
-            {business?.brand_name}
+            by {business?.brand_name}
           </Link>
         </div>
 
-        {/* Price */}
-        <div className="flex items-baseline gap-3">
-          <span className="text-xl font-bold text-white">
-            {(product.price_cents / 100).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-            })}
-          </span>
-          <span className="text-sm text-gray-400">{product.currency}</span>
+        {/* Price - Premium Display with Favorite Button */}
+        <div className="border-t border-b border-[#1a1a1a] py-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">
+                Price
+              </p>
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-light text-white">
+                  {(product.price_cents / 100).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })}
+                </span>
+                <span className="text-sm text-gray-400 font-medium">
+                  {product.currency}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={handleToggleFavorite}
+              disabled={loadingFav}
+              className="flex items-center justify-center w-12 h-12 rounded-full border border-[#1a1a1a] hover:border-[#8451E1] transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+              title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart
+                className={`w-6 h-6 transition-all ${
+                  isFav
+                    ? 'fill-red-500 text-red-500'
+                    : 'text-gray-400 group-hover:text-red-500'
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
-        <div className="flex gap-3">
+        {/* Badges */}
+        <div className="flex flex-wrap gap-2">
           {product.limited_edition_badge === "show_badge" && (
-            <span className="px-3 py-1.5 bg-[#8451E1CC]/20 text-[#8451E1] text-xs font-medium rounded-full">
-              Limited Edition
+            <span className="px-4 py-2 bg-gradient-to-r from-[#8451E1]/20 to-[#7240D0]/20 text-[#8451E1] text-xs font-semibold rounded-full border border-[#8451E1]/30 uppercase tracking-wide">
+              ✨ Limited Edition
             </span>
           )}
           {product.quantity_available <= 10 &&
             product.quantity_available > 0 && (
-              <span className="px-3 py-1.5 bg-orange-500/20 text-orange-400 text-xs font-medium rounded-full">
-                Only {product.quantity_available} left
+              <span className="px-4 py-2 bg-orange-500/10 text-orange-400 text-xs font-semibold rounded-full border border-orange-500/30 uppercase tracking-wide">
+                ⚠️ Only {product.quantity_available} left
               </span>
             )}
           {product.category && (
-            <span className="px-3 py-1.5 bg-gray-800 text-gray-300 text-xs font-medium rounded-full">
+            <span className="px-4 py-2 bg-gray-800/50 text-gray-300 text-xs font-semibold rounded-full border border-gray-700 uppercase tracking-wide">
               {product.category.replace(/_/g, " ")}
             </span>
           )}
         </div>
       </section>
 
-      <section className="border border-[#212121] flex flex-col gap-4 py-4 rounded-md">
+      {/* Product Options Section */}
+      <section className="border border-[#1a1a1a] flex flex-col gap-0 rounded-2xl bg-[#0a0a0a] overflow-hidden">
         {/* Color Selection */}
-        <section className="">
-          {colors.length > 0 && (
-            <div className="p-4">
-              <h3 className="text-sm font-medium mb-3 text-white">
-                Color:{" "}
-                <span className="text-gray-400 capitalize">
-                  {colors[selectedColor]?.colorName}
-                </span>
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {colors.map((color: any, index: number) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedColor(index)}
-                    className={`relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${
-                      selectedColor === index
-                        ? "border-[#8451E1] scale-110"
-                        : "border-gray-800 hover:border-gray-600"
-                    }`}
-                    title={color.colorName}
+        {colors.length > 0 && (
+          <div className="border-b border-[#1a1a1a] p-6">
+            <h3 className="text-xs font-semibold mb-4 text-white uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
+              Color: <span className="text-gray-400 font-normal capitalize">
+                ({colors[selectedColor]?.colorName})
+              </span>
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {colors.map((color: any, index: number) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedColor(index)}
+                  className={`relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${
+                    selectedColor === index
+                      ? "border-[#8451E1] scale-110"
+                      : "border-gray-800 hover:border-gray-600"
+                  }`}
+                  title={color.colorName}
+                >
+                  <div
+                    className="w-[85%] h-[85%] rounded-full flex items-center justify-center overflow-hidden shadow-inner"
+                    style={{ backgroundColor: color.displayHex || "#1a1a1a" }}
                   >
-                    <div
-                      className="w-[85%] h-[85%] rounded-full flex items-center justify-center overflow-hidden shadow-inner"
-                      style={{ backgroundColor: color.displayHex || "#1a1a1a" }}
-                    >
-                      {!color.displayHex && (
-                        <span className="text-[10px] text-white font-bold uppercase">
-                          {color.colorName?.charAt(0)}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Size Selection */}
-          {sizes.length > 0 && (
-            <div className="p-4">
-              <h3 className="text-sm font-medium mb-3 text-white">
-                Select size
-              </h3>
-              <div className="grid grid-cols-5 gap-3">
-                {sizes.map((size: string) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`py-3 rounded-lg border text-sm font-medium transition-all ${
-                      selectedSize === size
-                        ? "bg-white text-black border-white"
-                        : "border-gray-800 text-gray-400 hover:border-gray-600"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <hr className="py-2 text-[#212121] w-full" />
-
-          {/* Material/Composition Dropdown */}
-          {product.material_composition && (
-            <div className="p-4">
-              <h3 className="text-sm font-medium mb-3 text-white">
-                Material Composition
-              </h3>
-              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
-                {product.material_composition}
-              </div>
-            </div>
-          )}
-
-          {/* Target Audience Display */}
-          {product.additional_target_audience && (
-            <div className="p-4">
-              <h3 className="text-sm font-medium mb-3 text-white">
-                Target Audience
-              </h3>
-              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
-                {product.additional_target_audience}
-              </div>
-            </div>
-          )}
-
-          {/* Shipping Options Dropdown */}
-          {product.shipping_option && (
-            <div className="p-4">
-              <h3 className="text-sm font-medium mb-3 text-white">
-                Shipping Available
-              </h3>
-              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
-                {product.shipping_option === "local"
-                  ? "Local Only"
-                  : product.shipping_option === "international"
-                  ? "International Only"
-                  : "Local & International"}
-              </div>
-              {/* Shipping ETA Information */}
-              <div className="mt-3 space-y-2 text-sm">
-                {product.eta_domestic && (
-                  <div className="flex justify-between text-gray-400">
-                    <span>Domestic Delivery:</span>
-                    <span className="text-gray-300 capitalize">
-                      {product.eta_domestic.replace(/_/g, " ")}
-                    </span>
+                    {!color.displayHex && (
+                      <span className="text-[10px] text-white font-bold uppercase">
+                        {color.colorName?.charAt(0)}
+                      </span>
+                    )}
                   </div>
-                )}
-                {product.eta_international && product.shipping_option !== "local" && (
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Size Selection */}
+        {sizes.length > 0 && (
+          <div className="border-b border-[#1a1a1a] p-6">
+            <h3 className="text-xs font-semibold mb-4 text-white uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
+              Select Size
+            </h3>
+            <div className="grid grid-cols-5 gap-3">
+              {sizes.map((size: string) => (
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  className={`py-3 rounded-lg border text-sm font-medium transition-all ${
+                    selectedSize === size
+                      ? "bg-white text-black border-white"
+                      : "border-gray-800 text-gray-400 hover:border-gray-600"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Material/Composition */}
+        {product.material_composition && (
+          <div className="border-b border-[#1a1a1a] p-6">
+            <h3 className="text-xs font-semibold mb-3 text-white uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
+              Material Composition
+            </h3>
+            <div className="px-4 py-3 rounded-lg bg-[#161616]/50 border border-[#1a1a1a] text-gray-300 capitalize text-sm">
+              {product.material_composition}
+            </div>
+          </div>
+        )}
+
+        {/* Target Audience */}
+        {product.additional_target_audience && (
+          <div className="border-b border-[#1a1a1a] p-6">
+            <h3 className="text-xs font-semibold mb-3 text-white uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
+              Target Audience
+            </h3>
+            <div className="px-4 py-3 rounded-lg bg-[#161616]/50 border border-[#1a1a1a] text-gray-300 capitalize text-sm">
+              {product.additional_target_audience}
+            </div>
+          </div>
+        )}
+
+        {/* Shipping */}
+        {product.shipping_option && (
+          <div className="border-b border-[#1a1a1a] p-6">
+            <h3 className="text-xs font-semibold mb-3 text-white uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
+              Shipping Available
+            </h3>
+            <div className="px-4 py-3 rounded-lg bg-[#161616]/50 border border-[#1a1a1a] text-gray-300 capitalize text-sm mb-4">
+              {product.shipping_option === "local"
+                ? "Local Only"
+                : product.shipping_option === "international"
+                ? "International Only"
+                : "Local & International"}
+            </div>
+            {/* Shipping ETA */}
+            <div className="space-y-2 text-sm">
+              {product.eta_domestic && (
+                <div className="flex justify-between text-gray-400">
+                  <span>Domestic Delivery:</span>
+                  <span className="text-gray-300 capitalize font-medium">
+                    {product.eta_domestic.replace(/_/g, " ")}
+                  </span>
+                </div>
+              )}
+              {product.eta_international &&
+                product.shipping_option !== "local" && (
                   <div className="flex justify-between text-gray-400">
                     <span>International Delivery:</span>
-                    <span className="text-gray-300 capitalize">
+                    <span className="text-gray-300 capitalize font-medium">
                       {product.eta_international.replace(/_/g, " ")}
                     </span>
                   </div>
                 )}
-              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Refund Policy Display */}
-          {product.refund_policy && (
-            <div className="p-4">
-              <h3 className="text-sm font-medium mb-3 text-white flex items-center gap-2">
-                <span>✓</span> Refund Policy
-              </h3>
-              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300">
-                {product.refund_policy === "no_refunds"
-                  ? "No Refunds"
-                  : product.refund_policy === "48hrs"
-                  ? "48 Hours"
-                  : product.refund_policy === "72hrs"
-                  ? "72 Hours"
-                  : product.refund_policy === "5_working_days"
-                  ? "5 Working Days"
-                  : product.refund_policy === "1week"
-                  ? "1 Week"
-                  : product.refund_policy === "14days"
-                  ? "14 Days"
-                  : product.refund_policy === "30days"
-                  ? "30 Days"
-                  : product.refund_policy === "60days"
-                  ? "60 Days"
-                  : product.refund_policy === "store_credit"
-                  ? "Store Credit"
-                  : product.refund_policy}
-              </div>
+        {/* Refund Policy */}
+        {product.refund_policy && (
+          <div className="border-b border-[#1a1a1a] p-6">
+            <h3 className="text-xs font-semibold mb-3 text-white uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span> Refund
+              Policy
+            </h3>
+            <div className="px-4 py-3 rounded-lg bg-[#161616]/50 border border-[#1a1a1a] text-gray-300 text-sm">
+              {product.refund_policy === "no_refunds"
+                ? "No Refunds"
+                : product.refund_policy === "48hrs"
+                ? "48 Hours"
+                : product.refund_policy === "72hrs"
+                ? "72 Hours"
+                : product.refund_policy === "5_working_days"
+                ? "5 Working Days"
+                : product.refund_policy === "1week"
+                ? "1 Week"
+                : product.refund_policy === "14days"
+                ? "14 Days"
+                : product.refund_policy === "30days"
+                ? "30 Days"
+                : product.refund_policy === "60days"
+                ? "60 Days"
+                : product.refund_policy === "store_credit"
+                ? "Store Credit"
+                : product.refund_policy}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Supply Capacity Display */}
-          {product.supply_capacity && (
-            <div className="p-4">
-              <h3 className="text-sm font-medium mb-3 text-white">
-                Availability
-              </h3>
-              <div className="px-4 py-3 rounded-lg bg-[#161616] border border-[#212121] text-gray-300 capitalize">
-                {product.supply_capacity === "limited"
-                  ? "Limited Supply"
-                  : "Unlimited Supply"}
-              </div>
+        {/* Supply Capacity */}
+        {product.supply_capacity && (
+          <div className="border-b border-[#1a1a1a] p-6">
+            <h3 className="text-xs font-semibold mb-3 text-white uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
+              Availability
+            </h3>
+            <div className="px-4 py-3 rounded-lg bg-[#161616]/50 border border-[#1a1a1a] text-gray-300 capitalize text-sm">
+              {product.supply_capacity === "limited"
+                ? "Limited Supply"
+                : "Unlimited Supply"}
             </div>
-          )}
+          </div>
+        )}
 
-          <hr className="py-2 text-[#212121] w-full" />
-        </section>
-
-        {/* Quantity Selector */}
-        <div className="px-4">
-          <h3 className="text-sm font-medium mb-3 text-[#f2f2f2]">Quantity</h3>
-
-          <div className="flex items-center gap-3">
-            {/* Minus Button */}
+        {/* Quantity */}
+        <div className="border-b border-[#1a1a1a] p-6">
+          <h3 className="text-xs font-semibold mb-4 text-white uppercase tracking-widest flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
+            Quantity
+          </h3>
+          <div className="flex items-center gap-4">
             <button
               onClick={decrementQuantity}
               disabled={quantity <= 1}
-              className="w-12 h-12 flex items-center text-sm justify-center rounded-xl bg-[#1a1a1a] border border-[#222] hover:bg-[#222] disabled:opacity-20 disabled:cursor-not-allowed transition-all text-white"
+              className="w-12 h-12 flex items-center text-sm justify-center rounded-xl bg-[#1a1a1a] border border-[#1a1a1a] hover:bg-[#222] hover:border-[#333] disabled:opacity-20 disabled:cursor-not-allowed transition-all text-white"
             >
               <Minus className="w-5 h-5" />
             </button>
 
-            <div className="flex-1 max-w-[160px] h-12 flex items-center justify-center bg-[#1a1a1a] border border-[#222] rounded-xl">
-              <span className="font-medium text-sm text-white">{quantity}</span>
+            <div className="flex-1 max-w-[160px] h-12 flex items-center justify-center bg-[#1a1a1a] border border-[#1a1a1a] rounded-xl">
+              <span className="font-semibold text-sm text-white tracking-wide">
+                {quantity}
+              </span>
             </div>
 
-            {/* Plus Button */}
             <button
               onClick={incrementQuantity}
               disabled={quantity >= product.quantity_available}
@@ -391,22 +476,21 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
             </button>
           </div>
         </div>
-        <hr className="py-2 text-[#212121] w-full" />
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 px-4">
+        <div className="flex flex-col sm:flex-row justify-between gap-4 pt-8 px-6 pb-6">
           <Button
             onClick={handleBuyNow}
             disabled={addingToCart}
-            className="w-full cursor-pointer text-sm text-white py-4 h-12 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 cursor-pointer text-sm text-white py-4 h-12 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:from-[#9665F5] hover:to-[#8451E1] shadow-lg shadow-[#8451E1]/20 uppercase tracking-wide"
           >
             {addingToCart ? (
               "Processing..."
             ) : (
               <>
-                Buy now
+                Buy Now
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -425,47 +509,25 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
           <Button
             onClick={handleAddToCart}
             disabled={addingToCart}
-            className="w-full px-6 cursor-pointer py-4 bg-[#161616] h-12 hover:bg-[#1f1f1f] rounded-xl transition-all border border-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center group"
+            className="flex-1 px-6 cursor-pointer py-4 bg-[#1a1a1a] h-12 hover:bg-[#242424] rounded-xl transition-all border border-[#2a2a2a] hover:border-[#8451E1]/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center group uppercase tracking-wide"
           >
             {addedToCart ? (
-              <span className="text-sm text-green-500 flex items-center gap-2 font-medium">
-                <Check className="w-5 h-5" /> Added to Cart
+              <span className="text-sm text-green-400 flex items-center gap-2 font-semibold">
+                <Check className="w-5 h-5" /> Added
               </span>
             ) : (
               <>
-                <span className="text-sm text-purple-500 font-medium">
+                <ShoppingCart className="w-4 h-4 mr-2 text-[#8451E1]" />
+                <span className="text-sm text-[#8451E1] font-semibold">
                   Add to Cart
                 </span>
-                <ShoppingCart className="w-5 h-5 ml-2 text-purple-500 group-hover:scale-110 transition-transform" />
               </>
             )}
           </Button>
         </div>
       </section>
 
-      {/* Additional Info */}
-      {/* <div className="pt-6 space-y-3 text-sm border-t border-gray-800">
-        {product.material_composition && (
-          <div className="flex justify-between">
-            <span className="text-gray-400">Material:</span>
-            <span className="text-white capitalize">{product.material_composition}</span>
-          </div>
-        )}
-        {product.shipping_option && (
-          <div className="flex justify-between">
-            <span className="text-gray-400">Shipping:</span>
-            <span className="text-white capitalize">{product.shipping_option.replace(/_/g, " ")}</span>
-          </div>
-        )}
-        {product.eta_domestic && (
-          <div className="flex justify-between">
-            <span className="text-gray-400">Delivery (Domestic):</span>
-            <span className="text-white">{product.eta_domestic}</span>
-          </div>
-        )}
-      </div> */}
-
-      {/* Auth Requirement Modal */}
+      {/* Auth Modal */}
       <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
         <DialogContent className="bg-[#141414] border-[#212121] text-white sm:max-w-md rounded-2xl">
           <DialogHeader className="flex flex-col items-center">
@@ -501,4 +563,4 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       </Dialog>
     </div>
   );
-}
+}

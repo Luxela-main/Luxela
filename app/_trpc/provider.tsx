@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc } from "./client";
 import { httpLink, loggerLink } from "@trpc/client";
 import { createClient } from "@/utils/supabase/client";
+import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 interface TRPCProviderProps {
   children: ReactNode;
@@ -29,7 +30,7 @@ async function initializeAuthToken(): Promise<void> {
   currentAccessToken = session?.access_token ?? null;
 
   // Subscribe to future changes
-  supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
     currentAccessToken = session?.access_token ?? null;
   });
 }
@@ -89,15 +90,20 @@ export function TRPCProvider({ children }: TRPCProviderProps) {
 
   // Initialize auth on mount BEFORE component renders children
   useEffect(() => {
-    initializeAuthToken().then(() => {
-      setIsReady(true);
-    });
+    initializeAuthToken()
+      .then(() => {
+        setIsReady(true);
+      })
+      .catch((error) => {
+        console.error('Failed to initialize auth token:', error);
+        setIsReady(true); // Still proceed even if auth fails
+      });
   }, []);
 
-  // Don't render TRPC provider until auth is initialized
-  // This ensures the first requests have the access token
+  // Don't render anything until auth is initialized
+  // This ensures ALL requests (including initial ones) have the access token
   if (!isReady) {
-    return <>{children}</>;
+    return null;
   }
 
   return (

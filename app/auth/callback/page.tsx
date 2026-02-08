@@ -47,8 +47,17 @@ function AuthCallbackHandler() {
     const role = user?.user_metadata?.role as "buyer" | "seller" | undefined;
     const customRedirect = searchParams.get("redirect");
 
+    // Store success toast to display after redirect
+    localStorage.setItem('pendingToast', JSON.stringify({ type: 'success', message: 'Signed in successfully.' }));
+
     // If custom redirect is specified (e.g., from admin signin with Google)
     if (customRedirect) {
+      // If it's an admin redirect, just use it as-is (admin flow will handle role validation)
+      if (customRedirect.includes('/admin')) {
+        window.location.href = customRedirect;
+        return;
+      }
+      // Otherwise use the custom redirect
       window.location.href = customRedirect;
       return;
     }
@@ -110,14 +119,16 @@ function AuthCallbackHandler() {
 
           if (type === "signup" && data.session?.user) {
             setUser(data.session.user);
-            toast.success("Account created successfully.");
+            // Store toast message to show after redirect
+            localStorage.setItem('pendingToast', JSON.stringify({ type: 'success', message: 'Account created successfully.' }));
             window.location.href = "/select-role";
             return;
           }
 
           if (data.session?.user) {
             setUser(data.session.user);
-            toast.success("Signed in successfully.");
+            // Store toast message to show after redirect
+            localStorage.setItem('pendingToast', JSON.stringify({ type: 'success', message: 'Signed in successfully.' }));
           }
         }
 

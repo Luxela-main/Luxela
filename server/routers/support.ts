@@ -325,11 +325,39 @@ export const supportRouter = createTRPCRouter({
 
       const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
       const seller = sellerResult[0];
-      const buyerResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
-      const buyer = buyerResult[0];
+      let buyerResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
+      let buyer = buyerResult[0];
 
+      // If buyer doesn't exist, try to create one
+      if (!buyer && !seller) {
+        try {
+          const newBuyerId = uuidv4();
+          await db.insert(buyers).values({
+            id: newBuyerId,
+            userId: userId,
+          });
+          buyer = {
+            id: newBuyerId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as any;
+        } catch (error) {
+          // If creation fails (e.g., already exists), try to fetch again
+          const retryResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
+          buyer = retryResult[0];
+        }
+      }
+
+      // Check if user is an admin
+      const adminResult = await db.select().from(users).where(eq(users.id, userId));
+      const isAdmin = adminResult[0]?.role === 'admin';
+      
       let conditions;
-      if (seller) {
+      if (isAdmin) {
+        // Admin can view any ticket
+        conditions = eq(supportTickets.id, input.ticketId);
+      } else if (seller) {
         conditions = and(
           eq(supportTickets.id, input.ticketId),
           or(
@@ -609,19 +637,60 @@ export const supportRouter = createTRPCRouter({
           message: 'Ticket not found',
         });
 
-      const isBuyer = ticket[0].buyerId === userId;
+      const isAdmin = ctx.user?.role === 'admin';
+      
+      // Get buyer if exists
+      let buyerResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
+      let buyer = buyerResult[0];
+      
+      // If buyer doesn't exist, try to create one
+      if (!buyer) {
+        try {
+          const newBuyerId = uuidv4();
+          await db.insert(buyers).values({
+            id: newBuyerId,
+            userId: userId,
+          });
+          buyer = {
+            id: newBuyerId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as any;
+        } catch (error) {
+          // If creation fails (e.g., already exists), try to fetch again
+          const retryResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
+          buyer = retryResult[0];
+        }
+      }
+      
+      const isBuyer = buyer && ticket[0].buyerId === buyer.id;
       const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
       const seller = sellerResult[0];
       const isAssignedSeller = seller && ticket[0].assignedTo === seller.id;
+      const isTicketCreator = seller && ticket[0].sellerId === seller.id;
 
-      if (!isBuyer && !isAssignedSeller) {
+      if (!isAdmin && !isBuyer && !isAssignedSeller && !isTicketCreator) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Not authorized to reply to this ticket',
         });
       }
 
-      let senderRole: 'buyer' | 'seller' | 'admin' = isBuyer ? 'buyer' : 'seller';
+      let senderRole: 'buyer' | 'seller' | 'admin';
+      if (isAdmin) {
+        senderRole = 'admin';
+      } else if (isBuyer) {
+        senderRole = 'buyer';
+      } else if (isAssignedSeller || isTicketCreator) {
+        senderRole = 'seller';
+      } else {
+        // This should never happen due to the check above
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Unable to determine sender role',
+        });
+      }
 
       const replyId = uuidv4();
       const now = new Date();
@@ -659,16 +728,35 @@ export const supportRouter = createTRPCRouter({
           }
         }
       } else if (isAssignedSeller && ticket[0].buyerId) {
-        const buyerUser = await db.select().from(users).where(eq(users.id, ticket[0].buyerId));
-        if (buyerUser[0]) {
-          await sendSupportTicketEmail({
-            type: 'ticket_reply',
-            recipientEmail: buyerUser[0].email,
-            ticketId: input.ticketId,
-            ticketSubject: ticket[0].subject,
-            replyMessage: input.message,
-            senderName: 'Support Agent',
-          }).catch(err => console.error('Email notification failed:', err));
+        const buyer = await db.select().from(buyers).where(eq(buyers.id, ticket[0].buyerId));
+        if (buyer[0]) {
+          const buyerUser = await db.select().from(users).where(eq(users.id, buyer[0].userId));
+          if (buyerUser[0]) {
+            await sendSupportTicketEmail({
+              type: 'ticket_reply',
+              recipientEmail: buyerUser[0].email,
+              ticketId: input.ticketId,
+              ticketSubject: ticket[0].subject,
+              replyMessage: input.message,
+              senderName: 'Support Agent',
+            }).catch(err => console.error('Email notification failed:', err));
+          }
+        }
+      } else if (isAdmin && ticket[0].buyerId) {
+        // Admin reply - send email to the buyer
+        const buyer = await db.select().from(buyers).where(eq(buyers.id, ticket[0].buyerId));
+        if (buyer[0]) {
+          const buyerUser = await db.select().from(users).where(eq(users.id, buyer[0].userId));
+          if (buyerUser[0]) {
+            await sendSupportTicketEmail({
+              type: 'ticket_reply',
+              recipientEmail: buyerUser[0].email,
+              ticketId: input.ticketId,
+              ticketSubject: ticket[0].subject,
+              replyMessage: input.message,
+              senderName: 'Admin Support',
+            }).catch(err => console.error('Email notification failed:', err));
+          }
         }
       }
 
@@ -710,15 +798,51 @@ export const supportRouter = createTRPCRouter({
         });
 
       // Check if user is the buyer - buyerId is from buyers table
-      const buyerResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
-      const buyer = buyerResult[0];
-      const isBuyer = buyer && ticket[0].buyerId === buyer.id;
+      let buyerResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
+      let buyer = buyerResult[0];
+      
+      // If buyer doesn't exist, try to create one
+      if (!buyer) {
+        try {
+          const newBuyerId = uuidv4();
+          await db.insert(buyers).values({
+            id: newBuyerId,
+            userId: userId,
+          });
+          buyer = {
+            id: newBuyerId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as any;
+        } catch (error) {
+          // If creation fails (e.g., already exists), try to fetch again
+          const retryResult = await db.select().from(buyers).where(eq(buyers.userId, userId));
+          buyer = retryResult[0];
+        }
+      }
+      
+      // Check if user created the ticket (as buyer)
+      const isBuyer = (buyer && ticket[0].buyerId === buyer.id) || ticket[0].buyerId === userId;
       
       const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
       const seller = sellerResult[0];
       const isAssignedSeller = seller && ticket[0].assignedTo === seller.id;
+      
+      // Check if user is an admin
+      const adminResult = await db.select().from(users).where(eq(users.id, userId));
+      const isAdmin = adminResult[0]?.role === 'admin';
 
-      if (!isBuyer && !isAssignedSeller) {
+      if (!isBuyer && !isAssignedSeller && !isAdmin) {
+        console.error('[Support] getTicketReplies access denied', {
+          userId,
+          ticketId: input.ticketId,
+          ticketBuyerId: ticket[0].buyerId,
+          buyerId: buyer?.id,
+          isBuyer,
+          isAssignedSeller,
+          isAdmin,
+        });
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Not authorized to view this ticket',

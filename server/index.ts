@@ -17,7 +17,7 @@ import { appRouter } from "./trpc/router";
 import type { AppRouter } from "./trpc/router";
 
 // DB initializer
-import { startKeepAlive as initDB } from "./db";
+import { checkDBHealth } from "./db";
 
 // Payment flow scheduler
 import { initializeScheduledTasks } from "./services/schedulerService";
@@ -320,12 +320,23 @@ const PORT = process.env.PORT || 5000;
 if (process.env.VERCEL !== "1") {
   app.listen(PORT, async () => {
     console.log(`Server running at http://localhost:${PORT}`);
-    await initDB();
+    
+    // Verify database connection
+    try {
+      const isHealthy = await checkDBHealth();
+      if (isHealthy) {
+        console.log('✓ Database connection healthy');
+      } else {
+        console.warn('⚠ Database health check failed, but proceeding...');
+      }
+    } catch (err: any) {
+      console.error('Database initialization warning:', err.message);
+    }
     
     // Initialize payment flow automation
     try {
       initializeScheduledTasks();
-      console.log('Payment flow automation tasks initialized');
+      console.log('✓ Payment flow automation tasks initialized');
     } catch (err: any) {
       console.error('Failed to initialize payment flow tasks:', err);
     }

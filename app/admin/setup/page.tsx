@@ -23,13 +23,11 @@ export default function AdminSetupPage() {
         setIsAdmin(result.isAdmin);
         setUserEmail(result.userEmail || "");
         if (result.isAdmin) {
-          // Already admin, redirect to dashboard
           setTimeout(() => {
             router.push("/admin/support");
           }, 1000);
         }
       } else {
-        // If not authenticated, redirect to login
         if (result.error === "Not authenticated") {
           setTimeout(() => {
             router.push("/signin");
@@ -54,8 +52,10 @@ export default function AdminSetupPage() {
     if (result.success) {
       setSuccess(true);
       setTimeout(() => {
-        router.push("/admin/support");
-      }, 2000);
+        // Use window.location for hard refresh to ensure proxy checks updated JWT
+        // Add cache-busting query param to force new request and JWT validation
+        window.location.href = `/admin/support?refresh=${Date.now()}`;
+      }, 3500);
     } else {
       setError(result.error || "Failed to set admin role");
     }

@@ -7,6 +7,7 @@ import { Bell, ChevronDown, Search, ShoppingCart, Menu, X, ShoppingBag, Heart, P
 import Image from "next/image";
 import Link from "next/link";
 import { useSearch } from "@/context/SearchContext";
+import { useNotificationsCount } from "@/modules/buyer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ import router from "next/router";
 
 const NAVLINKS = [
   { name: "Home", href: "/buyer" },
+  { name: "Browse", href: "/buyer/browse" },
   { name: "Brands", href: "/buyer/brands" },
   { name: "Collections", href: "/buyer/collections" },
 ];
@@ -57,6 +59,7 @@ const BuyerHeader = () => {
   const { cart } = useCartState();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
   const itemCount = cart?.items?.length || 0;
+  const notificationCount = useNotificationsCount();
   const isCreateProfileRoute = pathname?.includes('/buyer/profile/create');
 
   useEffect(() => {
@@ -153,13 +156,30 @@ const BuyerHeader = () => {
 
               {mounted ? (
                 <Link href={user ? "/buyer/dashboard/notifications" : "/signin?redirect=/buyer/dashboard/notifications"}>
-                  <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
+                  <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
                     <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-[#0E0E0E]">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
                   </button>
                 </Link>
               ) : (
-                <button className="cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
+                <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
                   <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                </button>
+              )}
+
+              {mounted ? (
+                <Link href={user ? "/buyer/favorites" : "/signin?redirect=/buyer/favorites"}>
+                  <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group flex-shrink-0">
+                    <Heart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                  </button>
+                </Link>
+              ) : (
+                <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group flex-shrink-0">
+                  <Heart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
                 </button>
               )}
 
@@ -185,6 +205,19 @@ const BuyerHeader = () => {
                 </button>
               )}
             </div>
+
+            {/* Mobile: Favorites Icon */}
+            {mounted ? (
+              <Link href={user ? "/buyer/favorites" : "/signin?redirect=/buyer/favorites"}>
+                <button className="lg:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0">
+                  <Heart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                </button>
+              </Link>
+            ) : (
+              <button className="lg:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0">
+                <Heart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+              </button>
+            )}
 
             {/* Mobile: Cart Icon */}
             {mounted ? (

@@ -7,13 +7,28 @@ function getUserFromToken(token: string | undefined) {
   
   try {
     const decoded = jwtDecode(token) as any;
+    
+    // Extract user metadata from different possible locations in JWT
+    const userMetadata = decoded.user_metadata || decoded.metadata || {};
+    const appMetadata = decoded.app_metadata || {};
+    
+    // Check for admin flag in multiple places for compatibility
+    const isAdmin = 
+      userMetadata.admin === true || 
+      appMetadata.admin === true || 
+      decoded.admin === true;
+    
     return {
       id: decoded.sub,
       email: decoded.email,
-      user_metadata: decoded.user_metadata || {},
-      app_metadata: decoded.app_metadata || {},
+      user_metadata: {
+        ...userMetadata,
+        admin: isAdmin, // Ensure admin flag is set if found anywhere
+      },
+      app_metadata: appMetadata,
     };
   } catch (error) {
+    console.error('Error decoding JWT:', error);
     return null;
   }
 }
@@ -56,6 +71,43 @@ export async function proxy(request: NextRequest) {
 
   const role =
     user?.user_metadata?.role || user?.app_metadata?.role;
+
+  const isAdmin = user?.user_metadata?.admin === true;
+
+  // Admin routes that require admin role
+  const adminRoutes = ["/admin/support", "/admin"];
+  const isAdminRoute = adminRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // Public admin pages (signin, setup)
+  const publicAdminRoutes = ["/admin/signin", "/admin/setup"];
+  const isPublicAdminRoute = publicAdminRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // Protect admin routes - require admin role
+  if (isAdminRoute && !isPublicAdminRoute) {
+    if (!user) {
+      // Not logged in → go to admin signin
+      return NextResponse.redirect(
+        new URL("/admin/signin", request.url)
+      );
+    }
+    if (!isAdmin) {
+      // Logged in but not admin → go to setup
+      return NextResponse.redirect(
+        new URL("/admin/setup", request.url)
+      );
+    }
+  }
+
+  // Prevent already-admin users from accessing signin/setup
+  if (isAdmin && isPublicAdminRoute) {
+    return NextResponse.redirect(
+      new URL("/admin/support", request.url)
+    );
+  }
 
   // If logged in but role not set → force select role
   if (user && !role && !isAlwaysAllowed && !isPublicRoute) {

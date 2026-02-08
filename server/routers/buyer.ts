@@ -9,6 +9,7 @@ import {
   buyerAccountDetails,
   buyerBillingAddress,
   buyerFavorites,
+  buyerBrandFollows,
   loyaltyNFTs,
   orders,
   listings,
@@ -23,8 +24,10 @@ import {
   carts,
   cartItems,
   profiles,
+  brands,
 } from "../db/schema";
-import { and, eq, desc, sql, isNull } from "drizzle-orm";
+import { notificationTypeEnum } from "../db/zodSchemas";
+import { and, eq, desc, sql, isNull, count } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -1211,14 +1214,29 @@ return {
         data: z.array(
           z.object({
             orderId: z.string(),
+            buyerId: z.string(),
+            sellerId: z.string(),
+            listingId: z.string(),
             productTitle: z.string(),
             productImage: z.string().optional(),
             productCategory: z.string(),
+            customerName: z.string(),
+            customerEmail: z.string(),
+            recipientEmail: z.string().nullable(),
+            paymentMethod: z.string(),
+            amountCents: z.number(),
             priceCents: z.number(),
             currency: z.string(),
+            payoutStatus: z.string(),
+            shippingAddress: z.string().nullable(),
+            trackingNumber: z.string().nullable(),
+            estimatedArrival: z.date().nullable(),
+            deliveredDate: z.date().nullable(),
             orderDate: z.date(),
             orderStatus: z.string(),
             deliveryStatus: z.string(),
+            createdAt: z.date(),
+            updatedAt: z.date(),
           })
         ),
         total: z.number(),
@@ -1278,14 +1296,28 @@ return {
           db
             .select({
               id: orders.id,
+              buyerId: orders.buyerId,
+              sellerId: orders.sellerId,
+              listingId: orders.listingId,
               productTitle: orders.productTitle,
               productImage: orders.productImage || undefined,
               productCategory: orders.productCategory,
+              customerName: orders.customerName,
+              customerEmail: orders.customerEmail,
+              recipientEmail: orders.recipientEmail,
+              paymentMethod: orders.paymentMethod,
               amountCents: orders.amountCents,
               currency: orders.currency,
+              payoutStatus: orders.payoutStatus,
+              shippingAddress: orders.shippingAddress,
+              trackingNumber: orders.trackingNumber,
+              estimatedArrival: orders.estimatedArrival,
+              deliveredDate: orders.deliveredDate,
               orderDate: orders.orderDate,
               orderStatus: orders.orderStatus,
               deliveryStatus: orders.deliveryStatus,
+              createdAt: orders.createdAt,
+              updatedAt: orders.updatedAt,
             })
             .from(orders)
             .where(whereCondition)
@@ -1301,14 +1333,29 @@ return {
         return {
           data: results.map((o) => ({
             orderId: o.id,
+            buyerId: o.buyerId,
+            sellerId: o.sellerId,
+            listingId: o.listingId,
             productTitle: o.productTitle,
             productImage: o.productImage || undefined,
             productCategory: o.productCategory,
+            customerName: o.customerName,
+            customerEmail: o.customerEmail,
+            recipientEmail: o.recipientEmail,
+            paymentMethod: o.paymentMethod,
+            amountCents: o.amountCents,
             priceCents: o.amountCents,
             currency: o.currency,
+            payoutStatus: o.payoutStatus,
+            shippingAddress: o.shippingAddress,
+            trackingNumber: o.trackingNumber,
+            estimatedArrival: o.estimatedArrival,
+            deliveredDate: o.deliveredDate,
             orderDate: o.orderDate,
             orderStatus: o.orderStatus,
             deliveryStatus: o.deliveryStatus,
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
           })),
           total,
           page: input.page,
@@ -1467,12 +1514,28 @@ return {
           db
             .select({
               id: orders.id,
+              buyerId: orders.buyerId,
+              sellerId: orders.sellerId,
+              listingId: orders.listingId,
               productTitle: orders.productTitle,
               productImage: orders.productImage,
+              productCategory: orders.productCategory,
+              customerName: orders.customerName,
+              customerEmail: orders.customerEmail,
+              recipientEmail: orders.recipientEmail,
+              paymentMethod: orders.paymentMethod,
               amountCents: orders.amountCents,
               currency: orders.currency,
+              payoutStatus: orders.payoutStatus,
+              shippingAddress: orders.shippingAddress,
+              trackingNumber: orders.trackingNumber,
+              estimatedArrival: orders.estimatedArrival,
+              deliveredDate: orders.deliveredDate,
               orderDate: orders.orderDate,
               orderStatus: orders.orderStatus,
+              deliveryStatus: orders.deliveryStatus,
+              createdAt: orders.createdAt,
+              updatedAt: orders.updatedAt,
             })
             .from(orders)
             .where(
@@ -1493,12 +1556,29 @@ return {
         return {
           data: results.map((o) => ({
             orderId: o.id,
+            buyerId: o.buyerId,
+            sellerId: o.sellerId,
+            listingId: o.listingId,
             productTitle: o.productTitle,
             productImage: o.productImage || undefined,
+            productCategory: o.productCategory,
+            customerName: o.customerName,
+            customerEmail: o.customerEmail,
+            recipientEmail: o.recipientEmail,
+            paymentMethod: o.paymentMethod,
+            amountCents: o.amountCents,
             priceCents: o.amountCents,
             currency: o.currency,
+            payoutStatus: o.payoutStatus,
+            shippingAddress: o.shippingAddress,
+            trackingNumber: o.trackingNumber,
+            estimatedArrival: o.estimatedArrival,
+            deliveredDate: o.deliveredDate,
             orderDate: o.orderDate,
             orderStatus: o.orderStatus,
+            deliveryStatus: o.deliveryStatus,
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
           })),
           total,
           page: input.page,
@@ -1536,16 +1616,7 @@ return {
             id: z.string(),
             title: z.string(),
             message: z.string(),
-            type: z.enum([
-              "purchase",
-              "review",
-              "comment",
-              "reminder",
-              "order_confirmed",
-              "payment_failed",
-              "refund_issued",
-              "delivery_confirmed",
-            ]),
+            type: notificationTypeEnum,
             timestamp: z.string(),
             isRead: z.boolean(),
             isFavorited: z.boolean(),
@@ -2141,4 +2212,141 @@ return {
         });
       }
     }),
-});
+
+  followBrand: protectedProcedure
+    .input(
+      z.object({
+        brandId: z.string().uuid(),
+        action: z.enum(['follow', 'unfollow']),
+      })
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        isFollowing: z.boolean(),
+        followersCount: z.number(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'You must be logged in to follow brands',
+          });
+        }
+
+        const buyerResult = await db
+          .select({ id: buyers.id })
+          .from(buyers)
+          .where(eq(buyers.userId, userId))
+          .limit(1);
+
+        if (!buyerResult.length) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Buyer profile not found',
+          });
+        }
+
+        const buyerId = buyerResult[0].id;
+        let isFollowing = false;
+
+        if (input.action === 'follow') {
+          await db
+            .insert(buyerBrandFollows)
+            .values({
+              id: uuidv4(),
+              buyerId,
+              brandId: input.brandId,
+              followedAt: new Date(),
+            })
+            .onConflictDoNothing();
+          isFollowing = true;
+        } else {
+          await db
+            .delete(buyerBrandFollows)
+            .where(
+              and(
+                eq(buyerBrandFollows.buyerId, buyerId),
+                eq(buyerBrandFollows.brandId, input.brandId)
+              )
+            );
+          isFollowing = false;
+        }
+
+        // Get updated follower count for the brand
+        const followersCountResult = await db
+          .select({ count: count() })
+          .from(buyerBrandFollows)
+          .where(eq(buyerBrandFollows.brandId, input.brandId));
+        
+        const followersCount = Number(followersCountResult[0]?.count ?? 0);
+
+        return { success: true, isFollowing, followersCount };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update follow status',
+        });
+      }
+    }),
+
+  isFollowingBrand: protectedProcedure
+    .input(z.object({ brandId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.user?.id;
+        if (!userId) return false;
+
+        const buyerResult = await db
+          .select({ id: buyers.id })
+          .from(buyers)
+          .where(eq(buyers.userId, userId))
+          .limit(1);
+
+        if (!buyerResult.length) return false;
+
+        const follow = await db
+          .select({ id: buyerBrandFollows.id })
+          .from(buyerBrandFollows)
+          .where(
+            and(
+              eq(buyerBrandFollows.buyerId, buyerResult[0].id),
+              eq(buyerBrandFollows.brandId, input.brandId)
+            )
+          )
+          .limit(1);
+
+        return follow.length > 0;
+      } catch (error) {
+        return false;
+      }
+    }),
+
+  getFollowedBrands: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const userId = ctx.user?.id;
+      if (!userId) return [];
+
+      const buyerResult = await db
+        .select({ id: buyers.id })
+        .from(buyers)
+        .where(eq(buyers.userId, userId))
+        .limit(1);
+
+      if (!buyerResult.length) return [];
+
+      const followed = await db
+        .select({ brandId: buyerBrandFollows.brandId })
+        .from(buyerBrandFollows)
+        .where(eq(buyerBrandFollows.buyerId, buyerResult[0].id));
+
+      return followed.map((f) => f.brandId);
+    } catch (error) {
+      return [];
+    }
+  }),
+});

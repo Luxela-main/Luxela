@@ -7,18 +7,18 @@ export function OrderTabs() {
   const pathname = usePathname()
 
   const tabs = [
-    { id: "all", label: "All Orders", href: "/dashboard/orders" },
-    { id: "processing", label: "Processing", href: "/dashboard/orders/processing" },
-    { id: "shipped", label: "Shipped", href: "/dashboard/orders/shipped" },
-    { id: "delivered", label: "Delivered", href: "/dashboard/orders/delivered" },
-    { id: "returned", label: "Returned", href: "/dashboard/orders/returned" },
+    { id: "all", label: "All Orders", href: "/buyer/dashboard/orders" },
+    { id: "processing", label: "Processing", href: "/buyer/dashboard/orders/processing" },
+    { id: "shipped", label: "Shipped", href: "/buyer/dashboard/orders/shipped" },
+    { id: "delivered", label: "Delivered", href: "/buyer/dashboard/orders/delivered" },
+    { id: "returned", label: "Returned", href: "/buyer/dashboard/orders/returned" },
   ]
 
   // Check if current path matches tab (including detail pages)
   const isActive = (href: string) => {
     // All Orders should only be active on the exact list page
-    if (href === "/dashboard/orders") {
-      return pathname === "/dashboard/orders"
+    if (href === "/buyer/dashboard/orders") {
+      return pathname === "/buyer/dashboard/orders"
     }
     // Other tabs are active on their index and nested routes
     return pathname === href || pathname.startsWith(href + "/")

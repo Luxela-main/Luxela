@@ -65,10 +65,11 @@ export default function CheckoutPage() {
   // Get user's cart
   const { data: cart, isLoading: cartLoading, error: cartError } = trpc.cart.getCart.useQuery();
 
-  // Checkout mutations
+  // Checkout mutations - Extract cartId safely
+  const cartId = cart?.cart?.id;
   const prepareCheckout = trpc.checkout.prepareCheckout.useQuery(
-    { cartId: cart?.cart?.id || '' },
-    { enabled: !!cart?.cart?.id }
+    { cartId: cartId || '' },
+    { enabled: !!cartId && cartId.length > 0 }
   );
 
   const initializePayment = trpc.checkout.initializePayment.useMutation({

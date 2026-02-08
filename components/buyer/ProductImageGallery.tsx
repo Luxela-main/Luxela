@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { Listing } from '@/types/listing'
+import HorizontalImageScroller from '@/components/HorizontalImageScroller'
 
 interface ProductImageGalleryProps {
   product: Listing
@@ -21,45 +21,25 @@ export default function ProductImageGallery({ product }: ProductImageGalleryProp
     return product.image ? [product.image] : []
   }
   const images = getImages()
-  const [selectedImage, setSelectedImage] = useState(0)
 
   return (
-    <div className="space-y-4">
-      {/* Main Image */}
-      <div className="relative aspect-square bg-[#0a0a0a] rounded-2xl overflow-hidden">
-        <img 
-          src={images[selectedImage]} 
-          alt={product.title}
-          className="w-full h-full object-cover"
-        />
-        
-        {product.limited_edition_badge === 'show_badge' && (
-          <div className="absolute top-4 left-4 bg-[#8451E1] px-3 py-1.5 rounded-lg">
-            <span className="text-white text-xs font-bold uppercase">Limited Edition</span>
-          </div>
-        )}
-      </div>
+    <div className="space-y-6">
+      {/* Limited Edition Badge */}
+      {product.limited_edition_badge === 'show_badge' && (
+        <div className="absolute top-6 left-6 z-20 bg-gradient-to-r from-[#8451E1] to-[#7240D0] px-4 py-2 rounded-full shadow-lg shadow-[#8451E1]/30">
+          <span className="text-white text-xs font-bold uppercase tracking-wider">✨ Limited Edition</span>
+        </div>
+      )}
 
-      {/* Thumbnail Gallery - Responsive */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
-        {images.map((img, index) => (
-          <button
-            key={index}
-            onClick={() => setSelectedImage(index)}
-            className={`aspect-square rounded-lg sm:rounded-xl overflow-hidden transition-all ${
-              selectedImage === index 
-                ? 'ring-2 ring-purple-500' 
-                : 'ring-1 ring-black hover:ring-gray-600'
-            }`}
-          >
-            <img 
-              src={img} 
-              alt={`${product.title} ${index + 1}`}
-              className="w-full h-full object-cover"
-            />
-          </button>
-        ))}
-      </div>
+      {/* Horizontal Image Scroller - Desktop & Mobile Optimized */}
+      <HorizontalImageScroller
+        images={images}
+        alt={product.title}
+        showThumbnails={true}
+        showDots={true}
+        autoScroll={false}
+        className="rounded-3xl overflow-hidden shadow-2xl shadow-black/50"
+      />
     </div>
   )
-}
+}

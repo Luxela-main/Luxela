@@ -5,6 +5,7 @@ import { reviews, listings, notifications } from "../db/schema";
 import { v4 as uuidv4 } from "uuid";
 import { eq, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import type { TRPCContext } from "../trpc/context";
 
 const reviewSchema = z.object({
   id: z.string().uuid(),
@@ -33,7 +34,8 @@ export const reviewRouter = createTRPCRouter({
       })
     )
     .output(reviewSchema)
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async (opts: any) => {
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { listingId: string; rating: number; comment?: string } };
       const buyerId = ctx.user?.id;
       if (!buyerId)
         throw new TRPCError({
@@ -84,7 +86,8 @@ export const reviewRouter = createTRPCRouter({
     })
     .input(z.object({ listingId: z.string().uuid() }))
     .output(z.array(reviewSchema))
-    .query(async ({ input }) => {
+    .query(async (opts: any) => {
+      const { input } = opts as { input: { listingId: string } };
       const rows = await db
         .select()
         .from(reviews)

@@ -22,7 +22,7 @@ export async function generateMetadata(
   }
 
   const price = product.price_cents ? (product.price_cents / 100).toFixed(2) : undefined;
-  const currency = product.currency || 'USD';
+  const currency = product.currency || 'NGN';
 
   return generatePageMetadata({
     title: product.title,

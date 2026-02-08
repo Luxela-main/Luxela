@@ -210,6 +210,128 @@ export const sellerListingNotificationsRouter = createTRPCRouter({
       };
     }),
 
+  pollForNotifications: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/seller/notifications/poll",
+        tags: ["Seller Listing Notifications"],
+        summary: "Poll for new listing notifications (real-time via polling)",
+      },
+    })
+    .input(
+      z.object({
+        lastPolledAt: z.date().optional(),
+      })
+    )
+    .output(
+      z.object({
+        newNotifications: z.array(
+          z.object({
+            id: z.string().uuid(),
+            listingId: z.string().uuid(),
+            title: z.string(),
+            status: z.enum([
+              "pending",
+              "approved",
+              "rejected",
+              "revision_requested",
+            ]),
+            message: z.string(),
+            comments: z.string().nullable().optional(),
+            rejectionReason: z.string().nullable().optional(),
+            revisionRequests: z.record(z.string(), z.any()).nullable().optional(),
+            reviewedAt: z.date().nullable().optional(),
+            isNew: z.boolean(),
+          })
+        ),
+        hasMore: z.boolean(),
+        pollAgainInSeconds: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const seller = await verifySeller(ctx);
+
+      const lastPolledAt = input.lastPolledAt || new Date(Date.now() - 5 * 60 * 1000);
+
+      const newReviews = await db
+        .select({
+          review: listingReviews,
+          listing: listings,
+        })
+        .from(listingReviews)
+        .innerJoin(listings, eq(listingReviews.listingId, listings.id))
+        .where(
+          eq(listingReviews.sellerId, seller.id)
+        )
+        .orderBy((t) => t.review.updatedAt)
+        .limit(50);
+
+      const now = new Date();
+      const newNotifications = newReviews
+        .filter((item) => item.review.updatedAt > lastPolledAt)
+        .map((item) => {
+          const status = item.review.status;
+          let message = "";
+          
+          switch (status) {
+            case "approved":
+              message = `Your listing "${item.listing.title}" has been approved and is now live!`;
+              break;
+            case "rejected":
+              message = `Your listing "${item.listing.title}" has been rejected. Please review the feedback.`;
+              break;
+            case "revision_requested":
+              message = `Revision requested for "${item.listing.title}". Please make the necessary changes.`;
+              break;
+            default:
+              message = `Your listing "${item.listing.title}" is under review.`;
+          }
+
+          return {
+            id: item.review.id,
+            listingId: item.review.listingId,
+            title: item.listing.title,
+            status: item.review.status,
+            message,
+            comments: item.review.comments || undefined,
+            rejectionReason: item.review.rejectionReason || undefined,
+            revisionRequests: item.review.revisionRequests || undefined,
+            reviewedAt: item.review.reviewedAt || undefined,
+            isNew: item.review.updatedAt > lastPolledAt,
+          };
+        });
+
+      return {
+        newNotifications,
+        hasMore: newNotifications.length >= 50,
+        pollAgainInSeconds: 10,
+      };
+    }),
+
+  getUnreadCount: protectedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: "/seller/listing-notifications/unread-count",
+        tags: ["Seller Listing Notifications"],
+        summary: "Get count of unread listing notifications for badge",
+      },
+    })
+    .output(z.object({ count: z.number() }))
+    .query(async ({ ctx }) => {
+      const seller = await verifySeller(ctx);
+
+      const countResult = await db
+        .select({ count: countFn() })
+        .from(listingReviews)
+        .where(eq(listingReviews.sellerId, seller.id));
+
+      const total = Number(countResult[0]?.count ?? 0);
+
+      return { count: total };
+    }),
+
   resubmitListing: protectedProcedure
     .meta({
       openapi: {

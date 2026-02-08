@@ -30,6 +30,7 @@ type CartContextType = {
   subtotal: number;
   total: number;
   discountAmount: number;
+  hasUnapprovedItems?: boolean;
 };
 
 export const CartContext = createContext<CartContextType | undefined>(
@@ -59,14 +60,25 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const cart = data?.cart;
 
-  const { listings } = useListings();
+  const { listings, approvedListings, validateProductForCart, isListingApproved } = useListings();
 
   const items = useMemo(() => {
     const rawItems = data?.items || [];
 
-    const enrichedItems = rawItems.map((item) => {
-      // Find the product details from listings context
-      const product = listings.find((l) => l.id === item.listingId);
+    const enrichedItems = rawItems
+      .filter((item) => {
+        // CRITICAL: Only show approved products in cart
+        const isApproved = isListingApproved(item.listingId);
+        if (!isApproved) {
+          console.warn(
+            `[CartContext] Filtering out non-approved product from cart: ${item.listingId}`
+          );
+        }
+        return isApproved;
+      })
+      .map((item) => {
+        // Find the product details from approved listings only
+        const product = approvedListings.find((l) => l.id === item.listingId);
 
       return {
         ...item,
@@ -97,13 +109,34 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const total = Math.max(0, subtotal - discountAmount);
 
   const addToCart = async (listingId: string, quantity: number) => {
+    // CRITICAL: Validate product approval before adding to cart
+    const validation = validateProductForCart(listingId);
+    if (!validation.valid) {
+      throw new Error(
+        validation.reason || 'This product cannot be added to your cart'
+      );
+    }
+
+    if (quantity <= 0) {
+      throw new Error('Invalid quantity. Please select at least 1 item.');
+    }
+
     await addToCartMutation.mutateAsync({ listingId, quantity });
   };
 
   const updateQuantity = async (listingId: string, quantity: number) => {
+    // Validate approval status when updating
+    if (!isListingApproved(listingId)) {
+      console.warn(
+        `[CartContext] Cannot update non-approved product: ${listingId}`
+      );
+      await removeItem(listingId);
+      return;
+    }
+
     if (quantity === 0) {
       await removeItem(listingId);
-    } else {
+    } else if (quantity > 0) {
       await updateCartItemMutation.mutateAsync({ listingId, quantity });
     }
   };
@@ -121,10 +154,27 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   const checkout = async (data: CheckoutRequest) => {
+    // CRITICAL: Validate all cart items are approved before checkout
+    const unapprovedItems = items.filter((item) => !isListingApproved(item.listingId));
+    if (unapprovedItems.length > 0) {
+      throw new Error(
+        `Cannot proceed with checkout. ${unapprovedItems.length} product(s) are no longer available.`
+      );
+    }
+
+    // Verify at least one item is in cart
+    if (items.length === 0) {
+      throw new Error('Your cart is empty. Please add products before checkout.');
+    }
+
     await checkoutMutation.mutateAsync(data);
   };
 
   const normalizedError: Error | null = error instanceof Error ? error : null;
+
+  const hasUnapprovedItems = items.some(
+    (item) => !isListingApproved(item.listingId)
+  );
 
   const value: CartContextType = {
     cart,
@@ -143,7 +193,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     subtotal,
     total,
     discountAmount,
+    hasUnapprovedItems,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
+};

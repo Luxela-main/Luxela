@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { trpc } from '@/lib/_trpc/client';
 import { useToast } from '@/components/hooks/useToast';
 import {
   AlertCircle,
@@ -101,6 +103,8 @@ const getPriorityBadge = (priority: string) => {
 
 export default function AdminTicketsPage() {
   const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [tickets, setTickets] = useState<TicketWithReplies[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<TicketWithReplies | null>(null);
   const [filteredTickets, setFilteredTickets] = useState<TicketWithReplies[]>([]);
@@ -130,7 +134,7 @@ export default function AdminTicketsPage() {
   });
 
   // Fetch ticket details with replies
-  const ticketDetailsQuery = trpc.support.getTicket.useQuery(
+  const ticketDetailsQuery = trpc.supportAdmin.getTicketDetails.useQuery(
     { ticketId: selectedTicket?.id || '' },
     { enabled: !!selectedTicket?.id, refetchInterval: 15000 }
   );
@@ -162,8 +166,17 @@ export default function AdminTicketsPage() {
       }));
       setTickets(convertedTickets);
       setLoading(false);
+
+      // Auto-select ticket from URL query parameter
+      const selectedId = searchParams.get('selected');
+      if (selectedId) {
+        const ticketToSelect = convertedTickets.find(t => t.id === selectedId);
+        if (ticketToSelect) {
+          setSelectedTicket(ticketToSelect);
+        }
+      }
     }
-  }, [ticketsQuery.data]);
+  }, [ticketsQuery.data, searchParams]);
 
   // Load ticket details and replies
   useEffect(() => {
@@ -232,8 +245,12 @@ export default function AdminTicketsPage() {
 
       setReplyMessage('');
       toast.success('Reply sent successfully');
-      repliesQuery.refetch();
-      ticketDetailsQuery.refetch();
+      
+      // Await both refetch calls to ensure UI updates
+      await Promise.all([
+        repliesQuery.refetch(),
+        ticketDetailsQuery.refetch(),
+      ]);
     } catch (error) {
       toast.error('Failed to send reply');
     } finally {
@@ -382,8 +399,8 @@ export default function AdminTicketsPage() {
                   return (
                     <button
                       key={ticket.id}
-                      onClick={() => setSelectedTicket(ticket)}
-                      className={`w-full p-4 text-left rounded-lg transition-all border-2 ${
+                      onClick={() => router.push(`/admin/support/tickets/${ticket.id}`)}
+                      className={`w-full p-4 text-left rounded-lg transition-all border-2 cursor-pointer ${
                         selectedTicket?.id === ticket.id
                           ? 'border-[#8451E1] bg-[#1a1a1a]'
                           : 'border-[#2B2B2B] bg-[#0E0E0E] hover:border-[#8451E1]'
@@ -421,7 +438,7 @@ export default function AdminTicketsPage() {
                       <h2 className="text-lg font-bold text-white flex-1 line-clamp-2">{selectedTicket.subject}</h2>
                       <button
                         onClick={() => setSelectedTicket(null)}
-                        className="p-1 hover:bg-[#0E0E0E] rounded transition-colors"
+                        className="p-1 hover:bg-[#0E0E0E] rounded transition-colors cursor-pointer"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -453,7 +470,7 @@ export default function AdminTicketsPage() {
                       <select
                         value={selectedTicket.status}
                         onChange={e => handleUpdateStatus(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0E0E0E] border border-[#2B2B2B] rounded text-sm text-white focus:outline-none focus:border-[#8451E1]"
+                        className="w-full px-3 py-2 bg-[#0E0E0E] border border-[#2B2B2B] rounded text-sm text-white focus:outline-none focus:border-[#8451E1] cursor-pointer"
                       >
                         {STATUSES.map(status => (
                           <option key={status} value={status}>
@@ -604,7 +621,7 @@ export default function AdminTicketsPage() {
                       return (
                         <button
                           key={ticket.id}
-                          onClick={() => setSelectedTicket(ticket)}
+                          onClick={() => router.push(`/admin/support/tickets/${ticket.id}`)}
                           className={`w-full p-4 text-left hover:bg-[#0E0E0E] transition-colors border-l-2 cursor-pointer ${
                             selectedTicket?.id === ticket.id
                               ? 'border-[#8451E1] bg-[#0E0E0E]'
@@ -647,7 +664,7 @@ export default function AdminTicketsPage() {
                     </div>
                     <button
                       onClick={() => setSelectedTicket(null)}
-                      className="p-2 hover:bg-[#0E0E0E] rounded transition-colors"
+                      className="p-2 hover:bg-[#0E0E0E] rounded transition-colors cursor-pointer"
                     >
                       <X className="w-5 h-5" />
                     </button>

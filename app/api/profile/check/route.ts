@@ -2,15 +2,25 @@ export const runtime = "nodejs";
 
 import { NextResponse, NextRequest } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { db } from "@/server/db/client";
+import { db } from "@/app/api/lib/db";
 import { buyers, sellers, buyerAccountDetails, sellerBusiness } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+
+// Timeout helper
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Query timeout after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get user from session (browser-agnostic, uses secure tokens)
+    // Get user from session
     const {
       data: { user },
       error: userError,
@@ -31,7 +41,7 @@ export async function GET(request: NextRequest) {
     const userId = user.id;
     const userEmail = user.email;
 
-    // Get role from Supabase user metadata (stored server-side)
+    // Get role from Supabase user metadata
     const rawRole = user.user_metadata?.role;
     const role = (typeof rawRole === 'string' ? rawRole.toLowerCase().trim() : rawRole) as "buyer" | "seller" | undefined;
 
@@ -48,76 +58,112 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Query database for buyer profile
+    // Query database for buyer profile with timeout
     if (role === "buyer") {
-      const buyer = await db.query.buyers.findFirst({
-        where: eq(buyers.userId, userId),
-      });
+      try {
+        const buyer = await withTimeout(
+          db.query.buyers.findFirst({
+            where: eq(buyers.userId, userId),
+          }),
+          10000
+        );
 
-      if (!buyer) {
+        if (!buyer) {
+          return NextResponse.json({
+            role: "buyer",
+            exists: false,
+            profileComplete: false,
+            userId,
+            message: "Buyer profile not found",
+          });
+        }
+
+        // Check if buyer account details exist
+        const buyerDetails = await withTimeout(
+          db.query.buyerAccountDetails.findFirst({
+            where: eq(buyerAccountDetails.buyerId, buyer.id),
+          }),
+          10000 
+        );
+
+        const profileComplete = !!buyerDetails;
+
+        return NextResponse.json({
+          role: "buyer",
+          exists: true,
+          profileComplete,
+          buyerId: buyer.id,
+          email: buyerDetails?.email || userEmail,
+          userId,
+        });
+      } catch (queryError: any) {
+        console.error("[Profile Check] Buyer query error:", queryError.message);
+        // Return partial response if query fails
         return NextResponse.json({
           role: "buyer",
           exists: false,
           profileComplete: false,
           userId,
-          message: "Buyer profile not found",
-        });
+          message: "Could not verify buyer profile (database timeout)",
+          error: queryError.message,
+        }, { status: 503 });
       }
-
-      // Check if buyer account details exist (profile complete)
-      const buyerDetails = await db.query.buyerAccountDetails.findFirst({
-        where: eq(buyerAccountDetails.buyerId, buyer.id),
-      });
-
-      // Profile is complete if the record exists (all required fields are enforced at DB level)
-      const profileComplete = !!buyerDetails;
-
-      return NextResponse.json({
-        role: "buyer",
-        exists: true,
-        profileComplete,
-        buyerId: buyer.id,
-        email: buyerDetails?.email || userEmail,
-        userId,
-      });
     }
 
-    // Query database for seller profile
+    // Query database for seller profile with timeout
     if (role === "seller") {
-      const seller = await db.query.sellers.findFirst({
-        where: eq(sellers.userId, userId),
-      });
+      try {
+        const seller = await withTimeout(
+          db.query.sellers.findFirst({
+            where: eq(sellers.userId, userId),
+          }),
+          10000
+        );
 
-      if (!seller) {
+        if (!seller) {
+          return NextResponse.json({
+            role: "seller",
+            exists: false,
+            profileComplete: false,
+            userId,
+            message: "Seller profile not found",
+          });
+        }
+
+        // Check if seller business details exist
+        const sellerDetails = await withTimeout(
+          db.query.sellerBusiness.findFirst({
+            where: eq(sellerBusiness.sellerId, seller.id),
+          }),
+          10000 
+        );
+
+        const profileComplete = !!sellerDetails;
+
+        return NextResponse.json({
+          role: "seller",
+          exists: true,
+          profileComplete,
+          sellerId: seller.id,
+          storeEmail: sellerDetails?.officialEmail || userEmail,
+          userId,
+        });
+      } catch (queryError: any) {
+        console.error("[Profile Check] Seller query error:", queryError.message);
+        // Return partial response if query fails
         return NextResponse.json({
           role: "seller",
           exists: false,
           profileComplete: false,
           userId,
-          message: "Seller profile not found",
-        });
+          message: "Could not verify seller profile (database timeout)",
+          error: queryError.message,
+        }, { status: 503 });
       }
-
-      // Check if seller business details exist (profile complete)
-      const sellerDetails = await db.query.sellerBusiness.findFirst({
-        where: eq(sellerBusiness.sellerId, seller.id),
-      });
-
-      // Profile is complete if the record exists (all required fields are enforced at DB level)
-      const profileComplete = !!sellerDetails;
-
-      return NextResponse.json({
-        role: "seller",
-        exists: true,
-        profileComplete,
-        sellerId: seller.id,
-        storeEmail: sellerDetails?.officialEmail || userEmail,
-        userId,
-      });
     }
 
     // Fallback (should never reach here)
-    console.error("[Profile Check] Reached invalid role fallback. Raw role:", rawRole, "Processed:", role);
+    console.error("[Profile Check] Invalid role fallback. Raw role:", rawRole, "Processed:", role);
     return NextResponse.json(
       {
         error: "Invalid role",

@@ -112,7 +112,7 @@ export default function Navbar() {
                 user.user_metadata?.role === "seller"
                   ? "/sellers/dashboard"
                   : user.user_metadata?.role === "admin"
-                  ? "/admin/dashboard"
+                  ? "/admin/support"
                   : "/buyer/dashboard"
               }
               className="h-10 w-10 rounded-full overflow-hidden border-2 border-[#E5E7EB]/40 hover:border-[#E5E7EB]/80 transition-all duration-300 hover:shadow-[0_0_15px_#E5E7EB]/30"

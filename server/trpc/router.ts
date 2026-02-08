@@ -1,83 +1,89 @@
-import { initTRPC } from "@trpc/server";
-import { z } from "zod";
-import { createTRPCContext } from "./context";
-import { listingRouter } from "../routers/listing";
-import { sellerRouter } from "../routers/seller";
-import { sellerOrdersRouter } from "../routers/sellerOrders";
-import { buyerRouter } from "../routers/buyer";
-import { salesRouter } from "../routers/sales";
-import { cartRouter } from "../routers/cart";
-import { paymentRouter } from "../routers/payment";
-import { reviewRouter } from "../routers/review";
-import { notificationRouter } from "../routers/notification";
-import { supportRouter } from "../routers/support";
-import { supportAdminRouter } from "../routers/support-admin";
-import { productRouter } from "../routers/product";
-import { collectionRouter } from "../routers/collection";
-import { refundRouter } from "../routers/refund";
-import { inventoryRouter } from "../routers/inventory";
-import { paymentConfirmationRouter } from "../routers/paymentConfirmation";
-import { orderStatusRouter } from "../routers/orderStatus";
-import { shippingRouter } from "../routers/shipping";
-import { emailNotificationRouter } from "../routers/emailNotification";
-import { checkoutRouter } from "../routers/checkout";
-import { webhookRouter } from "../routers/webhook";
-import { variantsRouter } from "../routers/variantsRouter";
-import { financeRouter } from "../routers/finance";
-import { supportSubscriptionsRouter } from "../routers/supportSubscriptions";
-import { payoutSubscriptionsRouter } from "../routers/payoutSubscriptions";
-import { faqsRouter } from "../routers/faqs";
-import { productsRouter } from "../routers/products";
-import { adminListingReviewRouter } from "../routers/admin-listing-review";
-import { sellerListingNotificationsRouter } from "../routers/seller-listing-notifications";
-import { buyerListingsCatalogRouter } from "../routers/buyer-listings-catalog";
-import { payoutVerificationRouter } from "../routers/payoutVerification";
+import { createTRPCRouter } from './trpc';
+import { adminAnalyticsRouter } from '../routers/admin-analytics';
+import { adminAuditLogsRouter } from '../routers/admin-audit-logs';
+import { adminListingReviewRouter } from '../routers/admin-listing-review';
+import { adminMembersRouter } from '../routers/admin-members';
+import { adminNotificationsRouter } from '../routers/admin-notifications';
+import { adminReportGeneratorRouter } from '../routers/admin-report-generator';
+import { adminSettingsRouter } from '../routers/admin-settings';
+import { brandsRouter } from '../routers/brands';
+import { buyerListingsCatalogRouter } from '../routers/buyer-listings-catalog';
+import { buyerNotificationsRouter } from '../routers/buyer-notifications-unified';
+import { buyerRouter } from '../routers/buyer';
+import { cartRouter } from '../routers/cart';
+import { checkoutRouter } from '../routers/checkout';
+import { collectionRouter } from '../routers/collection';
+import { emailNotificationRouter } from '../routers/emailNotification';
+import { faqsRouter } from '../routers/faqs';
+import { financeRouter } from '../routers/finance';
+import { inventoryRouter } from '../routers/inventory';
+import { listingRouter } from '../routers/listing';
+import { notificationRouter } from '../routers/notification';
+import { orderStatusRouter } from '../routers/orderStatus';
+import { paymentRouter } from '../routers/payment';
+import { paymentConfirmationRouter } from '../routers/paymentConfirmation';
+import { payoutSubscriptionsRouter } from '../routers/payoutSubscriptions';
+import { payoutVerificationRouter } from '../routers/payoutVerification';
+import { productRouter } from '../routers/product';
+import { productsRouter } from '../routers/products';
+import { refundRouter } from '../routers/refund';
+import { returnsRouter } from '../routers/returns';
+import { reviewRouter } from '../routers/review';
+import { salesRouter } from '../routers/sales';
+import { sellerListingNotificationsRouter } from '../routers/seller-listing-notifications';
+import { sellerNotificationsRouter } from '../routers/seller-notifications-unified';
+import { sellerRouter } from '../routers/seller';
+import { sellerOrdersRouter } from '../routers/sellerOrders';
+import { shippingRouter } from '../routers/shipping';
+import { supportAdminRouter } from '../routers/support-admin';
+import { supportRouter } from '../routers/support';
+import { supportSubscriptionsRouter } from '../routers/supportSubscriptions';
+import { variantsRouter } from '../routers/variantsRouter';
+import { webhookRouter } from '../routers/webhook';
 
-const t = initTRPC.context<ReturnType<typeof createTRPCContext>>().create();
-
-export const publicProcedure = t.procedure;
-
-const helloRouter = t.router({
-  hello: publicProcedure
-    .input(z.object({ name: z.string().optional() }).optional())
-    .query(({ input }) => {
-      return { message: `Hello ${input?.name ?? "world"}!` };
-    }),
-});
-
-export const appRouter = t.router({
-  hello: helloRouter.hello,
-  listing: listingRouter,
-  seller: sellerRouter,
-  sellers: sellerOrdersRouter,
-  buyer: buyerRouter,
-  sales: salesRouter,
-  cart: cartRouter,
-  payment: paymentRouter,
-  review: reviewRouter,
-  notification: notificationRouter,
-  support: supportRouter,
-  supportAdmin: supportAdminRouter,
-  product: productRouter,
-  collection: collectionRouter,
-  refund: refundRouter,
-  inventory: inventoryRouter,
-  paymentConfirmation: paymentConfirmationRouter,
-  orderStatus: orderStatusRouter,
-  shipping: shippingRouter,
-  emailNotification: emailNotificationRouter,
-  checkout: checkoutRouter,
-  webhooks: webhookRouter,
-  variants: variantsRouter,
-  finance: financeRouter,
-  supportSubscriptions: supportSubscriptionsRouter,
-  payoutSubscriptions: payoutSubscriptionsRouter,
-  faqs: faqsRouter,
-  products: productsRouter,
+export const appRouter = createTRPCRouter({
+  adminAnalytics: adminAnalyticsRouter,
+  adminAuditLogs: adminAuditLogsRouter,
   adminListingReview: adminListingReviewRouter,
-  sellerListingNotifications: sellerListingNotificationsRouter,
+  adminMembers: adminMembersRouter,
+  adminNotifications: adminNotificationsRouter,
+  adminReportGenerator: adminReportGeneratorRouter,
+  adminSettings: adminSettingsRouter,
+
+  brands: brandsRouter,
   buyerListingsCatalog: buyerListingsCatalogRouter,
+  buyerNotifications: buyerNotificationsRouter,
+  buyer: buyerRouter,
+  cart: cartRouter,
+  checkout: checkoutRouter,
+  collection: collectionRouter,
+  emailNotification: emailNotificationRouter,
+  faqs: faqsRouter,
+  finance: financeRouter,
+  inventory: inventoryRouter,
+  listing: listingRouter,
+  notification: notificationRouter,
+  orderStatus: orderStatusRouter,
+  payment: paymentRouter,
+  paymentConfirmation: paymentConfirmationRouter,
+  payoutSubscriptions: payoutSubscriptionsRouter,
   payoutVerification: payoutVerificationRouter,
+  product: productRouter,
+  products: productsRouter,
+  refund: refundRouter,
+  returns: returnsRouter,
+  review: reviewRouter,
+  sales: salesRouter,
+  sellerListingNotifications: sellerListingNotificationsRouter,
+  sellerNotifications: sellerNotificationsRouter,
+  seller: sellerRouter,
+  sellerOrders: sellerOrdersRouter,
+  shipping: shippingRouter,
+  supportAdmin: supportAdminRouter,
+  support: supportRouter,
+  supportSubscriptions: supportSubscriptionsRouter,
+  variants: variantsRouter,
+  webhook: webhookRouter,
 });
 
 export type AppRouter = typeof appRouter;

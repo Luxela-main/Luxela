@@ -18,7 +18,8 @@
     "lint": "next lint",
     "swagger:server": "ts-node openapi/server.ts",
     "generate:openapi": "ts-node openapi/generate-doc.ts",
-    "serve:docs": "ts-node openapi/server.ts"
+    "serve:docs": "ts-node openapi/server.ts",
+    "migrate:fix-pending": "ts-node migrations/fix-pending-listings-reviews.ts"
   },
   "keywords": [],
   "author": "",

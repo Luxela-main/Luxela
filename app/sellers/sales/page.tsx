@@ -35,7 +35,7 @@ export default function Sales() {
   const { data: selectedOrderData } = useSaleById(selectedOrder || '');
   const { toast } = useToast();
 
-  const confirmDeliveryMutation = trpc.sellers.confirmDelivery.useMutation();
+  const confirmDeliveryMutation = trpc.sellerOrders.confirmDelivery.useMutation();
 
   if (isLoading) {
     return <LoadingState message="Loading sales data..." />;

@@ -7,6 +7,7 @@ import {
   X,
   Menu,
   DollarSign,
+  ShoppingBag,
 } from "lucide-react";
 import { Bell, Clock, FileText, Headphones, User, Settings } from "lucide-react";
 import Image from "next/image";
@@ -160,6 +161,22 @@ export default function Sidebar() {
               >
                 <BarChart3 size={20} />
                 <span>Sales</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
+                href="/sellers/orders"
+                className={`flex items-center gap-3 px-3 py-2 rounded-md ${
+                  isActive("/sellers/orders")
+                    ? "bg-[#1e1e1e]"
+                    : "hover:bg-[#1e1e1e]"
+                }`}
+              >
+                <ShoppingBag size={20} />
+                <span>Orders</span>
               </Link>
             </li>
             <li>

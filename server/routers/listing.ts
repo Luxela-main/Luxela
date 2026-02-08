@@ -136,10 +136,7 @@ const SingleListingInput = z.object({
   barcode: z.string().nullable().optional(),
   videoUrl: z.string().nullable().optional(),
   careInstructions: z.string().nullable().optional(),
-  collectionId: z.any().optional(),
-}).transform((data) => {
-  const { collectionId, ...rest } = data;
-  return rest;
+  collectionId: z.string().uuid().nullable().optional(),
 });
 
 const CollectionItemInput = z.object({
@@ -230,6 +227,27 @@ export const listingRouter = createTRPCRouter({
         brandId = newBrand[0].id;
       }
 
+      // Get or create default collection for brand
+      let collectionId = input.collectionId;
+      if (!collectionId) {
+        try {
+          const existingCollections = await db.select().from(collections).where(eq(collections.brandId, brandId)).limit(1);
+          if (existingCollections.length > 0) {
+            collectionId = existingCollections[0].id;
+          } else {
+            const defaultCollection = await db.insert(collections).values({
+              brandId: brandId,
+              name: "All Products",
+              slug: "all-products",
+            }).returning({ id: collections.id });
+            collectionId = defaultCollection[0].id;
+          }
+        } catch (error) {
+          console.warn('Failed to create default collection, continuing without one:', error);
+          collectionId = null;
+        }
+      }
+
       const productId = input.productId ?? uuidv4();
       
       // Generate base slug from title
@@ -264,7 +282,7 @@ export const listingRouter = createTRPCRouter({
       // Build product values object with only fields that have values
       const productValues: any = {
         brandId: brandId,
-        collectionId: sql.raw('NULL'),
+        collectionId: collectionId,
         name: input.title,
         slug: slug,
         priceCents: input.priceCents ?? 0,
@@ -300,6 +318,7 @@ export const listingRouter = createTRPCRouter({
       const listingValues = {
         sellerId: seller.id,
         productId: productInserted[0].id,
+        collectionId: input.collectionId ?? null,
         type: "single" as const,
         title: input.title,
         description: input.description ?? null,

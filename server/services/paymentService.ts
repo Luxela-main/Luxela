@@ -6,10 +6,15 @@ import {
   orders,
   sellers,
   payments,
+  buyers,
 } from '../db/schema';
 import { and, eq, sum } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
+import {
+  createBuyerNotification,
+  createSellerNotification,
+} from './notificationManager';
 
 export interface LedgerEntry {
   id: string;
@@ -55,6 +60,31 @@ export async function recordSale(
       description: `Sale from order ${orderId}`,
     });
   });
+
+  // Notify seller of payment
+  try {
+    const [seller] = await db
+      .select()
+      .from(sellers)
+      .where(eq(sellers.id, sellerId));
+
+    if (seller) {
+      const amount = (amountCents / 100).toFixed(2);
+      await createSellerNotification({
+        sellerId: seller.id,
+        type: 'payment_processed',
+        title: 'Payment Received',
+        message: `Payment of ${currency} ${amount} received for order #${orderId.substring(0, 8)}`,
+        severity: 'info',
+        relatedEntityId: orderId,
+        relatedEntityType: 'order',
+        actionUrl: `/seller/orders/${orderId}`,
+        metadata: { amountCents, currency },
+      });
+    }
+  } catch (notificationError) {
+    console.error('Failed to create payment notification:', notificationError);
+  }
 }
 
 export async function recordRefund(
@@ -135,6 +165,52 @@ export async function recordRefund(
         .where(eq(paymentHolds.id, hold.id));
     }
   });
+
+  // Notify buyer and seller of refund
+  try {
+    const [buyer] = await db
+      .select()
+      .from(buyers)
+      .where(eq(buyers.id, order.buyerId));
+
+    const [seller] = await db
+      .select()
+      .from(sellers)
+      .where(eq(sellers.id, order.sellerId));
+
+    const amount = (amountCents / 100).toFixed(2);
+
+    // Notify buyer
+    if (buyer) {
+      await createBuyerNotification({
+        buyerId: buyer.id,
+        type: 'refund_issued',
+        title: 'Refund Initiated',
+        message: `A refund of ${currency} ${amount} has been initiated for order #${orderId.substring(0, 8)}. Reason: ${reason}`,
+        relatedEntityId: orderId,
+        relatedEntityType: 'order',
+        actionUrl: `/buyer/orders/${orderId}`,
+        metadata: { amountCents, currency, reason },
+      });
+    }
+
+    // Notify seller
+    if (seller) {
+      await createSellerNotification({
+        sellerId: seller.id,
+        type: 'refund_issued',
+        title: 'Refund Processed',
+        message: `Refund of ${currency} ${amount} processed for order #${orderId.substring(0, 8)}. Reason: ${reason}`,
+        severity: 'warning',
+        relatedEntityId: orderId,
+        relatedEntityType: 'order',
+        actionUrl: `/seller/orders/${orderId}`,
+        metadata: { amountCents, currency, reason },
+      });
+    }
+  } catch (notificationError) {
+    console.error('Failed to create refund notifications:', notificationError);
+  }
 }
 
 export async function releasePaymentHold(holdId: string): Promise<void> {

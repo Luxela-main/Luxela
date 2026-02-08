@@ -39,10 +39,30 @@ export {
   useBrands,
   useBrandById,
   useBrandListings,
-  useCollections,
   useCollectionById,
   useCollectionListings,
 } from "./useProductBrowse";
+
+// Collections Hooks
+export {
+  useCollections,
+  useCollectionDetails,
+  type Collection,
+} from "./useCollections";
+
+// Collection Products Hooks
+export {
+  useCollectionProducts,
+  type CollectionProduct,
+  type ProductImage,
+  type ProductVariant,
+  type InventoryInfo,
+  type ItemsJSON,
+  type CollectionDisplayData,
+  type CollectionListing,
+  type UseCollectionProductsResult,
+  type UseCollectionProductsOptions,
+} from "./useCollectionProducts";
 
 // Cart Hooks
 export {

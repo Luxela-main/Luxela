@@ -11,6 +11,7 @@ import { CartProvider } from "@/modules/cart/context";
 import { TRPCReadyProvider } from "@/context/TRPCReadyContext";
 import { ProfileProvider } from "@/context/ProfileContext";
 import { ListingsProvider } from "@/context/ListingsContext";
+import { PendingToastHandler } from "@/components/utils/pending-toast-handler";
 import "react-toastify/dist/ReactToastify.css";
 
 const ToastContainer = dynamic(
@@ -87,6 +88,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
             <ProfileProvider>
               <ListingsProvider>
                 <CartProvider>
+                  <PendingToastHandler />
                   {children}
 
                   <ToastContainer

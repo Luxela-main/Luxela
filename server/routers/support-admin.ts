@@ -99,6 +99,74 @@ export const supportAdminRouter = createTRPCRouter({
       }
     }),
 
+  getTicketDetails: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/admin/support/tickets/{ticketId}',
+        tags: ['Support Admin'],
+        summary: 'Get ticket details (admin only)',
+      },
+    })
+    .input(z.object({ ticketId: z.string() }))
+    .output(z.object({
+      id: z.string(),
+      buyerId: z.string().nullable(),
+      sellerId: z.string().nullable(),
+      orderId: z.string().nullable(),
+      subject: z.string(),
+      description: z.string(),
+      category: z.string(),
+      status: z.string(),
+      priority: z.string(),
+      assignedTo: z.string().nullable(),
+      createdAt: z.date(),
+      updatedAt: z.date(),
+      resolvedAt: z.date().nullable(),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+        }
+        
+        await ensureAdmin(userId, ctx.user?.role);
+
+        const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
+        
+        if (!ticket[0]) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Ticket not found',
+          });
+        }
+
+        const t = ticket[0];
+        return {
+          id: t.id,
+          buyerId: t.buyerId ?? null,
+          sellerId: t.sellerId ?? null,
+          orderId: t.orderId ?? null,
+          subject: t.subject,
+          description: t.description,
+          category: t.category,
+          status: t.status,
+          priority: t.priority,
+          assignedTo: t.assignedTo ?? null,
+          createdAt: new Date(t.createdAt),
+          updatedAt: new Date(t.updatedAt),
+          resolvedAt: t.resolvedAt ? new Date(t.resolvedAt) : null,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch ticket',
+        });
+      }
+    }),
+
   // ============ ADMIN DASHBOARD ============
   
   getDashboardMetrics: protectedProcedure

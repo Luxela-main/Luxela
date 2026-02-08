@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { checkAdminStatus } from '@/app/actions/admin';
 import { Shield } from 'lucide-react';
-import AdminNavbar from '@/app/components/AdminNavbar';
 import { createClient } from '@/utils/supabase/client';
 
 export default function SupportLayout({ children }: { children: React.ReactNode }) {
@@ -66,11 +65,8 @@ export default function SupportLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="min-h-screen bg-[#0E0E0E] flex flex-col">
-      <AdminNavbar userEmail={userEmail} currentPath={pathname} />
-      <main className="flex-1 w-full">
-        {children}
-      </main>
-    </div>
+    <main className="flex-1 w-full">
+      {children}
+    </main>
   );
 }

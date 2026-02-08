@@ -1,8 +1,13 @@
 import { db } from '../db';
-import { orders, orderStateTransitions } from '../db/schema';
+import { orders, orderStateTransitions, buyers, sellers } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
+import {
+  createBuyerNotification,
+  createSellerNotification,
+  createAdminNotification,
+} from './notificationManager';
 
 export type OrderStatus =
   | 'processing'
@@ -64,6 +69,64 @@ export async function validateAndUpdateOrderStatus(
       triggeredByRole: 'admin',
     });
   });
+
+  // Fetch order details to get buyer and seller info
+  const [updatedOrder] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.id, orderId));
+
+  if (updatedOrder) {
+    try {
+      // Get buyer
+      const [buyer] = await db
+        .select()
+        .from(buyers)
+        .where(eq(buyers.id, updatedOrder.buyerId));
+
+      // Get seller
+      const [seller] = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.id, updatedOrder.sellerId));
+
+      // Trigger notifications based on status change
+      const notificationText = getStatusDisplay(newStatus);
+      const message = `Your order #${orderId.substring(0, 8)} has been ${notificationText.toLowerCase()}`;
+
+      // Notify buyer
+      if (buyer) {
+        await createBuyerNotification({
+          buyerId: buyer.id,
+          type: `order_${newStatus}`,
+          title: `Order ${notificationText}`,
+          message,
+          relatedEntityId: orderId,
+          relatedEntityType: 'order',
+          actionUrl: `/buyer/orders/${orderId}`,
+          metadata: { previousStatus: currentStatus, newStatus },
+        });
+      }
+
+      // Notify seller
+      if (seller) {
+        await createSellerNotification({
+          sellerId: seller.id,
+          type: `order_${newStatus}`,
+          title: `Order ${notificationText}`,
+          message: `Buyer order #${orderId.substring(0, 8)} status: ${notificationText}`,
+          severity: newStatus === 'canceled' ? 'warning' : 'info',
+          relatedEntityId: orderId,
+          relatedEntityType: 'order',
+          actionUrl: `/seller/orders/${orderId}`,
+          metadata: { previousStatus: currentStatus, newStatus },
+        });
+      }
+    } catch (notificationError) {
+      console.error('Failed to create order status notifications:', notificationError);
+      // Don't throw - notification failure shouldn't block order status update
+    }
+  }
 }
 
 export async function getOrderStateHistory(orderId: string) {

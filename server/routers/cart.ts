@@ -6,6 +6,17 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from "uuid";
 
+// Valid product category enum values
+const VALID_PRODUCT_CATEGORIES = [
+  'men_clothing',
+  'women_clothing',
+  'men_shoes',
+  'women_shoes',
+  'accessories',
+  'merch',
+  'others',
+] as const;
+
 async function ensureBuyer(userId: string) {
   const existing = await db.select().from(buyers).where(eq(buyers.userId, userId));
   if (existing[0]) return existing[0];
@@ -402,6 +413,14 @@ export const cartRouter = createTRPCRouter({
           if (!sellerRow) continue;
 
           const orderId = uuidv4();
+          
+          // Validate product category before inserting
+          let category = listingRow.category || 'accessories';
+          if (!VALID_PRODUCT_CATEGORIES.includes(category as any)) {
+            console.warn(`Invalid product category '${category}' for listing ${listingRow.id}, defaulting to 'accessories'`);
+            category = 'accessories';
+          }
+          
           const [order] = await db
             .insert(orders)
             .values({
@@ -411,7 +430,7 @@ export const cartRouter = createTRPCRouter({
               listingId: listingRow.id,
               productTitle: listingRow.title,
               productImage: listingRow.image || undefined,
-              productCategory: listingRow.category!,
+              productCategory: category,
               customerName: accountDetails.fullName,
               customerEmail: accountDetails.email,
               paymentMethod: input.paymentMethod,

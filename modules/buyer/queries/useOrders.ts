@@ -4,22 +4,41 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import { buyerQueryKeys } from "./queryKeys";
 
-export function useOrders(filters?: { status?: string; limit?: number; offset?: number }) {
+export interface UseOrdersConfig {
+  status?: string;
+  limit?: number;
+  offset?: number;
+  enablePolling?: boolean;
+  pollingInterval?: number; // in milliseconds, default 30000 (30 seconds)
+}
+
+export function useOrders(filters: UseOrdersConfig = {}) {
+  const { enablePolling = false, pollingInterval = 30000, ...queryFilters } = filters;
+  
   return useQuery({
     queryKey: buyerQueryKeys.orders(),
     queryFn: async () => {
       try {
-        const result = await ((trpc.buyer as any).getOrders as any).query(filters || {});
+        const result = await ((trpc.buyer as any).getOrders as any).query(queryFilters || {});
         return result;
       } catch (err) {
         throw err;
       }
     },
     staleTime: 60 * 1000, // 1 minute
+    refetchInterval: enablePolling ? pollingInterval : undefined,
+    refetchIntervalInBackground: enablePolling,
   });
 }
 
-export function useOrderById(orderId: string) {
+export interface UseOrderByIdConfig {
+  enablePolling?: boolean;
+  pollingInterval?: number; // default 30000 (30 seconds)
+}
+
+export function useOrderById(orderId: string, config: UseOrderByIdConfig = {}) {
+  const { enablePolling = false, pollingInterval = 30000 } = config;
+  
   return useQuery({
     queryKey: buyerQueryKeys.orderById(orderId),
     queryFn: async () => {
@@ -32,10 +51,19 @@ export function useOrderById(orderId: string) {
     },
     enabled: !!orderId,
     staleTime: 60 * 1000,
+    refetchInterval: enablePolling ? pollingInterval : undefined,
+    refetchIntervalInBackground: enablePolling,
   });
 }
 
-export function useOrderStats() {
+export interface UseOrderStatsConfig {
+  enablePolling?: boolean;
+  pollingInterval?: number; // default 30000 (30 seconds)
+}
+
+export function useOrderStats(config: UseOrderStatsConfig = {}) {
+  const { enablePolling = false, pollingInterval = 30000 } = config;
+  
   return useQuery({
     queryKey: buyerQueryKeys.orderStats(),
     queryFn: async () => {
@@ -47,6 +75,8 @@ export function useOrderStats() {
       }
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: enablePolling ? pollingInterval : undefined,
+    refetchIntervalInBackground: enablePolling,
   });
 }
 

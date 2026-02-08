@@ -4,36 +4,31 @@ import React, { createContext, useContext, ReactNode, useState, useEffect } from
 
 interface TRPCReadyContextType {
   isReady: boolean;
-  setReady: (ready: boolean) => void;
 }
 
-const TRPCReadyContext = createContext<TRPCReadyContextType | undefined>(
-  undefined
-);
+const TRPCReadyContext = createContext<TRPCReadyContextType | undefined>(undefined);
 
-export function useTRPCReady() {
-  const context = useContext(TRPCReadyContext);
-  if (!context) {
-    throw new Error("useTRPCReady must be used within TRPCReadyProvider");
-  }
-  return context;
-}
+export function TRPCReadyProvider({ children }: { children: ReactNode }) {
+  const [isReady, setIsReady] = useState(false);
 
-interface TRPCReadyProviderProps {
-  children: ReactNode;
-}
-
-export function TRPCReadyProvider({ children }: TRPCReadyProviderProps) {
-  const [isReady, setReady] = useState(true);
-
+  // Mark tRPC as ready on mount in the browser
   useEffect(() => {
-    // Ensure isReady is true on client mount
-    setReady(true);
+    setIsReady(true);
   }, []);
 
   return (
-    <TRPCReadyContext.Provider value={{ isReady, setReady }}>
+    <TRPCReadyContext.Provider value={{ isReady }}>
       {children}
     </TRPCReadyContext.Provider>
   );
+}
+
+export function useTRPCReady() {
+  const context = useContext(TRPCReadyContext);
+  
+  if (context === undefined) {
+    throw new Error("useTRPCReady must be used within a TRPCReadyProvider");
+  }
+  
+  return context;
 }

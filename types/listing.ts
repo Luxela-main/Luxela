@@ -35,12 +35,19 @@ export interface Listing {
   updated_at: string
   seller_id: string
   product_id: string | null
+  sku?: string | null
+  barcode?: string | null
+  slug?: string | null
+  meta_description?: string | null
+  video_url?: string | null
+  care_instructions?: string | null
   rating?: number
   review_count?: number
   sales_count?: number
   return_rate?: number
   seller_response_time?: number
   is_verified?: boolean
+  status?: string
   views?: number
   favorites_count?: number
   sellers: {

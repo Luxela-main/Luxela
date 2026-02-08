@@ -8,62 +8,70 @@ export default function ProductDescription({
   product,
 }: ProductDescriptionProps) {
   return (
-    <div className="bg-[#1a1a1a] rounded-2xl text-sm p-8 mb-8">
-      <h2 className="text-base font-medium mb-6">Product description</h2>
-      <hr className="text-[#858585]" />
-      <div className="space-y-1 mt-4">
+    <div className="bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] rounded-2xl border border-[#1a1a1a] text-sm p-8">
+      <h2 className="text-lg font-light mb-8 tracking-widest uppercase text-white flex items-center gap-3">
+        <span className="w-1 h-6 bg-gradient-to-b from-[#8451E1] to-[#7240D0] rounded-full"></span>
+        Product Description
+      </h2>
+
+      <div className="space-y-6">
+        {/* Product Name */}
         <div>
-          <h3 className="text-[#858585] font-medium ">
-            Name: <span className="text-white">{product.title} </span>
+          <h3 className="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-2">
+            Product Name
           </h3>
-          {/* Material */}
-          {product.material_composition && (
+          <p className="text-white text-base leading-relaxed">{product.title}</p>
+        </div>
+
+        {/* Material */}
+        {product.material_composition && (
+          <div>
+            <h3 className="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-2">
+              Material
+            </h3>
+            <p className="text-gray-300 text-base capitalize">
+              {product.material_composition}
+            </p>
+          </div>
+        )}
+
+        {/* Main Description */}
+        <div className="border-t border-[#1a1a1a] pt-6 space-y-4">
+          {product.description && (
             <div>
-              <h3 className="text-[#858585]">
-                Material:{" "}
-                <span className="text-white capitalize">
-                  {product.material_composition}
-                </span>
+              <h3 className="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-3">
+                About This Product
               </h3>
+              <p className="text-gray-300 leading-relaxed text-base">
+                {product.description}
+              </p>
             </div>
           )}
 
-          {/* Additional Details */}
-          <div>
-            <ul className="text-[#858585]">
-              {product.supply_capacity && (
-                <li>
-                  Supply capacity:{" "}
-                  <span className="text-white capitalize">
-                    {product.supply_capacity}
-                  </span>
-                </li>
-              )}
-              {product.release_duration && (
-                <li>
-                  Release duration:{" "}
-                  <span className="text-white">{product.release_duration}</span>
-                </li>
-              )}
-            </ul>
-          </div>
-        </div>
+          {/* Additional Details Grid */}
+          <div className="grid md:grid-cols-2 gap-6 pt-4">
+            {product.supply_capacity && (
+              <div>
+                <h3 className="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-2">
+                  Supply Capacity
+                </h3>
+                <p className="text-gray-300 capitalize text-base">
+                  {product.supply_capacity === "limited"
+                    ? "Limited Supply Available"
+                    : "Unlimited Supply"}
+                </p>
+              </div>
+            )}
 
-        {/* Placeholder Content */}
-        <div className="space-y-4 text-[#858585] text-sm">
-          <p>{product.description} </p>
-          <p>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse
-            cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-            cupidatat non proident, sunt in culpa qui officia deserunt mollit
-            anim id est laborum.
-          </p>
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat.
-          </p>
+            {product.release_duration && (
+              <div>
+                <h3 className="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-2">
+                  Release Duration
+                </h3>
+                <p className="text-gray-300 text-base">{product.release_duration}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

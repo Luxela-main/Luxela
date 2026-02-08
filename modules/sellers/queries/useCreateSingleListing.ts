@@ -24,6 +24,7 @@ export interface CreateSingleListingInput {
   etaInternational?: string | null;
   itemsJson?: any[] | null;
   productId?: string | null;
+  collectionId?: string | null;
 }
 
 export const useCreateSingleListing = () => {

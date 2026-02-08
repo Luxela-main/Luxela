@@ -7,7 +7,7 @@ import React, {
   useCallback,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { trpc } from "@/lib/trpc/client";
+import { trpc } from "@/lib/trpc";
 
 interface BillingAddress {
   id: string;
@@ -79,4 +79,4 @@ export function useProfile() {
   const ctx = useContext(ProfileContext);
   if (!ctx) throw new Error("useProfile must be used within ProfileProvider");
   return ctx;
-}
+}

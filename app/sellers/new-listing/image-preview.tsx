@@ -5,6 +5,17 @@ interface ImagePreviewProps {
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
+  const getImageUrl = (image: File | string): string => {
+    if (typeof image === 'string') {
+      return image;
+    }
+    // For File objects, create object URL
+    if (image && typeof image === 'object' && 'size' in image) {
+      return URL.createObjectURL(image as Blob);
+    }
+    return '';
+  };
+
   return (
     <div className="col-span-5">
       {/* Main Image Section */}
@@ -15,7 +26,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
         <div className="border border-gray-600 rounded-lg p-8 flex items-center justify-center bg-[#1a1a1a] h-72">
           {images.length > 0 ? (
             <img
-              src={typeof images[0] === 'string' ? images[0] : URL.createObjectURL(images[0])}
+              src={getImageUrl(images[0])}
               alt="Main product"
               className="w-full h-full object-cover rounded-lg"
             />
@@ -36,7 +47,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
           <div key={index} className="border border-gray-600 rounded-lg p-4 flex items-center justify-center bg-[#1a1a1a] h-24">
             {images[index] ? (
               <img
-                src={typeof images[index] === 'string' ? images[index] : URL.createObjectURL(images[index])}
+                src={getImageUrl(images[index])}
                 alt={`Product ${index + 1}`}
                 className="w-full h-full object-cover rounded"
               />

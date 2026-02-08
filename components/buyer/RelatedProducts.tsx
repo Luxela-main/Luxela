@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Listing } from '@/types/listing'
-import ProductCard from './ProductCard'
+import EnhancedProductCard from './product-display/EnhancedProductCard'
 import { ArrowRight } from 'lucide-react'
 
 interface RelatedProductsProps {
@@ -17,12 +17,15 @@ export default function RelatedProducts({ products, brandName }: RelatedProducts
   return (
     <div>
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Related products</h2>
+      <div className="flex items-center justify-between mb-12">
+        <h2 className="text-2xl lg:text-3xl font-light tracking-widest uppercase flex items-center gap-3">
+          <span className="w-1 h-8 bg-gradient-to-b from-[#8451E1] to-[#7240D0] rounded-full"></span>
+          Related Products
+        </h2>
         {brandName && (
           <Link 
             href={`/buyer/brand/${brandSlug}`}
-            className="flex items-center gap-2 text-[#8451E1] hover:text-[#8451E1] text-sm font-medium transition-colors group"
+            className="flex items-center gap-2 text-[#8451E1] hover:text-[#9665F5] text-xs font-semibold uppercase tracking-wider transition-colors group"
           >
             See all
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -32,9 +35,9 @@ export default function RelatedProducts({ products, brandName }: RelatedProducts
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {displayProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <EnhancedProductCard key={product.id} product={product} />
         ))}
       </div>
     </div>
   )
-}
+}

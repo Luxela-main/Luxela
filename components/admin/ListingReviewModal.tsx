@@ -110,7 +110,7 @@ export default function ListingReviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] bg-[#1f2937] border-[#2B2B2B]">
         <DialogHeader>
           <div className="flex items-center gap-3">
             {getIcon()}
@@ -168,7 +168,7 @@ export default function ListingReviewModal({
           {/* Revision Feedback */}
           {action === "revise" && (
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">
+              <label className="text-sm font-medium text-gray-500 block mb-2">
                 Revision Feedback *
               </label>
               <Textarea

@@ -2,7 +2,7 @@ import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { db } from '../db';
-import { carts, cartItems, orders, payments, listings } from '../db/schema';
+import { carts, cartItems, orders, payments, listings, buyers } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -17,6 +17,7 @@ import {
   createCheckoutSession,
   verifyPayment as verifyTsaraPayment,
 } from '../services/tsara';
+import { getBuyer } from './utils';
 
 /**
  * Checkout Router - Handles buyer payment and order flow
@@ -123,9 +124,12 @@ export const checkoutRouter = createTRPCRouter({
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
       try {
+        // Get or create buyer profile
+        const buyer = await getBuyer(userId);
+        
         const [cart] = await db.select().from(carts).where(eq(carts.id, input.cartId));
 
-        if (!cart || cart.buyerId !== userId) {
+        if (!cart || cart.buyerId !== buyer.id) {
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Cart not found',
@@ -175,7 +179,7 @@ export const checkoutRouter = createTRPCRouter({
 
         // Calculate totals
         const subtotalCents = itemsWithDetails.reduce((sum, item) => sum + item.totalPriceCents, 0);
-        const shippingCents = 50000; // ₦500 flat rate (in cents)
+        const shippingCents = 50000; // ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¦500 flat rate (in cents)
         const totalCents = subtotalCents + shippingCents;
 
         // Get unique sellers
@@ -232,11 +236,14 @@ export const checkoutRouter = createTRPCRouter({
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
       try {
+        // Get or create buyer profile
+        const buyer = await getBuyer(userId);
+        
         // Get buyer's cart
         const cartResult = await db
           .select()
           .from(carts)
-          .where(eq(carts.buyerId, userId))
+          .where(eq(carts.buyerId, buyer.id))
           .limit(1);
 
         const cart = cartResult[0];
@@ -264,10 +271,26 @@ export const checkoutRouter = createTRPCRouter({
         const totalCents = items.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
         const totalAmount = totalCents / 100; // Convert to currency units
 
+        // Get seller ID from the primary listing
+        const primaryListing = await db
+          .select()
+          .from(listings)
+          .where(eq(listings.id, items[0].listingId))
+          .limit(1);
+
+        if (!primaryListing.length) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Primary listing not found',
+          });
+        }
+
+        const sellerId = primaryListing[0].sellerId;
+
         // Create order (enters escrow)
         const { orderId } = await createOrderFromCart(
-          userId,
-          items[0].listingId, // TODO: handle multi-seller carts
+          buyer.id,
+          sellerId, // Now using actual seller ID
           items.map((item) => ({
             listingId: item.listingId,
             quantity: item.quantity,
@@ -296,7 +319,7 @@ export const checkoutRouter = createTRPCRouter({
 
         const paymentMetadata = {
           orderId,
-          buyerId: userId,
+          buyerId: buyer.id,
           customerName: input.customerName,
           customerEmail: input.customerEmail,
           shippingAddress: input.shippingAddress || '',
@@ -312,7 +335,7 @@ export const checkoutRouter = createTRPCRouter({
             amount: totalCents.toString(),
             asset: 'USDC',
             network: 'solana',
-            wallet_id: userId,
+            wallet_id: buyer.id,
             description: `Fashion purchase - Order ${orderId}`,
             metadata: paymentMetadata,
           });
@@ -323,7 +346,7 @@ export const checkoutRouter = createTRPCRouter({
               amount: totalCents,
               currency: input.currency,
               reference: transactionRef,
-              customer_id: userId,
+              customer_id: buyer.id,
               success_url: input.successUrl,
               cancel_url: input.cancelUrl,
               metadata: paymentMetadata,
@@ -333,7 +356,7 @@ export const checkoutRouter = createTRPCRouter({
               amount: totalCents,
               currency: input.currency,
               description: `Fashion purchase - Order ${orderId}`,
-              customer_id: userId,
+              customer_id: buyer.id,
               redirect_url: input.redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
               metadata: paymentMetadata,
             });
@@ -345,7 +368,7 @@ export const checkoutRouter = createTRPCRouter({
           .insert(payments)
           .values({
             id: paymentId,
-            buyerId: userId,
+            buyerId: buyer.id,
             listingId: items[0].listingId,
             orderId,
             amountCents: totalCents,
@@ -435,6 +458,9 @@ export const checkoutRouter = createTRPCRouter({
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
       try {
+        // Get or create buyer profile
+        const buyer = await getBuyer(userId);
+
         // Verify payment with Tsara
         const verification = await verifyTsaraPayment(input.transactionRef);
 
@@ -451,7 +477,7 @@ export const checkoutRouter = createTRPCRouter({
           .from(payments)
           .where(eq(payments.id, input.paymentId));
 
-        if (!payment || payment.buyerId !== userId) {
+        if (!payment || payment.buyerId !== buyer.id) {
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Payment not found',
@@ -495,7 +521,7 @@ export const checkoutRouter = createTRPCRouter({
         const [cart] = await db
           .select()
           .from(carts)
-          .where(and(eq(carts.buyerId, userId)));
+          .where(and(eq(carts.buyerId, buyer.id)));
 
         if (cart) {
           await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));

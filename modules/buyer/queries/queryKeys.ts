@@ -78,6 +78,16 @@ export const supportKeys = {
   stats: () => [...supportKeys.all(), "stats"] as const,
 };
 
+export const brandKeys = {
+  all: ["brands"] as const,
+  list: () => [...brandKeys.all, "list"] as const,
+  brands: (page: number, limit: number, search?: string, sortBy?: string) =>
+    [...brandKeys.list(), page, limit, search, sortBy] as const,
+  details: () => [...brandKeys.all, "details"] as const,
+  brandDetails: (brandId: string) =>
+    [...brandKeys.details(), brandId] as const,
+};
+
 export const queryKeys = {
   shipping: shippingKeys,
   email: emailKeys,
@@ -87,4 +97,6 @@ export const queryKeys = {
   payment: paymentKeys,
   order: orderKeys,
   support: supportKeys,
+  brands: brandKeys.brands,
+  brandDetails: brandKeys.brandDetails,
 };
