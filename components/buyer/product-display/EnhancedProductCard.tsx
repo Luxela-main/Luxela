@@ -188,7 +188,7 @@ export default function EnhancedProductCard({
             }}
           >
             {/* Image Section with Carousel */}
-            <div className="relative bg-[#222] overflow-hidden" style={{ height: '256px' }}>
+            <div className="relative bg-[#222] overflow-hidden flex-shrink-0" style={{ height: '256px' }}>
               {isValidImage && images.length > 0 ? (
                 <>
                   <HorizontalImageScroller
@@ -325,7 +325,7 @@ export default function EnhancedProductCard({
             </div>
 
             {/* Content Section */}
-            <div className="p-4 bg-black flex flex-col flex-1">
+            <div className="pt-4 px-4 pb-4 bg-black flex flex-col flex-1">
               {/* Category & Brand Row */}
               <div className="flex items-center justify-between mb-2 gap-2">
                 {product.category && (
