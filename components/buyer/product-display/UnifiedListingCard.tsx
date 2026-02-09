@@ -166,7 +166,7 @@ export default function UnifiedListingCard({
           imageArray.push(parsed);
         }
       } catch (e) {
-        // Continue to fallback
+        console.warn('[UnifiedListingCard] Failed to parse imagesJson for listing:', listing.id, e);
       }
     }
     
@@ -175,8 +175,13 @@ export default function UnifiedListingCard({
       imageArray.push(listing.image);
     }
     
+    if (imageArray.length > 1) {
+      console.log(`[UnifiedListingCard] Listing "${listing.title}" - Parsed ${imageArray.length} images from imagesJson`);
+    }
+    
     return imageArray.length > 0 ? imageArray : [];
   }, [listing.imagesJson, listing.image]);
+
 
   const isValidImage =
     images &&

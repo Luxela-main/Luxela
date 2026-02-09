@@ -23,6 +23,20 @@ async function testTrpcEndpoint() {
         console.log(`   Title: ${listing.title}`);
         console.log(`   Price: ${listing.price}`);
         console.log(`   Seller: ${listing.seller.brandName}`);
+        console.log(`   Image: ${listing.image}`);
+        console.log(`   ImagesJson: ${listing.imagesJson}`);
+        
+        if (listing.imagesJson) {
+          try {
+            const parsed = JSON.parse(listing.imagesJson);
+            console.log(`   Parsed Images Count: ${Array.isArray(parsed) ? parsed.length : 'not array'}`);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((img, i) => console.log(`     [${i}]: ${typeof img === 'string' ? img : JSON.stringify(img).substring(0, 50)}...`));
+            }
+          } catch (e) {
+            console.log(`   Failed to parse imagesJson: ${e.message}`);
+          }
+        }
       }
     } else {
       console.log(`❌ Endpoint error:\n`, data);

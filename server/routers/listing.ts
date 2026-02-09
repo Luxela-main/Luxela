@@ -1,9 +1,8 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
-// @ts-ignore - uuid v13 module resolution
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
 import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews } from "../db/schema";
-import { and, eq, sql, inArray } from "drizzle-orm";
+import { and, eq, sql, inArray, asc } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { TRPCContext } from "../trpc/context";
@@ -1482,8 +1481,78 @@ export const listingRouter = createTRPCRouter({
         .from(listings)
         .where(and(...conditions));
 
+      // Get all product IDs for bulk image fetching
+      const productIds = approvedListings
+        .filter(l => l.productId)
+        .map(l => l.productId) as string[];
+      
+      // Fetch all images for all products in one query
+      let allProductImages: any[] = [];
+      if (productIds.length > 0) {
+        allProductImages = await db
+          .select()
+          .from(productImages)
+          .where(inArray(productImages.productId, productIds))
+          .orderBy(productImages.position);
+      }
+      
+      // Build map of images by product ID
+      const imagesByProductId: Record<string, string[]> = {};
+      allProductImages.forEach(img => {
+        if (!imagesByProductId[img.productId]) {
+          imagesByProductId[img.productId] = [];
+        }
+        imagesByProductId[img.productId].push(img.imageUrl);
+      });
+
+      // For collection listings, fetch all collection items and their images
+      const collectionListingIds = approvedListings.filter(l => l.type === 'collection').map(l => l.id);
+      let collectionItemsData: any[] = [];
+      let collectionProductImages: any[] = [];
+      
+      if (collectionListingIds.length > 0) {
+        collectionItemsData = await db
+          .select()
+          .from(collectionItems)
+          .where(inArray(collectionItems.collectionId, 
+            approvedListings
+              .filter(l => l.type === 'collection' && l.collectionId)
+              .map(l => l.collectionId) as string[]
+          ));
+        
+        const collectionProductIds = collectionItemsData.map(ci => ci.productId);
+        if (collectionProductIds.length > 0) {
+          collectionProductImages = await db
+            .select()
+            .from(productImages)
+            .where(inArray(productImages.productId, collectionProductIds))
+            .orderBy(productImages.position);
+          
+          collectionProductImages.forEach(img => {
+            if (!imagesByProductId[img.productId]) {
+              imagesByProductId[img.productId] = [];
+            }
+            imagesByProductId[img.productId].push(img.imageUrl);
+          });
+        }
+      }
+
       return approvedListings.map((l) => {
         try {
+          // Fetch images for this listing
+          let imagesJson = l.imagesJson || null;
+          if (l.productId && imagesByProductId[l.productId]) {
+            imagesJson = JSON.stringify(imagesByProductId[l.productId]);
+          } else if (l.productId && !imagesByProductId[l.productId] && l.imagesJson) {
+            // Fallback to parsing imagesJson if no product images
+            try {
+              const parsed = JSON.parse(l.imagesJson);
+              imagesJson = JSON.stringify(parsed);
+            } catch (e) {
+              imagesJson = null;
+            }
+          }
+          
           const result: any = {
             id: l.id,
             sellerId: l.sellerId,
@@ -1492,7 +1561,7 @@ export const listingRouter = createTRPCRouter({
             description: l.description,
             category: l.category,
             image: l.image,
-            imagesJson: l.imagesJson || null,
+            imagesJson,
             priceCents: l.priceCents,
             currency: l.currency,
             sizesJson: l.sizesJson ? JSON.parse(l.sizesJson) : null,
