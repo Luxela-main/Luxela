@@ -65,17 +65,25 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     const fetchData = async () => {
       try {
         setLoading(true)
+        console.log('[ProductReviews] Fetching reviews for:', productId)
         const [reviewsRes, statsRes, reviewStatusRes] = await Promise.all([
           getListingReviews(productId),
           getListingStats(productId),
           user ? hasUserReviewedListing(productId) : Promise.resolve({ hasReviewed: false }),
         ])
 
+        console.log('[ProductReviews] Reviews response:', { success: reviewsRes.success, count: reviewsRes.reviews?.length })
+        console.log('[ProductReviews] Stats response:', { success: statsRes.success, stats: statsRes.stats })
+        
         if (reviewsRes.success) {
           setReviews(reviewsRes.reviews)
+        } else {
+          console.error('[ProductReviews] Failed to fetch reviews:', reviewsRes.error)
         }
         if (statsRes.success) {
           setStats(statsRes.stats as RatingStats)
+        } else {
+          console.error('[ProductReviews] Failed to fetch stats:', statsRes.error)
         }
         if (reviewStatusRes.hasReviewed) {
           setHasReviewed(true)
@@ -90,6 +98,21 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
     fetchData()
   }, [productId, user])
+
+  const handleRefreshReviews = async () => {
+    try {
+      console.log('[ProductReviews] Manual refresh triggered')
+      const [reviewsRes, statsRes] = await Promise.all([
+        getListingReviews(productId),
+        getListingStats(productId),
+      ])
+      console.log('[ProductReviews] Manual refresh complete:', { reviewsCount: reviewsRes.reviews?.length })
+      if (reviewsRes.success) setReviews(reviewsRes.reviews)
+      if (statsRes.success) setStats(statsRes.stats as RatingStats)
+    } catch (error) {
+      console.error('[ProductReviews] Manual refresh error:', error)
+    }
+  }
 
   const handleSubmitReview = async () => {
     if (!user) {
@@ -111,19 +134,25 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
       })
 
       if (result.success) {
+        console.log('[ProductReviews] Review submitted successfully, refreshing list')
         toast.success('Review submitted successfully')
         setReviewForm({ rating: 5, comment: '' })
         setShowForm(false)
         setHasReviewed(true)
         
-        // Refresh reviews
-        const [reviewsRes, statsRes] = await Promise.all([
-          getListingReviews(productId),
-          getListingStats(productId),
-        ])
-        if (reviewsRes.success) setReviews(reviewsRes.reviews)
-        if (statsRes.success) setStats(statsRes.stats as RatingStats)
+        // Refresh reviews after a small delay to ensure DB consistency
+        setTimeout(async () => {
+          console.log('[ProductReviews] Refreshing reviews after submission')
+          const [reviewsRes, statsRes] = await Promise.all([
+            getListingReviews(productId),
+            getListingStats(productId),
+          ])
+          console.log('[ProductReviews] Refresh complete:', { reviewsCount: reviewsRes.reviews?.length, statsSuccess: statsRes.success })
+          if (reviewsRes.success) setReviews(reviewsRes.reviews)
+          if (statsRes.success) setStats(statsRes.stats as RatingStats)
+        }, 500)
       } else {
+        console.error('[ProductReviews] Failed to submit review:', result.error)
         toast.error(result.error || 'Failed to submit review')
       }
     } catch (error) {
@@ -167,10 +196,19 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
   return (
     <div className="bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] rounded-2xl border border-[#1a1a1a] p-8">
-      <h2 className="text-lg font-light mb-8 tracking-widest uppercase text-white flex items-center gap-3">
-        <span className="w-1 h-6 bg-gradient-to-b from-[#8451E1] to-[#7240D0] rounded-full"></span>
-        Ratings & Reviews
-      </h2>
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-lg font-light tracking-widest uppercase text-white flex items-center gap-3">
+          <span className="w-1 h-6 bg-gradient-to-b from-[#8451E1] to-[#7240D0] rounded-full"></span>
+          Ratings & Reviews
+        </h2>
+        <button
+          onClick={handleRefreshReviews}
+          className="text-xs text-[#8451E1] hover:text-[#9665F5] font-semibold uppercase tracking-wider"
+          title="Manually refresh reviews"
+        >
+          ↻ Refresh
+        </button>
+      </div>
 
       {/* Rating Summary */}
       <div className="grid md:grid-cols-2 gap-8 mb-8 pb-8 border-b border-[#1a1a1a]">

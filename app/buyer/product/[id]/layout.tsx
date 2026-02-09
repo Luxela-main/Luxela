@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { generatePageMetadata } from '@/lib/seo/metadata-generators';
 import { getProductData } from '@/lib/seo/product-data';
+import { parseListingImages } from '@/lib/server/images';
 
 interface ProductLayoutProps {
   children: React.ReactNode;
@@ -23,12 +24,14 @@ export async function generateMetadata(
 
   const price = product.price_cents ? (product.price_cents / 100).toFixed(2) : undefined;
   const currency = product.currency || 'NGN';
+  const productImages = parseListingImages(product);
+  const primaryImage = productImages?.[0] || product.image || undefined;
 
   return generatePageMetadata({
     title: product.title,
     description: product.description || `Check out ${product.title} on our platform`,
     canonical: `${process.env.NEXT_PUBLIC_SITE_URL}/buyer/product/${id}`,
-    image: product.image || undefined,
+    image: primaryImage,
     imageAlt: product.title,
     keywords: [
       product.title,
@@ -44,7 +47,7 @@ export async function generateMetadata(
       '@type': 'Product',
       name: product.title,
       description: product.description,
-      image: product.image,
+      image: productImages || (product.image ? [product.image] : []),
       brand: {
         '@type': 'Brand',
         name: product.seller?.seller_business?.[0]?.brandName || 'Unknown Brand',

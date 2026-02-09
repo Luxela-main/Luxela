@@ -31,7 +31,7 @@ async function verifyAdminRole(ctx: TRPCContext) {
     });
   }
 
-  if (ctx.user.role !== "admin") {
+  if (!ctx.user.admin) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Admin access required",
@@ -610,7 +610,7 @@ export const adminListingReviewRouter = createTRPCRouter({
         .update(listingReviews)
         .set({
           status: "approved",
-          reviewedBy: ctx.user?.id ?? '',
+          reviewedBy: ctx.user?.id,
           reviewedAt: new Date(),
           comments: input.comments,
           updatedAt: new Date(),
@@ -674,8 +674,8 @@ export const adminListingReviewRouter = createTRPCRouter({
                     collectionListingId: input.listingId,
                     collectionId: listing.collectionId,
                   },
-                  performedBy: ctx.user?.id ?? '',
-                  performedByRole: (ctx.user?.role ?? '') as any,
+                  performedBy: ctx.user?.id,
+                  performedByRole: (ctx.user?.role as 'admin' | 'seller' | 'buyer' | undefined),
                 });
               }
             }
@@ -708,8 +708,8 @@ export const adminListingReviewRouter = createTRPCRouter({
           listingType: listing.type,
           collectionId: listing.collectionId || undefined,
         },
-        performedBy: ctx.user?.id ?? '',
-        performedByRole: (ctx.user?.role ?? '') as any,
+        performedBy: ctx.user?.id,
+        performedByRole: (ctx.user?.role as 'admin' | 'seller' | 'buyer' | undefined),
       });
 
       // Send notifications to seller (email + polling)

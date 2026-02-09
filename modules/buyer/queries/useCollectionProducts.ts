@@ -171,96 +171,127 @@ export function useCollectionProducts(
 
       console.log(`[useCollectionProducts] Starting fetch for collectionId=${collectionId}`);
 
-      // First, get the collection listing to fetch its metadata
-      const { data: collectionListing, error: collectionListingError } = await supabase
-        .from('listings')
+      // First, get the collection metadata directly from collections table
+      const { data: collectionData, error: collectionError } = await supabase
+        .from('collections')
         .select(
           `
           id,
-          title,
+          name,
+          slug,
           description,
-          image,
-          images_json,
-          collection_id,
-          status,
+          image_url,
+          brand_id,
           created_at,
-          updated_at,
-          sellers (
-            id,
-            user_id,
-            business_name,
-            logo,
-            hero_image
-          )
+          updated_at
         `
         )
-        .eq('collection_id', collectionId)
-        .eq('status', 'approved')
-        .eq('type', 'collection')
+        .eq('id', collectionId)
         .limit(1)
         .single();
 
-      if (collectionListingError) {
-        console.error(`[useCollectionProducts] Collection listing fetch error:`, collectionListingError);
-        throw new Error(collectionListingError.message || 'Failed to fetch collection listing');
+      // Check for errors first - handle 'no rows' case and other Supabase errors
+      if (collectionError) {
+        // Check if the error is specifically for no rows found (expected when collection doesn't exist)
+        if (collectionError.code === 'PGRST116' || collectionError.message?.includes('No rows')) {
+          console.warn(`[useCollectionProducts] Collection not found for collectionId=${collectionId}`);
+          // This is an actual error - collection should exist
+        } else {
+          console.error(`[useCollectionProducts] Collection fetch error:`, {
+            code: collectionError.code,
+            message: collectionError.message,
+            details: collectionError.details,
+            hint: collectionError.hint,
+          });
+          throw new Error(collectionError.message || 'Failed to fetch collection');
+        }
       }
 
-      // Now fetch the collection items from the junction table with full product data
+      // Fetch seller business info separately
+      let sellerInfo = { id: '', business_name: 'Unknown', logo: null, hero_image: null };
+      if (collectionData && collectionData.brand_id) {
+        const { data: sellerData } = await supabase
+          .from('seller_business')
+          .select('seller_id, brand_name, store_logo, store_banner')
+          .eq('seller_id', collectionData.brand_id)
+          .limit(1)
+          .single();
+        
+        if (sellerData) {
+          sellerInfo = {
+            id: sellerData.seller_id,
+            business_name: sellerData.brand_name || 'Unknown',
+            logo: sellerData.store_logo || null,
+            hero_image: sellerData.store_banner || null,
+          };
+        }
+      }
+
+      // Fetch collection items from the junction table
       const { data: collectionItemsData, error: collectionItemsError } = await supabase
         .from('collection_items')
-        .select(
-          `
-          id,
-          position,
-          product_id,
-          products (
-            id,
-            brand_id,
-            collection_id,
-            name,
-            slug,
-            description,
-            category,
-            price,
-            currency,
-            type,
-            sku,
-            in_stock,
-            ships_in,
-            created_at,
-            updated_at,
-            product_images (
-              id,
-              image_url,
-              position
-            ),
-            product_variants (
-              id,
-              size,
-              color_name,
-              color_hex
-            ),
-            inventory (
-              id,
-              quantity,
-              reserved_quantity,
-              variant_id
-            )
-          )
-        `
-        )
+        .select('id, position, product_id')
         .eq('collection_id', collectionId)
         .order('position', { ascending: true });
 
       if (collectionItemsError) {
-        console.error(`[useCollectionProducts] Collection items fetch error:`, collectionItemsError);
-        throw new Error(collectionItemsError.message || 'Failed to fetch collection items');
+        const errorCode = (collectionItemsError as any)?.code;
+        const errorMessage = (collectionItemsError as any)?.message;
+        const errorDetails = (collectionItemsError as any)?.details;
+        const errorHint = (collectionItemsError as any)?.hint;
+        
+        console.error(`[useCollectionProducts] Collection items fetch error:`, {
+          code: errorCode,
+          message: errorMessage,
+          details: errorDetails,
+          hint: errorHint,
+          fullError: collectionItemsError
+        });
+        
+        throw new Error(errorMessage || 'Failed to fetch collection items');
       }
 
       console.log(`[useCollectionProducts] Fetched ${collectionItemsData?.length || 0} items in collection`);
 
+      // Fetch product details separately using product IDs
+      const productIds = (collectionItemsData || []).map((item: any) => item.product_id).filter(Boolean);
+      let productsDataMap: Record<string, any> = {};
+      
+      if (productIds.length > 0) {
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select(
+            `id, brand_id, collection_id, name, slug, description, category, sku, in_stock, ships_in, created_at, updated_at, product_variants(id, size, color_name, color_hex), inventory(id, quantity, reserved_quantity, variant_id)`
+          )
+          .in('id', productIds);
+        
+        if (productsError) {
+          console.error(`[useCollectionProducts] Products fetch error:`, productsError);
+        } else if (productsData) {
+          productsData.forEach((product: any) => {
+            productsDataMap[product.id] = product;
+          });
+        }
+      }
+
+      // Fetch ALL product images separately for better reliability
+      let allProductImages: any[] = [];
+      
+      if (productIds.length > 0) {
+        const { data: imagesData, error: imagesError } = await supabase
+          .from('product_images')
+          .select('id, product_id, image_url, position')
+          .in('product_id', productIds);
+        
+        if (imagesError) {
+          console.error(`[useCollectionProducts] Product images fetch error:`, imagesError);
+          // Don't throw - continue without images rather than failing the entire request
+        } else {
+          allProductImages = imagesData || [];
+        }
+      }
+
       // Fetch listings for each product to get pricing and other listing details
-      const productIds = (collectionItemsData || []).map((item: { product_id: string | null }) => item.product_id).filter(Boolean);
       let listingsDataMap: Record<string, any> = {};
       
       if (productIds.length > 0) {
@@ -300,20 +331,20 @@ export function useCollectionProducts(
         }
       }
 
-      // Build collection data from the listing
-      let collectionData: CollectionDisplayData | null = null;
-      if (collectionListing) {
-        collectionData = {
-          id: collectionId,
-          name: collectionListing.title || 'Collection',
-          slug: collectionId,
-          description: collectionListing.description,
-          brandId: collectionListing.sellers?.id || '',
-          brandName: collectionListing.sellers?.business_name || 'Unknown',
-          brandLogo: collectionListing.sellers?.logo || null,
-          brandHero: collectionListing.sellers?.hero_image || null,
-          createdAt: collectionListing.created_at,
-          updatedAt: collectionListing.updated_at,
+      // Build collection display data from the collection metadata (if available)
+      let collectionDisplayData: CollectionDisplayData | null = null;
+      if (collectionData) {
+        collectionDisplayData = {
+          id: collectionData.id,
+          name: collectionData.name || 'Collection',
+          slug: collectionData.slug || collectionId,
+          description: collectionData.description,
+          brandId: collectionData.brand_id || sellerInfo.id || '',
+          brandName: sellerInfo.business_name || 'Unknown',
+          brandLogo: sellerInfo.logo || null,
+          brandHero: collectionData.image_url || sellerInfo.hero_image || null,
+          createdAt: collectionData.created_at,
+          updatedAt: collectionData.updated_at,
           products: [],
           listings: [],
           productCount: 0,
@@ -324,8 +355,15 @@ export function useCollectionProducts(
       // Transform products from collection_items with product data
       const transformedProducts: CollectionProduct[] = (collectionItemsData || [])
         .map((collectionItem: any) => {
-          const product = collectionItem.products;
+          const product = productsDataMap[collectionItem.product_id];
           if (!product) return null;
+          
+          // Get all images for this product from the fetched allProductImages array
+          const productImagesForItem = allProductImages.filter((img: any) => img.product_id === product.id)
+            .sort((a: any, b: any) => a.position - b.position);
+          
+          // Get the listing data to retrieve itemsJson and pricing
+          const listing = listingsDataMap[product.id];
           
           return {
             id: product.id,
@@ -335,21 +373,19 @@ export function useCollectionProducts(
             slug: product.slug,
             description: product.description,
             category: product.category,
-            price: product.price,
-            currency: product.currency,
+            price: listing?.price_cents ? listing.price_cents / 100 : 0, // Get price from listing table
+            currency: listing?.currency || 'NGN',
             type: product.type,
             sku: product.sku,
             inStock: product.in_stock,
             shipsIn: product.ships_in,
             createdAt: product.created_at,
             updatedAt: product.updated_at,
-            images: (product.product_images || [])
-              .sort((a: any, b: any) => a.position - b.position)
-              .map((img: any) => ({
-                id: img.id,
-                imageUrl: img.image_url,
-                position: img.position,
-              })),
+            images: productImagesForItem.map((img: any) => ({
+              id: img.id,
+              imageUrl: img.image_url,
+              position: img.position,
+            })),
             variants: (product.product_variants || []).map((variant: any) => ({
               id: variant.id,
               size: variant.size,
@@ -362,7 +398,7 @@ export function useCollectionProducts(
               reservedQuantity: inv.reserved_quantity,
               variantId: inv.variant_id,
             })),
-            itemsJson: null,
+            itemsJson: listing?.items_json ? JSON.parse(listing.items_json) : null,
           };
         })
         .filter((p: any): p is CollectionProduct => p !== null);
@@ -372,6 +408,7 @@ export function useCollectionProducts(
         .map((collectionItem: any) => {
           const product = transformedProducts.find((p) => p.id === collectionItem.product_id);
           const listing = listingsDataMap[collectionItem.product_id];
+          const productImgs = allProductImages.filter((img: any) => img.product_id === collectionItem.product_id);
           
           return {
             id: listing?.id || collectionItem.id,
@@ -380,8 +417,8 @@ export function useCollectionProducts(
             listingTitle: listing?.title || product?.name || 'Product',
             listingDescription: listing?.description || product?.description || null,
             category: listing?.category || product?.category || null,
-            image: listing?.image || (product?.images[0]?.imageUrl || null),
-            priceCents: listing?.price_cents || (product?.price ? product.price * 100 : 0),
+            image: listing?.image || (product?.images[0]?.imageUrl || productImgs[0]?.image_url || null),
+            priceCents: listing?.price_cents || 0,
             currency: listing?.currency || product?.currency || 'NGN',
             sizesJson: listing?.sizes_json ? JSON.parse(listing.sizes_json) : null,
             itemsJson: listing?.items_json ? JSON.parse(listing.items_json) : null,
@@ -399,12 +436,12 @@ export function useCollectionProducts(
       setProducts(transformedProducts);
 
       // Update collection display data with transformed data
-      if (collectionData) {
-        collectionData.products = transformedProducts;
-        collectionData.listings = transformedListings;
-        collectionData.productCount = transformedProducts.length;
-        collectionData.listingCount = transformedListings.length;
-        setData(collectionData);
+      if (collectionDisplayData) {
+        collectionDisplayData.products = transformedProducts;
+        collectionDisplayData.listings = transformedListings;
+        collectionDisplayData.productCount = transformedProducts.length;
+        collectionDisplayData.listingCount = transformedListings.length;
+        setData(collectionDisplayData);
       }
     } catch (err: any) {
       const errorMessage =

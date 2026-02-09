@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 const TSARA_BASE_URL = process.env.TSARA_BASE_URL || "https://api.tsara.ng/v1";
 const TSARA_SANDBOX_URL = "https://sandbox.tsara.ng/v1";
@@ -117,6 +117,8 @@ export async function createStablecoinPaymentLink(data: {
 }
 
 // ---- CREATE CHECKOUT SESSION ----
+// Note: Tsara does not have a dedicated /checkout/sessions endpoint
+// We use /payment-links instead, which provides checkout-like functionality
 export async function createCheckoutSession(data: {
   amount: number;
   currency: string;
@@ -127,8 +129,38 @@ export async function createCheckoutSession(data: {
   metadata?: Record<string, any>;
 }): Promise<TsaraResponse<CheckoutSession>> {
   try {
-    const response = await tsaraApi.post("/checkout/sessions", data);
-    return response.data;
+    // Map checkout session parameters to payment link format
+    const paymentLinkData = {
+      amount: data.amount,
+      currency: data.currency,
+      description: `Payment for order ${data.reference}`,
+      customer_id: data.customer_id,
+      metadata: {
+        ...data.metadata,
+        reference: data.reference,
+        success_url: data.success_url,
+        cancel_url: data.cancel_url,
+      },
+      redirect_url: data.success_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
+    };
+
+    const response = await tsaraApi.post("/payment-links", paymentLinkData);
+    
+    // Transform payment link response to checkout session format
+    const paymentLink = response.data.data;
+    return {
+      success: response.data.success,
+      data: {
+        id: paymentLink.id,
+        status: (paymentLink.status === "active" ? "open" : paymentLink.status) as any,
+        checkout_url: paymentLink.url,
+        amount: paymentLink.amount,
+        currency: paymentLink.currency,
+        reference: data.reference,
+        expires_at: paymentLink.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      request_id: response.data.request_id,
+    } as any;
   } catch (error: any) {
     console.error("Create checkout session failed:", error.response?.data || error.message);
     throw new Error(error.response?.data?.error?.message || "Failed to create checkout session");
@@ -239,3 +271,4 @@ export async function verifyWebhookSignature(
     }
   }
 }
+

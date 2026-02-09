@@ -206,11 +206,145 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchListingsFromCatalogData = async (data: typeof catalogData) => {
+    if (!data?.listings) {
+      console.warn('[ListingsContext.fetchListingsFromCatalogData] No listings in catalog data');
+      setListings([]);
+      setApprovedListings([]);
+      return;
+    }
+
+    const startTime = performance.now();
+    console.log('[ListingsContext.fetchListingsFromCatalogData] Processing', data.listings.length, 'approved listings');
+    
+    // Log category distribution to diagnose category carousel issues
+    const categoryDistribution: Record<string, number> = {};
+    data.listings.forEach((item: any) => {
+      const cat = item.category || 'uncategorized';
+      categoryDistribution[cat] = (categoryDistribution[cat] || 0) + 1;
+    });
+    console.log('[ListingsContext.fetchListingsFromCatalogData] Category distribution:', categoryDistribution);
+    console.log('[ListingsContext.fetchListingsFromCatalogData] Pagination info - Total pages:', data.totalPages, 'Current page:', data.page, 'Total available:', data.total);
+
+    const approvedItems = data.listings;
+    const transformedListings: Listing[] = approvedItems.map((item: any, index: number) => {
+      const createdAtDate = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
+      const defaultImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
+      let primaryImage = item.image;
+      if (!primaryImage && item.imagesJson) {
+        try {
+          const images = JSON.parse(item.imagesJson);
+          if (Array.isArray(images) && images.length > 0) {
+            primaryImage = images[0]?.imageUrl || images[0]?.url || images[0];
+          }
+        } catch (e) {
+          console.warn('[ListingsContext] Failed to parse imagesJson for item:', item.id);
+        }
+      }
+
+      let parsedSizes = null;
+      if (item.sizes) {
+        try {
+          parsedSizes = Array.isArray(item.sizes) ? item.sizes : JSON.parse(item.sizes);
+        } catch (e) {
+          parsedSizes = item.sizes;
+        }
+      }
+
+      let parsedColors = null;
+      if (item.colors) {
+        try {
+          parsedColors = Array.isArray(item.colors) ? item.colors : JSON.parse(item.colors);
+        } catch (e) {
+          parsedColors = item.colors;
+        }
+      }
+
+      const transformed: Listing = {
+        id: item.id,
+        title: item.title,
+        description: item.description || null,
+        image: primaryImage || defaultImage,
+        price_cents: item.price_cents ?? Math.round((item.price ?? 0) * 100),
+        currency: item.currency || 'NGN',
+        category: item.category || null,
+        colors_available: parsedColors ? JSON.stringify(parsedColors) : null,
+        type: item.type || 'single',
+        quantity_available: item.quantity_available ?? 0,
+        sizes_json: parsedSizes ? JSON.stringify(parsedSizes) : null,
+        material_composition: item.materialComposition || null,
+        limited_edition_badge: item.limitedEditionBadge || null,
+        shipping_option: item.shippingOption || null,
+        eta_domestic: item.etaDomestic || null,
+        eta_international: item.etaInternational || null,
+        additional_target_audience: item.additionalTargetAudience || null,
+        supply_capacity: item.supplyCapacity || null,
+        release_duration: item.releaseDuration || null,
+        refund_policy: item.refundPolicy || null,
+        local_pricing: item.localPricing || null,
+        items_json: null,
+        created_at: createdAtDate.toISOString(),
+        updated_at: createdAtDate.toISOString(),
+        seller_id: item.seller.id,
+        product_id: null,
+        sku: item.sku || null,
+        barcode: item.barcode || null,
+        slug: item.slug || null,
+        meta_description: item.metaDescription || null,
+        video_url: item.videoUrl || null,
+        care_instructions: item.careInstructions || null,
+        sellers: {
+          id: item.seller.id,
+          seller_business: item.seller.brandName
+            ? [
+                {
+                  brand_name: item.seller.brandName,
+                  business_type: 'retail',
+                  store_description: null,
+                  store_logo: '',
+                  store_banner: '',
+                  bio: null,
+                },
+              ]
+            : [],
+        },
+      };
+
+      if (index === 0) {
+        console.log('[ListingsContext] First listing transformed:', {
+          id: transformed.id,
+          title: transformed.title,
+          category: transformed.category,
+          seller_id: transformed.seller_id,
+        });
+      }
+
+      return transformed;
+    });
+
+    const perfTime = performance.now() - startTime;
+    console.log('[ListingsContext] Transformation complete:', {
+      count: transformedListings.length,
+      withBrandData: transformedListings.filter(l => l.sellers?.seller_business?.length).length,
+      processingTime: `${perfTime.toFixed(2)}ms`,
+    });
+
+    setListings(transformedListings);
+    setApprovedListings(transformedListings);
+    setError(null);
+    
+    // Log category breakdown
+    const transformedCategoryDistribution: Record<string, number> = {};
+    transformedListings.forEach((listing: any) => {
+      const cat = listing.category || 'uncategorized';
+      transformedCategoryDistribution[cat] = (transformedCategoryDistribution[cat] || 0) + 1;
+    });
+    console.log('[ListingsContext] Transformed listings category breakdown:', transformedCategoryDistribution);
+  };
+
   const fetchListings = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const startTime = performance.now();
       console.log('[ListingsContext.fetchListings] Started - catalogData available:', !!catalogData);
 
       if (!catalogData?.listings) {
@@ -221,142 +355,9 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log('[ListingsContext.fetchListings] Processing', catalogData.listings.length, 'listings from approved catalog');
-
-      // Note: The getApprovedListingsCatalog endpoint already returns only approved listings
-      // The status field here contains stock status ('in_stock', 'low_stock', 'sold_out'), not approval status
-      const approvedItems = catalogData.listings; // Use all items as they're already approved
-
-      // Transform tRPC catalog data to Listing format
-      const transformedListings: Listing[] = approvedItems.map((item: any, index: number) => {
-        // Ensure createdAt is properly handled
-        const createdAtDate = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
-        
-        // Provide default placeholder image if none exists
-        const defaultImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
-        // Get primary image, with fallback to first image from gallery
-        let primaryImage = item.image;
-        if (!primaryImage && item.imagesJson) {
-          try {
-            const images = JSON.parse(item.imagesJson);
-            if (Array.isArray(images) && images.length > 0) {
-              primaryImage = images[0]?.url || images[0];
-            }
-          } catch (e) {
-            console.warn('[ListingsContext] Failed to parse imagesJson for item:', item.id);
-          }
-        }
-        
-        // Parse sizes if available
-        let parsedSizes = null;
-        if (item.sizes) {
-          try {
-            parsedSizes = Array.isArray(item.sizes) ? item.sizes : JSON.parse(item.sizes);
-          } catch (e) {
-            parsedSizes = item.sizes;
-          }
-        }
-
-        // Parse colors if available
-        let parsedColors = null;
-        if (item.colors) {
-          try {
-            parsedColors = Array.isArray(item.colors) ? item.colors : JSON.parse(item.colors);
-          } catch (e) {
-            parsedColors = item.colors;
-          }
-        }
-
-        const transformed: Listing = {
-          id: item.id,
-          title: item.title,
-          description: item.description || null,
-          image: primaryImage || defaultImage,
-          price_cents: item.price_cents ?? Math.round((item.price ?? 0) * 100),
-          currency: item.currency || 'NGN',
-          category: item.category || null,
-          colors_available: parsedColors ? JSON.stringify(parsedColors) : null,
-          type: item.type || 'single',
-          quantity_available: item.quantity_available ?? 0,
-          sizes_json: parsedSizes ? JSON.stringify(parsedSizes) : null,
-          material_composition: item.materialComposition || null,
-          limited_edition_badge: item.limitedEditionBadge || null,
-          shipping_option: item.shippingOption || null,
-          eta_domestic: item.etaDomestic || null,
-          eta_international: item.etaInternational || null,
-          additional_target_audience: item.additionalTargetAudience || null,
-          supply_capacity: item.supplyCapacity || null,
-          release_duration: item.releaseDuration || null,
-          refund_policy: item.refundPolicy || null,
-          local_pricing: item.localPricing || null,
-          items_json: null,
-          created_at: createdAtDate.toISOString(),
-          updated_at: createdAtDate.toISOString(),
-          seller_id: item.seller.id,
-          product_id: null,
-          sku: item.sku || null,
-          barcode: item.barcode || null,
-          slug: item.slug || null,
-          meta_description: item.metaDescription || null,
-          video_url: item.videoUrl || null,
-          care_instructions: item.careInstructions || null,
-          sellers: {
-            id: item.seller.id,
-            seller_business: item.seller.brandName
-              ? [
-                  {
-                    brand_name: item.seller.brandName,
-                    business_type: 'retail',
-                    store_description: null,
-                    store_logo: '',
-                    store_banner: '',
-                    bio: null,
-                  },
-                ]
-              : [],
-          },
-        };
-        
-        if (index === 0) {
-          console.log('[ListingsContext.fetchListings] First listing transformed:', {
-            id: transformed.id,
-            title: transformed.title,
-            brandName: transformed.sellers?.seller_business?.[0]?.brand_name,
-            sellerId: transformed.seller_id,
-            price_cents: transformed.price_cents,
-            hasSku: !!transformed.sku,
-            hasMaterialComposition: !!transformed.material_composition,
-            hasCareInstructions: !!transformed.care_instructions,
-            hasVideoUrl: !!transformed.video_url,
-          });
-        }
-        
-        return transformed;
-      });
-
-      const perfTime = performance.now() - startTime;
-      console.log('[ListingsContext.fetchListings] Transformation complete:', {
-        count: transformedListings.length,
-        approvedCount: transformedListings.length,
-        withBrandData: transformedListings.filter(l => l.sellers?.seller_business?.length).length,
-        totalPages: catalogData.totalPages,
-        currentPage: catalogData.page,
-        processingTime: `${perfTime.toFixed(2)}ms`,
-      });
-      
-      // Set both listings and approved listings (since these are all approved)
-      console.log('[ListingsContext.fetchListings] About to set state with', transformedListings.length, 'listings');
-      setListings(transformedListings);
-      setApprovedListings(transformedListings);
-      console.log('[ListingsContext.fetchListings] State updated, listings now available');
+      await fetchListingsFromCatalogData(catalogData);
       setLastFetchTime(Date.now());
       setFetchAttempts(0);
-      
-      if (catalogData.page < catalogData.totalPages) {
-        setHasMorePages(true);
-      } else {
-        setHasMorePages(false);
-      }
     } catch (err: any) {
       const errorMessage = err?.message || (err instanceof Error ? err.message : JSON.stringify(err) || "Failed to fetch listings");
       setError(errorMessage);
@@ -377,6 +378,18 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
       fetchListings();
     }
   }, [catalogData]);
+
+  // Retry mechanism: If no listings after 3 seconds, force refetch
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (listings.length === 0 && !loading && !isCatalogLoading) {
+        console.warn('[ListingsContext] No listings loaded after 3 seconds, attempting refetch...');
+        refetchCatalog();
+      }
+    }, 3000);
+
+    return () => clearTimeout(timeout);
+  }, [listings.length, loading, isCatalogLoading, refetchCatalog]);
 
   // Cache approved listing in memory when it's loaded from context
   useEffect(() => {

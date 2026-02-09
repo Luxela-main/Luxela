@@ -212,6 +212,16 @@ export default function EnhancedProductCard({
                 {/* Approval Badge */}
                 <ApprovalBadge isApproved={isApproved} showText={false} />
 
+                {/* Pending Review Badge */}
+                {product.status === 'pending_review' && (
+                  <div className="px-3 py-1.5 rounded-lg bg-yellow-500/20 backdrop-blur-md flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                    <span className="text-[9px] text-yellow-400 font-medium">
+                      Pending
+                    </span>
+                  </div>
+                )}
+
                 {product.limited_edition_badge === 'show_badge' && (
                   <div
                     className="px-3 py-1.5 rounded-lg font-medium uppercase text-white text-xs backdrop-blur-md"

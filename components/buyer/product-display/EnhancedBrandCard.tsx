@@ -136,7 +136,7 @@ export default function EnhancedBrandCard({
   if (variant === 'grid' || variant === 'featured') {
     return (
       <>
-        <Link href={`/buyer/brand/${brand.id}`}>
+        <Link href={`/buyer/brand/${brand.slug}`}>
           <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow overflow-hidden h-full flex flex-col">
             {/* Brand Logo Section */}
             <div className="relative w-full bg-gradient-to-br from-purple-50 to-pink-50 p-6 flex items-center justify-center min-h-[200px]">
@@ -235,7 +235,7 @@ export default function EnhancedBrandCard({
   if (variant === 'compact') {
     return (
       <div className="relative">
-        <Link href={`/buyer/brand/${brand.id}`}>
+        <Link href={`/buyer/brand/${brand.slug}`}>
           <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
             {/* Logo */}
             <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center">

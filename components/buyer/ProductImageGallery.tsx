@@ -13,12 +13,24 @@ export default function ProductImageGallery({ product }: ProductImageGalleryProp
     try {
       if (product.imagesJson) {
         const parsed = JSON.parse(product.imagesJson)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filter to only include valid strings (URLs)
+          const validImages = parsed.filter((img): img is string => {
+            return typeof img === 'string' && Boolean(img?.trim().length)
+          })
+          if (validImages.length > 0) {
+            return validImages
+          }
+        }
       }
     } catch (e) {
       console.error('Failed to parse images:', e)
     }
-    return product.image ? [product.image] : []
+    // Always fallback to primary image if available
+    if (product.image && product.image.trim().length > 0) {
+      return [product.image]
+    }
+    return []
   }
   const images = getImages()
 

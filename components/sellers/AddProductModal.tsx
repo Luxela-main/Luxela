@@ -59,6 +59,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     currency: "NGN",
     description: "",
     image: "",
+    images: [] as string[],
     sizes: [] as string[],
     supplyCapacity: "no_max" as "no_max" | "limited",
     quantityAvailable: "",
@@ -97,7 +98,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     if (!formData.priceCents) newErrors.priceCents = "Price is required"
     if (!formData.description.trim())
       newErrors.description = "Description is required"
-    if (!formData.image.trim()) newErrors.image = "Image URL is required"
+    if (!formData.image.trim() && formData.images.length === 0) newErrors.image = "At least one image URL is required"
     if (formData.sizes.length === 0) newErrors.sizes = "Select at least one size"
     if (!formData.releaseDuration.trim())
       newErrors.releaseDuration = "Release duration is required"
@@ -121,13 +122,17 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     try {
       const priceCents = Math.round(parseFloat(formData.priceCents) * 100)
 
+      // Ensure we have at least primary image in the images array
+      const imageUrls = formData.images.length > 0 ? formData.images : (formData.image ? [formData.image] : [])
+      
       const payload: any = {
         title: formData.title,
         category: formData.category,
         priceCents,
         currency: formData.currency,
         description: formData.description,
-        image: formData.image,
+        image: formData.image, // Keep primary image for backward compatibility
+        images: imageUrls, // Pass all images including primary
         sizes: formData.sizes,
         supplyCapacity: formData.supplyCapacity,
         limitedEditionBadge: formData.limitedEditionBadge,
@@ -165,6 +170,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         currency: "NGN",
         description: "",
         image: "",
+        images: [],
         sizes: [],
         supplyCapacity: "no_max",
         quantityAvailable: "",
@@ -530,4 +536,4 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       </div>
     </div>
   )
-}
+}

@@ -1,0 +1,147 @@
+/* Masonry Grid Animations */
+
+/* Fade-in animation for masonry items */
+@keyframes masonryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger effect for masonry items */
+@keyframes masonryStagger {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Smooth grid layout transition */
+@keyframes gridTransition {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Base masonry item animation */
+.masonry-item {
+  animation: masonryFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Staggered masonry items */
+.masonry-item:nth-child(1) { animation-delay: 0.05s; }
+.masonry-item:nth-child(2) { animation-delay: 0.1s; }
+.masonry-item:nth-child(3) { animation-delay: 0.15s; }
+.masonry-item:nth-child(4) { animation-delay: 0.2s; }
+.masonry-item:nth-child(5) { animation-delay: 0.25s; }
+.masonry-item:nth-child(6) { animation-delay: 0.3s; }
+.masonry-item:nth-child(7) { animation-delay: 0.35s; }
+.masonry-item:nth-child(8) { animation-delay: 0.4s; }
+.masonry-item:nth-child(n+9) { animation-delay: 0.45s; }
+
+/* Masonry grid container */
+.masonry-grid {
+  animation: gridTransition 0.3s ease-out;
+}
+
+/* Smooth hover effect for masonry items */
+.masonry-item-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.masonry-item-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(132, 81, 225, 0.2);
+}
+
+/* Loading skeleton masonry */
+.masonry-skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .masonry-item {
+    animation-duration: 0.4s;
+  }
+  
+  .masonry-item:nth-child(n) { animation-delay: 0.05s; }
+  .masonry-item:nth-child(2n) { animation-delay: 0.1s; }
+  .masonry-item:nth-child(3n) { animation-delay: 0.15s; }
+}
+
+/* Accessibility - respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .masonry-item,
+  .masonry-item-hover,
+  .masonry-grid {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Loading state for masonry grid */
+.masonry-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Empty state styling */
+.masonry-empty {
+  animation: gridTransition 0.5s ease-out;
+}
+
+/* Improved placeholder card for loading state */
+.masonry-placeholder {
+  background: linear-gradient(
+    90deg,
+    #1a1a1a 25%,
+    #2a2a2a 50%,
+    #1a1a1a 75%
+  );
+  background-size: 200% 100%;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth item insertion animation */
+@keyframes insertItem {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.masonry-insert {
+  animation: insertItem 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth item removal animation */
+@keyframes removeItem {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.masonry-remove {
+  animation: removeItem 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

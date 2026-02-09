@@ -41,19 +41,32 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  const { data: notificationsData } = trpc.buyer.getNotifications.useQuery({}, {
+  const { data: notificationsData, error, isLoading: queryLoading } = trpc.buyer.getNotifications.useQuery({}, {
     retry: 1,
   });
 
   const { toast } = useToast();
 
   useEffect(() => {
+    if (error) {
+      // Handle 401 or other errors gracefully
+      console.warn('Failed to load notifications:', error);
+      setHasError(true);
+      setIsLoading(false);
+      return;
+    }
+    
     if (notificationsData) {
       setNotifications(notificationsData.data);
+      setHasError(false);
+      setIsLoading(false);
+    } else if (!queryLoading) {
+      // If query finished but no data and no error, set loading to false
       setIsLoading(false);
     }
-  }, [notificationsData]);
+  }, [notificationsData, error, queryLoading]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -153,11 +166,24 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        {isLoading ? (
+        {/* Render based on loading, error, or content state */}
+        {isLoading || queryLoading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin">
               <Bell className="text-[#8451e1]" size={32} />
             </div>
+          </div>
+        ) : hasError ? (
+          <div className="bg-[#1a1a1a] rounded-lg p-12 text-center border border-red-500/30">
+            <Bell className="mx-auto mb-4 text-red-500" size={48} />
+            <p className="text-red-400 text-lg">Unable to load notifications</p>
+            <p className="text-gray-500 text-sm mt-2">Please ensure you're logged in and try refreshing the page</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-[#8451e1] hover:bg-[#7043d8] text-white rounded transition"
+            >
+              Refresh Page
+            </button>
           </div>
         ) : notifications.length === 0 ? (
           <div className="bg-[#1a1a1a] rounded-lg p-12 text-center">

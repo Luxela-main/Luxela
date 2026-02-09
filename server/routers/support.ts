@@ -637,7 +637,7 @@ export const supportRouter = createTRPCRouter({
           message: 'Ticket not found',
         });
 
-      const isAdmin = ctx.user?.role === 'admin';
+      const isAdmin = ctx.user?.role === 'admin' || ctx.user?.admin === true;
       
       // Get buyer if exists
       let buyerResult = await db.select().from(buyers).where(eq(buyers.userId, userId));

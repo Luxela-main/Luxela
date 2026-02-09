@@ -143,11 +143,49 @@ export default function UnifiedListingCard({
   const LUXELA_PLACEHOLDER =
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop';
 
+  // Parse images from imagesJson first, then fall back to image field
+  const images = useMemo(() => {
+    const imageArray: string[] = [];
+    
+    // Try to parse imagesJson first - contains all product images
+    if (listing.imagesJson) {
+      try {
+        const parsed = JSON.parse(listing.imagesJson);
+        if (Array.isArray(parsed)) {
+          // Array of URLs or objects
+          parsed.forEach((item: any) => {
+            if (typeof item === 'string' && item.trim().length > 0) {
+              imageArray.push(item);
+            } else if (item?.imageUrl && typeof item.imageUrl === 'string') {
+              imageArray.push(item.imageUrl);
+            } else if (item?.url && typeof item.url === 'string') {
+              imageArray.push(item.url);
+            }
+          });
+        } else if (typeof parsed === 'string' && parsed.trim().length > 0) {
+          imageArray.push(parsed);
+        }
+      } catch (e) {
+        // Continue to fallback
+      }
+    }
+    
+    // Fallback to image field
+    if (imageArray.length === 0 && listing.image && listing.image.length > 0) {
+      imageArray.push(listing.image);
+    }
+    
+    return imageArray.length > 0 ? imageArray : [];
+  }, [listing.imagesJson, listing.image]);
+
   const isValidImage =
-    listing.image &&
-    listing.image.length > 0 &&
-    !listing.image.includes('placeholder.com') &&
-    listing.image !== LUXELA_PLACEHOLDER;
+    images &&
+    images.length > 0 &&
+    images[0] &&
+    typeof images[0] === 'string' &&
+    images[0].length > 0 &&
+    !images[0].includes('placeholder.com') &&
+    images[0] !== LUXELA_PLACEHOLDER;
 
   const colors = useMemo(() => {
     if (!listing.colors_available) return [];
@@ -161,18 +199,6 @@ export default function UnifiedListingCard({
       }));
     }
   }, [listing.colors_available]);
-
-  // Parse images from imagesJson
-  const images = useMemo(() => {
-    if (!listing.imagesJson) return [listing.image || ''];
-    try {
-      const parsed = JSON.parse(listing.imagesJson);
-      const imageArray = Array.isArray(parsed) ? parsed : [parsed];
-      return imageArray.filter((img: string) => img && img.length > 0);
-    } catch (e) {
-      return [listing.image || ''];
-    }
-  }, [listing.imagesJson, listing.image]);
 
   const stockStatus =
     listing.quantity_available === 0
@@ -380,6 +406,20 @@ export default function UnifiedListingCard({
 
               {/* Bottom Section */}
               <div className="space-y-3">
+                {/* Stock Quantity Display */}
+                {listing.quantity_available !== undefined && (
+                  <div className="flex items-center justify-between text-[10px] text-[#999] mb-2 pb-2 border-b border-[#333]">
+                    <span className="font-semibold">Stock:</span>
+                    <span className={`font-bold ${
+                      listing.quantity_available === 0 ? 'text-red-400' : 
+                      listing.quantity_available <= 5 ? 'text-orange-400' : 
+                      'text-green-400'
+                    }`}>
+                      {listing.quantity_available} items
+                    </span>
+                  </div>
+                )}
+
                 {/* Colors & Rating Row */}
                 <div className="flex items-center justify-between gap-2">
                   {colors.length > 0 && (
@@ -437,6 +477,30 @@ export default function UnifiedListingCard({
                       <span className="text-[9px] text-[#acacac]">
                         ({listing.review_count || 0})
                       </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Seller Info */}
+                {business && (
+                  <div className="flex items-center justify-between text-[10px] mb-2">
+                    <span className="text-[#999]">Seller:</span>
+                    <span className="text-[#8451E1] font-semibold truncate max-w-[80px]" title={business.brand_name}>
+                      {business.brand_name}
+                    </span>
+                  </div>
+                )}
+
+                {/* Product ID & Creation Date */}
+                <div className="text-[9px] text-[#666] mb-3 pb-2 border-b border-[#222] space-y-1">
+                  <div className="flex justify-between">
+                    <span>ID:</span>
+                    <span className="font-mono truncate max-w-[90px]" title={listing.id}>{listing.id.slice(0, 8)}...</span>
+                  </div>
+                  {listing.created_at && (
+                    <div className="flex justify-between">
+                      <span>Added:</span>
+                      <span>{new Date(listing.created_at).toLocaleDateString()}</span>
                     </div>
                   )}
                 </div>
@@ -544,8 +608,8 @@ export default function UnifiedListingCard({
           </DialogHeader>
 
           <div className="grid md:grid-cols-2 gap-6 mt-4">
-            {/* Image */}
-            <div className="bg-[#222] rounded-lg overflow-hidden">
+            {/* Image - Fixed Height */}
+            <div className="bg-[#222] rounded-lg overflow-hidden max-h-96">
               {isValidImage ? (
                 <img
                   src={listing.image}

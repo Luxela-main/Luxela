@@ -50,12 +50,29 @@ export async function setAdminRole(email: string, adminPassword: string) {
       return { success: false, error: updateError.message };
     }
 
+    // Also update the database users table to ensure consistency
+    const { error: dbUpdateError } = await supabase
+      .from('users')
+      .update({ role: 'admin' })
+      .eq('id', currentUser.id);
+
+    if (dbUpdateError) {
+      console.warn('Warning: Failed to update users table role:', dbUpdateError.message);
+      // Don't fail the operation - auth metadata was updated successfully
+    }
+
     // Get a fresh session to ensure JWT is updated
     const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
     
     if (sessionError) {
       console.warn("Session refresh warning:", sessionError.message);
       // Don't fail - the metadata was updated, session will refresh on next request
+    } else {
+      // Verify the session was updated with admin flag in the JWT
+      const { data: sessionUser } = await supabase.auth.getUser();
+      if (sessionUser?.user?.user_metadata?.admin === true) {
+        console.log("Admin role confirmed in refreshed session");
+      }
     }
 
     // Verify the update was successful by fetching the updated user
@@ -159,7 +176,20 @@ export async function checkAdminStatus() {
       return { success: false, isAdmin: false, error: "Not authenticated" };
     }
 
-    const isAdmin = user.user_metadata?.admin === true;
+    let isAdmin = user.user_metadata?.admin === true;
+    
+    // If not found in metadata, check the database users table as fallback
+    if (!isAdmin) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (!userError && userData?.role === 'admin') {
+        isAdmin = true;
+      }
+    }
 
     return {
       success: true,

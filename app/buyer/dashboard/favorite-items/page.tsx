@@ -19,6 +19,9 @@ export default function FavoriteItemsPage() {
 
   const { toast } = useToast();
 
+  const removeFavoriteMutation = trpc.buyer.removeFavorite.useMutation();
+  const addToCartMutation = trpc.cart.addToCart.useMutation();
+
   useEffect(() => {
     if (favoritesData) {
       setFavorites(favoritesData.data || []);
@@ -28,6 +31,7 @@ export default function FavoriteItemsPage() {
 
   const handleRemoveFavorite = async (favoriteId: string) => {
     try {
+      await removeFavoriteMutation.mutateAsync({ favoriteId });
       setFavorites(favorites.filter(item => item.favoriteId !== favoriteId));
       toast({
         title: 'Removed from favorites',
@@ -44,6 +48,7 @@ export default function FavoriteItemsPage() {
 
   const handleAddToCart = async (listingId: string) => {
     try {
+      await addToCartMutation.mutateAsync({ listingId, quantity: 1 });
       toast({
         title: 'Added to cart',
         description: 'Item added to your cart',
@@ -130,7 +135,7 @@ export default function FavoriteItemsPage() {
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {favorites.map(item => (
-              <div key={item.id} className="bg-[#1a1a1a] rounded-lg overflow-hidden hover:bg-[#252525] transition">
+              <div key={item.favoriteId} className="bg-[#1a1a1a] rounded-lg overflow-hidden hover:bg-[#252525] transition">
                 <div className="aspect-square bg-[#0e0e0e] relative overflow-hidden">
                   <img
                     src={item.image || 'https://via.placeholder.com/300'}
@@ -138,7 +143,7 @@ export default function FavoriteItemsPage() {
                     className="w-full h-full object-cover"
                   />
                   <button
-                    onClick={() => handleRemoveFavorite(item.id)}
+                    onClick={() => handleRemoveFavorite(item.favoriteId)}
                     className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full cursor-pointer transition"
                   >
                     <Heart size={16} fill="currentColor" />
@@ -150,14 +155,14 @@ export default function FavoriteItemsPage() {
                   <p className="text-[#8451e1] text-lg font-bold mt-2">{item.price}</p>
                   <div className="flex gap-2 mt-4">
                     <button
-                      onClick={() => handleAddToCart(item.id)}
+                      onClick={() => handleAddToCart(item.listingId)}
                       className="flex-1 bg-[#8451e1] hover:bg-[#7040d1] text-white py-2 rounded cursor-pointer transition flex items-center justify-center gap-2"
                     >
                       <ShoppingCart size={16} />
                       Add to Cart
                     </button>
                     <button
-                      onClick={() => handleRemoveFavorite(item.id)}
+                      onClick={() => handleRemoveFavorite(item.favoriteId)}
                       className="bg-[#252525] hover:bg-[#353535] text-white p-2 rounded cursor-pointer transition"
                     >
                       <Trash2 size={16} />
@@ -170,7 +175,7 @@ export default function FavoriteItemsPage() {
         ) : (
           <div className="space-y-4">
             {favorites.map(item => (
-              <div key={item.id} className="bg-[#1a1a1a] rounded-lg p-4 flex gap-4 hover:bg-[#252525] transition">
+              <div key={item.favoriteId} className="bg-[#1a1a1a] rounded-lg p-4 flex gap-4 hover:bg-[#252525] transition">
                 <img
                   src={item.image || 'https://via.placeholder.com/100'}
                   alt={item.name}
@@ -182,14 +187,14 @@ export default function FavoriteItemsPage() {
                   <p className="text-[#8451e1] text-lg font-bold mt-2">{item.price}</p>
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => handleAddToCart(item.id)}
+                      onClick={() => handleAddToCart(item.listingId)}
                       className="bg-[#8451e1] hover:bg-[#7040d1] text-white px-4 py-2 rounded cursor-pointer transition text-sm flex items-center gap-2"
                     >
                       <ShoppingCart size={14} />
                       Add to Cart
                     </button>
                     <button
-                      onClick={() => handleRemoveFavorite(item.id)}
+                      onClick={() => handleRemoveFavorite(item.favoriteId)}
                       className="bg-[#252525] hover:bg-[#353535] text-white px-4 py-2 rounded cursor-pointer transition text-sm"
                     >
                       Remove
@@ -203,4 +208,4 @@ export default function FavoriteItemsPage() {
       </div>
     </div>
   );
-}
+}

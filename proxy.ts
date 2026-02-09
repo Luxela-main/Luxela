@@ -34,7 +34,8 @@ function getUserFromToken(token: string | undefined) {
 }
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Create a mutable request headers object
+  const requestHeaders = new Headers(request.headers);
 
   // Get JWT token from cookies - Supabase stores it with dynamic name or as 'access_token'
   const authToken =
@@ -46,6 +47,10 @@ export async function proxy(request: NextRequest) {
 
   // Decode user from JWT without making API call (instant, no Supabase API delay)
   const user = getUserFromToken(authToken);
+
+  // Extract admin status and add to response headers so tRPC context can read it
+  const isAdmin = user?.user_metadata?.admin === true;
+  requestHeaders.set('x-admin-flag', isAdmin ? 'true' : 'false');
 
   const pathname = request.nextUrl.pathname;
 
@@ -72,8 +77,6 @@ export async function proxy(request: NextRequest) {
   const role =
     user?.user_metadata?.role || user?.app_metadata?.role;
 
-  const isAdmin = user?.user_metadata?.admin === true;
-
   // Admin routes that require admin role
   const adminRoutes = ["/admin/support", "/admin"];
   const isAdminRoute = adminRoutes.some((route) =>
@@ -85,29 +88,6 @@ export async function proxy(request: NextRequest) {
   const isPublicAdminRoute = publicAdminRoutes.some((route) =>
     pathname.startsWith(route)
   );
-
-  // Protect admin routes - require admin role
-  if (isAdminRoute && !isPublicAdminRoute) {
-    if (!user) {
-      // Not logged in → go to admin signin
-      return NextResponse.redirect(
-        new URL("/admin/signin", request.url)
-      );
-    }
-    if (!isAdmin) {
-      // Logged in but not admin → go to setup
-      return NextResponse.redirect(
-        new URL("/admin/setup", request.url)
-      );
-    }
-  }
-
-  // Prevent already-admin users from accessing signin/setup
-  if (isAdmin && isPublicAdminRoute) {
-    return NextResponse.redirect(
-      new URL("/admin/support", request.url)
-    );
-  }
 
   // If logged in but role not set → force select role
   if (user && !role && !isAlwaysAllowed && !isPublicRoute) {
@@ -156,5 +136,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 
-  return response;
-}
+  // Return response with modified request headers
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}

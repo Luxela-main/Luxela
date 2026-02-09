@@ -25,6 +25,7 @@ export async function getProductData(id: string): Promise<any> {
       title: listing.title,
       description: listing.description,
       image: listing.image || '',
+      imagesJson: listing.imagesJson,
       price_cents: listing.priceCents || 0,
       currency: listing.currency || 'USD',
       category: listing.category || '',
@@ -54,7 +55,10 @@ export async function getProductData(id: string): Promise<any> {
       },
     };
   } catch (error) {
-    console.error(`Error fetching product ${id}:`, error);
+    // Only log if not a "product not found" error
+    if (!(error instanceof Error && error.message.includes('no rows'))) {
+      console.error(`Error fetching product ${id}:`, error);
+    }
     return null;
   }
 }

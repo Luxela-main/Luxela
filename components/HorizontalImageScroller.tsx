@@ -37,6 +37,12 @@ export default function HorizontalImageScroller({
     return null;
   }
 
+  // Filter out any empty image URLs
+  const validImages = images.filter((img) => img && typeof img === 'string' && img.trim().length > 0);
+  if (validImages.length === 0) {
+    return null;
+  }
+
   // Handle image change
   const handleImageChange = useCallback(
     (index: number) => {
@@ -142,14 +148,16 @@ export default function HorizontalImageScroller({
       >
         {/* Main Image */}
         <div className="relative w-full h-full">
-          <Image
-            src={images[currentIndex]}
-            alt={`${alt} - Image ${currentIndex + 1}`}
-            fill
-            className="object-cover"
-            priority={currentIndex === 0}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
-          />
+          {images[currentIndex] && (
+            <Image
+              src={images[currentIndex]}
+              alt={`${alt} - Image ${currentIndex + 1}`}
+              fill
+              className="object-cover"
+              priority={currentIndex === 0}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
+            />
+          )}
         </div>
 
         {/* Left Arrow Button - Desktop */}

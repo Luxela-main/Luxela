@@ -86,6 +86,9 @@ export const brandKeys = {
   details: () => [...brandKeys.all, "details"] as const,
   brandDetails: (brandId: string) =>
     [...brandKeys.details(), brandId] as const,
+  sellerBrands: () => [...brandKeys.all, "sellerBrands"] as const,
+  sellerBrandsWithProducts: (sellerId: string, page?: number, limit?: number) =>
+    [...brandKeys.sellerBrands(), sellerId, page, limit] as const,
 };
 
 export const queryKeys = {
@@ -99,4 +102,5 @@ export const queryKeys = {
   support: supportKeys,
   brands: brandKeys.brands,
   brandDetails: brandKeys.brandDetails,
+  sellerBrandsWithProducts: brandKeys.sellerBrandsWithProducts,
 };

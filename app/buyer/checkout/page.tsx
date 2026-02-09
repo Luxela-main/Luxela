@@ -227,6 +227,12 @@ export default function CheckoutPage() {
       await initializePayment.mutateAsync({
         customerName: buyerInfo.customerName,
         customerEmail: buyerInfo.customerEmail,
+        customerPhone: buyerInfo.customerPhone,
+        shippingAddress: buyerInfo.shippingAddress,
+        shippingCity: buyerInfo.shippingCity,
+        shippingState: buyerInfo.shippingState,
+        shippingPostalCode: buyerInfo.shippingPostalCode,
+        shippingCountry: buyerInfo.shippingCountry,
         paymentMethod: checkoutForm.paymentMethod,
       });
     } catch (err: any) {

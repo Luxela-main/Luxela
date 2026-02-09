@@ -12,6 +12,7 @@ import RelatedProducts from "@/components/buyer/RelatedProducts";
 import Breadcrumb from "@/components/buyer/Breadcrumb";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { generateProductSchema, generateBreadcrumbSchema } from "@/lib/seo/structured-data";
+import { parseListingImages } from "@/modules/buyer/hooks/useUnifiedListings";
 import { SITE } from "@/lib/seo/config";
 import { Loader2, AlertCircle, Share2, Heart } from "lucide-react";
 
@@ -34,21 +35,29 @@ function ProductDetailPage({
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
+        console.log('[ProductDetailPage] Fetching product:', id);
         const listing = await getApprovedListingById(id);
         if (listing) {
-          setProduct(listing);
-          setIsApproved(true);
-          console.log('[ProductDetailPage] Loaded listing with full details:', {
+          console.log('[ProductDetailPage] Successfully loaded product:', {
             id: listing.id,
+            title: listing.title,
             hasMaterialComposition: !!listing.material_composition,
             hasCareInstructions: !!listing.care_instructions,
             hasVideoUrl: !!listing.video_url,
           });
+          setProduct(listing);
+          setIsApproved(true);
         } else {
+          console.warn('[ProductDetailPage] Product not found or not approved:', id);
+          setProduct(null);
           setIsApproved(false);
         }
       } catch (err) {
-        console.error('[ProductDetailPage] Error fetching listing:', err);
+        console.error('[ProductDetailPage] Error fetching product:', {
+          id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        setProduct(null);
         setIsApproved(false);
       } finally {
         setIsLoading(false);
@@ -71,18 +80,24 @@ function ProductDetailPage({
 
   const business = product?.sellers?.seller_business?.[0];
 
-  if (!product || !isApproved || product.id !== id) {
+  if (!product || !isApproved) {
+    console.warn('[ProductDetailPage] Showing 404 - product:', {
+      productExists: !!product,
+      isApproved,
+      requestedId: id,
+      productId: product?.id,
+    });
     return (
       <div className="bg-black min-h-screen flex items-center justify-center p-6">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-semibold text-white mb-2">Product unavailable</h1>
-          <p className="text-[#acacac] mb-6">This product is not currently available for purchase. Please check back later or browse our other items.</p>
+          <p className="text-[#acacac] mb-6">This product is not currently available for purchase. It may have been removed, is out of stock, or is not approved for sale yet.</p>
           <a
             href="/buyer"
             className="inline-block px-6 py-2.5 bg-[#8451E1] text-white rounded-lg font-semibold hover:bg-[#7240D0] transition-colors"
           >
-            Back to Products
+            Back to Browse
           </a>
         </div>
       </div>
@@ -95,7 +110,7 @@ function ProductDetailPage({
     id: product.id,
     name: product.title || "Product",
     description: product.description || "",
-    image: product.image || "",
+    image: parseListingImages(product),
     price: ((product.price_cents || 0) / 100).toString(),
     currency: product.currency || "NGN",
     availability:

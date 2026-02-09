@@ -122,11 +122,15 @@ export async function isFavorite(listingId: string) {
 
 export async function getBuyerFavorites() {
   try {
+    console.log('[FAVORITES] Starting getBuyerFavorites...');
     const user = await getCurrentUser();
     
     if (!user) {
+      console.log('[FAVORITES] User not authenticated');
       return { success: false, error: 'User not authenticated', favorites: [] };
     }
+
+    console.log('[FAVORITES] Got user:', user.id);
 
     // Get buyer record for the user
     const buyer = await db.query.buyers.findFirst({
@@ -134,8 +138,11 @@ export async function getBuyerFavorites() {
     });
 
     if (!buyer) {
+      console.log('[FAVORITES] Buyer profile not found for user:', user.id);
       return { success: false, error: 'Buyer profile not found', favorites: [] };
     }
+
+    console.log('[FAVORITES] Got buyer:', buyer.id);
 
     // Get favorites with listing data
     const favoritesList = await db.query.buyerFavorites.findMany({
@@ -144,6 +151,8 @@ export async function getBuyerFavorites() {
         listing: true,
       },
     });
+
+    console.log('[FAVORITES] Found', favoritesList.length, 'favorites');
 
     // Transform the data to match the expected frontend structure
     const transformedFavorites = favoritesList
@@ -160,9 +169,14 @@ export async function getBuyerFavorites() {
         },
       }));
 
+    console.log('[FAVORITES] Successfully returning', transformedFavorites.length, 'favorites');
     return { success: true, favorites: transformedFavorites };
   } catch (error) {
-    console.error('Error fetching favorites:', error);
+    console.error('[FAVORITES] Error fetching favorites:', error);
+    if (error instanceof Error) {
+      console.error('[FAVORITES] Error message:', error.message);
+      console.error('[FAVORITES] Stack:', error.stack);
+    }
     return { success: false, error: 'Failed to fetch favorites', favorites: [] };
   }
 }

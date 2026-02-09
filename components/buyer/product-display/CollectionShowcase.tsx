@@ -52,7 +52,7 @@ export default function CollectionShowcase({
       <section className="mb-16 relative">
         <div className="flex items-center justify-between mb-4 sm:mb-8 px-4 sm:px-0">
           {title && (
-            <h2 className="text-2xl font-bold text-white">{title}</h2>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">{title}</h2>
           )}
           {showControls && collections.length > 3 && (
             <div className="flex gap-2 ml-auto">
@@ -61,8 +61,8 @@ export default function CollectionShowcase({
                 disabled={!canScrollLeft}
                 className={`p-1.5 sm:p-2 rounded-full transition-all ${
                   canScrollLeft
-                    ? 'bg-[#8451E1] hover:bg-[#9468F2]'
-                    : 'bg-[#333] text-[#666] cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                    : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
                 }`}
               >
                 <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -72,8 +72,8 @@ export default function CollectionShowcase({
                 disabled={!canScrollRight}
                 className={`p-1.5 sm:p-2 rounded-full transition-all ${
                   canScrollRight
-                    ? 'bg-[#8451E1] hover:bg-[#9468F2]'
-                    : 'bg-[#333] text-[#666] cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                    : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
                 }`}
               >
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -98,7 +98,7 @@ export default function CollectionShowcase({
     <section className="mb-16 relative">
       {title && (
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-white">{title}</h2>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">{title}</h2>
         </div>
       )}
       {showControls && (
@@ -108,8 +108,8 @@ export default function CollectionShowcase({
             disabled={!canScrollLeft}
             className={`p-1.5 sm:p-2 rounded-full transition-all ${
               canScrollLeft
-                ? 'bg-[#8451E1] hover:bg-[#9468F2]'
-                : 'bg-[#333] text-[#666] cursor-not-allowed'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
             }`}
           >
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -119,8 +119,8 @@ export default function CollectionShowcase({
             disabled={!canScrollRight}
             className={`p-1.5 sm:p-2 rounded-full transition-all ${
               canScrollRight
-                ? 'bg-[#8451E1] hover:bg-[#9468F2]'
-                : 'bg-[#333] text-[#666] cursor-not-allowed'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
             }`}
           >
             <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -131,11 +131,11 @@ export default function CollectionShowcase({
       <div className="px-4 sm:px-0">
         <div
           ref={carouselRef}
-          className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-hide"
+          className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-hide transition-all"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {collections.map((collection) => (
-            <div key={collection.id} className="min-w-[calc(100vw-80px)] sm:min-w-[280px] flex-shrink-0">
+            <div key={collection.id} className="min-w-[calc(100vw-80px)] sm:min-w-[280px] flex-shrink-0 transition-transform duration-300 hover:scale-105">
               <EnhancedCollectionCard collection={collection} />
             </div>
           ))}

@@ -26,17 +26,25 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [addingToCartId, setAddingToCartId] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const { addToCart } = useCartState();
 
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+
+    // If user is not authenticated, redirect
     if (!user) {
       router.push('/signin');
       return;
     }
+
+    // Prevent fetching multiple times (for React strict mode and subsequent renders)
+    if (hasFetched) return;
 
     const fetchFavorites = async () => {
       try {
@@ -45,18 +53,18 @@ export default function FavoritesPage() {
         if (result.success) {
           setFavorites(result.favorites as Favorite[]);
         } else {
-          toast?.error?.(result.error || 'Failed to load favorites');
+          console.error('Failed to load favorites:', result.error);
         }
       } catch (error) {
         console.error('Error fetching favorites:', error);
-        toast?.error?.('Failed to load favorites');
       } finally {
         setLoading(false);
+        setHasFetched(true);
       }
     };
 
     fetchFavorites();
-  }, [user?.id]);
+  }, [authLoading, user, hasFetched, toast]);
 
   const handleRemoveFavorite = async (favoriteId: string) => {
     try {

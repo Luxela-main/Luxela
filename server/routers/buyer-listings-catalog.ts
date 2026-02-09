@@ -94,7 +94,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         .where(eq(sellerBusiness.sellerId, seller[0].id))
         .limit(1);
 
-      // Fetch images if available
+      // Fetch ALL images from productImages table
       let listingImages: any[] = [];
       if (listingData.productId) {
         listingImages = await db
@@ -103,6 +103,38 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
           .where(eq(productImages.productId, listingData.productId))
           .orderBy(productImages.position);
       }
+      
+      // Fallback to parsing imagesJson if no images in productImages table
+      if (listingImages.length === 0 && listingData.imagesJson) {
+        try {
+          const parsedImages = JSON.parse(listingData.imagesJson);
+          if (Array.isArray(parsedImages)) {
+            listingImages = parsedImages.map((img: any, index: number) => ({
+              imageUrl: typeof img === 'string' ? img : img.imageUrl || img.url,
+              position: index,
+            }));
+          }
+        } catch (e) {
+          console.warn('[BUYER_CATALOG] Failed to parse imagesJson for listing:', listingData.id);
+        }
+      }
+      
+      // Extract just the URLs from image objects for cleaner JSON format
+      let imageUrls = listingImages
+        .map((img) => img.imageUrl || img.url || (typeof img === 'string' ? img : ''))
+        .filter((url) => url && typeof url === 'string' && url.trim() !== '');
+
+      // If no images found through product images, ensure we have at least the primary image
+      if (imageUrls.length === 0 && listingData.image) {
+        imageUrls = [listingData.image];
+        console.log('[BUYER_CATALOG] Using primary image as fallback for listing:', listingData.id);
+      }
+
+      console.log('[BUYER_CATALOG] Image URLs extracted:', {
+        listingId: listingData.id,
+        count: imageUrls.length,
+        urls: imageUrls.slice(0, 2), // Log first 2 for debugging
+      });
 
       // Parse colors and sizes
       let colors = null;
@@ -136,12 +168,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         title: listingData.title,
         description: listingData.description,
         image: listingData.image,
-        imagesJson: JSON.stringify(
-          listingImages.map((img) => ({
-            imageUrl: img.imageUrl,
-            position: img.position,
-          }))
-        ),
+        imagesJson: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
         price: (listingData.priceCents ?? 0) / 100,
         price_cents: listingData.priceCents ?? 0,
         quantity_available: qty,
@@ -279,7 +306,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
                 .limit(1)
             : null;
 
-          // Fetch images
+          // Fetch images - ALWAYS from productImages table for complete image data
           let listingImages: any[] = [];
           if (listing.productId) {
             listingImages = await db
@@ -287,6 +314,31 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
               .from(productImages)
               .where(eq(productImages.productId, listing.productId))
               .orderBy(productImages.position);
+          }
+          
+          // If no images found in productImages table, fallback to parsing imagesJson
+          if (listingImages.length === 0 && listing.imagesJson) {
+            try {
+              const parsedImages = JSON.parse(listing.imagesJson);
+              if (Array.isArray(parsedImages)) {
+                listingImages = parsedImages.map((img: any, index: number) => ({
+                  imageUrl: typeof img === 'string' ? img : img.imageUrl || img.url,
+                  position: index,
+                }));
+              }
+            } catch (e) {
+              console.warn('[BUYER_CATALOG] Failed to parse imagesJson for listing:', listing.id);
+            }
+          }
+          
+          // Extract just the URLs from image objects for cleaner JSON format
+          let imageUrls = listingImages
+            .map((img) => img.imageUrl || img.url || (typeof img === 'string' ? img : ''))
+            .filter((url) => url && typeof url === 'string' && url.trim() !== '');
+
+          // If no images found through product images, ensure we have at least the primary image
+          if (imageUrls.length === 0 && listing.image) {
+            imageUrls = [listing.image];
           }
 
           // Parse colors and sizes
@@ -321,10 +373,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
             title: listing.title,
             description: listing.description,
             image: listing.image,
-            imagesJson: JSON.stringify(listingImages.map((img) => ({
-              imageUrl: img.imageUrl,
-              position: img.position,
-            }))),
+            imagesJson: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
             price: (listing.priceCents ?? 0) / 100,
             price_cents: listing.priceCents ?? 0,
             quantity_available: qty,

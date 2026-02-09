@@ -13,9 +13,21 @@ import {
   users,
   sellers,
 } from '../db/schema';
-import { and, eq, gt, desc, sql } from 'drizzle-orm';
+import { and, eq, gt, desc, sql, count } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+
+/**
+ * Verify user has admin access from proxy headers
+ */
+function ensureAdminAccess(admin?: boolean): void {
+  if (!admin) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Admin access required. Only administrators can access this resource.',
+    });
+  }
+}
 
 /**
  * Generate fresh notifications from system data and persist to database
@@ -331,12 +343,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can access notifications',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       // Generate fresh notifications (non-blocking background task)
       generateAndStoreNotifications(userId).catch(err => 
@@ -360,19 +368,19 @@ export const adminNotificationsRouter = createTRPCRouter({
 
       // Get total count
       const totalResult = await db
-        .select({ count: sql<number>`count(*)` })
+        .select({ totalCount: count() })
         .from(adminNotifications)
         .where(and(...conditions));
 
-      const total = totalResult[0]?.count ?? 0;
+      const total = totalResult[0]?.totalCount ?? 0;
 
       // Get unread count
       const unreadResult = await db
-        .select({ count: sql<number>`count(*)` })
+        .select({ unreadCount: count() })
         .from(adminNotifications)
         .where(and(eq(adminNotifications.adminId, userId), eq(adminNotifications.isRead, false)));
 
-      const unreadCount = unreadResult[0]?.count ?? 0;
+      const unreadCount = unreadResult[0]?.unreadCount ?? 0;
 
       // Get paginated notifications
       const notifs = await db
@@ -439,12 +447,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can access notifications',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       // Generate fresh notifications
       await generateAndStoreNotifications(userId).catch(err =>
@@ -498,23 +502,19 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can access notifications',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       const result = await db
-        .select({ count: sql<number>`count(*)` })
+        .select({ unreadCount: count() })
         .from(adminNotifications)
         .where(and(
           eq(adminNotifications.adminId, userId),
           eq(adminNotifications.isRead, false)
         ));
 
-      const count = result[0]?.count ?? 0;
-      return { count };
+      const unreadCount = result[0]?.unreadCount ?? 0;
+      return { count: unreadCount };
     }),
 
   /**
@@ -537,12 +537,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can mark notifications as read',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       // Verify ownership before updating
       const notif = await db
@@ -593,12 +589,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can mark notifications as read',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       await db
         .update(adminNotifications)
@@ -643,12 +635,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can access notifications',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       const notif = await db
         .select()
@@ -698,12 +686,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can modify notifications',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       // Verify ownership
       const notif = await db
@@ -746,12 +730,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      if (ctx.user?.role !== 'admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only admins can delete notifications',
-        });
-      }
+      // Verify admin access from proxy headers
+      ensureAdminAccess(ctx.user?.admin);
 
       // Verify ownership
       const notif = await db

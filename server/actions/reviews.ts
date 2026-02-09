@@ -56,6 +56,7 @@ export async function submitReview(data: ReviewData) {
     }
 
     // Submit review
+    console.log('[submitReview] Inserting review:', { buyerId: buyer.id, listingId: data.listingId, rating: data.rating })
     const newReview = await db.insert(reviews).values({
       buyerId: buyer.id,
       listingId: data.listingId,
@@ -63,6 +64,7 @@ export async function submitReview(data: ReviewData) {
       comment: data.comment,
     }).returning();
 
+    console.log('[submitReview] Review inserted successfully:', { id: newReview[0]?.id })
     return { success: true, review: newReview[0] };
   } catch (error) {
     console.error('Error submitting review:', error);
@@ -72,15 +74,18 @@ export async function submitReview(data: ReviewData) {
 
 export async function getListingReviews(listingId: string, limit: number = 10) {
   try {
+    console.log('[getListingReviews] Fetching reviews for listing:', listingId)
     // Check if listing exists
     const listing = await db.query.listings.findFirst({
       where: eq(listings.id, listingId),
     });
 
     if (!listing) {
+      console.error('[getListingReviews] Listing not found:', listingId)
       return { success: false, error: 'Listing not found', reviews: [] };
     }
 
+    console.log('[getListingReviews] Listing found, fetching reviews...')
     // Fetch reviews with buyer information
     const listingReviews = await db.query.reviews.findMany({
       where: eq(reviews.listingId, listingId),
@@ -95,10 +100,12 @@ export async function getListingReviews(listingId: string, limit: number = 10) {
       orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
     });
 
+    console.log('[getListingReviews] Found reviews:', { count: listingReviews.length })
     return { success: true, reviews: listingReviews };
   } catch (error) {
-    console.error('Error fetching reviews:', error);
-    return { success: false, error: 'Failed to fetch reviews', reviews: [] };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[getListingReviews] Error fetching reviews:', { listingId, errorMessage, error });
+    return { success: false, error: `Failed to fetch reviews: ${errorMessage}`, reviews: [] };
   }
 }
 

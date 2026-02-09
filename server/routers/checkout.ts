@@ -267,25 +267,42 @@ export const checkoutRouter = createTRPCRouter({
           });
         }
 
+        // Get all unique sellers from cart items
+        const itemsWithListings = await Promise.all(
+          items.map(async (item) => {
+            const [listing] = await db
+              .select()
+              .from(listings)
+              .where(eq(listings.id, item.listingId))
+              .limit(1);
+            return { item, listing };
+          })
+        );
+
+        // Validate all listings exist
+        const missingListings = itemsWithListings.filter((x) => !x.listing);
+        if (missingListings.length > 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Some items in your cart are no longer available',
+          });
+        }
+
+        // Check if all items are from the same seller
+        const sellerIds = new Set(itemsWithListings.map((x) => x.listing!.sellerId));
+        if (sellerIds.size > 1) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Your cart contains items from multiple sellers. Please remove items or create separate orders.',
+          });
+        }
+
         // Calculate total
         const totalCents = items.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
         const totalAmount = totalCents / 100; // Convert to currency units
 
-        // Get seller ID from the primary listing
-        const primaryListing = await db
-          .select()
-          .from(listings)
-          .where(eq(listings.id, items[0].listingId))
-          .limit(1);
-
-        if (!primaryListing.length) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Primary listing not found',
-          });
-        }
-
-        const sellerId = primaryListing[0].sellerId;
+        // Get seller ID from the primary listing (already validated to be same for all items)
+        const sellerId = itemsWithListings[0].listing!.sellerId;
 
         // Create order (enters escrow)
         const { orderId } = await createOrderFromCart(

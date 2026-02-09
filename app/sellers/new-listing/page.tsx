@@ -129,6 +129,20 @@ const NewListing: React.FC = () => {
         
         const response = listings.find((l) => l.id === editId);
         if (response) {
+          // Safely parse collection items which might be string or array
+          let collectionItems: CollectionItem[] = [];
+          try {
+            if (response.itemsJson) {
+              const items = typeof response.itemsJson === 'string' ? JSON.parse(response.itemsJson) : (Array.isArray(response.itemsJson) ? response.itemsJson : []);
+              collectionItems = (items as any[]).map((item: any) => ({
+                ...item,
+                images: item.image ? [item.image] : (item.images || [])
+              }));
+            }
+          } catch (e) {
+            console.error('Error parsing collection items:', e);
+          }
+
           setFormData({
             type: response.type || "single",
             name: response.title || "",
@@ -147,9 +161,9 @@ const NewListing: React.FC = () => {
             colors: (response.colorsAvailable && Array.isArray(response.colorsAvailable)) ? ((response.colorsAvailable as { colorName: string; colorHex: string; }[]).map((c: any) => String(c.colorName)).join(", ")) : "",
             targetAudience: response.additionalTargetAudience || "",
             shippingOption: response.shippingOption || "",
-            domesticDays: "",
+            domesticDays: response.etaDomestic || "",
             domesticMinutes: "",
-            internationalDays: "",
+            internationalDays: response.etaInternational || "",
             internationalMinutes: "",
             images: (response.imagesJson ? JSON.parse(response.imagesJson) : (response.image ? [response.image] : [])) as (File | string)[],
             collectionTitle: response.title || "",
@@ -161,10 +175,10 @@ const NewListing: React.FC = () => {
             collectionVideoUrl: response.videoUrl || "",
             collectionCareInstructions: response.careInstructions || "",
             collectionRefundPolicy: response.refundPolicy || "",
-            collectionItems: Array.isArray(response.itemsJson) ? (response.itemsJson as any).map((item: any) => ({
+            collectionItems: collectionItems.length > 0 ? collectionItems.map((item: any) => ({
               ...item,
               images: item.image ? [item.image] : (item.images || [])
-            })) : [],
+            })) : collectionItems,
             sku: response.sku || "",
             slug: response.slug || "",
             metaDescription: response.metaDescription || "",

@@ -1,5 +1,15 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+// ---------- User type definition ----------
+export type User = {
+  id: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  avatar_url?: string;
+  admin?: boolean;
+};
+
 // ---------- Create ANON client for auth ----------
 function getAuthClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -10,7 +20,7 @@ function getAuthClient(): SupabaseClient {
       fetch: ((url: string | Request, options?: RequestInit) => {
         // Add a timeout to fetch requests
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased from 30s to 60s
         return fetch(url, { ...options, signal: controller.signal })
           .finally(() => clearTimeout(timeoutId));
       }) as any,
@@ -28,7 +38,7 @@ function getAdminClient(): SupabaseClient {
       fetch: ((url: string | Request, options?: RequestInit) => {
         // Add a timeout to fetch requests
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased from 30s to 60s
         return fetch(url, { ...options, signal: controller.signal })
           .finally(() => clearTimeout(timeoutId));
       }) as any,
@@ -36,7 +46,60 @@ function getAdminClient(): SupabaseClient {
   });
 }
 
-// ---------- Extract Bearer token from headers ----------
+// ---------- Extract Supabase session from cookies ----------
+function extractSessionFromCookies(req: any): { access_token?: string; refresh_token?: string } | null {
+  if (!req) return null;
+
+  try {
+    let cookieString = "";
+    
+    // Fetch API style (NextRequest)
+    if (typeof req.headers?.get === "function") {
+      cookieString = req.headers.get("cookie") || "";
+    } else if (typeof req.headers === "object") {
+      // Express/Node style
+      cookieString = req.headers.cookie || "";
+    }
+
+    if (!cookieString) return null;
+
+    // Parse cookies
+    const cookies = cookieString.split(";").reduce((acc: any, cookie: string) => {
+      const [key, value] = cookie.trim().split("=");
+      if (key && value) {
+        acc[key] = decodeURIComponent(value);
+      }
+      return acc;
+    }, {});
+
+    // Find Supabase auth token cookie (format: sb-{projectRef}-auth-token)
+    let authTokenJson = null;
+    for (const [key, value] of Object.entries(cookies)) {
+      if (key.includes("auth-token") && key.includes("sb-")) {
+        try {
+          authTokenJson = JSON.parse(value as string);
+          break;
+        } catch (e) {
+          // Not a JSON token, skip
+        }
+      }
+    }
+
+    if (authTokenJson && typeof authTokenJson === "object") {
+      return {
+        access_token: (authTokenJson as any).access_token,
+        refresh_token: (authTokenJson as any).refresh_token,
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.warn("Error extracting session from cookies:", err);
+    return null;
+  }
+}
+
+// ---------- Extract Bearer token from Authorization header (fallback) ----------
 function extractAuthorizationHeader(req: any): string | null {
   if (!req) return null;
 
@@ -61,19 +124,24 @@ function parseBearerToken(header?: string | null) {
 
 // ---------- tRPC context ----------
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
-  const rawAuthHeader = extractAuthorizationHeader(req);
-  const token = parseBearerToken(rawAuthHeader);
+  // First, try to extract session from cookies (Supabase auth)
+  const session = extractSessionFromCookies(req);
+  let token: string | null = session?.access_token ?? null;
+  
+  // Fallback to Authorization header if no cookie session
+  if (!token) {
+    const rawAuthHeader = extractAuthorizationHeader(req);
+    token = parseBearerToken(rawAuthHeader);
+  }
 
   const authClient = getAuthClient();
   const adminClient = getAdminClient();
 
-  let user: {
-    id: string;
-    email?: string;
-    name?: string;
-    role?: string;
-    avatar_url?: string;
-  } | null = null;
+  // Extract admin flag from proxy headers
+  const adminFlagHeader = req?.headers?.['x-admin-flag'] || req?.headers?.get?.('x-admin-flag');
+  const isAdmin = adminFlagHeader === 'true' || adminFlagHeader === true;
+
+  let user: User | null = null;
 
   if (token) {
     try {
@@ -89,6 +157,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           name: data.user.user_metadata?.full_name,
           role: data.user.user_metadata?.role,
           avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
+          admin: isAdmin || data.user.user_metadata?.admin === true,
         };
       }
     } catch (err) {
@@ -97,7 +166,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
       const isDOMException = err instanceof Error && (err as any).name === "DOMException";
       
       if (isAbortError || isDOMException) {
-        console.warn("[AUTH_TIMEOUT] Supabase auth request aborted (30s timeout)", {
+        console.warn("[AUTH_TIMEOUT] Supabase auth request aborted (60s timeout)", {
           errorName: (err as Error).name,
           errorMessage: errorMessage,
           timestamp: new Date().toISOString(),

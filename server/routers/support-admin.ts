@@ -8,7 +8,8 @@ import {
   slaTracking,
   escalationRules,
   supportAuditLogs,
-  supportAnalytics
+  supportAnalytics,
+  users
 } from '../db/schema';
 import { and, eq, gte, lte, desc, asc, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -28,13 +29,21 @@ import { v4 as uuidv4 } from 'uuid';
  */
 
 async function ensureAdmin(userId: string, userRole?: string): Promise<boolean> {
-  if (!userRole || userRole !== 'admin') {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Admin access required. Only administrators can access this resource.',
-    });
+  // Check auth metadata first
+  if (userRole === 'admin') {
+    return true;
   }
-  return true;
+  
+  // Fallback: check database role if auth metadata doesn't have it
+  const userData = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+  if (userData[0]?.role === 'admin') {
+    return true;
+  }
+  
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message: 'Admin access required. Only administrators can access this resource.',
+  });
 }
 
 export const supportAdminRouter = createTRPCRouter({

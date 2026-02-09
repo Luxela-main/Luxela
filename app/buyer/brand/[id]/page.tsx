@@ -21,19 +21,55 @@ export default function BrandPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  console.log('[BrandPage] Rendering with id:', id);
   const [activeTab, setActiveTab] = useState<"products" | "collections">(
     "products"
   );
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [showSortMenu, setShowSortMenu] = useState(false);
 
-  // Fetch brand by ID using tRPC
-  const { data: brandData, isLoading: isBrandLoading, error: brandError } = trpc.brands.getBrandById.useQuery(
+  // Determine if the ID is a UUID or a slug
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isUUID = uuidRegex.test(id);
+  console.log('[BrandPage] UUID check:', { id, isUUID });
+
+  // Fetch brand by ID using tRPC (if ID is UUID)
+  const { data: brandDataById, isLoading: isBrandLoadingById, error: brandErrorById } = trpc.brands.getBrandById.useQuery(
     { brandId: id },
-    { enabled: !!id }
+    { enabled: !!id && isUUID }
   );
 
+  // Fetch brand by slug using tRPC (if ID is not UUID)
+  const { data: brandDataBySlug, isLoading: isBrandLoadingBySlug, error: brandErrorBySlug } = trpc.brands.getBrandBySlug.useQuery(
+    { slug: id },
+    { enabled: !!id && !isUUID }
+  );
+
+  // Use whichever query succeeded
+  const brandData = isUUID ? brandDataById : brandDataBySlug;
+  const isBrandLoading = isUUID ? isBrandLoadingById : isBrandLoadingBySlug;
+  const brandError = isUUID ? brandErrorById : brandErrorBySlug;
+  
+  console.log('[BrandPage] Brand query state:', {
+    isUUID,
+    isBrandLoading,
+    hasError: !!brandError,
+    errorMessage: brandError?.message,
+    brandData: brandData ? 'exists' : 'null',
+    fullBrandData: JSON.stringify(brandData),
+  });
+
+  // Extract brand from the response
+  // The server returns { brand: {...} }, so we extract it from that structure
   const brand = brandData?.brand;
+  console.log('[BrandPage] Brand object:', {
+    hasBrand: !!brand,
+    brandId: brand?.id,
+    brandName: brand?.brandName || brand?.name,
+    brandSlug: brand?.slug,
+    hasImage: !!brand?.storeLogo,
+    fullBrand: JSON.stringify(brand),
+  });
 
   // Fetch brand listings directly using the dedicated endpoint
   const { data: listingsData, isLoading: isListingsLoading } = trpc.brands.getBrandListings.useQuery(
@@ -42,6 +78,7 @@ export default function BrandPage({
   );
 
   const brandListings = listingsData?.listings || [];
+  console.log('[BrandPage] Listings query:', { listingsCount: brandListings.length, total: listingsData?.total });
 
   const products = brandListings.filter((listing) => listing.type === "single");
   const collections = brandListings.filter(
@@ -89,7 +126,8 @@ export default function BrandPage({
     { value: "name-za", label: "Name: Z-A" },
   ];
 
-  if (isBrandLoading || isListingsLoading)
+  if (isBrandLoading || isListingsLoading) {
+    console.log('[BrandPage] Loading...');
     return (
       <div className="bg-black min-h-screen flex items-center justify-center text-white">
         <div className="text-center">
@@ -98,13 +136,26 @@ export default function BrandPage({
         </div>
       </div>
     );
+  }
 
   if (brandError || !brand) {
+    console.error('[BrandPage] Brand not found or error:', {
+      error: brandError,
+      errorMessage: brandError?.message || 'No error message',
+      brandExists: !!brand,
+      brandDataStructure: brandData ? Object.keys(brandData) : 'null',
+      isUUID,
+      queryUsed: isUUID ? 'getBrandById' : 'getBrandBySlug',
+      attemptedId: id,
+    });
     return (
       <div className="bg-black min-h-screen flex items-center justify-center text-center">
         <div>
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <p className="text-gray-400 text-lg mb-4">Brand not found</p>
+          {brandError && (
+            <p className="text-red-400 text-sm mb-4">{brandError.message || 'Unknown error'}</p>
+          )}
           <Link
             href="/buyer/brands"
             className="px-6 py-2 bg-[#8451E1] text-white rounded-lg hover:bg-[#7240D0] transition-colors"
@@ -115,6 +166,8 @@ export default function BrandPage({
       </div>
     );
   }
+
+  console.log('[BrandPage] Rendering brand details successfully');
 
   return (
     <div className="bg-black min-h-screen">
@@ -127,7 +180,7 @@ export default function BrandPage({
             </Link>
             <ChevronRight size={16} />
             <span className="text-[#f2f2f2] font-medium capitalize">
-              {brand.brandName?.replace("-", " ")}
+              {(brand.brandName || brand.name)?.replace("-", " ")}
             </span>
           </div>
         </div>
@@ -166,7 +219,7 @@ export default function BrandPage({
           ) : null}
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight">
-            {brand.brandName}
+            {brand.brandName || brand.name}
           </h1>
           {brand.storeDescription && (
             <p className="text-[#acacac] text-lg max-w-2xl leading-relaxed">

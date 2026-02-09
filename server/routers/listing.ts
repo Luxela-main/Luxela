@@ -453,9 +453,13 @@ export const listingRouter = createTRPCRouter({
       const newBrand = await db.insert(brands).values({
         sellerId: seller.id,
         name: defaultBrandName,
-        slug: defaultBrandName.toLowerCase().replace(/\s+/g, "-"),
+        slug: 'default-store', // Will be updated to include ID after insert
       }).returning({ id: brands.id });
       brandId = newBrand[0].id;
+      
+      // Update slug to include brand ID for uniqueness
+      const uniqueSlug = `default-store-${brandId.substring(0, 8)}`;
+      await db.update(brands).set({ slug: uniqueSlug }).where(eq(brands.id, brandId));
     }
 
     // --- Create the collection ---

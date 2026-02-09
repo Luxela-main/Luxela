@@ -65,13 +65,27 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
             
             try {
               const supabase = createClient();
-              const { data: { session } } = await supabase.auth.getSession();
+              // Add a timeout to prevent hanging on session retrieval
+              const sessionPromise = supabase.auth.getSession();
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Session retrieval timeout')), 5000)
+              );
+              
+              const { data: { session } } = await Promise.race([
+                sessionPromise,
+                timeoutPromise as Promise<any>,
+              ]);
 
-              return {
-                authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
-              };
+              if (session?.access_token) {
+                return {
+                  authorization: `Bearer ${session.access_token}`,
+                };
+              }
+              
+              return {};
             } catch (error) {
               // If there's any error accessing auth, return empty headers
+              console.warn('[TRPC] Failed to get session:', error instanceof Error ? error.message : String(error));
               return {};
             }
           },

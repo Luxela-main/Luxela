@@ -51,11 +51,30 @@ export default function AdminSetupPage() {
 
     if (result.success) {
       setSuccess(true);
+      
+      // Force client-side session refresh to get the updated JWT token with admin flag
+      try {
+        const { createClient } = await import('@/utils/supabase/client');
+        const supabase = createClient();
+        
+        // Refresh the session to load the new JWT token from the server
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.warn('Session refresh warning:', refreshError.message);
+          // Continue anyway - the metadata was updated server-side
+        }
+        
+        // Wait for session to be fully updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (refreshErr) {
+        console.warn('Failed to refresh client session:', refreshErr);
+      }
+      
+      // Now redirect to dashboard
       setTimeout(() => {
-        // Use window.location for hard refresh to ensure proxy checks updated JWT
-        // Add cache-busting query param to force new request and JWT validation
-        window.location.href = `/admin/support?refresh=${Date.now()}`;
-      }, 3500);
+        router.push('/admin/support');
+      }, 1000);
     } else {
       setError(result.error || "Failed to set admin role");
     }
@@ -168,7 +187,7 @@ export default function AdminSetupPage() {
                 <div>
                   <p className="text-sm font-medium text-green-400">Success!</p>
                   <p className="text-xs text-green-300 mt-1">
-                    Admin role granted. Redirecting...
+                    Admin role granted. Refreshing session...
                   </p>
                 </div>
               </div>

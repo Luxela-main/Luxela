@@ -26,6 +26,15 @@ export default function AdminLayout({ children }: LayoutProps) {
     const checkAdminAccess = async () => {
       try {
         const supabase = createClient();
+        
+        // Refresh session to ensure we have the latest user metadata
+        // This is critical after metadata updates via setAdminRole
+        await supabase.auth.refreshSession();
+        
+        // Add a delay to allow metadata to propagate through Supabase
+        // This handles timing issues after admin role updates (increased to 1500ms for reliability)
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
@@ -45,13 +54,38 @@ export default function AdminLayout({ children }: LayoutProps) {
           return;
         }
 
-        // Check if user is admin
-        const userIsAdmin = user.user_metadata?.admin === true;
+        // Check if user is admin (check auth metadata first, then database as fallback)
+        let userIsAdmin = user.user_metadata?.admin === true;
+        
+        // If not found in metadata, check the database users table
+        if (!userIsAdmin) {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          if (!userError && userData?.role === 'admin') {
+            userIsAdmin = true;
+          } else if (!userError && userData?.role === 'admin') {
+            // Double-check: if database shows admin but metadata doesn't,
+            // do one more refresh to sync the JWT
+            console.log('Admin detected in database, refreshing again for JWT sync...');
+            await supabase.auth.refreshSession();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+            userIsAdmin = refreshedUser?.user_metadata?.admin === true || userData?.role === 'admin';
+          }
+        }
+        
         setIsAdmin(userIsAdmin);
 
         if (!userIsAdmin) {
-          // Not an admin, redirect to setup
-          router.push('/admin/setup');
+          // Not an admin - if on protected page, redirect to signin
+          // (setup is only for initial setup, not for handling failed permission checks)
+          if (!isPublicAdminPage) {
+            router.push('/admin/signin');
+          }
         }
 
         setIsLoading(false);

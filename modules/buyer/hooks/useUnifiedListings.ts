@@ -52,20 +52,30 @@ export const parseListingImages = (listing: RawListing): string[] => {
       return listing.image ? [listing.image] : [];
     }
 
+    let parsedImages: any[] = [];
+    
     if (typeof jsonField === 'string') {
       const parsed = JSON.parse(jsonField);
       if (Array.isArray(parsed)) {
-        return parsed;
-      }
-      if (typeof parsed === 'object' && parsed.images && Array.isArray(parsed.images)) {
-        return parsed.images;
+        parsedImages = parsed;
+      } else if (typeof parsed === 'object' && parsed.images && Array.isArray(parsed.images)) {
+        parsedImages = parsed.images;
       }
     } else if (Array.isArray(jsonField)) {
-      return jsonField;
+      parsedImages = jsonField;
     }
-
-    // Fallback to main image if parsing fails
-    return listing.image ? [listing.image] : [];
+    
+    // Extract URLs from images, handling both string and object formats
+    const imageUrls = parsedImages
+      .map((img) => {
+        if (typeof img === 'string') return img;
+        if (typeof img === 'object' && img?.imageUrl) return img.imageUrl;
+        if (typeof img === 'object' && img?.url) return img.url;
+        return '';
+      })
+      .filter((url): url is string => url.length > 0);
+    
+    return imageUrls.length > 0 ? imageUrls : (listing.image ? [listing.image] : []);
   } catch (error) {
     console.error('Error parsing listing images:', error);
     // Return main image as fallback

@@ -2294,7 +2294,7 @@ return {
       }
     }),
 
-  isFollowingBrand: protectedProcedure
+  isFollowingBrand: publicProcedure
     .input(z.object({ brandId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       try {
@@ -2326,7 +2326,7 @@ return {
       }
     }),
 
-  getFollowedBrands: protectedProcedure.query(async ({ ctx }) => {
+  getFollowedBrands: publicProcedure.query(async ({ ctx }) => {
     try {
       const userId = ctx.user?.id;
       if (!userId) return [];

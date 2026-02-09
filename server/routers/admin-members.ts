@@ -363,8 +363,9 @@ export const adminMembersRouter = createTRPCRouter({
       await verifyAdminRole(ctx);
 
       const offset = (input.page - 1) * input.limit;
+      const searchLower = input.search?.toLowerCase() || '';
 
-      // Fetch buyers
+      // Fetch buyers with search filter
       const buyerMembers = await db
         .select({
           id: buyers.id,
@@ -374,9 +375,17 @@ export const adminMembersRouter = createTRPCRouter({
           joinDate: buyers.createdAt,
         })
         .from(buyers)
-        .innerJoin(buyerAccountDetails, eq(buyers.id, buyerAccountDetails.buyerId));
+        .innerJoin(buyerAccountDetails, eq(buyers.id, buyerAccountDetails.buyerId))
+        .where(
+          searchLower
+            ? or(
+                ilike(buyerAccountDetails.fullName, `%${searchLower}%`),
+                ilike(buyerAccountDetails.email, `%${searchLower}%`)
+              )
+            : undefined
+        );
 
-      // Fetch sellers
+      // Fetch sellers with search filter
       const sellerMembers = await db
         .select({
           id: sellers.id,
@@ -386,7 +395,15 @@ export const adminMembersRouter = createTRPCRouter({
           joinDate: sellers.createdAt,
         })
         .from(sellers)
-        .leftJoin(sellerBusiness, eq(sellers.id, sellerBusiness.sellerId));
+        .leftJoin(sellerBusiness, eq(sellers.id, sellerBusiness.sellerId))
+        .where(
+          searchLower
+            ? or(
+                ilike(sellerBusiness.brandName, `%${searchLower}%`),
+                ilike(sellerBusiness.officialEmail, `%${searchLower}%`)
+              )
+            : undefined
+        );
 
       // Combine and format members based on role filter
       let members: any[] = [];

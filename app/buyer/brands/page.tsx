@@ -232,21 +232,33 @@ export default function BrandsPage() {
             {brandsList && brandsList.length > 0 ? (
               <>
                 <div className="space-y-3 sm:space-y-4">
-                  {brandsList.map((brand: Brand) => (
+                  {brandsList.map((brand: Brand) => {
+                    const handleBrandClick = () => {
+                      const brandIdentifier = brand.slug || brand.id;
+                      if (brandIdentifier) {
+                        router.push(`/buyer/brand/${brandIdentifier}`);
+                      }
+                    };
+                    return (
                     <div
                       key={brand.id}
-                      className="bg-[#0f0f0f] border border-[#2B2B2B] rounded-xl p-4 sm:p-6 hover:border-[#8451E1] transition-all group cursor-pointer duration-300"
+                      className="bg-[#0f0f0f] border border-[#2B2B2B] rounded-xl overflow-hidden hover:border-[#8451E1] transition-all group cursor-pointer duration-300"
+                      onClick={handleBrandClick}
                     >
-                      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
+                      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start p-4 sm:p-6">
                         {/* Logo */}
-                        {brand.logoImage && (
-                          <div className="w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-[#1a1a1a] border border-[#2B2B2B]">
+                        {(brand.logoImage || brand.storeLogo) && (
+                          <div className="w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-[#1a1a1a] border border-[#2B2B2B] flex items-center justify-center">
                             <Image
-                              src={brand.logoImage}
+                              src={brand.logoImage || brand.storeLogo || ''}
                               alt={brand.name}
                               width={96}
                               height={96}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
                             />
                           </div>
                         )}
@@ -254,11 +266,11 @@ export default function BrandsPage() {
                         {/* Info */}
                         <div className="flex-grow min-w-0">
                           <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">
-                            {brand.name}
+                            {brand.name || brand.brandName || 'Store'}
                           </h3>
-                          {brand.description && (
+                          {(brand.description || brand.storeDescription) && (
                             <p className="text-[#999] text-xs sm:text-sm mb-2 sm:mb-4 line-clamp-2 leading-relaxed">
-                              {brand.description}
+                              {brand.description || brand.storeDescription}
                             </p>
                           )}
 
@@ -268,21 +280,21 @@ export default function BrandsPage() {
                               <TrendingUp className="w-4 h-4 text-[#8451E1]" />
                               <span className="text-[#acacac]">Products:</span>
                               <span className="text-white font-semibold">
-                                {brand.totalProducts}
+                                {brand.totalProducts || 0}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Star className="w-4 h-4 text-[#8451E1]" />
                               <span className="text-[#acacac]">Rating:</span>
                               <span className="text-white font-semibold">
-                                ⭐ {brand.rating}
+                                ⭐ {brand.rating || '0'}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 text-[#8451E1]" />
-                              <span className="text-[#acacac]">Seller:</span>
+                              <span className="text-[#acacac]">Followers:</span>
                               <span className="text-white font-semibold">
-                                {brand.seller?.name || 'Luxela'}
+                                {brand.followersCount || 0}
                               </span>
                             </div>
                           </div>
@@ -290,14 +302,26 @@ export default function BrandsPage() {
 
                         {/* CTA */}
                         <button 
-                          onClick={() => router.push(`/buyer/brand/${brand.slug}`)}
+                          onClick={() => {
+                            console.log('[BrandListView] Brand object:', brand);
+                            console.log('[BrandListView] Brand slug:', brand.slug);
+                            console.log('[BrandListView] Brand id:', brand.id);
+                            const brandIdentifier = brand.slug || brand.id;
+                            if (!brandIdentifier) {
+                              console.error('[BrandListView] Neither slug nor id available for brand:', brand);
+                              return;
+                            }
+                            console.log('[BrandListView] Navigating to:', `/buyer/brand/${brandIdentifier}`);
+                            router.push(`/buyer/brand/${brandIdentifier}`);
+                          }}
                           className="px-3 sm:px-6 py-2 sm:py-3 bg-[#8451E1] text-white rounded-lg font-semibold hover:bg-[#7240D0] transition-all shadow-lg shadow-[#8451E1]/20 self-start sm:self-center whitespace-nowrap text-xs sm:text-sm active:scale-95"
                         >
                           View Brand
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Pagination */}

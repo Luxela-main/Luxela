@@ -17,17 +17,17 @@ import { checkAdminStatus } from '@/app/actions/admin';
 
 type AdminSignInFormValues = {
   email: string;
-  password: string;
+  adminPassword: string;
 };
 
 const adminSigninSchema = Yup.object().shape({
   email: Yup.string().email('Invalid email address').required('Email is required'),
-  password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  adminPassword: Yup.string().required('Admin password is required'),
 });
 
 const adminSigninInitialValues: AdminSignInFormValues = {
   email: '',
-  password: '',
+  adminPassword: '',
 };
 
 function AdminSignInContent() {
@@ -42,45 +42,53 @@ function AdminSignInContent() {
     { setSubmitting }: any
   ) => {
     try {
-      const { email, password } = values;
+      const { email, adminPassword } = values;
 
-      // First, sign in with auth
-      const { success, error, user } = await authActions.signinAction(email, password);
-
-      if (!success || !user) {
-        toast.error(error || 'Invalid email or password');
+      // Verify email and admin password
+      const expectedAdminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+      
+      if (!expectedAdminPassword) {
+        toast.error('Admin password not configured');
         setSubmitting(false);
         return;
       }
 
-      // Set user in context
-      setUser(user);
-      toast.success('Signing in...');
+      if (adminPassword !== expectedAdminPassword) {
+        toast.error('Invalid admin password');
+        setSubmitting(false);
+        return;
+      }
 
-      // Wait for toast to be displayed and then check admin status
+      // Verify admin status with database
       setIsCheckingAdmin(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       const adminStatus = await checkAdminStatus();
 
-      if (adminStatus.success && adminStatus.isAdmin) {
-        // Already admin, go directly to dashboard
-        // Add a small delay to ensure session is established
-        await new Promise(resolve => setTimeout(resolve, 500));
-        router.push('/admin/support');
-      } else if (adminStatus.success && !adminStatus.isAdmin) {
-        // Not admin yet, go to setup page to grant access
-        router.push('/admin/setup');
-      } else {
-        // Error checking admin status
+      if (!adminStatus.success) {
         toast.error(adminStatus.error || 'Failed to verify admin status');
         setIsCheckingAdmin(false);
+        setSubmitting(false);
+        return;
       }
+
+      if (!adminStatus.isAdmin) {
+        toast.error('You do not have admin access. Please use the setup page to request admin access.');
+        setIsCheckingAdmin(false);
+        setSubmitting(false);
+        return;
+      }
+
+      // Admin verified and has access
+      toast.success('Admin access verified!');
+      
+      // Wait a moment then redirect to dashboard
+      await new Promise(resolve => setTimeout(resolve, 800));
+      router.push('/admin/support');
+      
     } catch (err: unknown) {
       if (err instanceof Error) {
-        toast.error(err.message || 'Sign-in failed unexpectedly');
+        toast.error(err.message || 'Verification failed unexpectedly');
       } else {
-        toast.error('Sign-in failed unexpectedly');
+        toast.error('Verification failed unexpectedly');
       }
       setIsCheckingAdmin(false);
     } finally {
@@ -144,19 +152,19 @@ function AdminSignInContent() {
                   <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
                 </div>
 
-                {/* Password */}
+                {/* Admin Password */}
                 <div>
-                  <Label htmlFor="password" className="mb-1">
-                    Password
+                  <Label htmlFor="adminPassword" className="mb-1">
+                    Admin Password
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                     <Field
                       as={Input}
-                      name="password"
+                      name="adminPassword"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      className={`pl-10 pr-10 ${errors.password && touched.password ? 'border-destructive' : ''}`}
+                      placeholder="Enter admin password"
+                      className={`pl-10 pr-10 ${errors.adminPassword && touched.adminPassword ? 'border-destructive' : ''}`}
                     />
                     <Button
                       type="button"
@@ -168,18 +176,13 @@ function AdminSignInContent() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  <ErrorMessage name="password" component="div" className="text-sm text-destructive mt-1" />
+                  <ErrorMessage name="adminPassword" component="div" className="text-sm text-destructive mt-1" />
                 </div>
 
-                {/* Remember & Forgot */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center">
-                    <input type="checkbox" id="rememberMe" className="mr-2 accent-amber-600" />
-                    <Label htmlFor="rememberMe">Remember me</Label>
-                  </div>
-                  <Link href="/forgot-password" className="text-amber-400 hover:underline">
-                    Forgot password?
-                  </Link>
+                {/* Remember */}
+                <div className="flex items-center">
+                  <input type="checkbox" id="rememberMe" className="mr-2 accent-amber-600" />
+                  <Label htmlFor="rememberMe">Remember me</Label>
                 </div>
 
                 {/* Submit */}

@@ -36,7 +36,7 @@ export function generateProductSchema({
   id: string;
   name: string;
   description: string;
-  image: string | string[];
+  image: string | string[] | { url: string } | { url: string }[];
   brand?: string;
   price: number | string;
   currency?: string;
@@ -48,14 +48,27 @@ export function generateProductSchema({
   sku?: string;
   category?: string;
 }): BaseSchema {
-  const images = Array.isArray(image) ? image : [image];
+  // Normalize image to array and extract URLs
+  const imageArray = Array.isArray(image) ? image : [image];
+  const imageUrls = imageArray
+    .map((img) => {
+      // If it's a string, return it directly
+      if (typeof img === 'string') return img;
+      // If it's an object with a url property, extract it
+      if (typeof img === 'object' && img !== null && 'url' in img) {
+        return (img as { url: string }).url;
+      }
+      // Otherwise return empty string
+      return '';
+    })
+    .filter((url) => url.length > 0); // Remove empty strings
 
   const schema: BaseSchema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name,
     description,
-    image: images.map((img) =>
+    image: imageUrls.map((img) =>
       img.startsWith('http') ? img : `${SITE.url}${img}`
     ),
     brand: {
