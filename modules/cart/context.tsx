@@ -60,7 +60,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const cart = data?.cart;
 
-  const { listings, approvedListings, validateProductForCart, isListingApproved } = useListings();
+  const { listings, approvedListings, validateProductForCart, isListingApproved, getApprovedListingById } = useListings();
 
   const items = useMemo(() => {
     const rawItems = data?.items || [];
