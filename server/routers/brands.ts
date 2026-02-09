@@ -1307,7 +1307,7 @@ export const brandsRouter = createTRPCRouter({
               currency: listing.currency ?? 'NGN',
               category: listing.category,
               type: listing.type,
-              quantity_available: listing.quantity_available,
+              quantity_available: listing.quantity_available ?? 0,
               seller_id: listing.seller_id,
               created_at: listing.created_at,
               updated_at: listing.updated_at,
