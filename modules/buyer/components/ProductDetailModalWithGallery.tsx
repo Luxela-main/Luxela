@@ -38,7 +38,7 @@ interface ProductDetailModalWithGalleryProps {
     title: string;
     price: number;
     currency: string;
-    images: ProductImage[];
+    images: ProductImage[] | string[];
     image?: string;
     colors: ProductVariant[];
     sizes: string[];
@@ -62,10 +62,16 @@ export function ProductDetailModalWithGallery({
   const [added, setAdded] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
 
-  const allImages = (product.images || [])
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
-    .length > 0
-    ? product.images.sort((a, b) => (a.position || 0) - (b.position || 0))
+  // Convert string array to ProductImage objects if needed
+  const normalizedImages: ProductImage[] = (product.images || []).map((img, idx) => {
+    if (typeof img === 'string') {
+      return { id: `img-${idx}`, image_url: img };
+    }
+    return img as ProductImage;
+  });
+
+  const allImages = normalizedImages.length > 0
+    ? normalizedImages.sort((a, b) => (a.position || 0) - (b.position || 0))
     : product.image
       ? [{ id: '0', image_url: product.image }]
       : [];

@@ -46,13 +46,13 @@ export default function HorizontalImageScroller({
   // Handle image change
   const handleImageChange = useCallback(
     (index: number) => {
-      if (index >= 0 && index < images.length) {
+      if (index >= 0 && index < validImages.length) {
         setCurrentIndex(index);
         onImageChange?.(index);
         clearAutoScroll();
       }
     },
-    [images.length, onImageChange]
+    [validImages.length, onImageChange]
   );
 
   // Clear and reset auto scroll
@@ -64,24 +64,24 @@ export default function HorizontalImageScroller({
 
   // Auto scroll effect
   useEffect(() => {
-    if (!autoScroll || isHovering || images.length <= 1) return;
+    if (!autoScroll || isHovering || validImages.length <= 1) return;
 
     clearAutoScroll();
     autoScrollTimeout.current = setTimeout(() => {
-      handleImageChange((currentIndex + 1) % images.length);
+      handleImageChange((currentIndex + 1) % validImages.length);
     }, autoScrollInterval);
 
     return () => clearAutoScroll();
-  }, [currentIndex, autoScroll, isHovering, images.length, autoScrollInterval, handleImageChange, clearAutoScroll]);
+  }, [currentIndex, autoScroll, isHovering, validImages.length, autoScrollInterval, handleImageChange, clearAutoScroll]);
 
   // Next/Previous handlers
   const goToNext = useCallback(() => {
-    handleImageChange((currentIndex + 1) % images.length);
-  }, [currentIndex, images.length, handleImageChange]);
+    handleImageChange((currentIndex + 1) % validImages.length);
+  }, [currentIndex, validImages.length, handleImageChange]);
 
   const goToPrevious = useCallback(() => {
-    handleImageChange((currentIndex - 1 + images.length) % images.length);
-  }, [currentIndex, images.length, handleImageChange]);
+    handleImageChange((currentIndex - 1 + validImages.length) % validImages.length);
+  }, [currentIndex, validImages.length, handleImageChange]);
 
   // Touch handlers for swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -148,9 +148,9 @@ export default function HorizontalImageScroller({
       >
         {/* Main Image */}
         <div className="relative w-full h-full">
-          {images[currentIndex] && (
+          {validImages[currentIndex] && (
             <Image
-              src={images[currentIndex]}
+              src={validImages[currentIndex]}
               alt={`${alt} - Image ${currentIndex + 1}`}
               fill
               className="object-cover"
@@ -161,7 +161,7 @@ export default function HorizontalImageScroller({
         </div>
 
         {/* Left Arrow Button - Desktop */}
-        {images.length > 1 && (
+        {validImages.length > 1 && (
           <button
             onClick={goToPrevious}
             className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all"
@@ -172,7 +172,7 @@ export default function HorizontalImageScroller({
         )}
 
         {/* Right Arrow Button - Desktop */}
-        {images.length > 1 && (
+        {validImages.length > 1 && (
           <button
             onClick={goToNext}
             className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all"
@@ -183,9 +183,9 @@ export default function HorizontalImageScroller({
         )}
 
         {/* Dot Indicators */}
-        {showDots && images.length > 1 && (
+        {showDots && validImages.length > 1 && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-            {images.map((_, index) => (
+            {validImages.map((_, index) => (
               <button
                 key={index}
                 onClick={() => handleImageChange(index)}
@@ -199,22 +199,22 @@ export default function HorizontalImageScroller({
         )}
 
         {/* Mobile Swipe Hint */}
-        {images.length > 1 && (
+        {!isHovering && validImages.length > 1 && (
           <div className="sm:hidden absolute top-3 right-3 z-10 bg-black/50 text-white text-xs px-2 py-1 rounded">
             Swipe to browse
           </div>
         )}
 
         {/* Image Counter - Mobile */}
-        {images.length > 1 && (
+        {validImages.length > 1 && (
           <div className="absolute top-3 left-3 z-10 bg-black/50 text-white text-xs sm:text-sm px-2 py-1 rounded">
-            {currentIndex + 1} / {images.length}
+            {currentIndex + 1} / {validImages.length}
           </div>
         )}
       </div>
 
       {/* Thumbnail Scrollbar */}
-      {showThumbnails && images.length > 1 && (
+      {showThumbnails && validImages.length > 1 && (
         <div className="mt-3 sm:mt-4">
           <div
             ref={thumbnailScrollRef}
@@ -223,7 +223,7 @@ export default function HorizontalImageScroller({
               scrollBehavior: 'smooth',
             }}
           >
-            {images.map((image, index) => (
+            {validImages.map((image, index) => (
               <button
                 key={index}
                 onClick={() => handleImageChange(index)}
@@ -252,7 +252,7 @@ export default function HorizontalImageScroller({
       )}
 
       {/* Mobile Arrow Buttons */}
-      {images.length > 1 && (
+      {validImages.length > 1 && (
         <div className="sm:hidden flex gap-2 mt-3 justify-center">
           <button
             onClick={goToPrevious}

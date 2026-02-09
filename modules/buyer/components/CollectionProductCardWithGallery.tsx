@@ -19,7 +19,7 @@ interface CollectionProductCardWithGalleryProps {
   title: string;
   price: number;
   currency?: string;
-  images?: ProductImage[];
+  images?: ProductImage[] | string[];
   image?: string;
   colors?: ProductVariant[];
   sizes?: string[];
@@ -52,7 +52,11 @@ export function CollectionProductCardWithGallery({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const allImages: ProductImage[] = images && images.length > 0
-    ? images.sort((a, b) => (a.position || 0) - (b.position || 0))
+    ? (images as any[]).map((img, idx) => 
+        typeof img === 'string'
+          ? { id: idx.toString(), image_url: img }
+          : img
+      ).sort((a, b) => (a.position || 0) - (b.position || 0))
     : image
       ? [{ id: '0', image_url: image }]
       : [];

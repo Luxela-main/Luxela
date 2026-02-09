@@ -6,13 +6,17 @@ import { NextResponse } from "next/server";
 
 const handler = async (req: NextRequest) => {
   try {
-    console.log('[tRPC] Incoming request:', {
+    const pathname = req.nextUrl.pathname;
+    const searchParams = req.nextUrl.search;
+    
+    console.log('[tRPC Root] Incoming request:', {
       method: req.method,
+      pathname,
+      searchParams,
       url: req.url,
-      pathname: req.nextUrl.pathname,
-      searchParams: req.nextUrl.search,
     });
 
+    // Route all requests through tRPC
     const response = await fetchRequestHandler({
       endpoint: "/api/trpc",
       router: appRouter,
@@ -22,12 +26,16 @@ const handler = async (req: NextRequest) => {
       },
     });
 
-    console.log('[tRPC] Response status:', response.status);
+    console.log('[tRPC Root] Response status:', response.status);
     return response;
   } catch (error) {
-    console.error('[tRPC] Handler error:', error);
+    console.error('[tRPC Root] Handler error:', error instanceof Error ? error.message : error);
     return NextResponse.json(
-      { error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Internal server error', 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      },
       { status: 500 }
     );
   }

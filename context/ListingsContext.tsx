@@ -148,6 +148,7 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
           ? [
               {
                 brand_name: item.seller.brandName,
+                slug: item.seller.brandSlug,
                 business_type: 'retail',
                 store_description: null,
                 store_logo: '',

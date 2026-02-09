@@ -134,9 +134,10 @@ export default function EnhancedBrandCard({
   };
 
   if (variant === 'grid' || variant === 'featured') {
+    const brandIdentifier = brand.slug || brand.id;
     return (
       <>
-        <Link href={`/buyer/brand/${brand.slug}`}>
+        <Link href={`/buyer/brand/${brandIdentifier}`}>
           <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow overflow-hidden h-full flex flex-col">
             {/* Brand Logo Section */}
             <div className="relative w-full bg-gradient-to-br from-purple-50 to-pink-50 p-6 flex items-center justify-center min-h-[200px]">
@@ -233,9 +234,10 @@ export default function EnhancedBrandCard({
 
   // List view variant - Compact card view
   if (variant === 'compact') {
+    const brandIdentifier = brand.slug || brand.id;
     return (
       <div className="relative">
-        <Link href={`/buyer/brand/${brand.slug}`}>
+        <Link href={`/buyer/brand/${brandIdentifier}`}>
           <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
             {/* Logo */}
             <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center">
@@ -313,4 +315,4 @@ export default function EnhancedBrandCard({
   }
 
   return null;
-}
+}

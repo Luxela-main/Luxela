@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { trpc } from '@/app/_trpc/client';
 
 export interface Collection {
   id: string;
@@ -52,51 +53,39 @@ export interface UseCollectionsResult {
 }
 
 /**
- * Collections hook using backend REST API
+ * Collections hook using tRPC client
  * Fetches APPROVED collection listings with complete data
  */
 export function useCollections({
-  limit,
+  limit = 20,
   search,
   category,
 }: UseCollectionsOptions = {}): UseCollectionsResult {
+  // Use tRPC query to fetch approved collections
+  const { data: tRPCData, isLoading, error: tRPCError } = trpc.collection.getApprovedCollections.useQuery(
+    {
+      limit: limit || 20,
+      offset: 0,
+    },
+    {
+      enabled: true,
+    }
+  );
+
   const [data, setData] = useState<Collection[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCollections = useCallback(async () => {
+  // Process the tRPC data whenever it changes
+  useEffect(() => {
+    if (!tRPCData || !tRPCData.collections) {
+      setData([]);
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      setError(null);
-
-      // Call tRPC endpoint via HTTP with proper input format
-      const input = {
-        limit: limit || 20,
-        offset: 0,
-      };
-      const inputStr = encodeURIComponent(JSON.stringify(input));
-      const response = await fetch(`/api/trpc/collection.getApprovedCollections?input=${inputStr}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Collection API Error:', errorText);
-        throw new Error(`Failed to fetch collections: ${response.status}`);
-      }
-
-      const json = await response.json();
-      if (json.error) {
-        console.error('tRPC Error:', json.error);
-        throw new Error(json.error.message || 'Failed to fetch collections');
-      }
-      const result = json.result?.data;
 
       // Transform backend data to match Collection interface
-      let collections: Collection[] = (result?.collections || []).map((item: any) => {
+      let collections: Collection[] = (tRPCData.collections || []).map((item: any) => {
         let images: string[] = [];
         if (item.imagesJson) {
           try {
@@ -161,26 +150,31 @@ export function useCollections({
       }
 
       setData(collections);
+      setError(null);
     } catch (err: any) {
       const errorMessage =
-        err?.message || 'Failed to fetch collections';
+        err?.message || 'Failed to process collections';
       setError(errorMessage);
-      console.error('Error fetching collections:', errorMessage);
-    } finally {
-      setIsLoading(false);
+      console.error('Error processing collections:', errorMessage);
     }
-  }, [limit, search]);
+  }, [tRPCData, search]);
 
-  // Initial fetch
+  // Handle tRPC errors
   useEffect(() => {
-    fetchCollections();
-  }, [fetchCollections]);
+    if (tRPCError) {
+      const errorMessage = tRPCError instanceof Error 
+        ? tRPCError.message 
+        : 'Failed to fetch collections';
+      setError(errorMessage);
+      console.error('tRPC Error fetching collections:', errorMessage);
+    }
+  }, [tRPCError]);
 
   return {
     data,
     isLoading,
     error,
-    refetch: fetchCollections,
+    refetch: () => Promise.resolve(), // tRPC handles refetching internally
   };
 }
 
@@ -189,65 +183,59 @@ export function useCollections({
  * collectionId here is actually the listing ID of the collection
  */
 export function useCollectionDetails(collectionId: string) {
+  const { data: tRPCData, isLoading, error: tRPCError } = trpc.collection.getBuyerCollectionWithProducts.useQuery(
+    { collectionId },
+    {
+      enabled: !!collectionId,
+    }
+  );
+
   const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCollectionDetails = useCallback(async () => {
-    if (!collectionId) {
-      setIsLoading(false);
+  // Process the tRPC data whenever it changes
+  useEffect(() => {
+    if (!tRPCData) {
+      setData(null);
       return;
     }
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      // Fetch collection details via REST API
-      const response = await fetch(
-        `/api/trpc/collection.getBuyerCollectionWithProducts?input=${JSON.stringify({ collectionId })}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch collection details: ${response.status}`);
-      }
-
-      const json = await response.json();
-      const result = json.result?.data;
+      const result = tRPCData;
 
       setData({
         collection: {
           id: result?.id,
-          title: result?.title,
+          title: result?.name,
           description: result?.description,
           collectionId: result?.id,
         },
         items: result?.items || [],
         itemCount: result?.items?.length || 0,
       });
+      setError(null);
     } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to fetch collection details';
+      const errorMessage = err?.message || 'Failed to process collection details';
       setError(errorMessage);
-      console.error('Error fetching collection details:', errorMessage);
-    } finally {
-      setIsLoading(false);
+      console.error('Error processing collection details:', errorMessage);
     }
-  }, [collectionId]);
+  }, [tRPCData]);
 
+  // Handle tRPC errors
   useEffect(() => {
-    fetchCollectionDetails();
-  }, [fetchCollectionDetails]);
+    if (tRPCError) {
+      const errorMessage = tRPCError instanceof Error 
+        ? tRPCError.message 
+        : 'Failed to fetch collection details';
+      setError(errorMessage);
+      console.error('tRPC Error fetching collection details:', errorMessage);
+    }
+  }, [tRPCError]);
 
   return {
     data,
     isLoading,
     error,
-    refetch: fetchCollectionDetails,
+    refetch: () => Promise.resolve(), // tRPC handles refetching internally
   };
 }

@@ -764,56 +764,35 @@ export const brandsRouter = createTRPCRouter({
         const offset = (input.page - 1) * input.limit;
 
         console.log(`[getBrandListings] Brand found:`, { id: brand.id, sellerId: brand.sellerId });
-        console.log(`[getBrandListings] Looking for products with brandId = ${input.brandId}`);
+        console.log(`[getBrandListings] Fetching products for brand ${brand.id}`);
 
-        // First, get all products for this brand
-        const brandProducts = await db
-          .select({ id: products.id })
-          .from(products)
-          .where(eq(products.brandId, input.brandId));
-
-        const productIds = brandProducts.map(p => p.id);
-        console.log(`[getBrandListings] Found ${productIds.length} products for brand ${input.brandId}:`, productIds);
-        
-        // DEBUG: Check all products to understand the data structure
-        if (productIds.length === 0) {
-          const allProducts = await db.select({ id: products.id, brandId: products.brandId }).from(products).limit(10);
-          console.log(`[getBrandListings] DEBUG - No products found. Sample of all products:`, allProducts);
-        }
-
-        // Count total approved and pending listings for this brand's products
-        let countResult;
-        if (productIds.length > 0) {
-          countResult = await db
-            .select({ count: count() })
-            .from(listings)
-            .where(and(
-              inArray(listings.productId, productIds),
-              // Include both approved and pending_review statuses
-              inArray(listings.status, ['approved', 'pending_review'])
-            ));
-        } else {
-          countResult = [{ count: 0 }];
-        }
+        // First get all products for this brand
+        // Count total approved listings for ALL products from this seller
+        const countResult = await db
+          .select({ count: count() })
+          .from(listings)
+          .where(and(
+            eq(listings.sellerId, brand.sellerId),
+            // Only show approved listings to buyers
+            eq(listings.status, 'approved')
+          ));
 
         const total = Number(countResult[0]?.count ?? 0);
-        console.log(`[getBrandListings] Total listings (approved + pending): ${total}`);
+        console.log(`[getBrandListings] Total listings (approved) from seller: ${total}`);
 
-        // Fetch approved listings for this brand's products
-        let brandListings: any[] = [];
-        if (productIds.length > 0) {
-          console.log(`[getBrandListings] Fetching listings with offset ${offset}, limit ${input.limit}`);
-          brandListings = await db
+        // Fetch approved listings for ALL products from this seller
+        console.log(`[getBrandListings] Fetching listings with offset ${offset}, limit ${input.limit}`);
+        const brandListings = await db
             .select({
               id: listings.id,
             title: listings.title,
             description: listings.description,
             image: listings.image,
-            price_cents: sql<number>`COALESCE(${listings.priceCents}, 0)`,
-            currency: sql<string>`COALESCE(${listings.currency}, 'NGN')`,
-            category: sql<string>`COALESCE(${listings.category}, 'general')`,
+            price_cents: listings.priceCents,
+            currency: listings.currency,
+            category: listings.category,
             type: listings.type,
-            quantity_available: sql<number>`COALESCE(${listings.quantityAvailable}, 0)`,
+            quantity_available: listings.quantityAvailable,
             seller_id: listings.sellerId,
             created_at: listings.createdAt,
             updated_at: listings.updatedAt,
@@ -841,17 +820,25 @@ export const brandsRouter = createTRPCRouter({
           })
             .from(listings)
             .where(and(
-              inArray(listings.productId, productIds),
-              // Include both approved and pending_review statuses
-              inArray(listings.status, ['approved', 'pending_review'])
+              eq(listings.sellerId, brand.sellerId),
+              // Only show approved listings to buyers
+              eq(listings.status, 'approved')
             ))
             .orderBy(desc(listings.createdAt))
             .limit(input.limit)
             .offset(offset);
           console.log(`[getBrandListings] Fetched ${brandListings.length} listings`);
-        }
+          
+          // Apply null coalescing for fields that can be nullable
+          const coalescedListings = brandListings.map(l => ({
+            ...l,
+            price_cents: l.price_cents ?? 0,
+            currency: l.currency ?? 'NGN',
+            category: l.category ?? 'general',
+            quantity_available: l.quantity_available ?? 0,
+          }));
 
-        console.log(`[getBrandListings] Processing ${brandListings.length} listings for enrichment`);
+        console.log(`[getBrandListings] Processing ${coalescedListings.length} listings for enrichment`);
 
         // Enrich listings with product images and parsed data (only if there are listings)
         const enrichedListings = await Promise.all(
@@ -1029,21 +1016,21 @@ export const brandsRouter = createTRPCRouter({
               sku: listing.sku,
               status: listing.status,
               barcode: listing.barcode,
-              supply_capacity: listing.supplyCapacity,
-              colors_available: colors ? JSON.stringify(colors) : null,
-              sizes_json: sizes ? JSON.stringify(sizes) : null,
-              material_composition: listing.materialComposition,
-              shipping_option: listing.shippingOption,
-              eta_domestic: listing.etaDomestic,
-              eta_international: listing.etaInternational,
-              refund_policy: listing.refundPolicy,
-              local_pricing: listing.localPricing,
-              video_url: listing.videoUrl,
-              care_instructions: listing.careInstructions,
-              limited_edition_badge: listing.limitedEditionBadge,
-              release_duration: listing.releaseDuration,
-              additional_target_audience: listing.additionalTargetAudience,
-              meta_description: listing.metaDescription,
+              supplyCapacity: listing.supplyCapacity,
+              colors: colors,
+              sizes: sizes,
+              materialComposition: listing.materialComposition,
+              shippingOption: listing.shippingOption,
+              etaDomestic: listing.etaDomestic,
+              etaInternational: listing.etaInternational,
+              refundPolicy: listing.refundPolicy,
+              localPricing: listing.localPricing,
+              videoUrl: listing.videoUrl,
+              careInstructions: listing.careInstructions,
+              limitedEditionBadge: listing.limitedEditionBadge,
+              releaseDuration: listing.releaseDuration,
+              additionalTargetAudience: listing.additionalTargetAudience,
+              metaDescription: listing.metaDescription,
               ...(isCollection ? {
                 collectionItemCount,
                 collectionTotalPrice,
@@ -1205,11 +1192,11 @@ export const brandsRouter = createTRPCRouter({
             title: listings.title,
             description: listings.description,
             image: listings.image,
-            price_cents: sql<number>`COALESCE(${listings.priceCents}, 0)`,
-            currency: sql<string>`COALESCE(${listings.currency}, 'NGN')`,
-            category: sql<string>`COALESCE(${listings.category}, 'general')`,
+            price_cents: listings.priceCents,
+            currency: listings.currency,
+            category: listings.category,
             type: listings.type,
-            quantity_available: sql<number>`COALESCE(${listings.quantityAvailable}, 0)`,
+            quantity_available: listings.quantityAvailable,
             seller_id: listings.sellerId,
             created_at: listings.createdAt,
             updated_at: listings.updatedAt,

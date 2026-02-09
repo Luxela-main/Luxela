@@ -1,5 +1,6 @@
 interface SellerBusiness {
   brand_name: string
+  slug?: string | null
   business_type: string
   store_description: string | null
   store_logo: string
@@ -63,4 +64,4 @@ interface ListingsContextType {
   refetchListings: () => Promise<void>
   getListingById: (id: string) => Listing | undefined
   getListingsByBrand: (brandName: string) => Listing[]
-}
+}

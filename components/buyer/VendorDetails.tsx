@@ -12,8 +12,8 @@ export default function VendorDetails({
 }: VendorDetailsProps) {
   if (!business) return null;
 
-  const brandSlug =
-    business.brand_name?.toLowerCase().replace(/\s+/g, "-") || "";
+  // Use the actual brand slug from database
+  const brandSlug = business?.slug || business?.brand_slug || "";
 
   // Mock vendor stats
   const vendorRating = 4.8;
@@ -28,13 +28,15 @@ export default function VendorDetails({
           Vendor Details
         </h2>
         {/* View Products Button */}
-        <Link
-          href={`/buyer/brand/${brandSlug}`}
-          className="text-[#8451E1] hover:text-[#9665F5] text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-2 group"
-        >
-          View All
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </Link>
+        {brandSlug && (
+          <Link
+            href={`/buyer/brand/${brandSlug}`}
+            className="text-[#8451E1] hover:text-[#9665F5] text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-2 group"
+          >
+            View All
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        )}
       </div>
 
       {/* Vendor Info Card */}
