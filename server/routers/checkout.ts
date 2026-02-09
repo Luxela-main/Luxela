@@ -304,24 +304,10 @@ export const checkoutRouter = createTRPCRouter({
         // Get seller ID from the primary listing (already validated to be same for all items)
         const sellerId = itemsWithListings[0].listing!.sellerId;
 
-        // Create order (enters escrow)
-        const { orderId } = await createOrderFromCart(
-          buyer.id,
-          sellerId, // Now using actual seller ID
-          items.map((item) => ({
-            listingId: item.listingId,
-            quantity: item.quantity,
-            unitPriceCents: item.unitPriceCents,
-            currency: item.currency,
-          })),
-          input.customerName,
-          input.customerEmail,
-          input.paymentMethod
-        );
-
-        // Create payment record
-        const transactionRef = `order_${orderId}`;
+        // Generate IDs before payment initialization (but don't create order yet)
         const paymentId = uuidv4();
+        const orderId = uuidv4();
+        const transactionRef = `order_${orderId}`;
 
         // Validate payment method
         if (!['card', 'bank_transfer', 'crypto'].includes(input.paymentMethod)) {
@@ -330,6 +316,8 @@ export const checkoutRouter = createTRPCRouter({
             message: 'Invalid payment method',
           });
         }
+
+        // Note: We don't create the order until AFTER successful payment initialization
 
         // Create Tsara payment link
         let paymentResponse;
@@ -380,6 +368,25 @@ export const checkoutRouter = createTRPCRouter({
           }
         }
 
+        // Now that payment initialization succeeded, create the order
+        const orderResult = await createOrderFromCart(
+          buyer.id,
+          sellerId,
+          items.map((item) => ({
+            listingId: item.listingId,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            currency: item.currency,
+          })),
+          input.customerName,
+          input.customerEmail,
+          input.paymentMethod,
+          orderId
+        );
+        
+        // Use the actual orderId from the created order
+        const actualOrderId = orderResult.orderId;
+
         // Store payment in database
         const [payment] = await db
           .insert(payments)
@@ -387,7 +394,7 @@ export const checkoutRouter = createTRPCRouter({
             id: paymentId,
             buyerId: buyer.id,
             listingId: items[0].listingId,
-            orderId,
+            orderId: actualOrderId,
             amountCents: totalCents,
             currency: input.currency,
             paymentMethod: input.paymentMethod as any,
@@ -436,7 +443,7 @@ export const checkoutRouter = createTRPCRouter({
         return {
           paymentId: payment.id,
           paymentUrl,
-          orderId,
+          orderId: actualOrderId,
           totalAmount,
           transactionRef,
         };

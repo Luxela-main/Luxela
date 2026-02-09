@@ -110,11 +110,27 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const addToCart = async (listingId: string, quantity: number) => {
     // CRITICAL: Validate product approval before adding to cart
-    const validation = validateProductForCart(listingId);
+    let validation = validateProductForCart(listingId);
+    
+    // If product is not in approved listings cache, try to fetch it directly
     if (!validation.valid) {
-      throw new Error(
-        validation.reason || 'This product cannot be added to your cart'
-      );
+      try {
+        const listing = await getApprovedListingById(listingId, true);
+        if (!listing) {
+          throw new Error(
+            'Product is not available or has been removed from the catalog'
+          );
+        }
+        // Check stock
+        if ((listing.quantity_available || 0) <= 0) {
+          throw new Error('This product is currently out of stock');
+        }
+        // Product is valid, proceed
+      } catch (error: any) {
+        throw error instanceof Error ? error : new Error(
+          validation.reason || 'This product cannot be added to your cart'
+        );
+      }
     }
 
     if (quantity <= 0) {

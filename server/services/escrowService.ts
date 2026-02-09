@@ -62,7 +62,8 @@ export async function createOrderFromCart(
   cartItems_: Array<{ listingId: string; quantity: number; unitPriceCents: number; currency: string }>,
   customerName: string,
   customerEmail: string,
-  paymentMethod: string
+  paymentMethod: string,
+  orderId?: string
 ): Promise<{ orderId: string; totalAmountCents: number; totalCurrency: string }> {
   if (!cartItems_.length) {
     throw new TRPCError({
@@ -129,11 +130,11 @@ export async function createOrderFromCart(
     }
 
     // Create order in escrow state
-    const orderId = uuidv4();
+    const finalOrderId = orderId || uuidv4();
     const now = new Date();
 
     await tx.insert(orders).values({
-      id: orderId,
+      id: finalOrderId,
       buyerId,
       sellerId,
       listingId: cartItems_[0].listingId, // Primary listing
@@ -150,7 +151,7 @@ export async function createOrderFromCart(
       deliveryStatus: 'not_shipped',
     });
 
-    return { orderId, totalAmountCents, totalCurrency: currency };
+    return { orderId: finalOrderId, totalAmountCents, totalCurrency: currency };
   });
 
   return result;
