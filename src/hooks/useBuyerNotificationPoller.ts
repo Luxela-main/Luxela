@@ -49,7 +49,6 @@ export function useBuyerNotificationPoller(
 
   const getNotificationsQuery = api.buyerNotifications.getNotifications.useQuery(
     {
-      unreadOnly: false,
       limit: 10,
       offset: 0,
     },

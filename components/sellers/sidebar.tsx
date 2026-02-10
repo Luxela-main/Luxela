@@ -43,11 +43,13 @@ export default function Sidebar() {
     const { logout } = useAuth();
   
   // Get notification and pending order counts
-  const { data: notifications = [] } = useNotifications();
+  const { data: notificationsData } = useNotifications();
   const { data: pendingOrders = [] } = usePendingOrders();
   const { data: sellerProfileData } = useSellerProfile();
   
-  const unreadNotificationCount = notifications.filter((n: any) => !n.isRead).length;
+  // Extract notifications array from response - getNotifications returns { notifications, total, unreadCount }
+  const notifications = notificationsData?.notifications || [];
+  const unreadNotificationCount = notificationsData?.unreadCount || 0;
   const pendingOrderCount = pendingOrders.length;
 
   const isActive = (path: string) => {

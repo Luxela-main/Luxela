@@ -60,8 +60,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setUser(null);
       await supabase.auth.signOut();
+      // Redirect to home page after successful logout
+      router.push('/');
     } catch (e) {
       console.error("Logout error", e);
+      // Still redirect even if there's an error
+      router.push('/');
     }
   };
 

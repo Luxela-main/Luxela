@@ -166,6 +166,19 @@ export default function AdminNavbar({ userEmail: initialUserEmail, currentPath =
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
+            {/* Mobile Notification Bell */}
+            <button
+              onClick={() => router.push('/admin/notifications')}
+              className="relative flex items-center justify-center w-10 h-10 p-2 hover:bg-[#2B2B2B] rounded-lg transition-colors"
+              title="View notifications"
+            >
+              <Bell className="w-5 h-5 text-[#DCDCDC]" />
+              {notificationCount > 0 && (
+                <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 bg-red-600 text-white text-xs font-bold rounded-full">
+                  {notificationCount > 99 ? '99+' : notificationCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={toggleMenu}
               className="p-2 hover:bg-[#2B2B2B] rounded-lg transition-colors"
@@ -227,23 +240,6 @@ export default function AdminNavbar({ userEmail: initialUserEmail, currentPath =
                 </Link>
               );
             })}
-
-            {/* Notification Button - Mobile */}
-            <button
-              onClick={() => {
-                router.push('/admin/notifications');
-                setIsOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-[#DCDCDC] hover:bg-[#2B2B2B] rounded-lg transition-colors relative border-t border-[#2B2B2B] mt-4 pt-4"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="font-medium">Notifications</span>
-              {notificationCount > 0 && (
-                <span className="ml-auto flex items-center justify-center w-6 h-6 bg-red-600 text-white text-xs font-bold rounded-full">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </span>
-              )}
-            </button>
 
             {/* Home Button - Mobile */}
             <button

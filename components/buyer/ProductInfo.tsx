@@ -68,24 +68,44 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
   }, [product.id, user]);
 
   const sizes = useMemo(() => {
-    if (!product.sizes_json) return [];
+    // Handle sizes_json from listing data
+    const sizesData = product.sizes_json;
+    if (!sizesData) return [];
     try {
-      return JSON.parse(product.sizes_json);
+      // If it's a string, parse it
+      if (typeof sizesData === 'string') return JSON.parse(sizesData);
+      // If it's already an array, return it
+      return Array.isArray(sizesData) ? sizesData : [];
     } catch (e) {
       return [];
     }
   }, [product.sizes_json]);
 
   const colors = useMemo(() => {
-    if (!product.colors_available) return [];
+    // Handle both formats - colors_available (from collections) and colors (from product detail endpoint)
+    const colorsData = product.colors || product.colors_available;
+    if (!colorsData) return [];
     let parsed: any[] = [];
     try {
-      parsed = JSON.parse(product.colors_available);
+      // If it's a string, parse it
+      if (typeof colorsData === 'string') {
+        parsed = JSON.parse(colorsData);
+      } else if (Array.isArray(colorsData)) {
+        // If it's already an array, use it directly
+        parsed = colorsData;
+      } else {
+        return [];
+      }
     } catch (e) {
-      parsed = product.colors_available.split(",").map((c) => ({
-        colorName: c.trim(),
-        colorHex: "",
-      }));
+      // Fallback: try to split by comma if it's a string
+      if (typeof colorsData === 'string') {
+        parsed = colorsData.split(",").map((c) => ({
+          colorName: c.trim(),
+          colorHex: "",
+        }));
+      } else {
+        return [];
+      }
     }
 
     return parsed.map((c) => {
@@ -97,7 +117,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
         displayHex: hexFromDb || hexFromMap || null,
       };
     });
-  }, [product.colors_available]);
+  }, [product.colors, product.colors_available]);
 
   const performAddToCart = async (qty: number = 1) => {
     // 1. Auth Guard

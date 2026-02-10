@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useListings } from "@/context/ListingsContext";
-import ProductImageGallery from "@/components/buyer/ProductImageGallery";
+import ProductImageCarousel from "@/components/buyer/product-display/ProductImageCarousel";
 import ProductInfo from "@/components/buyer/ProductInfo";
 import ProductDescription from "@/components/buyer/ProductDescription";
 import ProductReviews from "@/components/buyer/ProductReviews";
@@ -44,6 +44,10 @@ function ProductDetailPage({
             hasMaterialComposition: !!listing.material_composition,
             hasCareInstructions: !!listing.care_instructions,
             hasVideoUrl: !!listing.video_url,
+            hasImagesJson: !!listing.imagesJson,
+            imagesJsonLength: listing.imagesJson ? listing.imagesJson.length : 0,
+            hasImage: !!listing.image,
+            imagesJsonSample: listing.imagesJson ? listing.imagesJson.substring(0, 100) : 'none',
           });
           setProduct(listing);
           setIsApproved(true);
@@ -142,7 +146,25 @@ function ProductDetailPage({
           <div className="grid lg:grid-cols-12 gap-12 mb-20">
             {/* Image Gallery - 5 cols */}
             <div className="lg:col-span-6 flex flex-col">
-              <ProductImageGallery product={product} />
+              <ProductImageCarousel
+                images={(() => {
+                  try {
+                    let images: string[] = [];
+                    if (typeof product?.imagesJson === 'string') {
+                      images = JSON.parse(product.imagesJson);
+                    } else if (Array.isArray(product?.imagesJson)) {
+                      images = product.imagesJson;
+                    } else if (product?.image) {
+                      images = [product.image];
+                    }
+                    return images;
+                  } catch (error) {
+                    console.error('[ProductImageCarousel] Error parsing images:', error);
+                    return product?.image ? [product.image] : [];
+                  }
+                })()}
+                alt={product?.name || product?.title || 'Product'}
+              />
             </div>
 
             {/* Product Info - 7 cols for asymmetric luxury feel */}

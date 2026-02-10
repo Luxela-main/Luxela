@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useCollections } from '@/modules/buyer/queries/useCollections';
 import { useSearch } from '@/context/SearchContext';
 import ScrollToTopButton from '@/components/buyer/ScrollToTopButton';
@@ -8,6 +8,7 @@ import {
   ProductDisplayHero,
   CollectionShowcase,
   MasonryGrid,
+  EnhancedCollectionCard,
 } from '@/components/buyer/product-display';
 import { ChevronLeft, ChevronRight, Loader2, Images, Search, X } from 'lucide-react';
 
@@ -60,6 +61,9 @@ const bgAnimations = `
 export default function CollectionsPage() {
   const { data: allCollections = [], isLoading } = useCollections();
   const { searchQuery } = useSearch();
+  
+  // Debug logging
+  console.log('[CollectionsPage] allCollections:', allCollections.length, allCollections.map((c: any) => ({ id: c.id, title: c.title, itemsCount: c.items?.length || 0 })));
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [layoutMode, setLayoutMode] = useState<'grid' | 'carousel'>('grid');
   const [filters, setFilters] = useState<ProductFilters>({
@@ -165,16 +169,16 @@ export default function CollectionsPage() {
         break;
       case 'price-low':
         sorted.sort((a: any, b: any) => {
-          const avgPriceA = a.itemsJson?.reduce((sum: number, item: any) => sum + (item.price || 0), 0) / (a.itemsJson?.length || 1) || 0;
-          const avgPriceB = b.itemsJson?.reduce((sum: number, item: any) => sum + (item.price || 0), 0) / (b.itemsJson?.length || 1) || 0;
-          return avgPriceA - avgPriceB;
+          const priceA = a.totalPrice || a.collectionTotalPrice || 0;
+          const priceB = b.totalPrice || b.collectionTotalPrice || 0;
+          return priceA - priceB;
         });
         break;
       case 'price-high':
         sorted.sort((a: any, b: any) => {
-          const avgPriceA = a.itemsJson?.reduce((sum: number, item: any) => sum + (item.price || 0), 0) / (a.itemsJson?.length || 1) || 0;
-          const avgPriceB = b.itemsJson?.reduce((sum: number, item: any) => sum + (item.price || 0), 0) / (b.itemsJson?.length || 1) || 0;
-          return avgPriceB - avgPriceA;
+          const priceA = a.totalPrice || a.collectionTotalPrice || 0;
+          const priceB = b.totalPrice || b.collectionTotalPrice || 0;
+          return priceB - priceA;
         });
         break;
       case 'name-az':
@@ -189,16 +193,15 @@ export default function CollectionsPage() {
         break;
       case 'rating':
         sorted.sort((a: any, b: any) => {
-          const avgRatingA = a.itemsJson?.reduce((sum: number, item: any) => sum + (item.rating || 0), 0) / (a.itemsJson?.length || 1) || 0;
-          const avgRatingB = b.itemsJson?.reduce((sum: number, item: any) => sum + (item.rating || 0), 0) / (b.itemsJson?.length || 1) || 0;
-          return avgRatingB - avgRatingA;
+          // Future: implement actual rating
+          return 0;
         });
         break;
       case 'sales':
         // For now, sort by items count as a proxy for sales
         sorted.sort((a: any, b: any) => {
-          const aCount = a.itemsJson?.length || 0;
-          const bCount = b.itemsJson?.length || 0;
+          const aCount = a.collectionItemCount || a.items?.length || 0;
+          const bCount = b.collectionItemCount || b.items?.length || 0;
           return bCount - aCount;
         });
         break;
@@ -384,22 +387,19 @@ export default function CollectionsPage() {
         <div className="fade-in">
         {sortedCollections.length > 0 ? (
           layoutMode === 'grid' ? (
-            <MasonryGrid
-              products={sortedCollections as any}
-              columns={{ mobile: 1, tablet: 2, desktop: 3 }}
-              gap="normal"
-              emptyMessage="No collections found. Try adjusting your search."
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortedCollections.map((collection) => (
+                <div key={collection.id}>
+                  <EnhancedCollectionCard
+                    collection={collection}
+                    variant="featured"
+                  />
+                </div>
+              ))}
+            </div>
           ) : (
             <CollectionShowcase
-              collections={sortedCollections.map((collection: any) => ({
-                id: collection.id,
-                title: collection.name || collection.title,
-                image: collection.image || 'https://via.placeholder.com/300x300',
-                description: collection.description,
-                itemCount: 0,
-                href: `/buyer/collection/${collection.id}`,
-              }))}
+              collections={sortedCollections}
               variant="carousel"
               showControls={true}
             />

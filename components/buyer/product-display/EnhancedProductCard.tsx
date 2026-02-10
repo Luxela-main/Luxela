@@ -145,15 +145,28 @@ export default function EnhancedProductCard({
     product.image !== LUXELA_PLACEHOLDER;
 
   const colors = useMemo(() => {
-    if (!product.colors_available) return [];
+    // Handle both formats - colors (from product endpoint) and colors_available (from collections)
+    const colorsData = product.colors_available;
+    if (!colorsData) return [];
     try {
-      const parsed = JSON.parse(product.colors_available);
-      return Array.isArray(parsed) ? parsed : [];
+      // If it's a string, parse it
+      if (typeof colorsData === 'string') {
+        const parsed = JSON.parse(colorsData);
+        return Array.isArray(parsed) ? parsed : [];
+      } else if (Array.isArray(colorsData)) {
+        // If it's already an array, return it
+        return colorsData;
+      }
+      return [];
     } catch (e) {
-      return product.colors_available.split(',').map((c) => ({
-        colorName: c.trim(),
-        colorHex: '',
-      }));
+      // Fallback: try to split by comma if it's a string
+      if (typeof colorsData === 'string') {
+        return colorsData.split(',').map((c) => ({
+          colorName: c.trim(),
+          colorHex: '',
+        }));
+      }
+      return [];
     }
   }, [product.colors_available]);
 
@@ -188,7 +201,7 @@ export default function EnhancedProductCard({
             }}
           >
             {/* Image Section with Carousel */}
-            <div className="relative bg-[#222] overflow-hidden flex-shrink-0" style={{ height: '256px' }}>
+            <div className="relative bg-[#222] overflow-visible flex-shrink-0" style={{ height: '256px' }}>
               {isValidImage && images.length > 0 ? (
                 <>
                   <HorizontalImageScroller
@@ -366,7 +379,7 @@ export default function EnhancedProductCard({
 
               {/* Colors & Rating Row */}
               <div className="flex items-center justify-between mb-3 gap-2">
-                {colors.length > 0 && (
+                {colors && colors.length > 0 && (
                   <div className="flex items-center -space-x-1">
                     {colors.slice(0, 3).map((color, i) => {
                       const name = color.colorName?.toLowerCase().trim() || '';
@@ -562,7 +575,7 @@ export default function EnhancedProductCard({
                 </div>
               )}
 
-              {colors.length > 0 && (
+              {colors && colors.length > 0 && (
                 <div>
                   <p className="text-sm text-[#acacac] mb-2">Available Colors</p>
                   <div className="flex flex-wrap gap-2">

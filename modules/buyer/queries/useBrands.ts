@@ -133,7 +133,7 @@ export function useBrands({
       console.log('[useBrands] Fetching brands...', { page, limit, search, sortBy, attemptNumber, maxRetries: MAX_RETRIES });
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
       const response = await fetch(
         `/api/trpc/brands.getAllBrands?${queryParams.toString()}`,
@@ -269,17 +269,17 @@ export function useBrands({
 
       if (!isAbortError || attemptNumber >= MAX_RETRIES) {
         setError(errorMessage);
-        console.error('[useBrands] Error fetching brands:', {
+        const errorLog = {
           message: errorMessage,
           errorType: err?.name || 'Unknown',
           errorCode: err?.code,
-          originalError: err,
-          errorString: String(err),
+          originalError: String(err),
           queryParams: { page, limit, search, sortBy },
           attemptNumber,
           isAbortError,
-          errorKeys: Object.keys(err || {}),
-        });
+          stack: err?.stack || 'No stack trace',
+        };
+        console.error('[useBrands] Error fetching brands:', JSON.stringify(errorLog, null, 2));
       }
       
       if (attemptNumber >= MAX_RETRIES) {

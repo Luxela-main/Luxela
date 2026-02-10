@@ -22,6 +22,7 @@ export {
   useAddToFavorites,
   useRemoveFromFavorites,
   useToggleFavorite,
+  useFavoritesCount,
 } from "./useFavorites";
 
 // Orders Hooks
@@ -173,6 +174,7 @@ export {
 // Notification Hooks
 export {
   useNotifications,
+  useUnifiedNotifications,
   useNotificationsCount,
   useMarkNotificationAsRead,
   useMarkAllNotificationsAsRead,

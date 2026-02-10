@@ -6,6 +6,7 @@ import { db } from '../db';
 import { payments, orders, refunds, paymentHolds, financialLedger, sellers } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { notifyRefundInitiated, notifyRefundCompleted } from '../services/buyerNotificationService';
 
 export const refundRouter = createTRPCRouter({
   refundPayment: protectedProcedure
@@ -91,6 +92,18 @@ export const refundRouter = createTRPCRouter({
             })
             .returning();
 
+          // Notify buyer about refund initiation
+          try {
+            await notifyRefundInitiated(
+              order.buyerId,
+              refundAmount / 100,
+              input.orderId,
+              input.reason
+            );
+          } catch (err) {
+            console.error('Failed to send refund initiated notification:', err);
+          }
+
           const [hold] = await tx
             .select()
             .from(paymentHolds)
@@ -121,6 +134,19 @@ export const refundRouter = createTRPCRouter({
 
           return [createdRefund];
         });
+
+        // Send notification to buyer
+        try {
+          await notifyRefundInitiated(
+            order.buyerId,
+            refundAmount / 100,
+            input.orderId,
+            input.reason
+          );
+        } catch (err) {
+          console.error('Failed to send refund notification:', err);
+          // Don't fail the operation if notification fails
+        }
 
         return {
           success: true,

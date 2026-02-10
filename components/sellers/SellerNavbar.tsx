@@ -6,8 +6,9 @@ import Image from "next/image";
 import { Bell, LogOut, Settings, User, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/hooks/useToast";
-import { useNotifications, usePendingOrders } from "@/modules/sellers";
+import { useSellerNotificationsCount, usePendingOrders } from "@/modules/sellers";
 import { useSellerProfile } from "@/modules/sellers/queries/useSellerProfile";
+import { useRealtimeSellerNotifications } from "@/hooks/useRealtimeSellerNotifications";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,23 +30,28 @@ export default function SellerNavbar() {
   const { logout } = useAuth();
   const toast = useToast();
 
-  // Get notification and pending order counts
-  const { data: notifications = [] } = useNotifications();
-  const { data: pendingOrders = [] } = usePendingOrders();
-  
-  // Get seller profile - automatically syncs when cache is invalidated
-  const { data: profileData } = useSellerProfile();
-  const user = profileData?.seller ? {
-    avatarUrl: profileData.seller.profilePhoto || '/default-avatar.png',
-    fullName: profileData.business?.fullName || 'Seller',
-    email: profileData.business?.officialEmail,
-  } : null;
+  // Enable realtime notifications polling
+  useRealtimeSellerNotifications();
 
-  const unreadNotificationCount = notifications.filter(
-    (n: any) => !n.isRead
-  ).length;
+  // Get notification count from badge query (lightweight, polls frequently)
+  const { data: notificationCountData } = useSellerNotificationsCount();
+  const unreadNotificationCount = notificationCountData?.count || 0;
+
+  // Get pending order counts
+  const { data: pendingOrders = [] } = usePendingOrders();
   const pendingOrderCount = pendingOrders.length;
   const totalAlerts = unreadNotificationCount + pendingOrderCount;
+
+  // Get seller profile - automatically syncs when cache is invalidated
+  const { data: profileData } = useSellerProfile();
+  const user = profileData?.seller
+    ? {
+        avatarUrl:
+          profileData.seller.profilePhoto || "/default-avatar.png",
+        fullName: profileData.business?.fullName || "Seller",
+        email: profileData.business?.officialEmail,
+      }
+    : null;
 
   const handleLogout = async () => {
     try {
@@ -86,7 +92,8 @@ export default function SellerNavbar() {
             <div className="hidden sm:flex gap-1 px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20">
               {unreadNotificationCount > 0 && (
                 <span className="text-xs font-medium text-red-400">
-                  {unreadNotificationCount} message{unreadNotificationCount > 1 ? "s" : ""}
+                  {unreadNotificationCount} message
+                  {unreadNotificationCount > 1 ? "s" : ""}
                 </span>
               )}
               {unreadNotificationCount > 0 && pendingOrderCount > 0 && (
@@ -103,12 +110,14 @@ export default function SellerNavbar() {
           {/* Notifications Button */}
           <Link
             href="/sellers/notifications"
-            className="relative p-2 rounded-lg hover:bg-[#1e1e1e] transition-colors"
+            className="relative p-2 rounded-lg hover:bg-[#1e1e1e] transition-colors cursor-pointer group"
           >
-            <Bell size={20} className="text-[#f1f1f1]" />
+            <Bell size={20} className="text-[#f1f1f1] group-hover:text-purple-400 transition-colors" />
             {unreadNotificationCount > 0 && (
-              <span className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">
-                {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+              <span className="absolute top-0 right-0 flex items-center justify-center min-w-[22px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg shadow-red-500/50 group-hover:animate-none group-hover:shadow-red-500/75 transition-all">
+                {unreadNotificationCount > 99
+                  ? "99+"
+                  : unreadNotificationCount}
               </span>
             )}
           </Link>
@@ -191,7 +200,8 @@ export default function SellerNavbar() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
                             <AlertDialogDescription className="text-gray-400">
-                              Are you sure you want to log out of your seller account?
+                              Are you sure you want to log out of your seller
+                              account?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

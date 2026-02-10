@@ -53,7 +53,7 @@ const NewListing: React.FC = () => {
       description: "",
       sizes: [],
       releaseDate: "",
-      supplyCapacity: "no-max",
+      supplyCapacity: "no_max",
       quantity: "",
       showBadge: "do_not_show",
       releaseDuration: "",
@@ -129,18 +129,39 @@ const NewListing: React.FC = () => {
         
         const response = listings.find((l) => l.id === editId);
         if (response) {
-          // Safely parse collection items which might be string or array
+          // Safely parse collection items which might be string, array, or object
           let collectionItems: CollectionItem[] = [];
           try {
             if (response.itemsJson) {
-              const items = typeof response.itemsJson === 'string' ? JSON.parse(response.itemsJson) : (Array.isArray(response.itemsJson) ? response.itemsJson : []);
+              let items = response.itemsJson;
+              // Handle string format
+              if (typeof items === 'string') {
+                items = JSON.parse(items);
+              }
+              // Ensure we have an array
+              if (!Array.isArray(items)) {
+                items = [];
+              }
+              // Map items and ensure all required fields are present
               collectionItems = (items as any[]).map((item: any) => ({
-                ...item,
-                images: item.image ? [item.image] : (item.images || [])
+                id: item.id || item.productId || '',
+                title: item.title || '',
+                priceCents: item.priceCents || 0,
+                currency: item.currency || 'NGN',
+                description: item.description || '',
+                category: item.category || '',
+                productId: item.id || item.productId || '',
+                sku: item.sku || '',
+                // Handle images - could be array of strings, array of objects with url property, or single string
+                images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
+                imagesJson: item.imagesJson,
+                sizes: item.sizes || [],
+                colors: item.colors || []
               }));
             }
           } catch (e) {
             console.error('Error parsing collection items:', e);
+            collectionItems = [];
           }
 
           setFormData({
@@ -151,7 +172,7 @@ const NewListing: React.FC = () => {
             description: response.description || "",
             sizes: response.sizesJson || [],
             releaseDate: "",
-            supplyCapacity: response.supplyCapacity === "no_max" ? "no-max" : (response.supplyCapacity || "no-max"),
+            supplyCapacity: response.supplyCapacity === "no_max" ? "no_max" : (response.supplyCapacity || "no_max"),
             quantity: response.quantityAvailable?.toString() || "",
             showBadge: (response.limitedEditionBadge === "show_badge" ? "show_badge" : "do_not_show"),
             releaseDuration: response.releaseDuration || "",
@@ -523,14 +544,16 @@ const handleSubmitSingle = async () => {
       return;
     }
 
-    await createSingleMutation.mutateAsync({
-      sellerId,
-      title: formData.name,
+    if (editId) {
+  await updateListingMutation.mutateAsync({
+    id: editId,
+    title: formData.name,
       description: formData.description,
       category,
       priceCents: Math.round(parseFloat(formData.price) * 100),
       currency: "NGN",
       image: mainImageUrl,
+      images: uploadedImageUrls,
       imagesJson: JSON.stringify(allImages),
       sizes,
       supplyCapacity,
@@ -553,6 +576,40 @@ const handleSubmitSingle = async () => {
       metaDescription: formData.metaDescription || undefined,
       barcode: formData.barcode || undefined,
     });
+  } else {
+
+    await createSingleMutation.mutateAsync({
+      sellerId,
+      title: formData.name,
+      description: formData.description,
+      category,
+      priceCents: Math.round(parseFloat(formData.price) * 100),
+      currency: "NGN",
+      image: mainImageUrl,
+      images: uploadedImageUrls,
+      imagesJson: JSON.stringify(allImages),
+      sizes,
+      supplyCapacity,
+      quantityAvailable: formData.quantity
+        ? parseInt(formData.quantity)
+        : undefined,
+      limitedEditionBadge,
+      releaseDuration,
+      materialComposition: formData.material || formData.material,
+      colorsAvailable,
+      additionalTargetAudience,
+      shippingOption,
+      etaDomestic: formData.domesticDays,
+      etaInternational: formData.internationalDays,
+      refundPolicy: formData.refundPolicy || undefined,
+      videoUrl: formData.videoUrl || undefined,
+      careInstructions: formData.careInstructions || undefined,
+      sku: formData.sku || undefined,
+      slug: formData.slug || undefined,
+      metaDescription: formData.metaDescription || undefined,
+      barcode: formData.barcode || undefined,
+    });
+  }
     
     setIsSubmitting(false);
   } catch (error) {
@@ -562,38 +619,76 @@ const handleSubmitSingle = async () => {
 };
 
 // Helper to convert File objects to Base64 strings for serialization
-const convertCollectionItemsForSubmission = async (items: CollectionItem[]): Promise<CollectionItem[]> => {
+const AVAILABLE_COLORS = [
+  { name: "Black", hex: "#000000" },
+  { name: "White", hex: "#FFFFFF" },
+  { name: "Red", hex: "#FF0000" },
+  { name: "Crimson", hex: "#DC143C" },
+  { name: "Blue", hex: "#0000FF" },
+  { name: "Navy", hex: "#000080" },
+  { name: "Royal Blue", hex: "#4169E1" },
+  { name: "Sky Blue", hex: "#87CEEB" },
+  { name: "Green", hex: "#00AA00" },
+  { name: "Forest Green", hex: "#228B22" },
+  { name: "Lime", hex: "#00FF00" },
+  { name: "Yellow", hex: "#FFFF00" },
+  { name: "Gold", hex: "#FFD700" },
+  { name: "Orange", hex: "#FFA500" },
+  { name: "Purple", hex: "#800080" },
+  { name: "Violet", hex: "#EE82EE" },
+  { name: "Magenta", hex: "#FF00FF" },
+  { name: "Pink", hex: "#FFC0CB" },
+  { name: "Hot Pink", hex: "#FF69B4" },
+  { name: "Brown", hex: "#8B4513" },
+  { name: "Maroon", hex: "#800000" },
+  { name: "Gray", hex: "#808080" },
+  { name: "Silver", hex: "#C0C0C0" },
+  { name: "Slate", hex: "#708090" },
+  { name: "Tan", hex: "#D2B48C" },
+];
+
+const convertCollectionItemsForSubmission = async (items: CollectionItem[]): Promise<any[]> => {
   return Promise.all(
     items.map(async (item) => {
-      if (!item.images || item.images.length === 0) {
-        return item;
+      let convertedImages: string[] = [];
+      
+      if (item.images && item.images.length > 0) {
+        convertedImages = await Promise.all(
+          item.images.map(async (image) => {
+            if (typeof image === 'string') {
+              return image;
+            }
+            if (image instanceof File) {
+              return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const result = reader.result as string;
+                  resolve(result);
+                };
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(image);
+              });
+            }
+            return "";
+          })
+        );
+        convertedImages = convertedImages.filter((img): img is string => img !== "");
       }
 
-      const convertedImages = await Promise.all(
-        item.images.map(async (image) => {
-          // If it's already a string URL, return as-is
-          if (typeof image === 'string') {
-            return image;
-          }
-          // If it's a File object, convert to Base64
-          if (image instanceof File) {
-            return new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                const result = reader.result as string;
-                resolve(result);
-              };
-              reader.onerror = () => reject(reader.error);
-              reader.readAsDataURL(image);
-            });
-          }
-          return undefined;
-        })
-      );
+      const colorsAvailable = item.colors && item.colors.length > 0
+        ? item.colors.map(colorName => {
+            const colorObj = AVAILABLE_COLORS.find(c => c.name === colorName);
+            return {
+              colorName: colorName,
+              colorHex: colorObj?.hex || "#000000",
+            };
+          })
+        : null;
 
       return {
         ...item,
-        images: convertedImages.filter((img): img is string => img !== undefined),
+        images: convertedImages,
+        colorsAvailable: colorsAvailable,
       };
     })
   );
@@ -615,27 +710,36 @@ const handleSubmitCollection = async () => {
         .replace(/^-|-$/g, "");
     }
     
-    await createCollectionMutation.mutateAsync({
+    const collectionData = {
       title: formData.collectionTitle || "",
-      description: formData.collectionDescription,
+      description: formData.collectionDescription || "",
       items: convertedItems,
-      supplyCapacity: formData.supplyCapacity as any,
-      shippingOption: formData.shippingOption as any,
-      etaDomestic: formData.domesticDays ? (formData.domesticDays as any) : undefined,
-      etaInternational: formData.internationalDays ? (formData.internationalDays as any) : undefined,
-      refundPolicy: formData.collectionRefundPolicy as any,
-      sku: formData.collectionSku,
+      supplyCapacity: (formData.supplyCapacity?.toLowerCase().includes("limit") ? "limited" : "no_max") as "no_max" | "limited",
+      shippingOption: (formData.shippingOption || "local") as "local" | "international" | "both",
+      etaDomestic: formData.domesticDays || "",
+      etaInternational: formData.internationalDays || "",
+      refundPolicy: (formData.collectionRefundPolicy || "") as "no_refunds" | "48hrs" | "30days" | "60days" | "store_credit" | "",
+      sku: formData.collectionSku || "",
       slug: collectionSlug,
-      metaDescription: formData.collectionMetaDescription,
-      barcode: formData.collectionBarcode,
-      videoUrl: formData.collectionVideoUrl,
-      careInstructions: formData.collectionCareInstructions,
-    });
+      metaDescription: formData.collectionMetaDescription || "",
+      barcode: formData.collectionBarcode || "",
+      videoUrl: formData.collectionVideoUrl || "",
+      careInstructions: formData.collectionCareInstructions || "",
+    };
+    
+    if (editId) {
+      await updateCollectionMutation.mutateAsync({
+        id: editId,
+        ...collectionData,
+      });
+    } else {
+      await createCollectionMutation.mutateAsync(collectionData);
+    }
     
     setIsSubmitting(false);
   } catch (error) {
     setIsSubmitting(false);
-    toastSvc.error("Failed to create collection");
+    toastSvc.error(editId ? "Failed to update collection" : "Failed to create collection");
   }
 };
 
@@ -679,6 +783,31 @@ const handleSubmitCollection = async () => {
     },
   });
 
+  const updateListingMutation = (trpc.listing as any).updateListing.useMutation({
+  onSuccess: () => {
+    toastSvc.success("Listing updated successfully!");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    setShowSuccessModal(true);
+  },
+  onError: (error: any) => {
+    try {
+      const errorData = JSON.parse(error.message);
+      if (Array.isArray(errorData)) {
+        errorData.forEach((err: any) => {
+          const fieldName = err.path?.[0] || "Field";
+          toastSvc.error(`${fieldName}: ${err.message}`);
+        });
+      } else {
+        toastSvc.error(error.message || "Failed to update listing");
+      }
+    } catch {
+      toastSvc.error(error.message || "Failed to update listing");
+    }
+  },
+});
+
   const createCollectionMutation = (
     trpc.listing as any
   ).createCollection.useMutation({
@@ -703,6 +832,34 @@ const handleSubmitCollection = async () => {
         }
       } catch {
         toastSvc.error(error.message || "Failed to create collection");
+      }
+    },
+  });
+
+  const updateCollectionMutation = (
+    trpc.listing as any
+  ).updateCollection.useMutation({
+    onSuccess: () => {
+      toastSvc.success("Collection updated successfully!");
+      // Clear saved form data after successful submission
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      setShowSuccessModal(true);
+    },
+    onError: (error: any) => {
+      try {
+        const errorData = JSON.parse(error.message);
+        if (Array.isArray(errorData)) {
+          errorData.forEach((err: any) => {
+            const fieldName = err.path?.[0] || "Field";
+            toastSvc.error(`${fieldName}: ${err.message}`);
+          });
+        } else {
+          toastSvc.error(error.message || "Failed to update collection");
+        }
+      } catch {
+        toastSvc.error(error.message || "Failed to update collection");
       }
     },
   });
@@ -779,6 +936,10 @@ const handleSubmitCollection = async () => {
     videoUrl={formData.collectionVideoUrl || ""}
     careInstructions={formData.collectionCareInstructions || ""}
     refundPolicy={formData.collectionRefundPolicy || ""}
+    supplyCapacity={formData.supplyCapacity || ""}
+    shippingOption={formData.shippingOption || ""}
+    etaDomestic={formData.domesticDays || ""}
+    etaInternational={formData.internationalDays || ""}
     items={formData.collectionItems || []}
     onTitleChange={(title) =>
       handleFormChange({ collectionTitle: title })
@@ -798,6 +959,18 @@ const handleSubmitCollection = async () => {
     }
     onRefundPolicyChange={(refundPolicy) =>
       handleFormChange({ collectionRefundPolicy: refundPolicy })
+    }
+    onSupplyCapacityChange={(supplyCapacity) =>
+      handleFormChange({ supplyCapacity })
+    }
+    onShippingOptionChange={(shippingOption) =>
+      handleFormChange({ shippingOption })
+    }
+    onEtaDomesticChange={(domesticDays) =>
+      handleFormChange({ domesticDays })
+    }
+    onEtaInternationalChange={(internationalDays) =>
+      handleFormChange({ internationalDays })
     }
     onItemsChange={(items) =>
       handleFormChange({ collectionItems: items })

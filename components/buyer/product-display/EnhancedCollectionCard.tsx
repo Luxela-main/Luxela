@@ -1,10 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Listing } from '@/types/listing';
 import { ArrowRight, Grid, Star, CheckCircle } from 'lucide-react';
 import { Button } from '../../ui/button';
+
+const UI_COLOR_MAP: { [key: string]: string } = {
+  red: '#ef4444',
+  green: '#22c55e',
+  blue: '#3b82f6',
+  yellow: '#eab308',
+  pink: '#ec4899',
+  purple: '#a855f7',
+  orange: '#f97316',
+  black: '#000000',
+  white: '#ffffff',
+  brown: '#78350f',
+  gray: '#6b7280',
+};
 
 interface EnhancedCollectionCardProps {
   collection: any;
@@ -17,17 +31,45 @@ export default function EnhancedCollectionCard({
 }: EnhancedCollectionCardProps) {
   const [imageIndex, setImageIndex] = useState(0);
 
+  // Handle both collection.items (from trpc) and collection.items_json (legacy)
   let collectionItems: Listing[] = [];
-  try {
-    collectionItems = collection.items_json
-      ? JSON.parse(collection.items_json)
-      : [];
-  } catch (e) {
-    console.error('Error parsing items_json:', e);
+  let productCount = 0;
+
+  // First priority: items array from backend (from trpc getApprovedCollections)
+  if (Array.isArray(collection.items) && collection.items.length > 0) {
+    collectionItems = collection.items;
+    productCount = collectionItems.length;
+  }
+  // Second priority: collectionItemCount directly
+  else if (typeof collection.collectionItemCount === 'number' && collection.collectionItemCount > 0) {
+    productCount = collection.collectionItemCount;
+  }
+  // Third priority: itemCount for backward compatibility
+  else if (typeof collection.itemCount === 'number' && collection.itemCount > 0) {
+    productCount = collection.itemCount;
+  }
+  // Fallback to items_json
+  else if (collection.items_json) {
+    try {
+      collectionItems = JSON.parse(collection.items_json);
+      productCount = collectionItems.length;
+    } catch (e) {
+      console.error('Error parsing items_json:', e);
+      productCount = 0;
+    }
+  }
+  // Final fallback to itemsJson
+  else if (collection.itemsJson) {
+    try {
+      collectionItems = JSON.parse(collection.itemsJson);
+      productCount = collectionItems.length;
+    } catch (e) {
+      console.error('Error parsing itemsJson:', e);
+      productCount = 0;
+    }
   }
 
-  const brand = collection.sellers?.seller_business?.[0];
-  const productCount = collectionItems.length;
+  const brand = collection.sellers?.seller_business?.[0] || collection.sellerName;
   const avgRating =
     productCount > 0
       ? (
@@ -35,6 +77,116 @@ export default function EnhancedCollectionCard({
           productCount
         ).toFixed(1)
       : 0;
+
+  // Extract the first image from collection
+  const collectionImage = useMemo(() => {
+    console.log('[EnhancedCollectionCard] Getting image for collection:', {
+      id: collection.id,
+      title: collection.title,
+      type: collection.type,
+      hasImagesJson: !!collection.imagesJson,
+      imagesJsonLength: collection.imagesJson ? collection.imagesJson.length : 0,
+      hasImage: !!collection.image,
+      hasCollectionProducts: !!collection.collectionProducts,
+      collectionProductsLength: collection.collectionProducts?.length || 0,
+    });
+    
+    // First priority: parse imagesJson array
+    if (collection.imagesJson) {
+      try {
+        const images = typeof collection.imagesJson === 'string' 
+          ? JSON.parse(collection.imagesJson)
+          : collection.imagesJson;
+        console.log('[EnhancedCollectionCard] Parsed images:', images);
+        if (Array.isArray(images) && images.length > 0) {
+          console.log('[EnhancedCollectionCard] Using first image from imagesJson:', images[0]);
+          return images[0];
+        }
+      } catch (e) {
+        console.warn('Error parsing imagesJson:', e, collection.imagesJson);
+      }
+    }
+    // Second priority: collection.image field
+    if (collection.image) {
+      console.log('[EnhancedCollectionCard] Using collection.image:', collection.image);
+      return collection.image;
+    }
+    // Third priority: first product image from collectionProducts
+    if (collection.collectionProducts && collection.collectionProducts.length > 0) {
+      const firstProduct = collection.collectionProducts[0];
+      if (firstProduct.images && firstProduct.images.length > 0) {
+        console.log('[EnhancedCollectionCard] Using first product image:', firstProduct.images[0]);
+        return firstProduct.images[0];
+      }
+    }
+    // Fallback to placeholder
+    console.log('[EnhancedCollectionCard] Using placeholder image');
+    return '/images/baz1.svg';
+  }, [collection]);
+
+  // Extract unique colors from collection items
+  const collectionColors = useMemo(() => {
+    const colorSet = new Map<string, { colorName: string; colorHex: string }>();
+    console.log('[EnhancedCollectionCard] Collection data:', { collection, collectionItems: collectionItems.length });
+    console.log('[EnhancedCollectionCard] Extracting colors from items:', collectionItems);
+    collectionItems.forEach((item: any, idx: number) => {
+      console.log(`[EnhancedCollectionCard] Item ${idx}:`, { 
+        title: item.title, 
+        colorsAvailable: item.colorsAvailable,
+        colors_available: item.colors_available,
+        colors: item.colors,
+        listingColorsAvailable: item.listingColorsAvailable,
+        allKeys: Object.keys(item)
+      });
+      try {
+        // Try multiple possible field names
+        const colorsSource = item.colorsAvailable || item.colors_available || item.colors || item.listingColorsAvailable;
+        console.log(`[EnhancedCollectionCard] Item ${idx} colorsSource:`, colorsSource);
+        if (!colorsSource) return;
+        
+        // Parse if it's a string (JSON)
+        let colors = colorsSource;
+        if (typeof colorsSource === 'string') {
+          try {
+            colors = JSON.parse(colorsSource);
+          } catch (e) {
+            // If JSON parsing fails, treat it as a plain string color name
+            colors = [{ colorName: colorsSource, colorHex: '#cccccc' }];
+          }
+        }
+        
+        // Handle array of colors
+        if (Array.isArray(colors)) {
+          colors.forEach((color: any) => {
+            // Handle both object format {colorName, colorHex} and string format
+            if (typeof color === 'string') {
+              // Simple string color name
+              if (!colorSet.has(color)) {
+                colorSet.set(color, { colorName: color, colorHex: '#cccccc' });
+              }
+            } else if (color && (color.colorHex || color.hex)) {
+              const hex = color.colorHex || color.hex;
+              const name = color.colorName || color.name || hex;
+              if (!colorSet.has(hex)) {
+                colorSet.set(hex, { colorName: name, colorHex: hex });
+              }
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Error extracting colors from item:', e);
+        // Skip colors that can't be parsed
+      }
+    });
+    const extractedColors = Array.from(colorSet.values()).slice(0, 5);
+    console.log('[EnhancedCollectionCard] Extracted colors:', extractedColors);
+    return extractedColors;
+  }, [collectionItems]);
+
+  // Calculate total price from collection
+  const totalPriceCents = collection.totalPriceCents || collection.totalPrice || 0;
+  const totalPrice = totalPriceCents / 100; // Convert from cents to decimal
+  const formattedPrice = totalPrice > 0 ? `NGN ${totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Price pending';
 
   const getBadgeText = (collection: any) => {
     if (collection.limited_edition_badge === 'show_badge')
@@ -52,7 +204,7 @@ export default function EnhancedCollectionCard({
         <div className="relative aspect-video md:aspect-auto md:h-96 rounded-2xl overflow-hidden">
           {/* Background Image */}
           <img
-            src={collection.image || '/images/baz1.svg'}
+            src={collectionImage}
             alt={collection.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
           />
@@ -111,9 +263,9 @@ export default function EnhancedCollectionCard({
     <Link href={`/buyer/collection/${collection.id}`} className="block group">
       <div className="relative rounded-xl overflow-hidden transition-all duration-300 h-full flex flex-col border border-purple-900/30 hover:border-purple-900/60 shadow-lg shadow-black/50 hover:shadow-purple-900/30 bg-gradient-to-br from-[#0f0f0f] to-[#1a1a1a]">
         {/* Image Section */}
-        <div className="relative aspect-square md:aspect-video bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] overflow-hidden flex-shrink-0 mb-4">
+        <div className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] overflow-hidden flex-shrink-0 mb-4" style={{ aspectRatio: '1 / 1', minHeight: '240px' }}>
           <img
-            src={collection.image || '/images/baz1.svg'}
+            src={collectionImage}
             alt={collection.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
@@ -172,6 +324,55 @@ export default function EnhancedCollectionCard({
             <p className="text-purple-300/60 text-[11px] line-clamp-1 mb-3">
               {collection.description}
             </p>
+          )}
+
+          {/* Color Swatches */}
+          {collectionColors.length > 0 && (
+            <div className="mb-3 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-500/20">
+              <div className="flex items-center -space-x-1">
+                {collectionColors.slice(0, 4).map((color: any, i: number) => {
+                  const name = color.colorName?.toLowerCase().trim() || '';
+                  const hexFromDb = color.colorHex?.startsWith('#')
+                    ? color.colorHex
+                    : null;
+                  const hexFromMap = UI_COLOR_MAP[name];
+                  const finalColor = hexFromDb || hexFromMap;
+
+                  return (
+                    <div
+                      key={`${i}-${color.colorHex}`}
+                      title={color.colorName}
+                      className={`flex items-center justify-center rounded-full border-2 shadow-sm transition-transform hover:z-10 hover:scale-125 ${
+                        finalColor ? 'w-4 h-4' : 'w-5 h-5 bg-zinc-800'
+                      }`}
+                      style={{
+                        backgroundColor: finalColor || undefined,
+                        borderColor: '#8451E160',
+                      }}
+                    >
+                      {!finalColor && (
+                        <span className="text-[7px] text-white font-bold uppercase">
+                          {name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+                {collectionColors.length > 4 && (
+                  <span className="text-[8px] text-gray-500 pl-1.5 flex items-center">
+                    +{collectionColors.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Price Display */}
+          {totalPrice > 0 && (
+            <div className="mb-3 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/40">
+              <p className="text-purple-300/70 text-[10px] uppercase tracking-wide mb-1">Total Collection</p>
+              <p className="text-white font-bold text-sm">{formattedPrice}</p>
+            </div>
           )}
 
           {/* Stats Row */}

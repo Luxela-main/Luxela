@@ -27,10 +27,26 @@ export default function Navbar() {
   useEffect(() => {
     const handleScroll = () => {
       setSticky(window.scrollY > 10);
+      // Close mobile menu when scrolling
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [mobileMenuOpen]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <nav
@@ -144,7 +160,7 @@ export default function Navbar() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 80, damping: 20 }}
-            className="lg:hidden fixed inset-0 bg-[#0E0E0E] z-50 flex flex-col px-6 py-6"
+            className="lg:hidden fixed inset-0 bg-[#0E0E0E]/75 backdrop-blur-md z-50 flex flex-col px-6 py-6"
             role="dialog"
             aria-modal="true"
           >

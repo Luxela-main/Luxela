@@ -1,11 +1,16 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { db } from '../db';
-import { supportTickets, supportTicketReplies, sellers, notifications, users, buyers } from '../db/schema';
+import { supportTickets, supportTicketReplies, sellers, notifications, users, buyers, buyerNotifications, sellerNotifications } from '../db/schema';
 import { and, eq, or, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from 'uuid';
 import { sendSupportTicketEmail } from '../services/emailService';
+import {
+  notifyTicketReplied,
+  notifyTicketStatusChanged,
+} from '../services/buyerNotificationService';
+import { createSellerNotification } from '../services/notificationManager';
 
 const TicketStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'closed']);
 const TicketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
@@ -120,6 +125,58 @@ export const supportRouter = createTRPCRouter({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Failed to create ticket - no result returned',
           });
+        }
+
+        // Create notification for buyer
+        try {
+          await db.insert(buyerNotifications).values({
+            id: uuidv4(),
+            buyerId: buyerId,
+            type: 'ticket_created' as any,
+            title: 'Support Ticket Created',
+            message: `Your support ticket "${input.subject}" has been created and is awaiting response.`,
+            relatedEntityId: ticket.id,
+            relatedEntityType: 'ticket',
+            actionUrl: `/buyer/dashboard/support-tickets/${ticket.id}`,
+            isRead: false,
+            metadata: {
+              notificationType: 'ticket_created',
+              ticketId: ticket.id,
+              ticketSubject: input.subject,
+              category: input.category,
+            },
+            createdAt: now,
+            updatedAt: now,
+          });
+        } catch (notifErr) {
+          console.error('Failed to create ticket notification:', notifErr);
+        }
+
+        // Create admin notification for new support ticket
+        try {
+          const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+          
+          for (const admin of adminUsers) {
+            await createSellerNotification({
+              sellerId: 'admin-' + admin.id,
+              type: 'ticket_created',
+              title: 'New Support Ticket',
+              message: `New support ticket: "${input.subject}" (${input.priority || 'medium'} priority)`,
+              severity: (input.priority || 'medium') === 'urgent' ? 'critical' : (input.priority || 'medium') === 'high' ? 'warning' : 'info',
+              relatedEntityId: ticket.id,
+              relatedEntityType: 'ticket',
+              actionUrl: `/admin/support-tickets/${ticket.id}`,
+              metadata: {
+                notificationType: 'ticket_created',
+                ticketId: ticket.id,
+                ticketSubject: input.subject,
+                category: input.category,
+                priority: input.priority || 'medium',
+              },
+            });
+          }
+        } catch (adminNotifErr) {
+          console.error('[Support] Failed to create admin ticket notification:', adminNotifErr);
         }
 
         return {
@@ -588,6 +645,32 @@ export const supportRouter = createTRPCRouter({
         .returning();
 
       const t = result[0];
+
+      // Notify assigned seller if ticket is closed
+      if (ticket[0].assignedTo) {
+        try {
+          await createSellerNotification({
+            sellerId: ticket[0].assignedTo,
+            type: 'ticket_status_changed',
+            title: 'Ticket Closed',
+            message: `Support ticket "${ticket[0].subject}" has been closed.`,
+            severity: 'info',
+            relatedEntityId: input.ticketId,
+            relatedEntityType: 'ticket',
+            actionUrl: `/sellers/support-tickets/${input.ticketId}`,
+            metadata: {
+              notificationType: 'ticket_status_changed',
+              ticketId: input.ticketId,
+              oldStatus: ticket[0].status,
+              newStatus: 'closed',
+              ticketSubject: ticket[0].subject,
+            },
+          });
+        } catch (err) {
+          console.error('[Support] Failed to notify seller of ticket closure:', err);
+        }
+      }
+
       return {
         id: t.id,
         buyerId: t.buyerId,
@@ -712,6 +795,20 @@ export const supportRouter = createTRPCRouter({
 
       await db.update(supportTickets).set({ updatedAt: now }).where(eq(supportTickets.id, input.ticketId));
 
+      // Notify buyer if seller/admin replied
+      if ((senderRole === 'seller' || senderRole === 'admin') && ticket[0].buyerId) {
+        try {
+          await notifyTicketReplied(
+            ticket[0].buyerId,
+            input.ticketId,
+            ticket[0].subject,
+            input.message
+          );
+        } catch (notifErr) {
+          console.error('[Support] Failed to notify buyer of ticket reply:', notifErr);
+        }
+      }
+
       if (isBuyer && ticket[0].assignedTo) {
         const assignedSeller = await db.select().from(sellers).where(eq(sellers.id, ticket[0].assignedTo));
         if (assignedSeller[0]) {
@@ -725,6 +822,32 @@ export const supportRouter = createTRPCRouter({
               replyMessage: input.message,
               senderName: 'Customer',
             }).catch(err => console.error('Email notification failed:', err));
+            
+            // Create in-app notification for seller
+            try {
+              await db.insert(sellerNotifications).values({
+                id: uuidv4(),
+                sellerId: assignedSeller[0].id,
+                type: 'ticket_reply' as any,
+                title: 'Support Ticket Reply',
+                message: `Customer replied to your ticket: "${ticket[0].subject}"`,
+                severity: 'info' as any,
+                relatedEntityId: input.ticketId,
+                relatedEntityType: 'ticket',
+                actionUrl: `/sellers/support-tickets/${input.ticketId}`,
+                isRead: false,
+                metadata: {
+                  notificationType: 'ticket_reply',
+                  ticketId: input.ticketId,
+                  replyId: replyId,
+                  senderRole: 'buyer',
+                },
+                createdAt: now,
+                updatedAt: now,
+              });
+            } catch (notifErr) {
+              console.error('Failed to create seller notification:', notifErr);
+            }
           }
         }
       } else if (isAssignedSeller && ticket[0].buyerId) {
@@ -732,6 +855,7 @@ export const supportRouter = createTRPCRouter({
         if (buyer[0]) {
           const buyerUser = await db.select().from(users).where(eq(users.id, buyer[0].userId));
           if (buyerUser[0]) {
+            // Send email notification
             await sendSupportTicketEmail({
               type: 'ticket_reply',
               recipientEmail: buyerUser[0].email,
@@ -741,6 +865,31 @@ export const supportRouter = createTRPCRouter({
               senderName: 'Support Agent',
             }).catch(err => console.error('Email notification failed:', err));
           }
+          
+          // Create in-app notification for buyer
+          try {
+            await db.insert(buyerNotifications).values({
+              id: uuidv4(),
+              buyerId: buyer[0].id,
+              type: 'ticket_reply' as any,
+              title: 'Support Ticket Reply',
+              message: `Brand Contact replied to your ticket: "${ticket[0].subject}"`,
+              relatedEntityId: input.ticketId,
+              relatedEntityType: 'ticket',
+              actionUrl: `/buyer/dashboard/support-tickets/${input.ticketId}`,
+              isRead: false,
+              metadata: {
+                notificationType: 'ticket_reply',
+                ticketId: input.ticketId,
+                replyId: replyId,
+                senderRole: 'seller',
+              },
+              createdAt: now,
+              updatedAt: now,
+            });
+          } catch (notifErr) {
+            console.error('Failed to create buyer notification:', notifErr);
+          }
         }
       } else if (isAdmin && ticket[0].buyerId) {
         // Admin reply - send email to the buyer
@@ -748,6 +897,7 @@ export const supportRouter = createTRPCRouter({
         if (buyer[0]) {
           const buyerUser = await db.select().from(users).where(eq(users.id, buyer[0].userId));
           if (buyerUser[0]) {
+            // Send email notification
             await sendSupportTicketEmail({
               type: 'ticket_reply',
               recipientEmail: buyerUser[0].email,
@@ -756,6 +906,55 @@ export const supportRouter = createTRPCRouter({
               replyMessage: input.message,
               senderName: 'Admin Support',
             }).catch(err => console.error('Email notification failed:', err));
+          }
+          
+          // Create in-app notification for buyer
+          try {
+            await db.insert(buyerNotifications).values({
+              id: uuidv4(),
+              buyerId: buyer[0].id,
+              type: 'ticket_reply' as any,
+              title: 'Admin Support Reply',
+              message: `Admin replied to your ticket: "${ticket[0].subject}"`,
+              relatedEntityId: input.ticketId,
+              relatedEntityType: 'ticket',
+              actionUrl: `/buyer/dashboard/support-tickets/${input.ticketId}`,
+              isRead: false,
+              metadata: {
+                notificationType: 'ticket_reply',
+                ticketId: input.ticketId,
+                replyId: replyId,
+                senderRole: 'admin',
+              },
+              createdAt: now,
+              updatedAt: now,
+            });
+          } catch (notifErr) {
+            console.error('Failed to create buyer notification:', notifErr);
+          }
+        }
+
+        // Notify assigned seller if admin replied to a ticket
+        if (ticket[0].assignedTo) {
+          try {
+            await createSellerNotification({
+              sellerId: ticket[0].assignedTo,
+              type: 'ticket_reply',
+              title: 'Admin Reply on Ticket',
+              message: `Admin replied to ticket: "${ticket[0].subject}"`,
+              severity: 'info',
+              relatedEntityId: input.ticketId,
+              relatedEntityType: 'ticket',
+              actionUrl: `/sellers/support-tickets/${input.ticketId}`,
+              metadata: {
+                notificationType: 'ticket_reply',
+                ticketId: input.ticketId,
+                replyId: replyId,
+                senderRole: 'admin',
+              },
+            });
+          } catch (err) {
+            console.error('[Support] Failed to notify seller of admin reply:', err);
           }
         }
       }

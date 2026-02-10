@@ -18,9 +18,9 @@ function getAuthClient(): SupabaseClient {
     auth: { persistSession: false },
     global: {
       fetch: ((url: string | Request, options?: RequestInit) => {
-        // Add a timeout to fetch requests
+        // Reduced timeout from 60s to 10s - fail fast to prevent request timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased from 30s to 60s
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         return fetch(url, { ...options, signal: controller.signal })
           .finally(() => clearTimeout(timeoutId));
       }) as any,
@@ -36,9 +36,9 @@ function getAdminClient(): SupabaseClient {
     auth: { persistSession: false },
     global: {
       fetch: ((url: string | Request, options?: RequestInit) => {
-        // Add a timeout to fetch requests
+        // Reduced timeout from 60s to 10s - fail fast to prevent request timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased from 30s to 60s
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         return fetch(url, { ...options, signal: controller.signal })
           .finally(() => clearTimeout(timeoutId));
       }) as any,
@@ -166,7 +166,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
       const isDOMException = err instanceof Error && (err as any).name === "DOMException";
       
       if (isAbortError || isDOMException) {
-        console.warn("[AUTH_TIMEOUT] Supabase auth request aborted (60s timeout)", {
+        console.warn("[AUTH_TIMEOUT] Supabase auth request aborted (10s timeout)", {
           errorName: (err as Error).name,
           errorMessage: errorMessage,
           timestamp: new Date().toISOString(),

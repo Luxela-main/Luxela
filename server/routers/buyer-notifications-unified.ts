@@ -7,6 +7,7 @@ import {
   listings,
   reviews,
   disputes,
+  buyerFavorites,
 } from '../db/schema';
 import { and, eq, gt, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -22,7 +23,7 @@ async function generateAndStoreBuyerNotifications(
   const now = new Date();
 
   try {
-    // 1. Check for order updates
+    // Check for order updates
     const buyerOrders = await db
       .select()
       .from(orders)
@@ -69,13 +70,14 @@ async function generateAndStoreBuyerNotifications(
         .limit(1);
 
       if (existing.length === 0 && message) {
-        await db.insert(buyerNotifications).values({
-          buyerId,
-          type: notifType as any,
-          title,
-          message,
-          relatedEntityId: order.id,
-          relatedEntityType: 'order',
+        try {
+          await db.insert(buyerNotifications).values({
+            buyerId,
+            type: notifType as any,
+            title,
+            message,
+            relatedEntityId: order.id,
+            relatedEntityType: 'order',
           actionUrl: `/buyer/orders/${order.id}`,
           isRead: false,
           metadata: {
@@ -86,17 +88,135 @@ async function generateAndStoreBuyerNotifications(
             currency: order.currency,
             severity,
           },
-        });
+          });
+        } catch (notifError: any) {
+          console.error(`Failed to create order notification for buyer ${buyerId}:`, notifError.message);
+          if (notifError.message?.includes('invalid input value for enum')) {
+            console.error('ENUM ERROR: notification_category enum value might not be in database yet');
+          }
+        }
       }
     }
 
-    // 2. Check for reviews on purchased items - SKIPPED: Not enough data from schema
-    // Would need to implement once buyer/listing relations are clearer
+    // Check for reviews posted by this buyer
+    const buyerReviews = await db
+      .select()
+      .from(reviews)
+      .where(eq(reviews.buyerId, buyerId))
+      .limit(100);
 
-    // 3. Check for price drops on favorited listings - SKIPPED: Schema doesn't have salePrice/originalPrice
-    // Would implement once pricing fields are added to listings schema
+    for (const review of buyerReviews) {
+      const existing = await db
+        .select()
+        .from(buyerNotifications)
+        .where(and(
+          eq(buyerNotifications.buyerId, buyerId),
+          eq(buyerNotifications.relatedEntityId, review.id),
+          sql`${buyerNotifications.metadata}->>'notificationType' = 'review_posted'`
+        ))
+        .limit(1);
 
-    // 4. Check for new disputes
+      if (existing.length === 0) {
+        // Get listing title for context
+        const listing = await db
+          .select({ title: listings.title })
+          .from(listings)
+          .where(eq(listings.id, review.listingId))
+          .limit(1);
+
+        const listingTitle = listing[0]?.title || 'Item';
+
+        try {
+          await db.insert(buyerNotifications).values({
+            buyerId,
+            type: 'new_review' as any,
+            title: 'Review Posted',
+            message: `Your ${review.rating}-star review on "${listingTitle}" has been posted successfully!`,
+            relatedEntityId: review.id,
+            relatedEntityType: 'review',
+            actionUrl: `/buyer/listings/${review.listingId}`,
+            isRead: false,
+            metadata: {
+              notificationType: 'review_posted',
+              reviewId: review.id,
+              listingId: review.listingId,
+              rating: review.rating,
+              preview: review.comment ? review.comment.substring(0, 100) : '',
+            },
+          });
+        } catch (notifError: any) {
+          console.error(`Failed to create review notification for buyer ${buyerId}:`, notifError.message);
+          // Log enum error details for debugging
+          if (notifError.message?.includes('invalid input value for enum')) {
+            console.error('ENUM ERROR: notification_category enum value might not be in database yet');
+            console.error('Please run: npx ts-node migrations/add-all-missing-notification-categories.ts');
+          }
+          // Don't throw - continue processing other notifications
+        }
+      }
+    }
+
+    // Check for price drops on favorited listings
+    const buyerFavoritesList = await db
+      .select()
+      .from(buyerFavorites)
+      .where(eq(buyerFavorites.buyerId, buyerId))
+      .limit(100);
+
+    for (const favorite of buyerFavoritesList) {
+      const listing = await db
+        .select({
+          title: listings.title,
+          priceCents: listings.priceCents,
+        })
+        .from(listings)
+        .where(eq(listings.id, favorite.listingId))
+        .limit(1);
+
+      if (listing[0]) {
+        const currentPrice = (listing[0].priceCents ?? 0) / 100;
+        const listingTitle = listing[0].title || 'Item';
+
+        // Check if we already have a price drop notification for this favorite
+        const existing = await db
+          .select()
+          .from(buyerNotifications)
+          .where(and(
+            eq(buyerNotifications.buyerId, buyerId),
+            eq(buyerNotifications.relatedEntityId, favorite.listingId),
+            sql`${buyerNotifications.metadata}->>'notificationType' = 'price_drop'`
+          ))
+          .limit(1);
+
+        if (existing.length === 0 && currentPrice > 0) {
+          try {
+            await db.insert(buyerNotifications).values({
+            buyerId,
+            type: 'price_drop' as any,
+            title: 'Price Alert!',
+            message: `"${listingTitle}" is now available at NGN ${currentPrice.toLocaleString()}!`,
+            relatedEntityId: favorite.listingId,
+            relatedEntityType: 'listing',
+            actionUrl: `/buyer/listings/${favorite.listingId}`,
+            isRead: false,
+            metadata: {
+              notificationType: 'price_drop',
+              listingId: favorite.listingId,
+              currentPrice,
+              listingTitle,
+            },
+          });
+          } catch (notifError: any) {
+            console.error(`Failed to create price drop notification for buyer ${buyerId}:`, notifError.message);
+            if (notifError.message?.includes('invalid input value for enum')) {
+              console.error('ENUM ERROR: notification_category enum value might not be in database yet');
+            }
+          }
+        }
+      }
+    }
+
+    // Check for new disputes
     const buyerDisputes = await db
       .select()
       .from(disputes)
@@ -136,7 +256,8 @@ async function generateAndStoreBuyerNotifications(
         }
 
         if (message) {
-          await db.insert(buyerNotifications).values({
+          try {
+            await db.insert(buyerNotifications).values({
             buyerId,
             type: 'dispute_alert' as any,
             title,
@@ -152,11 +273,17 @@ async function generateAndStoreBuyerNotifications(
               subject: dispute.subject,
             },
           });
+          } catch (notifError: any) {
+            console.error(`Failed to create dispute notification for buyer ${buyerId}:`, notifError.message);
+            if (notifError.message?.includes('invalid input value for enum')) {
+              console.error('ENUM ERROR: notification_category enum value might not be in database yet');
+            }
+          }
         }
       }
     }
 
-    // 5. Back in stock notifications - SKIPPED: Schema doesn't have quantity/isActive fields
+    // Back in stock notifications - SKIPPED: Schema doesn't have quantity/isActive fields
     // Would implement once inventory fields are added to listings schema
   } catch (error) {
     console.error('Error generating buyer notifications:', error);
@@ -168,7 +295,7 @@ export const buyerNotificationsRouter = createTRPCRouter({
    * Get all notifications for buyer with real-time support via polling
    * UNIFIED endpoint replacing buyer-notifications.ts, buyer-notifications-queries.ts, buyer-notifications-persistent.ts
    */
-  getNotifications: protectedProcedure
+  getAll: protectedProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -220,22 +347,22 @@ export const buyerNotificationsRouter = createTRPCRouter({
 
       // Get total count
       const totalResult = await db
-        .select({ count: sql<number>`count(*)` })
+        .select({ count: sql<number>`count(*)::integer` })
         .from(buyerNotifications)
         .where(and(...conditions));
 
-      const total = totalResult[0]?.count ?? 0;
+      const total = Number(totalResult[0]?.count ?? 0);
 
       // Get unread count
       const unreadResult = await db
-        .select({ count: sql<number>`count(*)` })
+        .select({ count: sql<number>`count(*)::integer` })
         .from(buyerNotifications)
         .where(and(
           eq(buyerNotifications.buyerId, buyer.id),
           eq(buyerNotifications.isRead, false)
         ));
 
-      const unreadCount = unreadResult[0]?.count ?? 0;
+      const unreadCount = Number(unreadResult[0]?.count ?? 0);
 
       // Get paginated notifications
       const notifs = await db
@@ -245,6 +372,82 @@ export const buyerNotificationsRouter = createTRPCRouter({
         .orderBy(desc(buyerNotifications.createdAt))
         .limit(input.limit)
         .offset(input.offset);
+
+      return {
+        notifications: notifs.map((n) => ({
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          relatedEntityId: n.relatedEntityId,
+          relatedEntityType: n.relatedEntityType,
+          actionUrl: n.actionUrl,
+          isRead: n.isRead,
+          isStarred: n.isStarred,
+          createdAt: n.createdAt.toISOString(),
+          metadata: n.metadata,
+        })),
+        total,
+        unreadCount,
+      };
+    }),
+
+  /**
+   * Get paginated notifications (alias for getAll for consistency)
+   */
+  getNotifications: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+      }
+
+      const buyer = await db.query.buyers.findFirst({
+        where: eq(buyers.userId, userId),
+      });
+
+      if (!buyer) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a buyer',
+        });
+      }
+
+      // Generate fresh notifications
+      generateAndStoreBuyerNotifications(buyer.id).catch((err) =>
+        console.error('Error generating notifications:', err)
+      );
+
+      const notifs = await db
+        .select()
+        .from(buyerNotifications)
+        .where(eq(buyerNotifications.buyerId, buyer.id))
+        .orderBy(desc(buyerNotifications.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)::integer` })
+        .from(buyerNotifications)
+        .where(eq(buyerNotifications.buyerId, buyer.id));
+
+      const total = Number(totalResult[0]?.count ?? 0);
+
+      const unreadResult = await db
+        .select({ count: sql<number>`count(*)::integer` })
+        .from(buyerNotifications)
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          eq(buyerNotifications.isRead, false)
+        ));
+
+      const unreadCount = Number(unreadResult[0]?.count ?? 0);
 
       return {
         notifications: notifs.map((n) => ({
@@ -279,32 +482,39 @@ export const buyerNotificationsRouter = createTRPCRouter({
     })
     .output(z.object({ count: z.number() }))
     .query(async ({ ctx }) => {
-      const userId = ctx.user?.id;
-      if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      }
+      try {
+        const userId = ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+        }
 
-      const buyer = await db.query.buyers.findFirst({
-        where: eq(buyers.userId, userId),
-      });
-
-      if (!buyer) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Not a buyer',
+        const buyer = await db.query.buyers.findFirst({
+          where: eq(buyers.userId, userId),
         });
+
+        if (!buyer) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not a buyer',
+          });
+        }
+
+        // Use a simpler count query without cast
+        const result = await db
+          .select({ count: sql<number>`count(*)::integer` })
+          .from(buyerNotifications)
+          .where(and(
+            eq(buyerNotifications.buyerId, buyer.id),
+            eq(buyerNotifications.isRead, false)
+          ));
+
+        const count = Number(result[0]?.count ?? 0);
+        return { count };
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+        // Fallback: return 0 instead of throwing error
+        return { count: 0 };
       }
-
-      const result = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(buyerNotifications)
-        .where(and(
-          eq(buyerNotifications.buyerId, buyer.id),
-          eq(buyerNotifications.isRead, false)
-        ));
-
-      const count = result[0]?.count ?? 0;
-      return { count };
     }),
 
   /**
@@ -584,6 +794,117 @@ export const buyerNotificationsRouter = createTRPCRouter({
       await db
         .delete(buyerNotifications)
         .where(eq(buyerNotifications.id, input.notificationId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Get favorited/starred notifications
+   */
+  getFavorited: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/buyer/notifications/favorited',
+        tags: ['Buyer Notifications'],
+        summary: 'Get starred/favorited notifications',
+      },
+    })
+    .input(
+      z.object({
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+      }
+
+      const buyer = await db.query.buyers.findFirst({
+        where: eq(buyers.userId, userId),
+      });
+
+      if (!buyer) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a buyer',
+        });
+      }
+
+      const notifs = await db
+        .select()
+        .from(buyerNotifications)
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          eq(buyerNotifications.isStarred, true)
+        ))
+        .orderBy(desc(buyerNotifications.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)::integer` })
+        .from(buyerNotifications)
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          eq(buyerNotifications.isStarred, true)
+        ));
+
+      const total = Number(totalResult[0]?.count ?? 0);
+
+      return {
+        notifications: notifs.map((n) => ({
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          relatedEntityId: n.relatedEntityId,
+          relatedEntityType: n.relatedEntityType,
+          actionUrl: n.actionUrl,
+          isRead: n.isRead,
+          isStarred: n.isStarred,
+          createdAt: n.createdAt.toISOString(),
+          metadata: n.metadata,
+        })),
+        total,
+      };
+    }),
+
+  /**
+   * Clear all notifications
+   */
+  clearAll: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'DELETE',
+        path: '/buyer/notifications/clear-all',
+        tags: ['Buyer Notifications'],
+        summary: 'Clear all notifications',
+      },
+    })
+    .output(z.object({ success: z.literal(true) }))
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+      }
+
+      const buyer = await db.query.buyers.findFirst({
+        where: eq(buyers.userId, userId),
+      });
+
+      if (!buyer) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a buyer',
+        });
+      }
+
+      await db
+        .delete(buyerNotifications)
+        .where(eq(buyerNotifications.buyerId, buyer.id));
 
       return { success: true };
     }),

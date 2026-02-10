@@ -77,3 +77,9 @@ export function useToggleFavorite() {
     },
   });
 }
+
+export function useFavoritesCount() {
+  const { data } = useFavorites();
+  const favoritesCount = data?.length ?? 0;
+  return favoritesCount;
+}

@@ -1,5 +1,25 @@
 import { trpc } from "@/lib/trpc";
 
+/**
+ * Unified notifications query from buyerNotifications router
+ * Returns { notifications, total, unreadCount } for real-time updates
+ */
+export const useUnifiedNotifications = () => {
+  return (trpc.buyerNotifications as any).getNotifications.useQuery(
+    { limit: 100, offset: 0 },
+    {
+      staleTime: 1000 * 5,
+      gcTime: 1000 * 60 * 10,
+      refetchInterval: 1000 * 5,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      retry: 3,
+      retryDelay: (attemptIndex: number) =>
+        Math.min(1000 * 2 ** attemptIndex, 30000),
+    }
+  );
+};
+
 export const useNotifications = () => {
   return trpc.buyer.getNotifications.useQuery(
     { page: 1, limit: 100 },
@@ -16,10 +36,14 @@ export const useNotifications = () => {
   );
 };
 
+/**
+ * Get real-time unread notification count
+ * Uses unified notifications endpoint for accurate count
+ */
 export const useNotificationsCount = () => {
-  const { data } = useNotifications();
-  const unreadCount = data?.data?.filter((n) => !n.isRead).length ?? 0;
-  return unreadCount;
+  const { data } = useUnifiedNotifications();
+  // unreadCount comes directly from the API response
+  return data?.unreadCount ?? 0;
 };
 
 export const useMarkNotificationAsRead = () => {

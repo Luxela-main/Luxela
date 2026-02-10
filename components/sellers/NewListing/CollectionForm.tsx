@@ -29,6 +29,10 @@ interface CollectionFormProps {
   videoUrl?: string;
   careInstructions?: string;
   refundPolicy?: string;
+  supplyCapacity?: string;
+  shippingOption?: string;
+  etaDomestic?: string;
+  etaInternational?: string;
   items: CollectionItem[];
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
@@ -39,6 +43,10 @@ interface CollectionFormProps {
   onVideoUrlChange?: (videoUrl: string) => void;
   onCareInstructionsChange?: (careInstructions: string) => void;
   onRefundPolicyChange?: (refundPolicy: string) => void;
+  onSupplyCapacityChange?: (supplyCapacity: string) => void;
+  onShippingOptionChange?: (shippingOption: string) => void;
+  onEtaDomesticChange?: (etaDomestic: string) => void;
+  onEtaInternationalChange?: (etaInternational: string) => void;
   onItemsChange: (items: CollectionItem[]) => void;
   onSubmit: () => void;
   onNext?: () => void;
@@ -84,6 +92,10 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
   videoUrl,
   careInstructions,
   refundPolicy,
+  supplyCapacity,
+  shippingOption,
+  etaDomestic,
+  etaInternational,
   items,
   onTitleChange,
   onDescriptionChange,
@@ -94,6 +106,10 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
   onVideoUrlChange,
   onCareInstructionsChange,
   onRefundPolicyChange,
+  onSupplyCapacityChange,
+  onShippingOptionChange,
+  onEtaDomesticChange,
+  onEtaInternationalChange,
   onItemsChange,
   onSubmit,
   onNext,
@@ -186,6 +202,25 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
       ? currentColors.filter((c) => c !== colorName)
       : [...currentColors, colorName];
     updateItem(index, "colors", newColors);
+  };
+
+  const convertColorsForSubmission = (): any[] => {
+    return items.map(item => {
+      const colorsAvailable = item.colors && item.colors.length > 0
+        ? item.colors.map(colorName => {
+            const colorObj = AVAILABLE_COLORS.find(c => c.name === colorName);
+            return {
+              colorName: colorName,
+              colorHex: colorObj?.hex || "#000000",
+            };
+          })
+        : null;
+      
+      return {
+        ...item,
+        colorsAvailable: colorsAvailable,
+      };
+    });
   };
 
   return (
@@ -300,13 +335,91 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
             {/* Refund Policy */}
             <div>
               <label className="block text-xs text-gray-400 mb-2">Refund Policy</label>
-              <textarea
+              <select
                 value={refundPolicy || ""}
                 onChange={(e) => onRefundPolicyChange?.(e.target.value)}
-                placeholder="e.g., 30-day money-back guarantee"
-                rows={2}
-                className="w-full bg-[#1a1a1a] border placeholder:text-sm border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-              />
+                className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              >
+                <option value="">Select refund policy (optional)</option>
+                <option value="no_refunds">No Refunds</option>
+                <option value="48hrs">48 Hours</option>
+                <option value="72hrs">72 Hours</option>
+                <option value="5_working_days">5 Working Days</option>
+                <option value="1week">1 Week</option>
+                <option value="14days">14 Days</option>
+                <option value="30days">30 Days</option>
+                <option value="60days">60 Days</option>
+                <option value="store_credit">Store Credit</option>
+              </select>
+            </div>
+
+            {/* Supply Capacity */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Supply Capacity</label>
+              <select
+                value={supplyCapacity || ""}
+                onChange={(e) => onSupplyCapacityChange?.(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500 cursor-pointer hover:border-purple-500 transition"
+              >
+                <option value="">Select supply capacity (optional)</option>
+                <option value="no_max">No Maximum</option>
+                <option value="limited">Limited</option>
+              </select>
+            </div>
+
+            {/* Shipping Option */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Shipping Option</label>
+              <select
+                value={shippingOption || ""}
+                onChange={(e) => onShippingOptionChange?.(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500 cursor-pointer hover:border-purple-500 transition"
+              >
+                <option value="">Select shipping option (optional)</option>
+                <option value="local">Local Only</option>
+                <option value="international">International Only</option>
+                <option value="both">Both Local & International</option>
+              </select>
+            </div>
+
+            {/* ETA Domestic */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Domestic ETA</label>
+              <select
+                value={etaDomestic || ""}
+                onChange={(e) => onEtaDomesticChange?.(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500 cursor-pointer hover:border-purple-500 transition"
+              >
+                <option value="">Select ETA (optional)</option>
+                <option value="same_day">Same Day</option>
+                <option value="next_day">Next Day</option>
+                <option value="48hrs">48 Hours</option>
+                <option value="72hrs">72 Hours</option>
+                <option value="5_working_days">5 Working Days</option>
+                <option value="1_2_weeks">1-2 Weeks</option>
+                <option value="2_3_weeks">2-3 Weeks</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            {/* ETA International */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">International ETA</label>
+              <select
+                value={etaInternational || ""}
+                onChange={(e) => onEtaInternationalChange?.(e.target.value)}
+                className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500 cursor-pointer hover:border-purple-500 transition"
+              >
+                <option value="">Select ETA (optional)</option>
+                <option value="same_day">Same Day</option>
+                <option value="next_day">Next Day</option>
+                <option value="48hrs">48 Hours</option>
+                <option value="72hrs">72 Hours</option>
+                <option value="5_working_days">5 Working Days</option>
+                <option value="1_2_weeks">1-2 Weeks</option>
+                <option value="2_3_weeks">2-3 Weeks</option>
+                <option value="custom">Custom</option>
+              </select>
             </div>
           </div>
         </div>
@@ -423,7 +536,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                             onChange={(e) =>
                               updateItem(index, "currency", e.target.value)
                             }
-                            className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                            className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500 cursor-pointer hover:border-purple-500 transition"
                           >
                             <option value="NGN">NGN - Nigerian Naira</option>
                             <option value="EUR">EUR - Euro</option>
@@ -457,7 +570,7 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                           onChange={(e) =>
                             updateItem(index, "category", e.target.value)
                           }
-                          className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                          className="w-full bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-purple-500 cursor-pointer hover:border-purple-500 transition"
                         >
                           <option value="">Select category (optional)</option>
                           <option value="men_clothing">Men's Clothing</option>

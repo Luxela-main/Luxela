@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { logListingsDebug } from '@/lib/debug/listings-debug';
 import { useListings } from '@/context/ListingsContext';
 import { useSearch } from '@/context/SearchContext';
+import { useRealtimeListings } from '@/hooks/useRealtimeListings';
 import {
   ProductDisplayHero,
   MasonryGrid,
+  UnifiedListingCard,
 } from '@/components/buyer/product-display';
 import ProductCarousel from '@/components/buyer/ProductCarousel';
 import { CollectionSort } from '@/components/buyer/CollectionSort';
 import { CollectionFilters } from '@/components/buyer/CollectionFilters';
-import { Filter, X, TrendingUp, Columns2, Columns3 } from 'lucide-react';
+import { Filter, X, TrendingUp, Columns2, Columns3, ChevronLeft, ChevronRight } from 'lucide-react';
 import ScrollToTopButton from '@/components/buyer/ScrollToTopButton';
 
 // Fashion ecommerce categories optimized for luxury brands
@@ -42,6 +44,7 @@ const AVAILABLE_COLORS = [
 export default function BrowsePage() {
   const { listings, loading, error } = useListings();
   const { searchQuery } = useSearch();
+  useRealtimeListings(); // Enable realtime product syncing
   const [showFiltersPanel, setShowFiltersPanel] = useState(true);
   const [sortBy, setSortBy] = useState<string>('newest');
   const [filters, setFilters] = useState<any>({
@@ -59,6 +62,10 @@ export default function BrowsePage() {
   const [showFiltersRightArrow, setShowFiltersRightArrow] = useState(false);
   const [showSortLeftArrow, setShowSortLeftArrow] = useState(false);
   const [showSortRightArrow, setShowSortRightArrow] = useState(false);
+  const productsCarouselRef = useRef<HTMLDivElement>(null);
+  const [productsScrollPos, setProductsScrollPos] = useState(0);
+  const [showProductsLeftArrow, setShowProductsLeftArrow] = useState(false);
+  const [showProductsRightArrow, setShowProductsRightArrow] = useState(false);
   
   useEffect(() => {
     logListingsDebug.initialized(1, 100);
@@ -289,6 +296,18 @@ export default function BrowsePage() {
     }
   };
   
+  // Handle scroll for products
+  const handleProductsScroll = (direction: 'left' | 'right') => {
+    if (productsCarouselRef.current) {
+      productsCarouselRef.current.scrollBy({
+        left: direction === 'left' ? -300 : 300,
+        behavior: 'smooth',
+      });
+    }
+  };
+  
+
+  
   // Check scroll positions for visibility
   const checkScroll = useCallback(() => {
     const filtersContainer = document.getElementById('filters-scroll-container');
@@ -305,11 +324,25 @@ export default function BrowsePage() {
       setShowSortLeftArrow(scrollLeft > 0);
       setShowSortRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
     }
+    
+    if (productsCarouselRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = productsCarouselRef.current;
+      setShowProductsLeftArrow(scrollLeft > 0);
+      setShowProductsRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+    }
   }, []);
   
   useEffect(() => {
     checkScroll();
     window.addEventListener('resize', checkScroll);
+    const productsCarousel = productsCarouselRef.current;
+    if (productsCarousel) {
+      productsCarousel.addEventListener('scroll', checkScroll);
+      return () => {
+        window.removeEventListener('resize', checkScroll);
+        productsCarousel.removeEventListener('scroll', checkScroll);
+      };
+    }
     return () => window.removeEventListener('resize', checkScroll);
   }, [checkScroll]);
 
@@ -610,7 +643,7 @@ export default function BrowsePage() {
           </div>
         </div>
 
-        {/* Main Products Grid */}
+        {/* Main Products Carousel */}
         {loading && listings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 sm:py-28 md:py-36">
             <div className="inline-block text-center">
@@ -626,15 +659,47 @@ export default function BrowsePage() {
             </div>
           </div>
         ) : sortedListings.length > 0 ? (
-          <MasonryGrid
-            products={sortedListings}
-            isLoading={loading}
-            showActions={{
-              wishlist: true,
-              quickView: true,
-              share: true,
-            }}
-          />
+          <div className="relative">
+            {/* Products Left Scroll Arrow */}
+            {showProductsLeftArrow && (
+              <button
+                onClick={() => handleProductsScroll('left')}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-[#8451E1] hover:bg-[#9468F2] text-white transition-all shadow-lg flex items-center justify-center"
+                aria-label="Scroll products left"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            
+            {/* Products Right Scroll Arrow */}
+            {showProductsRightArrow && (
+              <button
+                onClick={() => handleProductsScroll('right')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-[#8451E1] hover:bg-[#9468F2] text-white transition-all shadow-lg flex items-center justify-center"
+                aria-label="Scroll products right"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
+            
+            <div
+              ref={productsCarouselRef}
+              className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide px-0 sm:px-0"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              onScroll={() => checkScroll()}
+            >
+              {sortedListings.map((product) => (
+                <div key={product.id} className="min-w-[calc(100vw-100px)] sm:min-w-[280px] md:min-w-[300px] flex-shrink-0">
+                  <UnifiedListingCard
+                    listing={product}
+                    showWishlist={true}
+                    showQuickView={true}
+                    showShare={true}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="text-center max-w-md">

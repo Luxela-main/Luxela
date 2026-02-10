@@ -145,6 +145,7 @@ const CollectionItemInput = z.object({
   description: z.string().optional(),
   category: CategoryEnum.optional(),
   images: z.array(z.string()).optional(),
+  colorsAvailable: z.string().optional(),
 });
 
 // ---------- HELPERS ----------
@@ -358,16 +359,42 @@ export const listingRouter = createTRPCRouter({
       });
 
       // Insert additional product images if provided
+      console.log('[LISTING.createSingle] Image insertion check:', {
+        hasImages: !!input.images,
+        imagesLength: input.images?.length || 0,
+        imagesArray: input.images,
+        imagesJsonLength: input.imagesJson?.length || 0,
+      });
+
       if (input.images && input.images.length > 0) {
         const imageValues = input.images.map((imageUrl, index) => ({
           productId: productInserted[0].id,
           imageUrl,
           position: index,
         }));
-        await db.insert(productImages).values(imageValues);
+        console.log('[LISTING.createSingle] Inserting images:', {
+          imageCount: imageValues.length,
+          productId: productInserted[0].id,
+          imageUrls: imageValues.map(img => img.imageUrl),
+        });
+        try {
+          await db.insert(productImages).values(imageValues);
+          console.log('[LISTING.createSingle] Images inserted successfully');
+        } catch (imgError) {
+          console.error('[LISTING.createSingle] Failed to insert images:', imgError);
+          throw imgError;
+        }
+      } else {
+        console.log('[LISTING.createSingle] No images provided, relying on imagesJson fallback');
       }
 
       const created = listingInserted[0];
+
+      console.log('[LISTING.createSingle] Listing created successfully:', {
+        listingId: created.id,
+        title: created.title,
+        hasImagesJson: !!created.imagesJson,
+      });
 
       return {
         id: created.id,
@@ -434,6 +461,12 @@ export const listingRouter = createTRPCRouter({
       barcode: z.string().optional().transform(val => val === '' ? undefined : val),
       videoUrl: z.string().optional().transform(val => val === '' ? undefined : val),
       careInstructions: z.string().optional().transform(val => val === '' ? undefined : val),
+      // Extended metadata
+      materialComposition: z.string().optional(),
+      colorsAvailable: z.array(z.object({
+        colorName: z.string(),
+        colorHex: z.string(),
+      })).nullable().optional(),
     })
   )
   .output(ListingOutput)
@@ -627,6 +660,7 @@ export const listingRouter = createTRPCRouter({
         etaDomestic: input.etaDomestic ?? null,
         etaInternational: input.etaInternational ?? null,
         refundPolicy: input.refundPolicy ?? null,
+        colorsAvailable: item.colorsAvailable ? JSON.stringify(item.colorsAvailable) : null,
         slug: listingSlug,
         status: "pending_review",
       });
@@ -667,6 +701,19 @@ export const listingRouter = createTRPCRouter({
       productId: null,
       quantityAvailable: input.items.length,
       status: "pending_review",
+      supplyCapacity: input.supplyCapacity ?? "no_max",
+      shippingOption: input.shippingOption ?? "both",
+      etaDomestic: input.etaDomestic ?? null,
+      etaInternational: input.etaInternational ?? null,
+      refundPolicy: input.refundPolicy ?? null,
+      sku: input.sku ?? null,
+      slug: input.slug ?? null,
+      metaDescription: input.metaDescription ?? null,
+      barcode: input.barcode ?? null,
+      videoUrl: input.videoUrl ?? null,
+      careInstructions: input.careInstructions ?? null,
+      materialComposition: input.materialComposition ?? null,
+      colorsAvailable: input.colorsAvailable ? JSON.stringify(input.colorsAvailable) : null,
       }).returning();
     
     // Create a corresponding listing review entry for admin review dashboard
@@ -835,6 +882,23 @@ export const listingRouter = createTRPCRouter({
         }
       }
       
+      // Map database status values to frontend enum values
+      const mapStatusToFrontend = (dbStatus: string | null): "pending" | "approved" | "rejected" | "revision_requested" => {
+        switch (dbStatus) {
+          case 'pending_review':
+          case 'draft':
+            return 'pending';
+          case 'approved':
+            return 'approved';
+          case 'rejected':
+            return 'rejected';
+          case 'archived':
+            return 'rejected';
+          default:
+            return 'pending';
+        }
+      };
+
       return Promise.all(myListings.map(async (l) => {
         try {
           const result: any = {
@@ -862,6 +926,7 @@ export const listingRouter = createTRPCRouter({
             refundPolicy: l.refundPolicy,
             localPricing: l.localPricing,
             itemsJson: null,
+            status: mapStatusToFrontend(l.status),
             productId: l.productId ?? undefined,
             createdAt: new Date(l.createdAt),
             updatedAt: new Date(l.updatedAt),
@@ -1343,7 +1408,10 @@ export const listingRouter = createTRPCRouter({
       limitedEditionBadge: LimitedBadgeEnum.nullable().optional(),
       releaseDuration: ReleaseDurationEnum.nullable().optional(),
       materialComposition: z.string().nullable().optional(),
-      colorsAvailable: z.array(z.string()).nullable().optional(),
+      colorsAvailable: z.array(z.object({
+        colorName: z.string(),
+        colorHex: z.string(),
+      })).nullable().optional(),
       additionalTargetAudience: TargetAudienceEnum.nullable().optional(),
       shippingOption: ShippingOptionEnum.nullable().optional(),
       etaDomestic: ShippingEtaEnum.nullable().optional(),
@@ -1391,14 +1459,52 @@ export const listingRouter = createTRPCRouter({
       
       await db.update(listings).set(updateData).where(eq(listings.id, input.id));
       
+      // Reset review status to 'pending' if listing is not yet approved
+      // This ensures edits to unapproved listings go back to admin review queue
+      const existingReview = await db
+        .select()
+        .from(listingReviews)
+        .where(eq(listingReviews.listingId, input.id));
+      
+      if (existingReview.length > 0 && existingReview[0].status !== 'approved') {
+        // If listing was rejected or under revision, reset to pending for fresh review
+        await db
+          .update(listingReviews)
+          .set({
+            status: 'pending',
+            reviewedBy: null,
+            reviewedAt: null,
+            rejectionReason: null,
+            comments: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(listingReviews.listingId, input.id));
+      }
+      
       // Handle new images if provided
+      console.log('[LISTING.updateListing] Image insertion check:', {
+        hasImages: !!input.images,
+        imagesLength: input.images?.length || 0,
+        hasProductId: !!listing.productId,
+      });
       if (input.images && input.images.length > 0 && listing.productId) {
         const imageValues = input.images.map((imageUrl, index) => ({
           productId: listing.productId!,
           imageUrl,
           position: index,
         }));
-        await db.insert(productImages).values(imageValues);
+        console.log('[LISTING.updateListing] Inserting images:', {
+          imageCount: imageValues.length,
+          productId: listing.productId,
+          imageUrls: imageValues.map(img => img.imageUrl),
+        });
+        try {
+          await db.insert(productImages).values(imageValues);
+          console.log('[LISTING.updateListing] Images inserted successfully');
+        } catch (imgError) {
+          console.error('[LISTING.updateListing] Failed to insert images:', imgError);
+          throw imgError;
+        }
       }
       
       // Fetch updated listing
@@ -1439,6 +1545,239 @@ export const listingRouter = createTRPCRouter({
         createdAt: new Date(updated.createdAt),
         updatedAt: new Date(updated.updatedAt),
       };
+    }),
+
+  updateCollection: protectedProcedure
+    .meta({
+      openapi: {
+        method: "PUT",
+        path: "/listing/update-collection",
+        tags: ["Listing"],
+        summary: "Update an existing collection listing",
+      },
+    })
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().min(1).optional(),
+        description: z.string().optional(),
+        items: z.array(CollectionItemInput).optional(),
+        // Shipping and supply fields
+        supplyCapacity: SupplyCapacityEnum.optional(),
+        shippingOption: ShippingOptionEnum.optional(),
+        etaDomestic: ShippingEtaEnum.optional(),
+        etaInternational: ShippingEtaEnum.optional(),
+        refundPolicy: z.enum(['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']).optional(),
+        // Enterprise fields
+        sku: z.string().optional().transform(val => val === '' ? undefined : val),
+        slug: z.string().optional(),
+        metaDescription: z.string().optional().transform(val => val === '' ? undefined : val),
+        barcode: z.string().optional().transform(val => val === '' ? undefined : val),
+        videoUrl: z.string().optional().transform(val => val === '' ? undefined : val),
+        careInstructions: z.string().optional().transform(val => val === '' ? undefined : val),
+        // Extended metadata
+        materialComposition: z.string().optional(),
+        colorsAvailable: z.array(z.object({
+          colorName: z.string(),
+          colorHex: z.string(),
+        })).nullable().optional(),
+      })
+    )
+    .output(ListingOutput)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const seller = await fetchSeller(ctx);
+
+        // Verify seller owns the listing
+        const existingListing = await db
+          .select()
+          .from(listings)
+          .where(and(eq(listings.id, input.id), eq(listings.sellerId, seller.id)));
+
+        if (!existingListing.length) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You don't have permission to update this listing",
+          });
+        }
+
+        const listing = existingListing[0];
+
+        // Get or create brand for seller (needed for creating new products when updating collection items)
+        const existingBrands = await db.select().from(brands).where(eq(brands.sellerId, seller.id));
+        let brandId: string;
+        if (existingBrands.length > 0) {
+          brandId = existingBrands[0].id;
+        } else {
+          const defaultBrandName = "Default Store";
+          const newBrand = await db.insert(brands).values({
+            sellerId: seller.id,
+            name: defaultBrandName,
+            slug: 'default-store',
+          }).returning({ id: brands.id });
+          brandId = newBrand[0].id;
+          
+          // Update slug to include brand ID for uniqueness
+          const uniqueSlug = `default-store-${brandId.substring(0, 8)}`;
+          await db.update(brands).set({ slug: uniqueSlug }).where(eq(brands.id, brandId));
+        }
+
+        // Update collection (listing record)
+        const updateData: any = {};
+        if (input.title !== undefined) updateData.title = input.title;
+        if (input.description !== undefined) updateData.description = input.description;
+        if (input.supplyCapacity !== undefined) updateData.supplyCapacity = input.supplyCapacity;
+        if (input.shippingOption !== undefined) updateData.shippingOption = input.shippingOption;
+        if (input.etaDomestic !== undefined) updateData.etaDomestic = input.etaDomestic ? mapShippingEta(input.etaDomestic) : null;
+        if (input.etaInternational !== undefined) updateData.etaInternational = input.etaInternational ? mapShippingEta(input.etaInternational) : null;
+        if (input.refundPolicy !== undefined) updateData.refundPolicy = input.refundPolicy;
+        if (input.sku !== undefined) updateData.sku = input.sku;
+        if (input.slug !== undefined) updateData.slug = input.slug;
+        if (input.metaDescription !== undefined) updateData.metaDescription = input.metaDescription;
+        if (input.barcode !== undefined) updateData.barcode = input.barcode;
+        if (input.videoUrl !== undefined) updateData.videoUrl = input.videoUrl;
+        if (input.careInstructions !== undefined) updateData.careInstructions = input.careInstructions;
+        if (input.materialComposition !== undefined) updateData.materialComposition = input.materialComposition;
+        if (input.colorsAvailable !== undefined) updateData.colorsAvailable = input.colorsAvailable ? JSON.stringify(input.colorsAvailable) : null;
+
+        await db.update(listings).set(updateData).where(eq(listings.id, input.id));
+
+        // Reset review status to 'pending' if collection is not yet approved
+        const existingReview = await db
+          .select()
+          .from(listingReviews)
+          .where(eq(listingReviews.listingId, input.id));
+
+        if (existingReview.length > 0 && existingReview[0].status !== 'approved') {
+          // If collection was rejected or under revision, reset to pending for fresh review
+          await db
+            .update(listingReviews)
+            .set({
+              status: 'pending',
+              reviewedBy: null,
+              reviewedAt: null,
+              rejectionReason: null,
+              comments: null,
+              updatedAt: new Date(),
+            })
+            .where(eq(listingReviews.listingId, input.id));
+        }
+
+        // If items are provided, update collection items
+        if (input.items && input.items.length > 0) {
+          // Delete existing collection items
+          await db.delete(collectionItems).where(eq(collectionItems.collectionId, listing.collectionId!));
+
+          // Delete existing products and images associated with this collection
+          const existingProducts = await db
+            .select()
+            .from(products)
+            .where(eq(products.collectionId, listing.collectionId!));
+          
+          for (const product of existingProducts) {
+            // Delete product images
+            await db.delete(productImages).where(eq(productImages.productId, product.id));
+            // Delete product
+            await db.delete(products).where(eq(products.id, product.id));
+          }
+
+          // Create new products and collection items
+          const newCollectionItems: any[] = [];
+          for (const [index, item] of input.items.entries()) {
+            const productId = uuidv4();
+
+            // Generate slug with proper special character handling
+            const productSlug = item.title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, "");
+
+            // Generate unique SKU using UUID
+            const uniqueSku = `SKU-${uuidv4().slice(0, 8).toUpperCase()}`;
+
+            // Insert product
+            await db.insert(products).values({
+              id: productId,
+              brandId: brandId,
+              collectionId: listing.collectionId,
+              name: item.title,
+              slug: productSlug,
+              description: item.description ?? null,
+              category: item.category ?? null,
+              priceCents: item.priceCents,
+              currency: item.currency ?? "SOL",
+              sku: uniqueSku,
+              inStock: true,
+            });
+
+            // Add to collection items
+            newCollectionItems.push({
+              id: uuidv4(),
+              collectionId: listing.collectionId,
+              productId: productId,
+              position: index,
+            });
+
+            // Insert product images if provided
+            if (item.images && item.images.length > 0) {
+              const imageValues = item.images.map((imageUrl, imgIndex) => ({
+                id: uuidv4(),
+                productId: productId,
+                imageUrl,
+                position: imgIndex,
+              }));
+              await db.insert(productImages).values(imageValues);
+            }
+          }
+
+          // Insert new collection items
+          if (newCollectionItems.length > 0) {
+            await db.insert(collectionItems).values(newCollectionItems);
+          }
+        }
+
+        // Fetch updated listing
+        const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
+
+        return {
+          id: updated.id,
+          sellerId: updated.sellerId,
+          type: updated.type,
+          title: updated.title,
+          description: updated.description,
+          category: updated.category,
+          image: updated.image,
+          imagesJson: updated.imagesJson,
+          priceCents: updated.priceCents,
+          currency: updated.currency,
+          sizesJson: updated.sizesJson ? JSON.parse(updated.sizesJson) : null,
+          supplyCapacity: updated.supplyCapacity,
+          quantityAvailable: updated.quantityAvailable,
+          limitedEditionBadge: updated.limitedEditionBadge,
+          releaseDuration: updated.releaseDuration as ReleaseDurationType | null,
+          materialComposition: updated.materialComposition,
+          colorsAvailable: updated.colorsAvailable ? JSON.parse(updated.colorsAvailable) : null,
+          additionalTargetAudience: updated.additionalTargetAudience,
+          shippingOption: updated.shippingOption,
+          etaDomestic: updated.etaDomestic as any,
+          etaInternational: updated.etaInternational as any,
+          refundPolicy: updated.refundPolicy ?? null,
+          localPricing: updated.localPricing ?? null,
+          itemsJson: updated.itemsJson ? JSON.parse(updated.itemsJson) : null,
+          productId: updated.productId ?? undefined,
+          sku: updated.sku || undefined,
+          slug: updated.slug || undefined,
+          metaDescription: updated.metaDescription || undefined,
+          barcode: updated.barcode || undefined,
+          videoUrl: updated.videoUrl || undefined,
+          careInstructions: updated.careInstructions || undefined,
+          createdAt: new Date(updated.createdAt),
+          updatedAt: new Date(updated.updatedAt),
+        };
+      } catch (error) {
+        console.error('Error updating collection:', error);
+        throw error;
+      }
     }),
 
   // ---- DELETE ----

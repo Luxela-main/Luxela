@@ -45,7 +45,8 @@ export default function HorizontalImageScroller({
 
   // Handle image change
   const handleImageChange = useCallback(
-    (index: number) => {
+    (index: number, e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
       if (index >= 0 && index < validImages.length) {
         setCurrentIndex(index);
         onImageChange?.(index);
@@ -75,11 +76,13 @@ export default function HorizontalImageScroller({
   }, [currentIndex, autoScroll, isHovering, validImages.length, autoScrollInterval, handleImageChange, clearAutoScroll]);
 
   // Next/Previous handlers
-  const goToNext = useCallback(() => {
+  const goToNext = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     handleImageChange((currentIndex + 1) % validImages.length);
   }, [currentIndex, validImages.length, handleImageChange]);
 
-  const goToPrevious = useCallback(() => {
+  const goToPrevious = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     handleImageChange((currentIndex - 1 + validImages.length) % validImages.length);
   }, [currentIndex, validImages.length, handleImageChange]);
 
@@ -136,10 +139,10 @@ export default function HorizontalImageScroller({
   }, [currentIndex, showThumbnails]);
 
   return (
-    <div className={`w-full ${className}`}>
-      {/* Main Image Container */}
+    <div className={`w-full flex flex-col ${className}`} style={{ touchAction: 'pan-y' }}>
+      {/* Main Image Container - Includes dots and thumbnails in layout */}
       <div
-        className="relative w-full bg-gray-100 overflow-hidden"
+        className="relative w-full bg-gray-100 overflow-hidden flex-shrink-0 flex flex-col"
         style={{ aspectRatio: '1 / 1' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -147,48 +150,68 @@ export default function HorizontalImageScroller({
         onMouseLeave={() => setIsHovering(false)}
       >
         {/* Main Image */}
-        <div className="relative w-full h-full">
+        <div className="relative w-full h-full flex-1">
           {validImages[currentIndex] && (
             <Image
               src={validImages[currentIndex]}
               alt={`${alt} - Image ${currentIndex + 1}`}
               fill
-              className="object-cover"
+              className="object-cover block"
               priority={currentIndex === 0}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 50vw"
             />
           )}
         </div>
 
-        {/* Left Arrow Button - Desktop */}
+        {/* Left Arrow Button - Desktop & Mobile */}
         {validImages.length > 1 && (
           <button
-            onClick={goToPrevious}
-            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              goToPrevious();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className="flex absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all cursor-pointer"
             aria-label="Previous image"
           >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            <ChevronLeft className="w-4 h-4 sm:w-6 sm:h-6" />
           </button>
         )}
 
-        {/* Right Arrow Button - Desktop */}
+        {/* Right Arrow Button - Desktop & Mobile */}
         {validImages.length > 1 && (
           <button
-            onClick={goToNext}
-            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              goToNext();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className="flex absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all cursor-pointer"
             aria-label="Next image"
           >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+            <ChevronRight className="w-4 h-4 sm:w-6 sm:h-6" />
           </button>
         )}
 
-        {/* Dot Indicators */}
+        {/* Dot Indicators - Positioned at bottom with padding to avoid text overlap */}
         {showDots && validImages.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-2">
             {validImages.map((_, index) => (
               <button
                 key={index}
-                onClick={() => handleImageChange(index)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleImageChange(index);
+                }}
                 className={`rounded-full transition-all ${
                   index === currentIndex ? 'bg-white w-2 h-2' : 'bg-white/50 w-1.5 h-1.5 hover:bg-white/70'
                 }`}
@@ -213,28 +236,33 @@ export default function HorizontalImageScroller({
         )}
       </div>
 
-      {/* Thumbnail Scrollbar */}
+      {/* Thumbnail Scrollbar - Positioned at bottom within image container */}
       {showThumbnails && validImages.length > 1 && (
-        <div className="mt-3 sm:mt-4">
+        <div className="w-full px-1 py-1 bg-gray-50 border-t border-gray-200 flex-shrink-0" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div
             ref={thumbnailScrollRef}
-            className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scroll-smooth"
+            className="flex gap-1 sm:gap-1.5 overflow-x-auto scroll-smooth touch-pan-x"
             style={{
               scrollBehavior: 'smooth',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             {validImages.map((image, index) => (
               <button
                 key={index}
-                onClick={() => handleImageChange(index)}
-                className={`flex-shrink-0 relative rounded border-2 transition-all ${
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleImageChange(index);
+                }}
+                className={`flex-shrink-0 relative rounded border-1.5 transition-all ${
                   index === currentIndex
-                    ? 'border-blue-500 ring-2 ring-blue-400'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-blue-500 ring-1 ring-blue-400'
+                    : 'border-gray-300 hover:border-gray-400'
                 }`}
                 style={{
-                  width: '60px',
-                  height: '60px',
+                  width: '30px',
+                  height: '30px',
                 }}
                 aria-label={`Select image ${index + 1}`}
               >
@@ -243,7 +271,7 @@ export default function HorizontalImageScroller({
                   alt={`${alt} thumbnail ${index + 1}`}
                   fill
                   className="object-cover rounded"
-                  sizes="60px"
+                  sizes="30px"
                 />
               </button>
             ))}
@@ -251,19 +279,27 @@ export default function HorizontalImageScroller({
         </div>
       )}
 
-      {/* Mobile Arrow Buttons */}
+      {/* Mobile Arrow Buttons - Outside main container */}
       {validImages.length > 1 && (
-        <div className="sm:hidden flex gap-2 mt-3 justify-center">
+        <div className="sm:hidden flex gap-2 mt-2 justify-center">
           <button
-            onClick={goToPrevious}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 transition-all"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              goToPrevious();
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 transition-all cursor-pointer"
             aria-label="Previous image"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
-            onClick={goToNext}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 transition-all"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              goToNext();
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 transition-all cursor-pointer"
             aria-label="Next image"
           >
             <ChevronRight className="w-5 h-5" />

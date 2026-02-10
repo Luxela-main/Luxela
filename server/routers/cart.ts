@@ -5,6 +5,11 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from "uuid";
+import {
+  notifyItemAddedToCart,
+  notifyItemRemovedFromCart,
+  notifyCartCleared,
+} from '../services/buyerNotificationService';
 
 // Valid product category enum values
 const VALID_PRODUCT_CATEGORIES = [
@@ -147,6 +152,20 @@ export const cartRouter = createTRPCRouter({
               currency: listing.currency!,
             })
             .returning();
+          
+          // Notify buyer
+          try {
+            await notifyItemAddedToCart(
+              buyer.id,
+              input.listingId,
+              listing.title || 'Product',
+              input.quantity
+            );
+          } catch (notifError) {
+            console.error('Failed to send cart notification:', notifError);
+            // Don't throw - notification failure shouldn't block cart operations
+          }
+          
           return created;
         }
       } catch (err: any) {
@@ -193,6 +212,22 @@ export const cartRouter = createTRPCRouter({
         if (!item) throw new TRPCError({ code: 'NOT_FOUND', message: 'Item not in cart' });
         if (input.quantity === 0) {
           await db.delete(cartItems).where(eq(cartItems.id, item.id));
+          
+          // Notify buyer - fetch listing for product title
+          try {
+            const listing = await db
+              .select()
+              .from(listings)
+              .where(eq(listings.id, input.listingId))
+              .then(r => r[0]);
+            
+            if (listing) {
+              await notifyItemRemovedFromCart(buyer.id, input.listingId, listing.title || 'Product');
+            }
+          } catch (notifError) {
+            console.error('Failed to send cart notification:', notifError);
+          }
+          
           return { success: true };
         }
         const [updated] = await db
@@ -263,6 +298,14 @@ export const cartRouter = createTRPCRouter({
           .update(carts)
           .set({ discountId: null as any, updatedAt: new Date() })
           .where(eq(carts.id, cart.id));
+        
+        // Notify buyer
+        try {
+          await notifyCartCleared(buyer.id);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+        }
+        
         return { success: true };
       } catch (err: any) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Failed to clear cart' });

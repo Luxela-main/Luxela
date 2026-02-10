@@ -1,7 +1,8 @@
 'use server';
 
 import { db } from '@/server/db';
-import { buyerFavorites, listings, buyers } from '@/server/db/schema';
+import { buyerFavorites, listings, buyers, buyerNotifications } from '@/server/db/schema';
+import { v4 as uuidv4 } from 'uuid';
 import { eq, and } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/utils/getCurrentUser';
 
@@ -48,6 +49,31 @@ export async function addToFavorites(listingId: string) {
       buyerId: buyer.id,
       listingId: listingId,
     });
+
+    // Create notification for buyer
+    try {
+      await db.insert(buyerNotifications).values({
+        id: uuidv4(),
+        buyerId: buyer.id,
+        type: 'favorite_added' as any,
+        title: 'Added to Favorites',
+        message: `You added "${listing.title}" to your favorites!`,
+        relatedEntityId: listingId,
+        relatedEntityType: 'listing',
+        actionUrl: `/buyer/product/${listingId}`,
+        isRead: false,
+        metadata: {
+          notificationType: 'favorite_added',
+          listingId: listingId,
+          listingTitle: listing.title,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    } catch (notifErr) {
+      // Log but don't fail if notification fails
+      console.error('Failed to create favorite notification:', notifErr);
+    }
 
     return { success: true, message: 'Added to favorites' };
   } catch (error) {

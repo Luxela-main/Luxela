@@ -1,86 +1,67 @@
 import { useMemo } from "react";
-import { useNotifications } from "./useNotifications";
-import { useListingStatusNotifications } from "./useListingStatusNotifications";
+import { trpc } from "@/lib/trpc";
 
 export interface UnifiedNotification {
   id: string;
-  type: "general" | "listing_review";
+  type: string;
   title?: string;
   message: string;
-  status?: string; // For listing review notifications
-  reviewStatus?: "pending" | "approved" | "rejected" | "revision_requested";
+  severity?: string;
   isRead: boolean;
   isStarred?: boolean;
-  createdAt: Date;
-  listingId?: string;
-  comments?: string;
-  rejectionReason?: string;
-  revisionRequests?: Record<string, any>;
+  createdAt: string | Date;
+  relatedEntityId?: string;
+  relatedEntityType?: string;
+  actionUrl?: string;
+  metadata?: Record<string, any>;
 }
 
 /**
- * Unified notifications hook that combines both general notifications and listing review notifications
+ * Unified notifications hook that fetches from the new sellerNotifications router
+ * Combines all notification types (orders, disputes, reviews, inventory, etc.)
  */
 export const useUnifiedNotifications = () => {
-  // Fetch general notifications (purchases, reviews, etc)
-  const generalNotifications = useNotifications();
+  // Fetch all notifications from the unified endpoint
+  const notificationsQuery = trpc.sellerNotifications.getNotifications.useQuery(
+    {},
+    {
+      staleTime: 1000 * 30,
+      gcTime: 1000 * 60 * 10,
+      refetchInterval: 1000 * 5,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      retry: 3,
+      retryDelay: (attemptIndex: number) =>
+        Math.min(1000 * 2 ** attemptIndex, 30000),
+    }
+  );
 
-  // Fetch listing review status notifications
-  const listingNotifications = useListingStatusNotifications();
-
-  // Combine and sort by date
+  // Transform and normalize the notifications
   const unifiedNotifications = useMemo(() => {
-    const notifications: UnifiedNotification[] = [];
-
-    // Add general notifications
-    if (generalNotifications.data) {
-      notifications.push(
-        ...generalNotifications.data.map((notif: any) => ({
-          id: notif.id,
-          type: "general" as const,
-          message: notif.message,
-          isRead: notif.isRead,
-          isStarred: notif.isStarred,
-          createdAt: notif.createdAt,
-        }))
-      );
+    if (!notificationsQuery.data?.notifications) {
+      return [];
     }
 
-    // Add listing review notifications
-    if (listingNotifications.data?.notifications) {
-      notifications.push(
-        ...listingNotifications.data.notifications.map((notif: any) => ({
-          id: notif.id,
-          type: "listing_review" as const,
-          title: notif.title,
-          message: `Your listing "${notif.title}" is ${notif.status.replace(/_/g, " ")}`,
-          status: notif.status,
-          reviewStatus: notif.status,
-          isRead: false, // Listing notifications don't have read status yet
-          isStarred: false,
-          createdAt: notif.createdAt,
-          listingId: notif.listingId,
-          comments: notif.comments,
-          rejectionReason: notif.rejectionReason,
-          revisionRequests: notif.revisionRequests,
-        }))
-      );
-    }
-
-    // Sort by date descending (newest first)
-    return notifications.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [generalNotifications.data, listingNotifications.data]);
+    return notificationsQuery.data.notifications.map((notif: any) => ({
+      id: notif.id,
+      type: notif.type,
+      title: notif.title || undefined,
+      message: notif.message,
+      severity: notif.severity || "info",
+      isRead: notif.isRead,
+      isStarred: notif.isStarred || false,
+      createdAt: notif.createdAt,
+      relatedEntityId: notif.relatedEntityId,
+      relatedEntityType: notif.relatedEntityType,
+      actionUrl: notif.actionUrl,
+      metadata: notif.metadata,
+    })) as UnifiedNotification[];
+  }, [notificationsQuery.data?.notifications]);
 
   return {
     data: unifiedNotifications,
-    isLoading: generalNotifications.isLoading || listingNotifications.isLoading,
-    error: generalNotifications.error || listingNotifications.error,
-    refetch: async () => {
-      await generalNotifications.refetch?.();
-      await listingNotifications.refetch?.();
-    },
+    isLoading: notificationsQuery.isLoading,
+    error: notificationsQuery.error,
+    refetch: notificationsQuery.refetch,
   };
 };

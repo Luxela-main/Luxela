@@ -362,7 +362,7 @@ export default function DisputeDetailPage() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-white capitalize">
-                              {reply.senderRole}
+                              {reply.senderRole === 'admin' ? 'Admin' : reply.senderRole === 'seller' ? 'Brand Contact' : 'Customer'}
                             </p>
                             <p className="text-xs text-gray-500">
                               {new Date(reply.createdAt).toLocaleString()}

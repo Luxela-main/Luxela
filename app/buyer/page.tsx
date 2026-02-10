@@ -72,22 +72,20 @@ const Homepage = () => {
       return [];
     }
     
-    // Show all approved products regardless of type
-    let result = listings;
-    
+    // Backend now filters out collections and products in collections
     if (!searchQuery.trim()) {
-      console.log('[Homepage] No search query, showing all', result.length, 'listings');
-      return result;
+      console.log('[Homepage] No search query, showing all', listings.length, 'listings');
+      return listings;
     }
     
     const query = searchQuery.toLowerCase();
-    const filtered = result.filter((listing: any) => 
+    const filtered = listings.filter((listing: any) => 
       listing.title?.toLowerCase().includes(query) ||
       listing.description?.toLowerCase().includes(query) ||
       listing.category?.toLowerCase().includes(query) ||
       listing.sellers?.seller_business?.[0]?.brand_name?.toLowerCase().includes(query)
     );
-    console.log('[Homepage] Search filtered:', { query, original: result.length, filtered: filtered.length });
+    console.log('[Homepage] Search filtered:', { query, original: listings.length, filtered: filtered.length });
     return filtered;
   }, [listings, searchQuery]);
 
@@ -114,7 +112,7 @@ const Homepage = () => {
   // Calculate homepage stats
   const homeStats = useMemo(() => {
     return {
-      totalProducts: listings.filter((l: any) => l.type === 'single').length,
+      totalProducts: listings.filter((l: any) => l.type !== 'collection').length,
       totalBrands: totalBrands || brandsArray.length,
       totalCollections: collectionsData.length,
     };

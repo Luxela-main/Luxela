@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 import type { Order } from '@/types/buyer';
 import { Search, AlertCircle, Loader, XCircle, ArrowLeft } from 'lucide-react';
@@ -23,6 +24,19 @@ export default function ReturnedOrdersPage() {
     { status: 'canceled', page: currentPage, limit: itemsPerPage },
     { retry: 2, retryDelay: 1000 }
   );
+
+  // Initialize real-time order syncing with polling
+  const { startPolling } = useRealtimeOrders({
+    enabled: true,
+    refetchInterval: 30000, // Poll every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
+    refetchOnInteraction: true, // Refresh on user interactions
+  });
+
+  // Start polling when component mounts
+  useEffect(() => {
+    startPolling();
+  }, [startPolling]);
 
   // Map API response
   useEffect(() => {

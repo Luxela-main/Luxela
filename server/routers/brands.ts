@@ -126,15 +126,18 @@ export const brandsRouter = createTRPCRouter({
         const sellerIds = Array.from(new Set(allBrands.map(b => b.sellerId))); // deduplicate
         const brandIds = allBrands.map(b => b.id);
 
-        // Execute product and follower count queries in parallel
+        // Execute product and follower count queries in parallel for better performance
         console.log(`Fetching counts in parallel for ${allBrands.length} brands...`);
+        
         const [productCountsResult, followerCountsResult] = await Promise.all([
+          // Fetch product counts for sellers
           sellerIds.length > 0 ? db
             .select({ sellerId: listings.sellerId, count: count() })
             .from(listings)
             .where(inArray(listings.sellerId, sellerIds))
             .groupBy(listings.sellerId)
             : Promise.resolve([]),
+          // Fetch follower counts for brands
           brandIds.length > 0 ? db
             .select({
               brandId: buyerBrandFollows.brandId,
@@ -145,6 +148,7 @@ export const brandsRouter = createTRPCRouter({
             .groupBy(buyerBrandFollows.brandId)
             : Promise.resolve([]),
         ]);
+        console.log(`✓ Product and follower counts fetched in parallel`);
         
         const productCountsMap = new Map(
           (productCountsResult || []).map(r => [r.sellerId, Number(r.count ?? 0)])
@@ -851,6 +855,7 @@ export const brandsRouter = createTRPCRouter({
             let allCollectionImages: string[] = [];
 
             if (isCollection && listing.id) {
+              console.log(`[getBrandListings] Processing collection: ${listing.title} (${listing.id})`);
               // Fetch collection items
               const collectionItemsList = await db
                 .select()
@@ -859,6 +864,7 @@ export const brandsRouter = createTRPCRouter({
                 .orderBy(collectionItems.position);
 
               collectionItemCount = collectionItemsList.length;
+              console.log(`[getBrandListings] Collection has ${collectionItemCount} items`);
 
               if (collectionItemsList.length > 0) {
                 const productIds = collectionItemsList.map((item) => item.productId);
@@ -881,6 +887,8 @@ export const brandsRouter = createTRPCRouter({
                   .from(productImages)
                   .where(inArray(productImages.productId, productIds))
                   .orderBy(productImages.position);
+                
+                console.log(`[getBrandListings] Fetched ${allProductImages.length} images for ${productIds.length} products in collection`);
 
                 // Build product data with pricing
                 collectionProductsList = collectionItemsList
@@ -900,6 +908,9 @@ export const brandsRouter = createTRPCRouter({
                         allCollectionImages.push(img.imageUrl);
                       }
                     });
+                    if (!collectionProductsList[collectionProductsList.length - 1]) {
+                      console.log(`[getBrandListings] Product ${collectionItem.productId} has ${productImages.length} images`);
+                    }
 
                     let colors = null;
                     let sizes = null;
@@ -966,8 +977,12 @@ export const brandsRouter = createTRPCRouter({
               .filter((url) => url && typeof url === 'string' && url.trim() !== '');
 
             // For collections, include all product images
-            if (isCollection && allCollectionImages.length > 0) {
-              imageUrls = [...new Set([...imageUrls, ...allCollectionImages])];
+            if (isCollection) {
+              console.log(`[getBrandListings] Collection ${listing.id}: imageUrls before = ${imageUrls.length}, allCollectionImages = ${allCollectionImages.length}`);
+              if (allCollectionImages.length > 0) {
+                imageUrls = [...new Set([...imageUrls, ...allCollectionImages])];
+              }
+              console.log(`[getBrandListings] Collection ${listing.id}: imageUrls after = ${imageUrls.length}`);
             }
 
             if (imageUrls.length === 0 && listing.image) {

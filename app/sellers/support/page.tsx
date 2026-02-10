@@ -107,14 +107,14 @@ export default function SellerSupportPage() {
             <p className="text-white font-semibold">Seller Guide</p>
             <p className="text-gray-400 text-sm">Browse our documentation</p>
           </button>
-          <Link href="/sellers/dashboard/support-tickets">
+          <Link href="/sellers/support-tickets">
             <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#E5E7EB'}}>
               <Ticket className="w-6 h-6 text-green-500 mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-white font-semibold">Support Tickets</p>
               <p className="text-gray-400 text-sm">View & create tickets</p>
             </button>
           </Link>
-          <Link href="/sellers/dashboard/support-tickets">
+          <Link href="/sellers/support-tickets">
             <button className="bg-[#1a1a1a] border-2 rounded-lg p-4 hover:bg-[#252525] transition-colors text-left cursor-pointer group w-full" style={{borderColor: '#E5E7EB'}}>
               <AlertCircle className="w-6 h-6 text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-white font-semibold">Report Issue</p>
@@ -183,7 +183,7 @@ export default function SellerSupportPage() {
           <h3 className="text-xl font-semibold text-white mb-2 text-center">Didn't find what you need?</h3>
           <p className="text-gray-400 mb-6 text-center">Create a support ticket and our team will assist you</p>
           <div className="flex justify-center">
-            <Link href="/sellers/dashboard/support-tickets">
+            <Link href="/sellers/support-tickets">
               <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium cursor-pointer flex items-center gap-2">
                 <Ticket className="w-4 h-4" />
                 Create Ticket

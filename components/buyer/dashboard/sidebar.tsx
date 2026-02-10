@@ -50,7 +50,8 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
 
   const derivedActive = useCallback(() => {
     if (!pathname) return activeItem;
-    if (pathname === '/buyer/dashboard') return 'my-account';
+    if (pathname === '/buyer/dashboard') return 'dashboard';
+    if (pathname.startsWith('/buyer/dashboard/account')) return 'account';
     if (pathname.startsWith('/buyer/dashboard/orders')) return 'orders';
     if (pathname.startsWith('/buyer/dashboard/favorite-items')) return 'favorite-items';
     if (pathname.startsWith('/buyer/dashboard/notifications')) return 'notifications';
@@ -64,7 +65,8 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
   const activeItemValue = derivedActive();
 
   const menuItems: MenuItem[] = [
-    { id: 'my-account', label: 'My Account', icon: User, href: '/buyer/dashboard' },
+    { id: 'dashboard', label: 'Dashboard', icon: ShoppingBag, href: '/buyer/dashboard' },
+    { id: 'account', label: 'Account Details', icon: User, href: '/buyer/dashboard/account' },
     { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/buyer/dashboard/orders' },
     { id: 'favorite-items', label: 'Favorite Items', icon: Heart, href: '/buyer/dashboard/favorite-items' },
     { id: 'notifications', label: 'Notifications', icon: Bell, href: '/buyer/dashboard/notifications', badge: notificationCount },
@@ -120,7 +122,7 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
               <Link key={item.id} href={item.href} onClick={closeMobileMenu} className="block">
                 <button
                   className={cn(
-                    'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all justify-between',
+                    'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all justify-between cursor-pointer',
                     'text-[#acacac] hover:text-white hover:bg-[#1a1a1a]',
                     isActive && 'bg-[#8451E126] text-[#8451E1] hover:bg-[#8451e1] hover:text-white'
                   )}
@@ -145,7 +147,7 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
           {/* Profile Button */}
           <button
             onClick={handleProfileClick}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all text-[#acacac] hover:text-white hover:bg-[#1a1a1a]"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all text-[#acacac] hover:text-white hover:bg-[#1a1a1a] cursor-pointer"
           >
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
               {profile?.profilePicture ? (
@@ -176,13 +178,13 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 px-3 py-2 bg-[#1a1a1a] text-white rounded-lg text-sm hover:bg-[#222] transition-colors"
+                  className="flex-1 px-3 py-2 bg-[#1a1a1a] text-white rounded-lg text-sm hover:bg-[#222] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
+                  className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors cursor-pointer"
                 >
                   Log out
                 </button>

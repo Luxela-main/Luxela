@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState, useMemo } from "react";
-import { EnhancedProductCard, EnhancedCollectionCard } from "@/components/buyer/product-display";
+import { ProductDisplayGrid, CollectionShowcase } from "@/components/buyer/product-display";
 import { ChevronDown, ChevronRight, Loader2, Package, TrendingUp, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +23,7 @@ export default function BrandPage({
   const { id } = use(params);
   console.log('[BrandPage] Rendering with id:', id);
   const [activeTab, setActiveTab] = useState<"products" | "collections">(
+
     "products"
   );
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -348,11 +349,7 @@ export default function BrandPage({
           {activeTab === "products" ? (
             <>
               {sortedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
-                  {sortedProducts.map((product) => (
-                    <EnhancedProductCard key={product.id} product={product} brandSlug={id} />
-                  ))}
-                </div>
+                <ProductDisplayGrid products={sortedProducts} />
               ) : (
                 <div className="text-center py-20">
                   <Package className="w-12 h-12 text-[#333] mx-auto mb-4" />
@@ -364,11 +361,7 @@ export default function BrandPage({
           ) : (
             <>
               {sortedCollections.length > 0 ? (
-                <div className="space-y-4 mb-12">
-                  {sortedCollections.map((collection) => (
-                    <EnhancedCollectionCard key={collection.id} collection={collection} />
-                  ))}
-                </div>
+                <CollectionShowcase collections={sortedCollections} title="" variant="grid" />
               ) : (
                 <div className="text-center py-20">
                   <Package className="w-12 h-12 text-[#333] mx-auto mb-4" />

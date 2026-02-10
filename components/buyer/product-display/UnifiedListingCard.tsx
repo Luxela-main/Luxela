@@ -193,17 +193,30 @@ export default function UnifiedListingCard({
     images[0] !== LUXELA_PLACEHOLDER;
 
   const colors = useMemo(() => {
-    if (!listing.colors_available) return [];
+    // Handle both formats - colors (from product endpoint) and colors_available (from collections)
+    const colorsData = listing.colors || listing.colors_available;
+    if (!colorsData) return [];
     try {
-      const parsed = JSON.parse(listing.colors_available);
-      return Array.isArray(parsed) ? parsed : [];
+      // If it's a string, parse it
+      if (typeof colorsData === 'string') {
+        const parsed = JSON.parse(colorsData);
+        return Array.isArray(parsed) ? parsed : [];
+      } else if (Array.isArray(colorsData)) {
+        // If it's already an array, return it
+        return colorsData;
+      }
+      return [];
     } catch (e) {
-      return listing.colors_available.split(',').map((c) => ({
-        colorName: c.trim(),
-        colorHex: '',
-      }));
+      // Fallback: try to split by comma if it's a string
+      if (typeof colorsData === 'string') {
+        return colorsData.split(',').map((c) => ({
+          colorName: c.trim(),
+          colorHex: '',
+        }));
+      }
+      return [];
     }
-  }, [listing.colors_available]);
+  }, [listing.colors, listing.colors_available]);
 
   const stockStatus =
     listing.quantity_available === 0
@@ -220,7 +233,7 @@ export default function UnifiedListingCard({
   return (
     <>
       <div className="group relative h-full flex flex-col">
-        <Link href={destinationUrl} className="block flex-1">
+        <Link href={destinationUrl} className="block flex-1 pointer-events-none">
           <div
             className="relative h-full bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-xl overflow-hidden transition-all duration-300 shadow-lg border-2 flex flex-col"
             style={{
@@ -240,8 +253,8 @@ export default function UnifiedListingCard({
               el.style.transform = 'translateY(0)';
             }}
           >
-            {/* Image Section - Fixed height 280px with Horizontal Scroll */}
-            <div className="relative w-full h-[280px] bg-[#222] overflow-hidden flex-shrink-0">
+            {/* Image Section - Responsive height with aspect ratio */}
+            <div className="relative w-full bg-[#222] overflow-hidden flex-shrink-0 pointer-events-auto" style={{ aspectRatio: '1 / 1', height: 'auto', minHeight: '220px', touchAction: 'pan-y' }}>
               {isValidImage && images.length > 0 ? (
                 <HorizontalImageScroller
                   images={images}

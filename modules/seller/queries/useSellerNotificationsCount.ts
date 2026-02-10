@@ -1,55 +1,60 @@
-import { trpc as api } from '@/app/_trpc/client';
+import { trpc } from "@/lib/trpc";
 
+/**
+ * Hook to get ONLY unread listing notification count for badge
+ * Uses lightweight optimized query that polls frequently
+ */
 export const useSellerNotificationsCount = () => {
-  const { data } = api.sellerListingNotifications.getUnreadCount.useQuery(
-    undefined,
-    {
-      staleTime: 1000 * 5,
-      gcTime: 1000 * 60 * 10,
-      refetchInterval: 1000 * 10,
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      retry: 3,
-      retryDelay: (attemptIndex: number) =>
-        Math.min(1000 * 2 ** attemptIndex, 30000),
-    }
-  );
-
-  return data?.count ?? 0;
-};
-
-export const useSellerNotificationsCountLightweight = () => {
-  const { data } = api.sellerListingNotifications.getUnreadCount.useQuery(
-    undefined,
-    {
-      staleTime: 1000 * 10,
-      gcTime: 1000 * 60 * 15,
-      refetchInterval: 1000 * 30,
-      refetchOnWindowFocus: true,
-      retry: 2,
-      retryDelay: 1000,
-    }
-  );
-
-  return data?.count ?? 0;
-};
-
-export const useSellerNotificationsCountAggressive = () => {
-  const { data, isLoading } = api.sellerListingNotifications.getUnreadCount.useQuery(
-    undefined,
-    {
-      staleTime: 1000 * 2,
-      gcTime: 1000 * 60 * 5,
-      refetchInterval: 1000 * 5,
-      refetchOnWindowFocus: true,
-      refetchIntervalInBackground: true,
-      retry: 3,
-      retryDelay: 500,
-    }
-  );
-
+  const query = trpc.sellerListingNotifications.getUnreadCount.useQuery(undefined, {
+    staleTime: 1000 * 5, 
+    gcTime: 1000 * 60,
+    refetchInterval: 1000 * 10,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 2,
+  });
+  const count = query.data?.count ?? 0;
   return {
-    unreadCount: data?.count ?? 0,
-    isLoading,
+    ...query,
+    data: count,
+  };
+};
+
+/**
+ * Lightweight version for less frequent updates
+ * Useful for components that don't need real-time updates
+ */
+export const useSellerNotificationsCountLightweight = () => {
+  const query = trpc.sellerListingNotifications.getUnreadCount.useQuery(undefined, {
+    staleTime: 1000 * 10,
+    gcTime: 1000 * 60 * 15,
+    refetchInterval: 1000 * 30,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  });
+  const count = query.data?.count ?? 0;
+  return {
+    ...query,
+    data: count,
+  };
+};
+
+/**
+ * Aggressive version for real-time updates
+ * Polls every 5 seconds and includes background refetch
+ */
+export const useSellerNotificationsCountAggressive = () => {
+  const query = trpc.sellerListingNotifications.getUnreadCount.useQuery(undefined, {
+    staleTime: 1000 * 2,
+    gcTime: 1000 * 60 * 5,
+    refetchInterval: 1000 * 5,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: true,
+    retry: 2,
+  });
+  const count = query.data?.count ?? 0;
+  return {
+    ...query,
+    data: count,
   };
 };

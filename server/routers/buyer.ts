@@ -32,6 +32,17 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  notifyAccountCreated,
+  notifyProfileUpdated,
+  notifyAddressAdded,
+  notifyAddressUpdated,
+  notifyPasswordChanged,
+  notifyProductFavorited,
+  notifyProductUnfavorited,
+  notifyBrandFollowed,
+  notifyBrandUnfollowed,
+} from "../services/buyerNotificationService";
 
 let supabase: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient | null {
@@ -789,6 +800,21 @@ return {
           });
         });
 
+        // Send address creation notification
+        try {
+          await notifyAddressAdded(
+            buyer.id,
+            JSON.stringify({
+              houseAddress: input.houseAddress,
+              city: input.city,
+              postalCode: input.postalCode,
+              isDefault: input.isDefault,
+            })
+          );
+        } catch (notifErr) {
+          console.warn('Failed to send address creation notification:', notifErr);
+        }
+
         return { success: true, id: addressId };
       } catch (err: any) {
         throw new TRPCError({
@@ -863,6 +889,21 @@ return {
             })
             .where(eq(buyerBillingAddress.id, input.addressId));
         });
+        
+        // Send address update notification
+        try {
+          await notifyAddressUpdated(
+            buyer.id,
+            JSON.stringify({
+              houseAddress: input.houseAddress,
+              city: input.city,
+              postalCode: input.postalCode,
+              isDefault: input.isDefault,
+            })
+          );
+        } catch (notifErr) {
+          console.warn('Failed to send address update notification:', notifErr);
+        }
 
         return { success: true };
       } catch (err: any) {
@@ -1082,6 +1123,25 @@ return {
           createdAt: new Date(),
         });
 
+        // Get listing details for notification
+        const listing = await db
+          .select({ title: listings.title, productId: listings.productId })
+          .from(listings)
+          .where(eq(listings.id, input.listingId))
+          .limit(1);
+
+        // Notify buyer
+        try {
+          if (listing[0]) {
+            // Only notify if productId exists
+            if (listing[0].productId) {
+              await notifyProductFavorited(buyer.id, listing[0].productId, listing[0].title);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to send favorite notification:', err);
+        }
+
         return { success: true, favoriteId };
       } catch (err: any) {
         throw new TRPCError({
@@ -1129,9 +1189,29 @@ return {
           });
         }
 
+        const listingId = favorite[0].listingId;
+
+        // Fetch listing details for notification
+        const listingDetails = await db
+          .select({ title: listings.title })
+          .from(listings)
+          .where(eq(listings.id, listingId))
+          .limit(1);
+
         await db
           .delete(buyerFavorites)
           .where(eq(buyerFavorites.id, input.favoriteId));
+
+        // Notify buyer
+        try {
+          await notifyProductUnfavorited(
+            buyer.id,
+            listingId,
+            listingDetails[0]?.title || 'Product'
+          );
+        } catch (err) {
+          console.error('Failed to send unfavorite notification:', err);
+        }
 
         return { success: true };
       } catch (err: any) {
@@ -2264,6 +2344,20 @@ return {
             })
             .onConflictDoNothing();
           isFollowing = true;
+
+          // Get brand name for notification
+          const brandData = await db
+            .select({ name: brands.name })
+            .from(brands)
+            .where(eq(brands.id, input.brandId))
+            .limit(1);
+
+          // Notify buyer
+          try {
+            await notifyBrandFollowed(buyerId, input.brandId, brandData[0]?.name || 'Brand');
+          } catch (err) {
+            console.error('Failed to send brand follow notification:', err);
+          }
         } else {
           await db
             .delete(buyerBrandFollows)
@@ -2274,6 +2368,24 @@ return {
               )
             );
           isFollowing = false;
+
+          // Get brand name for notification
+          const brandDataUnfollow = await db
+            .select({ name: brands.name })
+            .from(brands)
+            .where(eq(brands.id, input.brandId))
+            .limit(1);
+
+          // Notify buyer
+          try {
+            await notifyBrandUnfollowed(
+              buyerId,
+              input.brandId,
+              brandDataUnfollow[0]?.name || 'Brand'
+            );
+          } catch (err) {
+            console.error('Failed to send brand unfollow notification:', err);
+          }
         }
 
         // Get updated follower count for the brand

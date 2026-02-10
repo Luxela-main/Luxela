@@ -7,7 +7,9 @@ import { Bell, ChevronDown, Search, ShoppingCart, Menu, X, ShoppingBag, Heart, P
 import Image from "next/image";
 import Link from "next/link";
 import { useSearch } from "@/context/SearchContext";
-import { useNotificationsCount } from "@/modules/buyer";
+import { useNotificationsCount, useFavoritesCount } from "@/modules/buyer";
+import { useRealtimeFavorites } from "@/hooks/useRealtimeFavorites";
+import { NotificationBell } from "@/modules/buyer/components/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,12 +44,13 @@ const NAVLINKS = [
 ];
 
 const USER_DROPDOWN = [
-  { name: "My Account", href: "/buyer/dashboard" },
+  { name: "My Account", href: "/buyer/dashboard/account" },
   { name: "Profile", href: "/buyer/profile" },
   { name: "Settings", href: "/buyer/dashboard/settings" },
 ];
 
 const BuyerHeader = () => {
+  useRealtimeFavorites(); // Enable real-time favorites syncing
   const { user, logout } = useAuth();
   const toast = useToast();
   const pathname = usePathname();
@@ -56,10 +59,10 @@ const BuyerHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { profile, loading } = useProfile();
-  const { cart } = useCartState();
+  const { itemCount } = useCartState();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
-  const itemCount = cart?.items?.length || 0;
   const notificationCount = useNotificationsCount();
+  const favoritesCount = useFavoritesCount();
   const isCreateProfileRoute = pathname?.includes('/buyer/profile/create');
 
   useEffect(() => {
@@ -154,27 +157,17 @@ const BuyerHeader = () => {
                 )}
               </div>
 
-              {mounted ? (
-                <Link href={user ? "/buyer/dashboard/notifications" : "/signin?redirect=/buyer/dashboard/notifications"}>
-                  <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
-                    <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
-                    {notificationCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-[#0E0E0E]">
-                        {notificationCount > 99 ? '99+' : notificationCount}
-                      </span>
-                    )}
-                  </button>
-                </Link>
-              ) : (
-                <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out flex-shrink-0">
-                  <Bell stroke="#DCDCDC" strokeWidth={1} className="size-6" />
-                </button>
-              )}
+              {mounted && user && <NotificationBell />}
 
               {mounted ? (
                 <Link href={user ? "/buyer/favorites" : "/signin?redirect=/buyer/favorites"}>
                   <button className="relative cursor-pointer p-[10px] bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] hover:-translate-y-[1px] duration-300 ease-in-out group flex-shrink-0">
                     <Heart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                    {favoritesCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-[#0E0E0E]">
+                        {favoritesCount > 99 ? '99+' : favoritesCount}
+                      </span>
+                    )}
                   </button>
                 </Link>
               ) : (
@@ -206,11 +199,23 @@ const BuyerHeader = () => {
               )}
             </div>
 
+            {/* Mobile: Notification Bell */}
+            {mounted && user && (
+              <div className="lg:hidden">
+                <NotificationBell />
+              </div>
+            )}
+
             {/* Mobile: Favorites Icon */}
             {mounted ? (
               <Link href={user ? "/buyer/favorites" : "/signin?redirect=/buyer/favorites"}>
                 <button className="lg:hidden relative cursor-pointer p-2 bg-[#141414] rounded-[4px] shadow-[inset_0_0_0_1px_#212121] flex-shrink-0">
                   <Heart stroke="#DCDCDC" strokeWidth={1} className="size-6" />
+                  {favoritesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full">
+                      {favoritesCount > 99 ? '99+' : favoritesCount}
+                    </span>
+                  )}
                 </button>
               </Link>
             ) : (
@@ -277,7 +282,7 @@ const BuyerHeader = () => {
                       <React.Fragment key={item.name}>
                         <DropdownMenuItem
                           asChild
-                          className="cursor-pointer text-[#F2F2F2] hover:!text-[#000] transition-colors duration-300 ease-in"
+                          className="cursor-pointer text-[#F2F2F2] hover:text-[#8451E1] transition-colors duration-300 ease-in"
                         >
                           <Link href={item.href}>{item.name}</Link>
                         </DropdownMenuItem>

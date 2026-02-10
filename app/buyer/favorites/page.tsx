@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getBuyerFavorites } from '@/server/actions/favorites';
 import { useAuth } from '@/context/AuthContext';
+import { useRealtimeListings } from '@/hooks/useRealtimeListings';
 import { useRouter } from 'next/navigation';
 import { Loader2, Heart, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
@@ -22,6 +23,7 @@ interface Favorite {
 }
 
 export default function FavoritesPage() {
+  useRealtimeListings(); // Enable realtime product syncing
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);

@@ -4,6 +4,7 @@ export * from './useMyCollections';
 export * from './useSales';
 export * from './useSellerOrders';
 export * from './useNotifications';
+export * from './useSellerNotificationsCount';
 export * from './useListingStatusNotifications';
 export * from './useUnifiedNotifications';
 export * from './useDashboardData';

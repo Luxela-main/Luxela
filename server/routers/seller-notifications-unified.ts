@@ -22,7 +22,7 @@ async function generateAndStoreSellerNotifications(
   const now = new Date();
 
   try {
-    // 1. Check for new orders awaiting confirmation
+    // Check for new orders awaiting confirmation
     const newOrders = await db
       .select()
       .from(orders)
@@ -68,7 +68,7 @@ async function generateAndStoreSellerNotifications(
       }
     }
 
-    // 2. Check for orders awaiting shipment
+    // Check for orders awaiting shipment
     const confirmedOrders = await db
       .select()
       .from(orders)
@@ -109,7 +109,7 @@ async function generateAndStoreSellerNotifications(
       }
     }
 
-    // 3. Check for new disputes
+    // Check for new disputes
     const openDisputes = await db
       .select()
       .from(disputes)
@@ -154,7 +154,7 @@ async function generateAndStoreSellerNotifications(
       }
     }
 
-    // 4. Check for new reviews on listings
+    // Check for new reviews on listings
     const recentReviews = await db
       .select()
       .from(listingReviews)
@@ -198,7 +198,7 @@ async function generateAndStoreSellerNotifications(
       }
     }
 
-    // 5. Check for low inventory listings
+    // Check for low inventory listings
     const lowInventoryListings = await db
       .select()
       .from(listings)
@@ -285,7 +285,8 @@ export const sellerNotificationsRouter = createTRPCRouter({
       }
 
       // Generate fresh notifications (non-blocking background task)
-      generateAndStoreSellerNotifications(seller.id).catch((err) =>
+      // Fire-and-forget: don't await to prevent blocking the response
+      void generateAndStoreSellerNotifications(seller.id).catch((err) =>
         console.error('Error generating notifications:', err)
       );
 
@@ -361,6 +362,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
         summary: 'Get count of unread notifications (optimized badge query)',
       },
     })
+    .input(z.void())
     .output(z.object({ count: z.number() }))
     .query(async ({ ctx }) => {
       const userId = ctx.user?.id;
@@ -388,7 +390,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
         ));
 
       const count = result[0]?.count ?? 0;
-      return { count };
+      return { count: Number(count) };
     }),
 
   /**
@@ -438,8 +440,8 @@ export const sellerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Generate fresh notifications
-      await generateAndStoreSellerNotifications(seller.id).catch((err) =>
+      // Generate fresh notifications (fire-and-forget)
+      void generateAndStoreSellerNotifications(seller.id).catch((err) =>
         console.error('Error generating notifications:', err)
       );
 
@@ -674,5 +676,42 @@ export const sellerNotificationsRouter = createTRPCRouter({
         .where(eq(sellerNotifications.id, input.notificationId));
 
       return { success: true };
+    }),
+
+  /**
+   * Delete all notifications for a seller
+   */
+  deleteAllNotifications: protectedProcedure
+    .output(z.object({ success: z.literal(true), deletedCount: z.number() }))
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+      }
+
+      const seller = await db.query.sellers.findFirst({
+        where: eq(sellers.userId, userId),
+      });
+
+      if (!seller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a seller',
+        });
+      }
+
+      // Get count before deletion for response
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(sellerNotifications)
+        .where(eq(sellerNotifications.sellerId, seller.id));
+
+      const deletedCount = countResult[0]?.count ?? 0;
+
+      await db
+        .delete(sellerNotifications)
+        .where(eq(sellerNotifications.sellerId, seller.id));
+
+      return { success: true, deletedCount };
     }),
 });

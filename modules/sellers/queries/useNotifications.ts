@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 
 export const useNotifications = () => {
-  return (trpc.notification as any).getAll.useQuery(undefined, {
+  return trpc.sellerNotifications.getNotifications.useQuery({}, {
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
     refetchInterval: 1000 * 5,
@@ -15,11 +15,11 @@ export const useNotifications = () => {
 export const useMarkNotificationAsRead = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.notification as any).markAsRead.useMutation({
+  return trpc.sellerNotifications.markAsRead.useMutation({
     onSuccess: async () => {
-      await (utils.notification as any).getAll.invalidate();
-      await (utils.notification as any).getStarred.invalidate();
-      await (utils.notification as any).getAll.refetch();
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
+      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
@@ -27,10 +27,11 @@ export const useMarkNotificationAsRead = () => {
 export const useMarkAllNotificationsAsRead = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.notification as any).markAllAsRead.useMutation({
+  return trpc.sellerNotifications.markAllAsRead.useMutation({
     onSuccess: async () => {
-      await (utils.notification as any).getAll.invalidate();
-      await (utils.notification as any).getAll.refetch();
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
+      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
@@ -38,17 +39,17 @@ export const useMarkAllNotificationsAsRead = () => {
 export const useToggleNotificationStar = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.notification as any).toggleStar.useMutation({
+  return trpc.sellerNotifications.toggleStar.useMutation({
     onSuccess: async () => {
-      await (utils.notification as any).getAll.invalidate();
-      await (utils.notification as any).getStarred.invalidate();
-      await (utils.notification as any).getAll.refetch();
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
+      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
 
 export const useStarredNotifications = () => {
-  return (trpc.notification as any).getStarred.useQuery(undefined, {
+  return trpc.sellerNotifications.getNotifications.useQuery({}, {
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
     refetchInterval: 1000 * 5,
@@ -60,11 +61,11 @@ export const useStarredNotifications = () => {
 export const useDeleteNotification = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.notification as any).deleteNotification.useMutation({
+  return trpc.sellerNotifications.deleteNotification.useMutation({
     onSuccess: async () => {
-      await (utils.notification as any).getAll.invalidate();
-      await (utils.notification as any).getStarred.invalidate();
-      await (utils.notification as any).getAll.refetch();
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
+      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
@@ -72,11 +73,11 @@ export const useDeleteNotification = () => {
 export const useDeleteAllNotifications = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.notification as any).deleteAll.useMutation({
+  return trpc.sellerNotifications.deleteAllNotifications.useMutation({
     onSuccess: async () => {
-      await (utils.notification as any).getAll.invalidate();
-      await (utils.notification as any).getStarred.invalidate();
-      await (utils.notification as any).getAll.refetch();
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
+      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };

@@ -1,10 +1,11 @@
 "use client";
 
-import { use, useMemo, useState, useEffect } from "react";
+import { use, useMemo, useState, useEffect, useCallback } from "react";
 import { useListings } from "@/context/ListingsContext";
 import { useCartState } from "@/modules/cart/context";
 import { useAuth } from "@/context/AuthContext";
-import { useCollectionProducts } from "@/modules/buyer/queries/useCollectionProducts";
+import { trpc } from "@/app/_trpc/client";
+
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -23,6 +24,18 @@ import {
   ArrowUpDown,
   Zap,
   AlertCircle,
+  Shield,
+  AlertTriangle,
+  Globe,
+  RotateCcw,
+  Shirt,
+  Barcode,
+  Film,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  Send,
+  X,
 } from "lucide-react";
 import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
@@ -37,71 +50,218 @@ import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { generateProductSchema, generateBreadcrumbSchema } from "@/lib/seo/structured-data";
 import { SITE } from "@/lib/seo/config";
 
+// Helper function to format refund policies
+const formatRefundPolicy = (policy: string) => {
+  const policies: Record<string, string> = {
+    no_refunds: "No Refunds",
+    "48hrs": "48 Hours",
+    "72hrs": "72 Hours",
+    "5_working_days": "5 Working Days",
+    "1week": "1 Week",
+    "14days": "14 Days",
+    "30days": "30 Days",
+    "60days": "60 Days",
+    store_credit: "Store Credit",
+  };
+  return policies[policy] || policy;
+};
+
+// Helper function to format shipping ETAs
+const formatShippingEta = (eta: string) => {
+  const etas: Record<string, string> = {
+    same_day: "Same Day",
+    next_day: "Next Day",
+    "48hrs": "48 Hours",
+    "72hrs": "72 Hours",
+    "5_working_days": "5 Working Days",
+    "1_2_weeks": "1-2 Weeks",
+    "2_3_weeks": "2-3 Weeks",
+    custom: "Custom",
+  };
+  return etas[eta] || eta;
+};
+
+// Helper function to format shipping options
+const formatShippingOption = (option: string) => {
+  const options: Record<string, string> = {
+    local: "Local Only",
+    international: "International Only",
+    both: "Both Local & International",
+  };
+  return options[option] || option;
+};
+
 export default function CollectionDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { getListingById, loading, fetchListingDetailsById } = useListings();
-  const { data: collectionProductsData, products, isLoading: productsLoading } = useCollectionProducts({ collectionId: id });
+  const { getListingById, loading } = useListings();
+  const { user } = useAuth();
   const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [filterColor, setFilterColor] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [showSchemas, setShowSchemas] = useState(false);
-  const [collectionDetails, setCollectionDetails] = useState<any>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(true);
+  const [collectionId, setCollectionId] = useState<string | null>(null);
+  const [resolvedCollectionId, setResolvedCollectionId] = useState<string | null>(null);
+  const [isFavorited, setIsFavorited] = useState(false);
 
-  const isLoadingPage = loading || productsLoading || isLoadingDetails;
-  const collection = collectionDetails || collectionProductsData || getListingById(id);
-
+  // Only set collectionId once when params changes
   useEffect(() => {
-    const loadDetails = async () => {
-      try {
-        setIsLoadingDetails(true);
-        const details = await fetchListingDetailsById(id);
-        if (details) {
-          setCollectionDetails(details);
-        }
-      } catch (error) {
-        console.error('[Collection Page] Error:', error);
-      } finally {
-        setIsLoadingDetails(false);
-      }
-    };
-    loadDetails();
-  }, [id, fetchListingDetailsById]);
+    if (!id) return;
+    setCollectionId(id);
+  }, [id]);
 
-  // Use products from the new hook with all images
-  let items: any[] = [];
-  if (products && products.length > 0) {
-    // Map products to items, using listing prices
-    items = products.map((product) => {
-      // Find the corresponding listing for pricing
-      const listing = collectionProductsData?.listings?.find((l: any) => l.productId === product.id);
-      const priceCents = listing?.priceCents || 0;
-      const currency = listing?.currency || product.currency || 'NGN';
+  // Query approved collections - runs once due to stabilized params
+  const { data: collectionData, isLoading: isLoadingCollectionData } = trpc.collection.getApprovedCollections.useQuery(
+    {
+      limit: 100,
+      offset: 0,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    }
+  );
+
+  // Resolve collection ID from listing ID - only when collectionData changes
+  useEffect(() => {
+    if (!collectionId) return;
+    
+    // First check if the ID from URL is a collectionId directly
+    if (collectionData?.collections) {
+      const matchedCollection = collectionData.collections.find((c: any) => c.id === collectionId);
+      if (matchedCollection?.collectionId) {
+        // URL param was a listing ID
+        setResolvedCollectionId(matchedCollection.collectionId);
+        return;
+      }
+    }
+    
+    // If no listing match found, assume the ID itself is a collectionId
+    setResolvedCollectionId(collectionId);
+  }, [collectionData?.collections, collectionId]);
+
+  // Query detailed collection data - only when resolvedCollectionId is available
+  const { data: detailedCollectionData, isLoading: isLoadingDetailedData } = trpc.collection.getBuyerCollectionWithProducts.useQuery(
+    { collectionId: resolvedCollectionId! },
+    {
+      enabled: !!resolvedCollectionId,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+    }
+  );
+
+  const isLoadingPage = loading || isLoadingCollectionData || isLoadingDetailedData;
+  const collectionProductsData = useMemo(() => {
+    if (!collectionData?.collections || !collectionId) return null;
+    // First try to find by listing ID
+    const byListingId = collectionData.collections.find((c: any) => c.id === collectionId);
+    if (byListingId) return byListingId;
+    // Then try to find by collectionId
+    const byCollectionId = collectionData.collections.find((c: any) => c.collectionId === collectionId);
+    return byCollectionId || null;
+  }, [collectionData?.collections, collectionId]);
+  
+  const collection = collectionProductsData || detailedCollectionData;
+  const products = collectionProductsData?.items || detailedCollectionData?.items || [];
+
+  // Memoize items processing to prevent recalculation
+  const items = useMemo(() => {
+    const sourceItems = collectionProductsData?.items || detailedCollectionData?.items || [];
+    
+    if (!sourceItems || sourceItems.length === 0) return [];
+
+    return sourceItems.map((item: any, idx: number) => {
+      // Items from getBuyerCollectionWithProducts have listing object with price/color/size fields
+      // If item has a listing property, use it; otherwise use the item itself
+      const isEnriched = !item.listing; // item is enriched if it doesn't have a listing (data is on item itself)
+      const listingData = item.listing || item;
+      const product = item.product;
+      
+      let colors_available: any[] = [];
+      // Try multiple field names: colorsAvailable (from listing), colors_available, colors
+      const colorSource = listingData?.colorsAvailable || listingData?.colors_available || listingData?.colors;
+      if (colorSource) {
+        try {
+          colors_available = typeof colorSource === 'string' 
+            ? JSON.parse(colorSource) 
+            : Array.isArray(colorSource) ? colorSource : [];
+          console.log('[Collection] Color source for item', idx, ':', {colorSource, parsed: colors_available});
+        } catch (e) {
+          console.error('[Collection] Color parse error for item', idx, ':', e);
+          colors_available = [];
+        }
+      }
+      
+      let sizes: any[] = [];
+      const sizeSource = listingData?.sizesJson || listingData?.sizes;
+      if (sizeSource) {
+        try {
+          sizes = typeof sizeSource === 'string' 
+            ? JSON.parse(sizeSource) 
+            : Array.isArray(sizeSource) ? sizeSource : [];
+        } catch (e) {
+          sizes = [];
+        }
+      }
+      
+      const materialSource = listingData?.material;
+      const itemTitle = item.title || item.productName || product?.name || `Item ${idx + 1}`;
+      
+      let itemImages = [];
+      if (isEnriched && item.images) {
+        itemImages = item.images.map((img: any) => ({ imageUrl: img.image || img.imageUrl, position: img.position }));
+      } else if (item.images) {
+        itemImages = item.images;
+      }
+      
+      const mainImage = itemImages?.[0]?.imageUrl || 
+                        (item.image && isEnriched ? item.image : null) ||
+                        product?.images?.[0]?.imageUrl || 
+                        null;
       
       return {
-        id: product.id,
-        title: product.name,
-        name: product.name,
-        priceCents: priceCents,
-        price_cents: priceCents,
-        currency: currency,
-        image: product.images?.[0]?.imageUrl || null,
-        colors_available: product.variants || [],
-        sizes: product.variants?.map((v: any) => v.size).filter((s: any, i: number, arr: any[]) => arr.indexOf(s) === i) || [],
-        material_composition: product.description,
-        quantity_available: product.inventory?.reduce((sum: number, inv: any) => sum + (inv.quantity || 0), 0) || 0,
-        inStock: product.inStock,
-        images: product.images || [],
-        itemsJson: listing?.itemsJson || product.itemsJson,
+        id: product?.id || item.productId || item.id,
+        title: itemTitle,
+        name: itemTitle,
+        priceCents: listingData?.priceCents || item?.priceCents || 0,
+        price_cents: listingData?.priceCents || item?.priceCents || 0,
+        currency: listingData?.currency || item?.currency || 'NGN',
+        image: mainImage,
+        colors_available: colors_available,
+        sizes: sizes,
+        description: listingData?.description || product?.description,
+        material_composition: materialSource || product?.description,
+        quantity_available: listingData?.quantityAvailable || 0,
+        inStock: (listingData?.quantityAvailable || 0) > 0,
+        images: itemImages,
+        careInstructions: listingData?.careInstructions,
+        refundPolicy: listingData?.refundPolicy,
+        videoUrl: listingData?.videoUrl,
+        shippingOption: listingData?.shippingOption,
+        etaDomestic: listingData?.etaDomestic,
+        etaInternational: listingData?.etaInternational,
+        sku: listingData?.sku,
+        barcode: listingData?.barcode,
+        metaDescription: listingData?.metaDescription,
+        category: listingData?.category,
+        rating: 4.5,
+        reviewCount: 12,
       };
     });
-  }
+  }, [collectionProductsData?.items, products]);
 
-  // Extract all unique colors from all items
+  const avgRating = useMemo(() => {
+    if (items.length === 0) return 0;
+    const totalRating = items.reduce((sum, item) => sum + (item.rating || 0), 0);
+    return totalRating / items.length;
+  }, [items]);
+
+  const totalReviews = useMemo(() => {
+    return items.reduce((sum, item) => sum + (item.reviewCount || 0), 0);
+  }, [items]);
+
   const allColors = useMemo(() => {
     const colorMap = new Map<string, { colorName: string; colorHex: string }>();
     items.forEach((item) => {
@@ -109,19 +269,21 @@ export default function CollectionDetailPage({
         const colors = item.colors_available
           ? Array.isArray(item.colors_available)
             ? item.colors_available
-            : JSON.parse(item.colors_available)
+            : typeof item.colors_available === 'string' ? JSON.parse(item.colors_available) : []
           : [];
+        console.log('[allColors] Item colors:', {  itemTitle: item.title, colorCount: colors.length, colorsData: item.colors_available });
         colors.forEach((color: any) => {
           if (!colorMap.has(color.colorHex)) {
             colorMap.set(color.colorHex, color);
           }
         });
-      } catch (e) {}
+      } catch (e) {
+        console.error('[allColors] Error processing:', e);
+      }
     });
     return Array.from(colorMap.values());
   }, [items]);
 
-  // Filter and sort items
   const sortedItems = useMemo(() => {
     let filtered = items.filter((item) => {
       if (!filterColor) return true;
@@ -150,7 +312,9 @@ export default function CollectionDetailPage({
     });
   }, [items, sortBy, filterColor]);
 
-  // Early return checks must come after all hooks
+  const totalPriceCents = items.reduce((sum, item) => sum + (item.priceCents || item.price_cents || 0), 0);
+  const totalPrice = totalPriceCents > 0 ? totalPriceCents / 100 : 0;
+
   if (isLoadingPage)
     return (
       <div className="bg-black min-h-screen flex items-center justify-center">
@@ -178,210 +342,238 @@ export default function CollectionDetailPage({
       </div>
     );
 
-  const totalPrice = items.reduce((sum, item) => sum + (item.price_cents || 0), 0);
-  const avgPrice = items.length > 0 ? totalPrice / items.length / 100 : 0;
-
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: SITE.url },
     { name: "Collections", url: `${SITE.url}/buyer/collections` },
-    { name: collectionProductsData?.name ?? "Collection", url: `${SITE.url}/buyer/collection/${id}` },
+    { name: collectionProductsData?.collectionName ?? collectionProductsData?.title ?? "Collection", url: `${SITE.url}/buyer/collection/${id}` },
   ]);
 
   return (
     <>
       <JsonLdScript data={breadcrumbSchema} id="collection-breadcrumb" />
       <div className="bg-gradient-to-br from-black via-[#0a0a0a] to-[#0f0a1a] min-h-screen overflow-hidden relative">
-        {/* Background animated elements */}
         <div className="fixed inset-0 pointer-events-none z-0">
           <div className="absolute top-20 right-1/4 w-80 h-80 bg-[#8451E1]/15 rounded-full blur-3xl opacity-40 animate-blob"></div>
           <div className="absolute bottom-40 left-1/4 w-96 h-96 bg-[#5C2EAF]/10 rounded-full blur-3xl opacity-30 animate-blob animation-delay-2s"></div>
         </div>
         <div className="relative z-10">
-      {/* Header with Back Button */}
-      <div className="px-6 py-6 border-b border-[#8451E1]/10 sticky top-0 bg-gradient-to-b from-black/98 via-black/95 to-black/80 backdrop-blur-xl z-40 shadow-lg shadow-[#8451E1]/10">
-        <div className="max-w-7xl mx-auto">
-          <Link
-            href="/buyer/collections"
-            className="inline-flex items-center gap-2 text-[#acacac] hover:text-[#8451E1] transition-all duration-300 mb-6 hover:gap-3 group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
-            Back to Collections
-          </Link>
-        </div>
-      </div>
+          <div className="px-6 py-6 border-b border-[#8451E1]/10 sticky top-0 bg-gradient-to-b from-black/98 via-black/95 to-black/80 backdrop-blur-xl z-40 shadow-lg shadow-[#8451E1]/10">
+            <div className="max-w-7xl mx-auto">
+              <Link
+                href="/buyer/collections"
+                className="inline-flex items-center gap-2 text-[#acacac] hover:text-[#8451E1] transition-all duration-300 mb-6 hover:gap-3 group"
+              >
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
+                Back to Collections
+              </Link>
+            </div>
+          </div>
 
-      {/* Collection Hero Section */}
-      <div className="px-6 py-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Collection Image */}
-          {collectionProductsData?.brandHero && (
-            <div className="relative w-full h-72 md:h-96 rounded-2xl overflow-hidden mb-12 border border-[#8451E1]/30 shadow-2xl shadow-[#8451E1]/20 hover:shadow-[0_0_50px_rgba(132,81,225,0.35)] transition-all duration-500 group">
-              <img
-                src={collectionProductsData.brandHero}
-                alt={collectionProductsData?.name ?? "Collection"}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-              
-              {/* Hero Overlay Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-8">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-[#8451E1] text-sm font-bold uppercase tracking-wider mb-2">
-                      {collectionProductsData?.brandName ?? "Luxela"}
+          <div className="px-6 py-12">
+            <div className="max-w-7xl mx-auto">
+              {collectionProductsData?.image && (
+                <div className="relative w-full h-72 md:h-96 rounded-2xl overflow-hidden mb-12 border border-[#8451E1]/30 shadow-2xl shadow-[#8451E1]/20 hover:shadow-[0_0_50px_rgba(132,81,225,0.35)] transition-all duration-500 group">
+                  <img
+                    src={collectionProductsData.image}
+                    alt={collectionProductsData?.collectionName ?? "Collection"}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-8">
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-[#8451E1] text-sm font-bold uppercase tracking-wider mb-2">
+                          {collectionProductsData?.sellerName ?? "Luxela"}
+                        </p>
+                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white via-[#f0f0f0] to-[#d0d0d0] bg-clip-text text-transparent capitalize mb-3 drop-shadow-lg">
+                          {collectionProductsData?.collectionName ?? collectionProductsData?.title}
+                        </h1>
+                      </div>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => {
+                            if (!user) {
+                              toastSvc.warning('Please sign in to favorite');
+                              return;
+                            }
+                            setIsFavorited(!isFavorited);
+                            toastSvc.success(isFavorited ? 'Removed from favorites' : 'Added to favorites!');
+                          }}
+                          className="p-3 bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/30 hover:from-[#8451E1]/50 hover:to-[#5C2EAF]/50 rounded-lg transition-all duration-300 backdrop-blur-sm border border-[#8451E1]/40 hover:border-[#8451E1]/70 hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110 cursor-pointer active:scale-95"
+                        >
+                          <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (navigator.share) {
+                              navigator.share({
+                                title: collectionProductsData?.collectionName ?? 'Collection',
+                                text: collectionProductsData?.collectionDescription ?? 'Check out this amazing collection!',
+                                url: window.location.href,
+                              });
+                            } else {
+                              navigator.clipboard.writeText(window.location.href);
+                              toastSvc.success('Collection link copied to clipboard!');
+                            }
+                          }}
+                          className="p-3 bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/30 hover:from-[#8451E1]/50 hover:to-[#5C2EAF]/50 rounded-lg transition-all duration-300 backdrop-blur-sm border border-[#8451E1]/40 hover:border-[#8451E1]/70 hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110 cursor-pointer active:scale-95"
+                        >
+                          <Share2 className="w-5 h-5 text-white" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-fade-in">
+                <div className="md:col-span-2 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 backdrop-blur-xl rounded-2xl border border-[#8451E1]/30 p-6 md:p-8 shadow-xl shadow-[#8451E1]/10 hover:border-[#8451E1]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(132,81,225,0.2)]">
+                  <h2 className="text-lg font-semibold bg-gradient-to-r from-white to-[#d0d0d0] bg-clip-text text-transparent mb-3 flex items-center gap-2">
+                    <div className="w-1 h-6 bg-gradient-to-b from-[#8451E1] to-[#5C2EAF] rounded-full"></div>
+                    About This Collection
+                  </h2>
+                  {(collectionProductsData?.collectionDescription ?? collectionProductsData?.description) && (
+                    <p className="text-[#acacac] leading-relaxed text-sm group hover:text-[#d0d0d0] transition-colors duration-300">
+                      {collectionProductsData?.collectionDescription ?? collectionProductsData?.description}
                     </p>
-                    <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white via-[#f0f0f0] to-[#d0d0d0] bg-clip-text text-transparent capitalize mb-3 drop-shadow-lg">
-                      {collectionProductsData?.name}
-                    </h1>
+                  )}
+                </div>
 
-                  </div>
-                  <div className="flex gap-3">
-                    <button className="p-3 bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/30 hover:from-[#8451E1]/50 hover:to-[#5C2EAF]/50 rounded-lg transition-all duration-300 backdrop-blur-sm border border-[#8451E1]/40 hover:border-[#8451E1]/70 hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110">
-                      <Heart className="w-5 h-5 text-white" />
-                    </button>
-                    <button className="p-3 bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/30 hover:from-[#8451E1]/50 hover:to-[#5C2EAF]/50 rounded-lg transition-all duration-300 backdrop-blur-sm border border-[#8451E1]/40 hover:border-[#8451E1]/70 hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110">
-                      <Share2 className="w-5 h-5 text-white" />
-                    </button>
+                <div className="bg-gradient-to-br from-[#1a1a2e]/90 to-[#0f0f1a]/90 backdrop-blur-xl rounded-2xl border border-[#8451E1]/40 p-6 md:p-8 shadow-xl shadow-[#8451E1]/20 hover:shadow-[0_0_40px_rgba(132,81,225,0.35)] transition-all duration-500 hover:border-[#8451E1]/70 hover:scale-105">
+                  <h3 className="text-sm font-semibold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent mb-6 uppercase tracking-wide">
+                    Collection Stats
+                  </h3>
+                  <div className="space-y-6">
+                    <div className="pb-6 border-b border-[#8451E1]/10">
+                      <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
+                        Total Items
+                      </p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent">
+                        {items.length}
+                      </p>
+                    </div>
+                    <div className="pb-6 border-b border-[#8451E1]/10">
+                      <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
+                        Total Collection Price
+                      </p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent">
+                        NGN {totalPrice.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
+                        Average Rating
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${i < Math.round(avgRating) ? 'fill-yellow-400 text-yellow-400' : 'text-[#666]'}`}
+                            />
+                          ))}
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent">
+                            {avgRating.toFixed(1)}
+                          </p>
+                          <p className="text-[#666] text-xs">
+                            ({totalReviews} reviews)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Collection Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-fade-in">
-            {/* Description */}
-            <div className="md:col-span-2 bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 backdrop-blur-xl rounded-2xl border border-[#8451E1]/30 p-6 md:p-8 shadow-xl shadow-[#8451E1]/10 hover:border-[#8451E1]/50 transition-all duration-500 hover:shadow-[0_0_30px_rgba(132,81,225,0.2)]">
-              <h2 className="text-lg font-semibold bg-gradient-to-r from-white to-[#d0d0d0] bg-clip-text text-transparent mb-3 flex items-center gap-2">
-                <div className="w-1 h-6 bg-gradient-to-b from-[#8451E1] to-[#5C2EAF] rounded-full"></div>
-                About This Collection
-              </h2>
-              {(collectionProductsData?.description ?? collection?.description) && (
-                <p className="text-[#acacac] leading-relaxed text-sm group hover:text-[#d0d0d0] transition-colors duration-300">
-                  {collectionProductsData?.description ?? collection?.description}
-                </p>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 mb-10 pb-8 border-b border-[#8451E1]/20">
+                <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-[#999] bg-clip-text text-transparent">
+                  Items in Collection
+                </h2>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                  {allColors.length > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 backdrop-blur-xl border border-[#8451E1]/30 hover:border-[#8451E1]/70 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/20">
+                      <Palette className="w-4 h-4 text-[#8451E1]" />
+                      <select
+                        value={filterColor || ""}
+                        onChange={(e) => setFilterColor(e.target.value || null)}
+                        className="bg-transparent text-white text-sm font-medium focus:outline-none cursor-pointer appearance-none"
+                      >
+                        <option value="">All Colors</option>
+                        {allColors.map((color) => (
+                          <option key={color.colorHex} value={color.colorHex}>
+                            {color.colorName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 backdrop-blur-xl border border-[#8451E1]/30 hover:border-[#8451E1]/70 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/20">
+                    <ArrowUpDown className="w-4 h-4 text-[#8451E1]" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) =>
+                        setSortBy(
+                          e.target.value as "price-low" | "price-high" | "newest"
+                        )
+                      }
+                      className="bg-transparent text-white text-sm font-medium focus:outline-none cursor-pointer appearance-none"
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="price-low">Price: Low to High</option>
+                      <option value="price-high">Price: High to Low</option>
+                    </select>
+                  </div>
+
+                  <div className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#8451E1]/20 to-[#5C2EAF]/20 border border-[#8451E1]/40 text-[#8451E1] text-sm font-semibold">
+                    {sortedItems.length} items
+                  </div>
+                </div>
+              </div>
+
+              {sortedItems.length === 0 ? (
+                <div className="text-center py-20 animate-fade-in">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/20 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#8451E1]/20">
+                    <Images className="w-10 h-10 text-[#8451E1]/60" />
+                  </div>
+                  <p className="text-[#acacac] text-lg font-medium mb-2">
+                    No items found
+                  </p>
+                  <p className="text-[#666] text-sm">
+                    Try adjusting your filters
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-12">
+                  {sortedItems.map((item: any, index: number) => (
+                    <CollectionItemCard
+                      key={item.id}
+                      item={item}
+                      collectionId={id}
+                      productId={item.id}
+                      brandName={collectionProductsData?.sellerName ?? undefined}
+                      index={index}
+                      itemNumber={items.indexOf(item) + 1}
+                      onSelect={setSelectedItem}
+                    />
+                  ))}
+                </div>
               )}
-            </div>
-
-            {/* Stats Card */}
-            <div className="bg-gradient-to-br from-[#1a1a2e]/90 to-[#0f0f1a]/90 backdrop-blur-xl rounded-2xl border border-[#8451E1]/40 p-6 md:p-8 shadow-xl shadow-[#8451E1]/20 hover:shadow-[0_0_40px_rgba(132,81,225,0.35)] transition-all duration-500 hover:border-[#8451E1]/70 hover:scale-105">
-              <h3 className="text-sm font-semibold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent mb-6 uppercase tracking-wide">
-                Collection Stats
-              </h3>
-              <div className="space-y-6">
-                <div className="pb-6 border-b border-[#8451E1]/10">
-                  <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
-                    Total Items
-                  </p>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent">
-                    {items.length}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
-                    Avg Price
-                  </p>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent">
-                    {items.length > 0 ? `NGN ${avgPrice.toLocaleString()}` : "N/A"}
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Filters & Sorting */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 mb-10 pb-8 border-b border-[#8451E1]/20">
-            <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-[#999] bg-clip-text text-transparent">
-              Items in Collection
-            </h2>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-              {/* Color Filter */}
-              {allColors.length > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 backdrop-blur-xl border border-[#8451E1]/30 hover:border-[#8451E1]/70 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/20 hover:bg-gradient-to-br hover:from-[#1a1a2e] hover:to-[#0f0f1a]">
-                  <Palette className="w-4 h-4 text-[#8451E1]" />
-                  <select
-                    value={filterColor || ""}
-                    onChange={(e) => setFilterColor(e.target.value || null)}
-                    className="bg-transparent text-white text-sm font-medium focus:outline-none cursor-pointer appearance-none"
-                  >
-                    <option value="">All Colors</option>
-                    {allColors.map((color) => (
-                      <option key={color.colorHex} value={color.colorHex}>
-                        {color.colorName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Sort */}
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 backdrop-blur-xl border border-[#8451E1]/30 hover:border-[#8451E1]/70 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/20">
-                <ArrowUpDown className="w-4 h-4 text-[#8451E1]" />
-                <select
-                  value={sortBy}
-                  onChange={(e) =>
-                    setSortBy(
-                      e.target.value as "price-low" | "price-high" | "newest"
-                    )
-                  }
-                  className="bg-transparent text-white text-sm font-medium focus:outline-none cursor-pointer appearance-none"
-                >
-                  <option value="newest">Newest</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                </select>
-              </div>
-
-              <div className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#8451E1]/20 to-[#5C2EAF]/20 border border-[#8451E1]/40 text-[#8451E1] text-sm font-semibold">
-                {sortedItems.length} items
-              </div>
-            </div>
-          </div>
-
-          {/* Items Grid */}
-          {sortedItems.length === 0 ? (
-            <div className="text-center py-20 animate-fade-in">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/20 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#8451E1]/20">
-                <Images className="w-10 h-10 text-[#8451E1]/60" />
-              </div>
-              <p className="text-[#acacac] text-lg font-medium mb-2">
-                No items found
-              </p>
-              <p className="text-[#666] text-sm">
-                Try adjusting your filters
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-12">
-              {sortedItems.map((item: any, index: number) => (
-                <CollectionItemCard
-                  key={index}
-                  item={item}
-                  collectionId={id}
-                  productId={item.id}
-                  brandName={collectionProductsData?.brandName ?? undefined}
-                  index={index}
-                  itemNumber={items.indexOf(item) + 1}
-                  onSelect={setSelectedItem}
-                />
-              ))}
-            </div>
+          {selectedItem && (
+            <ItemDetailModal
+              item={selectedItem}
+              collection={collection}
+              brandName={collectionProductsData?.sellerName ?? undefined}
+              onClose={() => setSelectedItem(null)}
+            />
           )}
-
-
-        </div>
-      </div>
-
-      {/* Item Detail Modal */}
-      {selectedItem && (
-        <ItemDetailModal
-          item={selectedItem}
-          collection={collection}
-          brandName={collectionProductsData?.brandName ?? undefined}
-          onClose={() => setSelectedItem(null)}
-        />
-      )}
         </div>
       </div>
     </>
@@ -447,9 +639,11 @@ function CollectionItemCard({
     if (item.colors_available) {
       colors = Array.isArray(item.colors_available)
         ? item.colors_available
-        : JSON.parse(item.colors_available);
+        : typeof item.colors_available === 'string' ? JSON.parse(item.colors_available) : [];
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('[CollectionItemCard] Color parsing error:', e);
+  }
 
   let sizes: string[] = [];
   try {
@@ -479,7 +673,6 @@ function CollectionItemCard({
           onClick={() => onSelect(item)}
           className="cursor-pointer h-full bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 backdrop-blur-xl rounded-2xl overflow-hidden border border-[#8451E1]/30 hover:border-[#8451E1]/80 transition-all duration-500 shadow-xl hover:shadow-[0_0_40px_rgba(132,81,225,0.35)] hover:-translate-y-2 hover:scale-105 flex flex-col group"
         >
-          {/* Image */}
           <div className="h-72 md:h-80 bg-[#1a1a1a] relative overflow-hidden flex-shrink-0">
             {isValidImage ? (
               <img
@@ -494,14 +687,12 @@ function CollectionItemCard({
               </div>
             )}
 
-            {/* Index Badge */}
             <div className="absolute top-3 right-3 bg-gradient-to-r from-[#8451E1]/70 to-[#5C2EAF]/70 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[#8451E1]/50 shadow-lg shadow-[#8451E1]/30">
               <span className="text-white text-[11px] font-bold tracking-tight">
                 #{itemNumber}
               </span>
             </div>
 
-            {/* Stock Status */}
             <div className={`absolute bottom-3 left-3 text-xs font-semibold px-3 py-1.5 rounded-lg ${stockColor} backdrop-blur-md border transition-all duration-300 ${
               item.quantity_available === 0 ? 'bg-red-500/20 border-red-500/40' :
               item.quantity_available <= 5 ? 'bg-orange-500/20 border-orange-500/40' :
@@ -511,7 +702,6 @@ function CollectionItemCard({
             </div>
           </div>
 
-          {/* Info */}
           <div className="p-4 md:p-5 bg-black flex flex-col flex-grow">
             <p className="text-[#8451E1] text-[10px] font-bold uppercase tracking-widest mb-2.5">
               {brandName ?? "Exclusive"}
@@ -521,7 +711,6 @@ function CollectionItemCard({
               {item.title || item.name || `Item ${itemNumber}`}
             </h3>
 
-            {/* Colors & Sizes */}
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-[#8451E1]/20 text-[10px]">
               {colors.length > 0 && (
                 <div className="flex items-center gap-1">
@@ -545,20 +734,35 @@ function CollectionItemCard({
               )}
             </div>
 
-            {/* Material */}
-            {item.material_composition && (
-              <p className="text-[#999] text-[9px] line-clamp-1 mb-3">
-                {item.material_composition}
-              </p>
-            )}
+            <div className="space-y-1 mb-3 text-[9px]">
+              {item.material_composition && (
+                <p className="text-[#999] line-clamp-1">
+                  <span className="text-[#8451E1] font-semibold">Material:</span> {item.material_composition}
+                </p>
+              )}
+              {item.careInstructions && (
+                <p className="text-[#999] line-clamp-1">
+                  <span className="text-[#8451E1] font-semibold">Care:</span> {item.careInstructions}
+                </p>
+              )}
+            </div>
 
-            {/* Price & Action */}
+            <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#8451E1]/20">
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-3 h-3 ${i < Math.round(item.rating || 4.5) ? 'fill-yellow-400 text-yellow-400' : 'text-[#666]'}`}
+                  />
+                ))}
+              </div>
+              <span className="text-[#999] text-[9px]">({item.reviewCount || 0})</span>
+            </div>
+
             <div className="flex items-center justify-between mt-auto pt-3">
               <span className="text-[#f2f2f2] font-bold text-sm bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent">
                 {item.currency ?? "NGN"}{" "}
-                {(
-                  (item.priceCents ?? item.price_cents ?? 0) / 100
-                ).toLocaleString()}
+                {((item.priceCents ?? item.price_cents ?? 0) / 100).toLocaleString()}
               </span>
 
               {productId && (
@@ -639,14 +843,53 @@ function ItemDetailModal({
   brandName?: string;
   onClose: () => void;
 }) {
+  const { user } = useAuth();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [selectedRating, setSelectedRating] = useState(5);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  const { data: reviewsData, refetch: refetchReviews } = trpc.products.getProductReviews.useQuery(
+    { productId: item.id, limit: 10, offset: 0 },
+    { 
+      enabled: !!item.id,
+      staleTime: 1 * 60 * 1000, // 1 minute
+      gcTime: 5 * 60 * 1000, // 5 minutes
+    }
+  );
+
+  const createReviewMutation = trpc.products.createProductReview.useMutation({
+    onSuccess: () => {
+      setReviewText("");
+      setSelectedRating(5);
+      setIsSubmittingReview(false);
+      refetchReviews();
+      toastSvc.success("Review submitted successfully!");
+    },
+    onError: (error) => {
+      toastSvc.error(error.message || "Failed to submit review");
+      setIsSubmittingReview(false);
+    },
+  });
+
+  useEffect(() => {
+    if (reviewsData?.reviews) {
+      setReviews(reviewsData.reviews);
+    }
+  }, [reviewsData?.reviews]);
+
   let colors: Array<{ colorName: string; colorHex: string }> = [];
   try {
     if (item.colors_available) {
       colors = Array.isArray(item.colors_available)
         ? item.colors_available
-        : JSON.parse(item.colors_available);
+        : typeof item.colors_available === 'string' ? JSON.parse(item.colors_available) : [];
     }
-  } catch (e) {}
+    console.log('[ItemDetailModal] Colors parsed:', { colors, itemTitle: item.title });
+  } catch (e) {
+    console.error('[ItemDetailModal] Color parsing error:', e);
+  }
 
   let sizes: string[] = [];
   try {
@@ -655,9 +898,30 @@ function ItemDetailModal({
     }
   } catch (e) {}
 
+  const handleSubmitReview = async () => {
+    if (!reviewText.trim()) {
+      toastSvc.error("Please enter a review");
+      return;
+    }
+
+    if (!user) {
+      toastSvc.error("Please log in to submit a review");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    await createReviewMutation.mutateAsync({
+      productId: item.id,
+      rating: selectedRating,
+      review: reviewText,
+    });
+  };
+
+  const imageGallery = item.images && item.images.length > 0 ? item.images : [];
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="bg-gradient-to-br from-[#0e0e0e] to-[#1a0a2e] border-[#8451E1]/30 text-white rounded-2xl max-w-2xl max-h-96 overflow-y-auto shadow-2xl shadow-[#8451E1]/20">
+      <DialogContent className="bg-gradient-to-br from-[#0e0e0e] to-[#1a0a2e] border-[#8451E1]/30 text-white rounded-2xl max-w-5xl max-h-[95vh] overflow-y-auto shadow-2xl shadow-[#8451E1]/20">
         <DialogHeader>
           <DialogTitle className="text-2xl bg-gradient-to-r from-white to-[#999] bg-clip-text text-transparent">{item.title || item.name}</DialogTitle>
           <DialogDescription className="text-[#8451E1] text-sm font-medium">
@@ -665,20 +929,71 @@ function ItemDetailModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-6 py-6">
-          {/* Image */}
-          {item.image && (
-            <div className="h-64 bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#8451E1]/20 shadow-lg">
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-              />
-            </div>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6">
+          {/* Image Gallery */}
+          <div className="space-y-4">
+            {imageGallery.length > 0 ? (
+              <>
+                <div className="h-80 bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#8451E1]/20 shadow-lg relative group">
+                  <img
+                    src={imageGallery[currentImageIndex]?.imageUrl || item.image}
+                    alt={`${item.title} - Image ${currentImageIndex + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {imageGallery.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentImageIndex((prev) => (prev - 1 + imageGallery.length) % imageGallery.length)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-[#8451E1]/70 hover:bg-[#8451E1] p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-white" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentImageIndex((prev) => (prev + 1) % imageGallery.length)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#8451E1]/70 hover:bg-[#8451E1] p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <ChevronRight className="w-5 h-5 text-white" />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 px-3 py-1 rounded-lg text-xs text-white">
+                        {currentImageIndex + 1} / {imageGallery.length}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {imageGallery.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {imageGallery.map((img: any, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        className={`h-16 w-16 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                          currentImageIndex === idx ? 'border-[#8451E1]' : 'border-[#8451E1]/30'
+                        }`}
+                      >
+                        <img
+                          src={img.imageUrl || img.image}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="h-80 bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#8451E1]/20 shadow-lg flex items-center justify-center">
+                <div className="text-center">
+                  <Images className="w-12 h-12 text-[#8451E1]/50 mx-auto mb-2" />
+                  <p className="text-[#666]">No images available</p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Details */}
-          <div className="space-y-4 text-sm">
+          <div className="space-y-4 text-sm overflow-y-auto max-h-[600px] pr-2">
             <div className="bg-[#1a1a2e]/50 rounded-lg p-3 border border-[#8451E1]/20">
               <p className="text-[#666] text-xs uppercase tracking-wider mb-1 font-semibold">
                 Price
@@ -686,6 +1001,40 @@ function ItemDetailModal({
               <p className="text-2xl font-bold bg-gradient-to-r from-[#8451E1] to-[#c084fc] bg-clip-text text-transparent">
                 {item.currency ?? "NGN"}{" "}
                 {((item.priceCents ?? item.price_cents ?? 0) / 100).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/30">
+              <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
+                Customer Rating
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${i < Math.round(item.rating || 4.5) ? 'fill-yellow-400 text-yellow-400' : 'text-[#666]'}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-blue-300 font-medium">
+                  {(item.rating || 4.5).toFixed(1)} ({item.reviewCount || 0} reviews)
+                </span>
+              </div>
+            </div>
+
+            <div className={`rounded-lg p-3 border ${
+              item.quantity_available > 0
+                ? 'bg-green-500/10 border-green-500/30'
+                : 'bg-red-500/10 border-red-500/30'
+            }`}>
+              <p className="text-[#666] text-xs uppercase tracking-wider mb-1 font-semibold">
+                Stock Status
+              </p>
+              <p className={`font-semibold ${
+                item.quantity_available > 0 ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {item.quantity_available > 0 ? `${item.quantity_available} units available` : 'Out of Stock'}
               </p>
             </div>
 
@@ -698,7 +1047,7 @@ function ItemDetailModal({
                   {colors.map((color, i) => (
                     <div
                       key={i}
-                      className="w-7 h-7 rounded-full border-2 border-[#8451E1]/50 shadow-lg hover:scale-110 transition-transform"
+                      className="w-8 h-8 rounded-full border-2 border-[#8451E1]/50 shadow-lg hover:scale-110 transition-transform"
                       style={{ backgroundColor: color.colorHex }}
                       title={color.colorName}
                     />
@@ -725,14 +1074,169 @@ function ItemDetailModal({
               </div>
             )}
 
-            <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/30">
-              <p className="text-[#666] text-xs uppercase tracking-wider mb-1 font-semibold">
-                Stock Status
-              </p>
-              <p className="text-green-400 font-semibold">
-                {item.quantity_available} units available
+            {item.careInstructions && (
+              <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/30">
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-2">
+                  <Shirt className="w-4 h-4" /> Care Instructions
+                </p>
+                <p className="text-blue-300 text-sm">{item.careInstructions}</p>
+              </div>
+            )}
+
+            {item.refundPolicy && (
+              <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-500/30">
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-1 font-semibold flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4" /> Refund Policy
+                </p>
+                <p className="text-orange-300 text-sm">{formatRefundPolicy(item.refundPolicy)}</p>
+              </div>
+            )}
+
+            {(item.etaDomestic || item.etaInternational) && (
+              <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/30">
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-2">
+                  <Truck className="w-4 h-4" /> Shipping
+                </p>
+                <div className="space-y-1 text-purple-300 text-sm">
+                  {item.etaDomestic && (
+                    <p><span className="font-semibold">Domestic:</span> {formatShippingEta(item.etaDomestic)}</p>
+                  )}
+                  {item.etaInternational && (
+                    <p><span className="font-semibold">International:</span> {formatShippingEta(item.etaInternational)}</p>
+                  )}
+                  {item.shippingOption && (
+                    <p><span className="font-semibold">Options:</span> {formatShippingOption(item.shippingOption)}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(item.sku || item.barcode) && (
+              <div className="bg-gray-500/10 rounded-lg p-3 border border-gray-500/30">
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
+                  Product IDs
+                </p>
+                <div className="space-y-1 text-gray-300 text-xs font-mono">
+                  {item.sku && <p><span className="font-semibold">SKU:</span> {item.sku}</p>}
+                  {item.barcode && <p><span className="font-semibold">Barcode:</span> {item.barcode}</p>}
+                </div>
+              </div>
+            )}
+
+            {item.videoUrl && (
+              <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-500/30">
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-2">
+                  <Film className="w-4 h-4" /> Product Video
+                </p>
+                <a href={item.videoUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 text-xs break-all">
+                  {item.videoUrl}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-8 pt-6 border-t border-[#8451E1]/20">
+          <h3 className="text-lg font-semibold mb-4 bg-gradient-to-r from-white to-[#d0d0d0] bg-clip-text text-transparent">
+            Customer Reviews & Ratings
+          </h3>
+
+          {/* Review Form */}
+          {user ? (
+            <div className="bg-[#1a1a2e]/50 rounded-lg p-4 border border-[#8451E1]/20 mb-6">
+              <p className="text-sm text-[#999] mb-3">Share your experience with this product</p>
+              
+              <div className="mb-4">
+                <p className="text-xs text-[#666] uppercase tracking-wider mb-2 font-semibold">Your Rating</p>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setSelectedRating(star)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`w-6 h-6 ${star <= selectedRating ? 'fill-yellow-400 text-yellow-400' : 'text-[#666]'}`}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-sm text-[#999]">{selectedRating}/5</span>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="Write your review here..."
+                  className="w-full bg-[#0a0a0a] border border-[#8451E1]/30 rounded-lg p-3 text-white placeholder-[#666] focus:border-[#8451E1]/70 focus:outline-none resize-none text-sm"
+                  rows={4}
+                  maxLength={1000}
+                />
+                <p className="text-xs text-[#666] mt-1">{reviewText.length}/1000</p>
+              </div>
+
+              <button
+                onClick={handleSubmitReview}
+                disabled={isSubmittingReview || !reviewText.trim()}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmittingReview ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Submit Review
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="bg-[#1a1a2e]/50 rounded-lg p-4 border border-[#8451E1]/20 mb-6 text-center">
+              <p className="text-[#999] text-sm">
+                <Link href="/signin" className="text-[#8451E1] hover:text-[#c084fc] font-semibold">
+                  Sign in
+                </Link>
+                {" "}to leave a review
               </p>
             </div>
+          )}
+
+          {/* Reviews List */}
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {reviews.length > 0 ? (
+              reviews.map((review: any, idx: number) => (
+                <div key={idx} className="bg-[#1a1a2e]/30 rounded-lg p-4 border border-[#8451E1]/10">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Anonymous User</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3 h-3 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-[#666]'}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-[#999]">
+                          {new Date(review.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-[#acacac]">{review.review}</p>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-[#666] text-sm">No reviews yet. Be the first to review!</p>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
@@ -740,7 +1244,6 @@ function ItemDetailModal({
   );
 }
 
-// Add global styles for animations
 if (typeof document !== 'undefined') {
   const styleId = 'collection-page-styles';
   if (!document.getElementById(styleId)) {

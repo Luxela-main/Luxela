@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 import type { Order, TrackingStep, ProductCategory, PaymentMethod, PayoutStatus, DeliveryStatus, OrderStatus } from '@/types/buyer';
 import {
@@ -32,6 +33,19 @@ export default function DeliveredOrderDetailPage() {
     { status: 'delivered', page: 1, limit: 100 },
     { retry: 2, retryDelay: 1000 }
   );
+
+  // Initialize real-time order syncing with polling
+  const { startPolling } = useRealtimeOrders({
+    enabled: true,
+    refetchInterval: 30000, // Poll every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
+    refetchOnInteraction: true, // Refresh on user interactions
+  });
+
+  // Start polling when component mounts
+  useEffect(() => {
+    startPolling();
+  }, [startPolling]);
 
   useEffect(() => {
     if (ordersData?.data) {

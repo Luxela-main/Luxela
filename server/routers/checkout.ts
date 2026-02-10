@@ -2,7 +2,7 @@ import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { db } from '../db';
-import { carts, cartItems, orders, payments, listings, buyers } from '../db/schema';
+import { carts, cartItems, orders, payments, listings, buyers, buyerNotifications } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -540,6 +540,33 @@ export const checkoutRouter = createTRPCRouter({
           order.currency,
           30 // 30-day hold
         );
+
+        // Create notification for buyer
+        try {
+          await db.insert(buyerNotifications).values({
+            id: uuidv4(),
+            buyerId: buyer.id,
+            type: 'order_placed' as any,
+            title: 'Order Placed Successfully',
+            message: `Your order #${order.id.slice(0, 8)} for ${order.currency} ${order.amountCents / 100} has been placed successfully!`,
+            relatedEntityId: order.id,
+            relatedEntityType: 'order',
+            actionUrl: `/buyer/orders/${order.id}`,
+            isRead: false,
+            metadata: {
+              notificationType: 'order_placed',
+              orderId: order.id,
+              amount: order.amountCents / 100,
+              currency: order.currency,
+              sellerId: order.sellerId,
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        } catch (notifErr) {
+          // Log but don't fail checkout if notification fails
+          console.error('Failed to create order notification:', notifErr);
+        }
 
         // Clear cart
         const [cart] = await db

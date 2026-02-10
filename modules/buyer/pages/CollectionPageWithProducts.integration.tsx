@@ -9,10 +9,9 @@ export function EnhancedCollectionPageExample({ collectionId }: { collectionId: 
   const {
     data,
     products,
-    listings,
+    listings = [],
     isLoading,
     error,
-    refetch,
   } = useCollectionProducts({ collectionId });
 
   if (isLoading) {
@@ -31,12 +30,7 @@ export function EnhancedCollectionPageExample({ collectionId }: { collectionId: 
       <div className="bg-black min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 font-semibold mb-3">{error}</p>
-          <button
-            onClick={refetch}
-            className="px-4 py-2 bg-[#8451E1] text-white rounded-lg hover:bg-purple-700"
-          >
-            Try Again
-          </button>
+          <p className="text-[#acacac]">Please try again later or contact support</p>
         </div>
       </div>
     );

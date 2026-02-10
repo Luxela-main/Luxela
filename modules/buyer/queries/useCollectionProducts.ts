@@ -81,9 +81,6 @@ export interface CollectionListing {
   itemsJson: any;
   shippingOption: string | null;
   refundPolicy: string | null;
-  localPricing: string | null;
-  etaDomestic: string | null;
-  etaInternational: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,7 +107,6 @@ export interface CollectionDisplayData {
 
 export interface UseCollectionProductsOptions {
   collectionId?: string;
-  brandId?: string;
   limit?: number;
   offset?: number;
 }
@@ -118,15 +114,13 @@ export interface UseCollectionProductsOptions {
 export interface UseCollectionProductsResult {
   data: CollectionDisplayData | null;
   products: CollectionProduct[];
-  listings: CollectionListing[];
+  listings?: CollectionListing[];
   isLoading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
 }
 
 /**
- * Fetch collection products with all images and items JSON
- * Fetches from the collection_items junction table to get actual collection members
+ * Hook to fetch collection data including products, images, variants, and inventory
  * Includes product images, variants, inventory, and listing details
  */
 export function useCollectionProducts(
@@ -169,10 +163,134 @@ export function useCollectionProducts(
       setIsLoading(true);
       setError(null);
 
-      console.log(`[useCollectionProducts] Starting fetch for collectionId=${collectionId}`);
+      console.log(`[useCollectionProducts] Starting fetch for collectionId=${collectionId}, using listings table (type='collection')`);
 
-      // First, get the collection metadata directly from collections table
-      const { data: collectionData, error: collectionError } = await supabase
+      // First, determine if the provided ID is a listing ID or collection ID
+      // Try collection_id first (most common case from collection cards)
+      let listingData = null;
+      let resolvedCollectionId = collectionId;
+      let actualListingId = null;
+      
+      // Attempt 1: Try as collection_id (most common - from collection cards)
+      const { data: collectionListing, error: collectionError } = await supabase
+        .from('listings')
+        .select(
+          `
+          id,
+          title,
+          description,
+          slug,
+          image,
+          images_json,
+          price_cents,
+          currency,
+          items_json,
+          collection_id,
+          seller_id,
+          shipping_option,
+          refund_policy,
+          created_at,
+          updated_at
+        `
+        )
+        .eq('collection_id', collectionId)
+        .eq('type', 'collection')
+        .eq('status', 'approved')
+        .limit(1)
+        .maybeSingle();
+      
+      if (collectionError) {
+        console.warn(`[useCollectionProducts] Collection ID fetch error:`, collectionError);
+      } else if (collectionListing) {
+        console.log(`[useCollectionProducts] ✓ Found collection by collection ID: ${collectionListing.collection_id}`);
+        listingData = collectionListing;
+        resolvedCollectionId = collectionId;
+        actualListingId = collectionListing.id;
+      } else {
+        // Attempt 2: Try as listing ID (direct match)
+        const { data: directListing, error: directError } = await supabase
+          .from('listings')
+          .select(
+            `
+            id,
+            title,
+            description,
+            slug,
+            image,
+            images_json,
+            price_cents,
+            currency,
+            items_json,
+            collection_id,
+            seller_id,
+            shipping_option,
+            refund_policy,
+            created_at,
+            updated_at
+          `
+          )
+          .eq('id', collectionId)
+          .eq('type', 'collection')
+          .eq('status', 'approved')
+          .limit(1)
+          .maybeSingle();
+        
+        if (directError) {
+          console.warn(`[useCollectionProducts] Direct listing fetch error:`, directError);
+        } else if (directListing) {
+          console.log(`[useCollectionProducts] ✓ Found collection by listing ID: ${directListing.id}`);
+          listingData = directListing;
+          resolvedCollectionId = directListing.collection_id || collectionId;
+          actualListingId = directListing.id;
+        }
+      }
+
+      // If no listing found, try to fetch collection directly from collections table
+      // This handles collections that don't have a corresponding listings record
+      if (!listingData) {
+        console.log(`[useCollectionProducts] No listing found for collectionId=${collectionId}, checking collections table...`);
+        
+        const { data: collectionFromTable, error: collectionTableError } = await supabase
+          .from('collections')
+          .select('id, name, slug, description, brand_id, created_at, updated_at')
+          .eq('id', collectionId)
+          .limit(1)
+          .maybeSingle();
+        
+        if (collectionTableError) {
+          console.warn(`[useCollectionProducts] Collection table fetch error:`, collectionTableError);
+        } else if (collectionFromTable) {
+          console.log(`[useCollectionProducts] ✓ Found collection in collections table: ${collectionFromTable.name}`);
+          listingData = {
+            id: collectionFromTable.id,
+            title: collectionFromTable.name,
+            description: collectionFromTable.description,
+            slug: collectionFromTable.slug,
+            image: null,
+            images_json: null,
+            price_cents: 0,
+            currency: 'NGN',
+            items_json: null,
+            collection_id: collectionFromTable.id,
+            seller_id: collectionFromTable.brand_id,
+            shipping_option: null,
+            refund_policy: null,
+            created_at: collectionFromTable.created_at,
+            updated_at: collectionFromTable.updated_at,
+          };
+          resolvedCollectionId = collectionFromTable.id;
+        } else {
+          console.warn(`[useCollectionProducts] Collection not found in either listings or collections table`);
+          setError('Collection not found');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      console.log(`[useCollectionProducts] ✓ Found collection listing: "${listingData.title}"`);
+
+      // Get collection metadata from collections table for additional info
+      const { data: collectionData, error: collectionMetadataError } = await supabase
         .from('collections')
         .select(
           `
@@ -180,42 +298,28 @@ export function useCollectionProducts(
           name,
           slug,
           description,
-          image_url,
           brand_id,
           created_at,
           updated_at
         `
         )
-        .eq('id', collectionId)
+        .eq('id', resolvedCollectionId)
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      // Check for errors first - handle 'no rows' case and other Supabase errors
-      if (collectionError) {
-        // Check if the error is specifically for no rows found (expected when collection doesn't exist)
-        if (collectionError.code === 'PGRST116' || collectionError.message?.includes('No rows')) {
-          console.warn(`[useCollectionProducts] Collection not found for collectionId=${collectionId}`);
-          // This is an actual error - collection should exist
-        } else {
-          console.error(`[useCollectionProducts] Collection fetch error:`, {
-            code: collectionError.code,
-            message: collectionError.message,
-            details: collectionError.details,
-            hint: collectionError.hint,
-          });
-          throw new Error(collectionError.message || 'Failed to fetch collection');
-        }
+      if (collectionMetadataError) {
+        console.warn(`[useCollectionProducts] Collection metadata fetch warning:`, collectionMetadataError);
       }
 
-      // Fetch seller business info separately
+      // Fetch seller business info
       let sellerInfo = { id: '', business_name: 'Unknown', logo: null, hero_image: null };
-      if (collectionData && collectionData.brand_id) {
+      if (listingData && listingData.seller_id) {
         const { data: sellerData } = await supabase
           .from('seller_business')
           .select('seller_id, brand_name, store_logo, store_banner')
-          .eq('seller_id', collectionData.brand_id)
+          .eq('seller_id', listingData.seller_id)
           .limit(1)
-          .single();
+          .maybeSingle();
         
         if (sellerData) {
           sellerInfo = {
@@ -227,41 +331,32 @@ export function useCollectionProducts(
         }
       }
 
-      // Fetch collection items from the junction table
+      // Fetch collection items from junction table
       const { data: collectionItemsData, error: collectionItemsError } = await supabase
         .from('collection_items')
         .select('id, position, product_id')
-        .eq('collection_id', collectionId)
+        .eq('collection_id', resolvedCollectionId)
         .order('position', { ascending: true });
 
       if (collectionItemsError) {
-        const errorCode = (collectionItemsError as any)?.code;
-        const errorMessage = (collectionItemsError as any)?.message;
-        const errorDetails = (collectionItemsError as any)?.details;
-        const errorHint = (collectionItemsError as any)?.hint;
-        
-        console.error(`[useCollectionProducts] Collection items fetch error:`, {
-          code: errorCode,
-          message: errorMessage,
-          details: errorDetails,
-          hint: errorHint,
-          fullError: collectionItemsError
-        });
-        
-        throw new Error(errorMessage || 'Failed to fetch collection items');
+        console.warn(`[useCollectionProducts] Collection items fetch error:`, collectionItemsError);
       }
 
-      console.log(`[useCollectionProducts] Fetched ${collectionItemsData?.length || 0} items in collection`);
+      const productIds: string[] = (collectionItemsData || [])
+        .map((item: any) => item.product_id)
+        .filter(Boolean);
+      
+      console.log(`[useCollectionProducts] Found ${productIds.length} products in collection_items`);
 
-      // Fetch product details separately using product IDs
-      const productIds = (collectionItemsData || []).map((item: any) => item.product_id).filter(Boolean);
+      console.log(`[useCollectionProducts] Total product IDs to fetch: ${productIds.length}`);
+      
       let productsDataMap: Record<string, any> = {};
       
       if (productIds.length > 0) {
         const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select(
-            `id, brand_id, collection_id, name, slug, description, category, sku, in_stock, ships_in, created_at, updated_at, product_variants(id, size, color_name, color_hex), inventory(id, quantity, reserved_quantity, variant_id)`
+            `id, brand_id, collection_id, name, slug, description, category, sku, in_stock, ships_in, created_at, updated_at`
           )
           .in('id', productIds);
         
@@ -276,8 +371,11 @@ export function useCollectionProducts(
 
       // Fetch ALL product images separately for better reliability
       let allProductImages: any[] = [];
+      let allProductVariants: any[] = [];
+      let allInventory: any[] = [];
       
       if (productIds.length > 0) {
+        // Fetch product images
         const { data: imagesData, error: imagesError } = await supabase
           .from('product_images')
           .select('id, product_id, image_url, position')
@@ -285,13 +383,36 @@ export function useCollectionProducts(
         
         if (imagesError) {
           console.error(`[useCollectionProducts] Product images fetch error:`, imagesError);
-          // Don't throw - continue without images rather than failing the entire request
         } else {
           allProductImages = imagesData || [];
         }
+
+        // Fetch product variants
+        const { data: variantsData, error: variantsError } = await supabase
+          .from('product_variants')
+          .select('id, product_id, size, color_name, color_hex')
+          .in('product_id', productIds);
+        
+        if (variantsError) {
+          console.error(`[useCollectionProducts] Product variants fetch error:`, variantsError);
+        } else {
+          allProductVariants = variantsData || [];
+        }
+
+        // Fetch inventory
+        const { data: inventoryData, error: inventoryError } = await supabase
+          .from('inventory')
+          .select('id, product_id, quantity, reserved_quantity, variant_id')
+          .in('product_id', productIds);
+        
+        if (inventoryError) {
+          console.error(`[useCollectionProducts] Inventory fetch error:`, inventoryError);
+        } else {
+          allInventory = inventoryData || [];
+        }
       }
 
-      // Fetch listings for each product to get pricing and other listing details
+      // Fetch product listings for pricing
       let listingsDataMap: Record<string, any> = {};
       
       if (productIds.length > 0) {
@@ -312,39 +433,41 @@ export function useCollectionProducts(
             items_json,
             shipping_option,
             refund_policy,
-            local_pricing,
-            eta_domestic,
-            eta_international,
             created_at,
             updated_at,
-            status
+            status,
+            type
           `
           )
           .in('product_id', productIds)
-          .eq('status', 'approved')
-          .eq('type', 'single');
+          .eq('status', 'approved');
 
-        if (!listingsError && fetchedListings) {
+        if (listingsError) {
+          console.warn(`[useCollectionProducts] Product listings fetch warning:`, listingsError);
+        } else if (fetchedListings) {
           fetchedListings.forEach((listing: any) => {
-            listingsDataMap[listing.product_id] = listing;
+            if (!listingsDataMap[listing.product_id] || listing.type === 'single') {
+              listingsDataMap[listing.product_id] = listing;
+            }
           });
+          console.log(`[useCollectionProducts] Found ${fetchedListings.length} product listings`);
         }
       }
 
-      // Build collection display data from the collection metadata (if available)
+      // Build collection display data from listing and collection metadata
       let collectionDisplayData: CollectionDisplayData | null = null;
-      if (collectionData) {
+      if (listingData) {
         collectionDisplayData = {
-          id: collectionData.id,
-          name: collectionData.name || 'Collection',
-          slug: collectionData.slug || collectionId,
-          description: collectionData.description,
-          brandId: collectionData.brand_id || sellerInfo.id || '',
+          id: resolvedCollectionId,
+          name: collectionData?.name || listingData.title || 'Collection',
+          slug: collectionData?.slug || listingData.slug || resolvedCollectionId,
+          description: collectionData?.description || listingData.description,
+          brandId: listingData.seller_id || sellerInfo.id || '',
           brandName: sellerInfo.business_name || 'Unknown',
           brandLogo: sellerInfo.logo || null,
-          brandHero: collectionData.image_url || sellerInfo.hero_image || null,
-          createdAt: collectionData.created_at,
-          updatedAt: collectionData.updated_at,
+          brandHero: listingData.image || sellerInfo.hero_image || null,
+          createdAt: listingData.created_at,
+          updatedAt: listingData.updated_at,
           products: [],
           listings: [],
           productCount: 0,
@@ -362,6 +485,12 @@ export function useCollectionProducts(
           const productImagesForItem = allProductImages.filter((img: any) => img.product_id === product.id)
             .sort((a: any, b: any) => a.position - b.position);
           
+          // Get all variants for this product
+          const productVariantsForItem = allProductVariants.filter((variant: any) => variant.product_id === product.id);
+          
+          // Get all inventory for this product
+          const productInventoryForItem = allInventory.filter((inv: any) => inv.product_id === product.id);
+          
           // Get the listing data to retrieve itemsJson and pricing
           const listing = listingsDataMap[product.id];
           
@@ -373,7 +502,7 @@ export function useCollectionProducts(
             slug: product.slug,
             description: product.description,
             category: product.category,
-            price: listing?.price_cents ? listing.price_cents / 100 : 0, // Get price from listing table
+            price: listing?.price_cents ? listing.price_cents / 100 : 0,
             currency: listing?.currency || 'NGN',
             type: product.type,
             sku: product.sku,
@@ -386,13 +515,13 @@ export function useCollectionProducts(
               imageUrl: img.image_url,
               position: img.position,
             })),
-            variants: (product.product_variants || []).map((variant: any) => ({
+            variants: productVariantsForItem.map((variant: any) => ({
               id: variant.id,
               size: variant.size,
               colorName: variant.color_name,
               colorHex: variant.color_hex,
             })),
-            inventory: (product.inventory || []).map((inv: any) => ({
+            inventory: productInventoryForItem.map((inv: any) => ({
               id: inv.id,
               quantity: inv.quantity,
               reservedQuantity: inv.reserved_quantity,
@@ -417,21 +546,20 @@ export function useCollectionProducts(
             listingTitle: listing?.title || product?.name || 'Product',
             listingDescription: listing?.description || product?.description || null,
             category: listing?.category || product?.category || null,
-            image: listing?.image || (product?.images[0]?.imageUrl || productImgs[0]?.image_url || null),
+            image: listing?.image || (product?.images[0]?.imageUrl || productImgs[0]?.imageUrl || null),
             priceCents: listing?.price_cents || 0,
             currency: listing?.currency || product?.currency || 'NGN',
             sizesJson: listing?.sizes_json ? JSON.parse(listing.sizes_json) : null,
             itemsJson: listing?.items_json ? JSON.parse(listing.items_json) : null,
             shippingOption: listing?.shipping_option || null,
             refundPolicy: listing?.refund_policy || null,
-            localPricing: listing?.local_pricing || null,
-            etaDomestic: listing?.eta_domestic || null,
-            etaInternational: listing?.eta_international || null,
             createdAt: listing?.created_at || product?.createdAt || new Date().toISOString(),
             updatedAt: listing?.updated_at || product?.updatedAt || new Date().toISOString(),
           };
         });
 
+      console.log(`[useCollectionProducts] Final: ${transformedProducts.length} products, ${transformedListings.length} listings`);
+      
       setListings(transformedListings);
       setProducts(transformedProducts);
 
@@ -442,6 +570,9 @@ export function useCollectionProducts(
         collectionDisplayData.productCount = transformedProducts.length;
         collectionDisplayData.listingCount = transformedListings.length;
         setData(collectionDisplayData);
+        console.log(`[useCollectionProducts] ✓ Loaded collection: "${collectionDisplayData.name}" with ${collectionDisplayData.productCount} items and description: "${collectionDisplayData.description?.substring(0, 50) || 'N/A'}..."`);
+      } else {
+        console.error('[useCollectionProducts] Collection display data is null - check if collection listing is approved');
       }
     } catch (err: any) {
       const errorMessage =
@@ -476,30 +607,59 @@ export function useCollectionProducts(
 
     // Subscribe to collection items changes
     if (collectionId) {
-      subscriptions.push(
-        supabase
-          .channel(`collection-items-${collectionId}`)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'collection_items',
-              filter: `collection_id=eq.${collectionId}`,
-            },
-            () => {
-              debouncedFetch();
-            }
-          )
-          .subscribe()
-      );
+      const collectionItemsSubscription = supabase
+        .channel(`collection_items:collection_id=eq.${collectionId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'collection_items',
+          filter: `collection_id=eq.${collectionId}`,
+        }, () => {
+          console.log('[useCollectionProducts] Collection items changed, refetching...');
+          debouncedFetch();
+        })
+        .subscribe();
+
+      subscriptions.push(collectionItemsSubscription);
     }
 
+    // Subscribe to products table changes
+    const productsSubscription = supabase
+      .channel('products:changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'products',
+      }, () => {
+        console.log('[useCollectionProducts] Products changed, refetching...');
+        debouncedFetch();
+      })
+      .subscribe();
+
+    subscriptions.push(productsSubscription);
+
+    // Subscribe to listings table changes
+    const listingsSubscription = supabase
+      .channel('listings:changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'listings',
+      }, () => {
+        console.log('[useCollectionProducts] Listings changed, refetching...');
+        debouncedFetch();
+      })
+      .subscribe();
+
+    subscriptions.push(listingsSubscription);
+
     return () => {
+      subscriptions.forEach((subscription) => {
+        subscription.unsubscribe();
+      });
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
-      subscriptions.forEach((sub) => sub.unsubscribe());
     };
   }, [supabase, collectionId, fetchCollectionProducts]);
 
@@ -509,6 +669,5 @@ export function useCollectionProducts(
     listings,
     isLoading,
     error,
-    refetch: fetchCollectionProducts,
   };
-}
+}

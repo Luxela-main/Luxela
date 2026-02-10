@@ -20,6 +20,7 @@ export interface Listing {
   colors_available: string | null
   type: string
   quantity_available: number
+  colors: string | string[] | null
   sizes_json: string | null
   material_composition: string | null
   limited_edition_badge: string | null

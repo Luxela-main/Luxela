@@ -8,6 +8,7 @@ import {
   slaTracking,
   escalationRules,
   listings,
+  listingReviews,
   orders,
   disputes,
   users,
@@ -37,6 +38,55 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
   const now = new Date();
 
   try {
+    // Check for pending listing reviews (new listings awaiting approval)
+    const pendingListings = await db
+      .select()
+      .from(listingReviews)
+      .where(eq(listingReviews.status, 'pending'));
+
+    for (const review of pendingListings) {
+      const listing = await db
+        .select()
+        .from(listings)
+        .where(eq(listings.id, review.listingId))
+        .limit(1);
+
+      if (listing.length > 0) {
+        const existingNotif = await db
+          .select()
+          .from(adminNotifications)
+          .where(and(
+            eq(adminNotifications.adminId, adminId),
+            eq(adminNotifications.relatedEntityId, review.listingId),
+            sql`${adminNotifications.metadata}->>'reviewId' = ${review.id}`
+          ))
+          .limit(1);
+
+        if (existingNotif.length === 0) {
+          await db.insert(adminNotifications).values({
+            adminId,
+            type: 'listing_pending_review' as any,
+            severity: 'info' as any,
+            title: 'New Listing Awaiting Review',
+            message: `\"${listing[0].title}\" from seller needs approval`,
+            relatedEntityId: review.listingId,
+            relatedEntityType: 'listing',
+            actionUrl: `/admin/listings/review/${review.listingId}`,
+            isRead: false,
+            metadata: {
+              reviewId: review.id,
+              listingId: review.listingId,
+              listingTitle: listing[0].title,
+              listingType: listing[0].type,
+              sellerId: listing[0].sellerId,
+              status: 'pending',
+              createdAt: review.createdAt.toISOString(),
+            },
+          });
+        }
+      }
+    }
+
     // 1. Check for urgent open tickets
     const urgentTickets = await db
       .select()
@@ -264,7 +314,101 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 5. Check for unresponded tickets
+    // 5. Check for rejected listings (admin should review why they were rejected)
+    const rejectedListings = await db
+      .select()
+      .from(listingReviews)
+      .where(eq(listingReviews.status, 'rejected'));
+
+    for (const review of rejectedListings) {
+      const listing = await db
+        .select()
+        .from(listings)
+        .where(eq(listings.id, review.listingId))
+        .limit(1);
+
+      if (listing.length > 0 && review.updatedAt && (now.getTime() - review.updatedAt.getTime()) < 86400000) {
+        // Only create notification within 24 hours of rejection
+        const existingNotif = await db
+          .select()
+          .from(adminNotifications)
+          .where(and(
+            eq(adminNotifications.adminId, adminId),
+            eq(adminNotifications.relatedEntityId, review.listingId),
+            sql`${adminNotifications.metadata}->>'status' = 'rejected'`
+          ))
+          .limit(1);
+
+        if (existingNotif.length === 0) {
+          await db.insert(adminNotifications).values({
+            adminId,
+            type: 'listing_rejected' as any,
+            severity: 'warning' as any,
+            title: 'Listing Rejected',
+            message: `\"${listing[0].title}\" was rejected. ${review.rejectionReason || 'Review reason required.'}`,
+            relatedEntityId: review.listingId,
+            relatedEntityType: 'listing',
+            actionUrl: `/admin/listings/review/${review.listingId}`,
+            isRead: false,
+            metadata: {
+              reviewId: review.id,
+              listingId: review.listingId,
+              status: 'rejected',
+              rejectionReason: review.rejectionReason,
+              rejectedAt: review.updatedAt?.toISOString(),
+            },
+          });
+        }
+      }
+    }
+
+    // 6. Check for revision-requested listings (seller needs to make changes)
+    const revisionListings = await db
+      .select()
+      .from(listingReviews)
+      .where(eq(listingReviews.status, 'revision_requested'));
+
+    for (const review of revisionListings) {
+      const listing = await db
+        .select()
+        .from(listings)
+        .where(eq(listings.id, review.listingId))
+        .limit(1);
+
+      if (listing.length > 0) {
+        const existingNotif = await db
+          .select()
+          .from(adminNotifications)
+          .where(and(
+            eq(adminNotifications.adminId, adminId),
+            eq(adminNotifications.relatedEntityId, review.listingId),
+            sql`${adminNotifications.metadata}->>'status' = 'revision_requested'`
+          ))
+          .limit(1);
+
+        if (existingNotif.length === 0) {
+          await db.insert(adminNotifications).values({
+            adminId,
+            type: 'listing_revision_requested' as any,
+            severity: 'info' as any,
+            title: 'Listing Revision Requested',
+            message: `Seller was asked to revise \"${listing[0].title}\". Awaiting resubmission.`,
+            relatedEntityId: review.listingId,
+            relatedEntityType: 'listing',
+            actionUrl: `/admin/listings/review/${review.listingId}`,
+            isRead: false,
+            metadata: {
+              reviewId: review.id,
+              listingId: review.listingId,
+              status: 'revision_requested',
+              requestedAt: review.updatedAt?.toISOString(),
+            },
+          });
+        }
+      }
+    }
+
+    // 7. Check for unresponded tickets
     const allTickets = await db.select().from(supportTickets);
     for (const ticket of allTickets) {
       if (ticket.status === 'open') {

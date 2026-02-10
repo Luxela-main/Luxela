@@ -533,4 +533,147 @@ export const productsRouter = createTRPCRouter({
         hasMore: offset + pageSize < total,
       };
     }),
+
+  /**
+   * Get reviews for a specific product
+   */
+  getProductReviews: publicProcedure
+    .input(
+      z.object({
+        productId: z.string().uuid(),
+        limit: z.number().int().default(20),
+        offset: z.number().int().default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        // Handle both productId and listingId cases
+        let listingIdToUse = input.productId;
+        
+        // Check if input is a listing ID or product ID
+        const checkListing = await db
+          .select({ id: listings.id })
+          .from(listings)
+          .where(eq(listings.id, input.productId))
+          .limit(1);
+        
+        // If not found as listing ID, try to find listing by productId
+        if (checkListing.length === 0) {
+          const listingByProduct = await db
+            .select({ id: listings.id })
+            .from(listings)
+            .where(eq(listings.productId, input.productId))
+            .limit(1);
+          
+          if (listingByProduct.length > 0) {
+            listingIdToUse = listingByProduct[0].id;
+          }
+        }
+        
+        const productReviews = await db
+          .select({
+            id: reviews.id,
+            listingId: reviews.listingId,
+            buyerId: reviews.buyerId,
+            rating: reviews.rating,
+            comment: reviews.comment,
+            createdAt: reviews.createdAt,
+
+          })
+          .from(reviews)
+          .where(eq(reviews.listingId, listingIdToUse))
+          .orderBy(desc(reviews.createdAt))
+          .limit(input.limit)
+          .offset(input.offset);
+
+        // Get average rating
+        const ratingResult = await db
+          .select({
+            avgRating: sql<number>`AVG(CAST(${reviews.rating} as FLOAT))`,
+            count: sql<number>`COUNT(*)`,
+          })
+          .from(reviews)
+          .where(eq(reviews.listingId, listingIdToUse));
+
+        const avgRating = ratingResult[0]?.avgRating
+          ? parseFloat(ratingResult[0].avgRating.toString())
+          : 0;
+        const totalReviews = ratingResult[0]?.count
+          ? parseInt(ratingResult[0].count.toString())
+          : 0;
+
+        return {
+          reviews: productReviews,
+          averageRating: avgRating,
+          totalReviews: totalReviews,
+        };
+      } catch (error) {
+        console.error('[getProductReviews] Error fetching reviews:', error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch product reviews",
+        });
+      }
+    }),
+
+  /**
+   * Create a new product review (protected - requires authentication)
+   */
+  createProductReview: protectedProcedure
+    .input(
+      z.object({
+        productId: z.string().uuid(),
+        rating: z.number().int().min(1).max(5),
+        review: z.string().min(1).max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        if (!ctx.user || !ctx.user.id) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Must be logged in to create a review",
+          });
+        }
+
+        // Find listing by productId
+        const listing = await db
+          .select()
+          .from(listings)
+          .where(eq(listings.productId, input.productId))
+          .limit(1);
+
+        if (listing.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Listing not found for this product",
+          });
+        }
+
+        // Create the review
+        const newReview = await db
+          .insert(reviews)
+          .values({
+            buyerId: ctx.user.id,
+            listingId: listing[0].id,
+            rating: input.rating,
+            comment: input.review,
+          })
+          .returning();
+
+        return {
+          id: newReview[0].id,
+          rating: newReview[0].rating,
+          comment: newReview[0].comment,
+          createdAt: newReview[0].createdAt,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[createProductReview] Error creating review:', error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create review",
+        });
+      }
+    }),
 });

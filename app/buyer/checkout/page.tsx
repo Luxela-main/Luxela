@@ -213,6 +213,7 @@ export default function CheckoutPage() {
     });
 
     try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const buyerInfo = {
         customerName: `${checkoutForm.firstName.trim()} ${checkoutForm.lastName.trim()}`,
         customerEmail: checkoutForm.email.trim(),
@@ -224,6 +225,9 @@ export default function CheckoutPage() {
         shippingCountry: checkoutForm.country.trim(),
       };
 
+      const successUrl = `${appUrl}/buyer/checkout/success?payment_id={paymentId}&reference={reference}`;
+      const cancelUrl = `${appUrl}/buyer/checkout`;
+
       await initializePayment.mutateAsync({
         customerName: buyerInfo.customerName,
         customerEmail: buyerInfo.customerEmail,
@@ -234,6 +238,8 @@ export default function CheckoutPage() {
         shippingPostalCode: buyerInfo.shippingPostalCode,
         shippingCountry: buyerInfo.shippingCountry,
         paymentMethod: checkoutForm.paymentMethod,
+        successUrl,
+        cancelUrl,
       });
     } catch (err: any) {
       const errorMessage = err?.message || 'Payment initialization failed. Please try again.';

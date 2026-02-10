@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBrands, type Brand } from '@/modules/buyer/queries/useBrands';
+import { useRealtimeListings } from '@/hooks/useRealtimeListings';
 import {
   BrandShowcase,
   ProductDisplayGrid,
@@ -20,6 +21,7 @@ import Image from 'next/image';
 
 export default function BrandsPage() {
   const router = useRouter();
+  useRealtimeListings(); // Enable realtime product syncing
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [search, setSearch] = useState('');

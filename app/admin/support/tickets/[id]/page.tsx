@@ -286,7 +286,7 @@ export default function AdminTicketDetailPage() {
                     }`}
                   >
                     <p className="text-xs font-semibold mb-1 opacity-75">
-                      {reply.senderRole === 'admin' ? 'Admin' : 'Customer'}
+                      {reply.senderRole === 'admin' ? 'Admin' : reply.senderRole === 'seller' ? 'Brand Contact' : 'Customer'}
                     </p>
                     <p className="text-sm">{reply.message}</p>
                     <p className="text-xs opacity-50 mt-2">{new Date(reply.createdAt).toLocaleTimeString()}</p>

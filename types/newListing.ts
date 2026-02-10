@@ -32,7 +32,7 @@ export interface FormData {
   releaseDate: string;
 
   // Supply Information
-  supplyCapacity: "no-max" | "limited";
+  supplyCapacity: "no-max" | "limited" | string;
   quantity: string;
   showBadge: "show_badge" | "do_not_show";
   releaseDuration: string;
@@ -43,7 +43,7 @@ export interface FormData {
   material: string;
   colors: string;
   targetAudience: "male" | "female" | "unisex" | "";
-  shippingOption: "local" | "international" | "both" | "";
+  shippingOption: "local" | "international" | "both" | "" | string;
   domesticDays: string;
   domesticMinutes: string;
   internationalDays: string;

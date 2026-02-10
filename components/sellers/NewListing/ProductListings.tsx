@@ -272,7 +272,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
     });
 
     // View feedback for rejected or revision requested
-    if (status === "rejected" || status === "revision_requested") {
+    if (status === "rejected") {
       actions.push({
         id: "feedback",
         label: "View Feedback",
@@ -641,7 +641,29 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                       </div>
                       <div className="flex justify-center">
                         {(() => {
-                          const status = listingStatuses[listing.id] || "pending";
+                          // Map backend status values to frontend display values
+
+                          let displayStatus = listingStatuses[listing.id] || "pending_review";
+
+                          // Convert backend status names to frontend status names
+
+                          const statusMapping: Record<string, string> = {
+
+                            pending_review: "pending",
+
+                            approved: "approved",
+
+                            rejected: "rejected",
+
+                            draft: "pending",
+
+                            archived: "rejected",
+
+                          };
+
+                          displayStatus = statusMapping[displayStatus] || "pending";
+
+                          const status = displayStatus;
                           const statusConfig: Record<string, any> = {
                             pending: {
                               label: "Pending",
@@ -664,7 +686,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                               dotColor: "bg-orange-400",
                             },
                           };
-                          const config = statusConfig[status] || statusConfig.pending;
+                          const config = statusConfig[displayStatus] || statusConfig.pending;
                           return (
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm transition-all border ${config.color}`}>
                               <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${config.dotColor}`}></span>
@@ -794,7 +816,29 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                     <div>
                       <p className="text-gray-500 mb-1 text-xs">Status</p>
                       {(() => {
-                        const status = listingStatuses[listing.id] || "pending";
+                        // Map backend status values to frontend display values
+
+                        let displayStatus = listingStatuses[listing.id] || "pending_review";
+
+                        // Convert backend status names to frontend status names
+
+                        const statusMapping: Record<string, string> = {
+
+                          pending_review: "pending",
+
+                          approved: "approved",
+
+                          rejected: "rejected",
+
+                          draft: "pending",
+
+                          archived: "rejected",
+
+                        };
+
+                        displayStatus = statusMapping[displayStatus] || "pending";
+
+                        const status = displayStatus;
                         const statusConfig: Record<string, any> = {
                           pending: {
                             label: "Pending",
@@ -817,7 +861,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                             dotColor: "bg-orange-400",
                           },
                         };
-                        const config = statusConfig[status] || statusConfig.pending;
+                        const config = statusConfig[displayStatus] || statusConfig.pending;
                         return (
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold backdrop-blur-sm ${config.color}`}>
                             <span className={`h-1 w-1 rounded-full animate-pulse ${config.dotColor}`}></span>
@@ -836,7 +880,7 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                       >
                         Restock
                       </button>
-                      {((listingStatuses[listing.id] || "pending") === "rejected" || (listingStatuses[listing.id] || "pending") === "revision_requested") && (
+                      {(listingStatuses[listing.id] === "rejected") && (
                         <button
                           onClick={() => {
                             toastSvc.info("Review feedback will be shown here. Please check your email or dashboard.");

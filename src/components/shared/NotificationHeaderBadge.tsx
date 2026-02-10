@@ -18,8 +18,8 @@ export const NotificationHeaderBadge = ({
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
-  const buyerUnreadCount = useBuyerNotificationsCount();
-  const sellerUnreadCount = useSellerNotificationsCount();
+  const buyerQuery = useBuyerNotificationsCount();
+  const sellerQuery = useSellerNotificationsCount();
 
   useEffect(() => {
     setIsMounted(true);
@@ -27,7 +27,7 @@ export const NotificationHeaderBadge = ({
 
   if (!isMounted) return null;
 
-  const unreadCount = userRole === 'seller' ? sellerUnreadCount : buyerUnreadCount;
+  const unreadCount = userRole === 'seller' ? (sellerQuery.data ?? 0) : (buyerQuery.data ?? 0);
 
   const handleClick = () => {
     if (onNotificationClick) {
@@ -36,9 +36,14 @@ export const NotificationHeaderBadge = ({
       const notificationPath =
         userRole === 'seller'
           ? '/seller/notifications'
-          : '/buyer/notifications';
+          : '/buyer/dashboard/notifications';
       router.push(notificationPath);
     }
+  };
+
+  const handleAccountClick = () => {
+    const accountPath = userRole === 'seller' ? '/seller/settings' : '/buyer/dashboard/account';
+    router.push(accountPath);
   };
 
   return (
@@ -57,10 +62,10 @@ export const NotificationHeaderBadgeWithTooltip = ({
   onNotificationClick,
 }: NotificationHeaderBadgeProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
-  const buyerUnreadCount = useBuyerNotificationsCount();
-  const sellerUnreadCount = useSellerNotificationsCount();
+  const buyerQuery = useBuyerNotificationsCount();
+  const sellerQuery = useSellerNotificationsCount();
 
-  const unreadCount = userRole === 'seller' ? sellerUnreadCount : buyerUnreadCount;
+  const unreadCount = userRole === 'seller' ? (sellerQuery.data ?? 0) : (buyerQuery.data ?? 0);
 
   return (
     <div className="relative group">
@@ -82,8 +87,8 @@ export const NotificationHeaderBadgeWithTooltip = ({
 export const NotificationMiniBadge = ({
   userRole = 'buyer',
 }: Omit<NotificationHeaderBadgeProps, 'onNotificationClick'>) => {
-  const buyerUnreadCount = useBuyerNotificationsCount();
-  const sellerUnreadCount = useSellerNotificationsCount();
+  const buyerQuery = useBuyerNotificationsCount();
+  const sellerQuery = useSellerNotificationsCount();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -92,7 +97,7 @@ export const NotificationMiniBadge = ({
 
   if (!isMounted) return null;
 
-  const unreadCount = userRole === 'seller' ? sellerUnreadCount : buyerUnreadCount;
+  const unreadCount = userRole === 'seller' ? (sellerQuery.data ?? 0) : (buyerQuery.data ?? 0);
 
   if (unreadCount === 0) return null;
 
