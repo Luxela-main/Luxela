@@ -478,13 +478,13 @@ export const collectionRouter = createTRPCRouter({
           .from(listings)
           .where(and(
             eq(listings.type, "collection"),
-            inArray(listings.status, ["approved", "pending_review"])
+            eq(listings.status, "approved")
           ))
           .orderBy(listings.createdAt)
           .limit(input.limit)
           .offset(input.offset);
         
-        console.log('[getApprovedCollections] Found visible collection listings (approved + pending_review):', approvedListings.length);
+        console.log('[getApprovedCollections] Found approved collection listings:', approvedListings.length);
 
         if (approvedListings.length === 0) {
           console.log('[getApprovedCollections] No approved collection listings found, returning empty array');
@@ -500,9 +500,9 @@ export const collectionRouter = createTRPCRouter({
           .from(listings)
           .where(and(
             eq(listings.type, "collection"),
-            inArray(listings.status, ["approved", "pending_review"])
+            eq(listings.status, "approved")
           ));
-        console.log('[getApprovedCollections] Total visible collections (approved + pending_review):', totalCount.length);
+        console.log('[getApprovedCollections] Total visible collections (approved):', totalCount.length);
 
         const enrichedCollections = await Promise.all(
           approvedListings.map(async (listing) => {
