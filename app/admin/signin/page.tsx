@@ -82,7 +82,7 @@ function AdminSignInContent() {
       
       // Wait a moment then redirect to dashboard
       await new Promise(resolve => setTimeout(resolve, 800));
-      router.push('/admin/support');
+      router.push('/admin/dashboard');
       
     } catch (err: unknown) {
       if (err instanceof Error) {

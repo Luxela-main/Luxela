@@ -56,7 +56,6 @@ export default function AdminSidebar() {
       label: 'Listings Review',
       href: '/admin/listings',
       icon: <FileCheck className="w-5 h-5" />,
-      badge: 'pending',
     },
     {
       label: 'Orders Management',
