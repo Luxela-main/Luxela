@@ -145,7 +145,10 @@ const CollectionItemInput = z.object({
   description: z.string().optional(),
   category: CategoryEnum.optional(),
   images: z.array(z.string()).optional(),
-  colorsAvailable: z.string().optional(),
+  colorsAvailable: z.array(z.object({
+    colorName: z.string(),
+    colorHex: z.string(),
+  })).nullable().optional(),
 });
 
 // ---------- HELPERS ----------

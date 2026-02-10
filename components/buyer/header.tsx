@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Bell, ChevronDown, Search, ShoppingCart, Menu, X, ShoppingBag, Heart, Package, Ticket, Home, Users, FolderOpen, HelpCircle, User, FileText, Settings, LogOut, Bookmark } from "lucide-react";
+import { Bell, ChevronDown, Search, ShoppingCart, Menu, X, ShoppingBag, Heart, Package, Ticket, Home, Users, FolderOpen, HelpCircle, User, FileText, Settings, LogOut, Bookmark, LayoutDashboard} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearch } from "@/context/SearchContext";
@@ -365,6 +365,14 @@ const BuyerHeader = () => {
                   <h3 className="text-xs text-gray-500 uppercase tracking-wider">
                     Dashboard
                   </h3>
+                   <Link
+                    href="/buyer/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </Link>
                   <Link
                     href="/buyer/dashboard/orders"
                     onClick={() => setMobileMenuOpen(false)}

@@ -1,4 +1,4 @@
-import { Calendar, ChevronUp, Home, Inbox, Search, Settings, User2 } from "lucide-react"
+import { Calendar, ChevronUp, Home, Inbox, Search, Settings, User2, LayoutDashboard } from "lucide-react"
 
 import {
   Sidebar,
@@ -26,6 +26,11 @@ const items = [
     title: "Inbox",
     url: "#",
     icon: Inbox,
+  },
+  {
+    title: "Buyer Dashboard",
+    url: "/buyer/dashboard",
+    icon: LayoutDashboard,
   },
   {
     title: "Calendar",
@@ -95,4 +100,4 @@ export default function AppSidebar() {
         </SidebarFooter>
       </Sidebar>
   )
-}
+}
