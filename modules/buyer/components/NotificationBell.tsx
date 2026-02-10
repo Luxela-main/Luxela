@@ -52,13 +52,22 @@ export function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      {/* Bell Icon Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 hover:bg-purple-500/10 rounded-lg transition-colors duration-200 cursor-pointer"
-        aria-label="Notifications"
-      >
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 sm:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+      
+      <div className="relative" ref={dropdownRef}>
+        {/* Bell Icon Button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="relative p-2 hover:bg-purple-500/10 rounded-lg transition-colors duration-200 cursor-pointer"
+          aria-label="Notifications"
+        >
         <Bell className="w-6 h-6 text-gray-300 hover:text-purple-400 transition-colors" />
         
         {/* Badge Count */}
@@ -71,7 +80,7 @@ export function NotificationBell() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-[#1a1a1a] border border-purple-500/30 rounded-lg shadow-xl z-50">
+        <div className="fixed inset-x-0 sm:absolute sm:right-0 sm:inset-auto bottom-0 sm:bottom-auto sm:mt-2 sm:w-96 w-full bg-[#1a1a1a] border border-purple-500/30 rounded-t-lg sm:rounded-lg shadow-xl z-50">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-purple-500/20">
             <h3 className="text-lg font-bold text-white">Notifications</h3>
@@ -84,7 +93,7 @@ export function NotificationBell() {
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[50vh] sm:max-h-96 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center p-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-purple-500"></div>
@@ -140,5 +149,6 @@ export function NotificationBell() {
         </div>
       )}
     </div>
+    </>
   );
 }
