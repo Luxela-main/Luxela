@@ -151,13 +151,17 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
         console.warn("Supabase getUser error:", error.message, error.code);
         user = null;
       } else if (data?.user) {
+        // Determine user role: check if they're an admin or have a specific role
+        const isAdminUser = isAdmin || data.user.user_metadata?.admin === true;
+        const userRole = isAdminUser ? 'admin' : (data.user.user_metadata?.role ?? undefined);
+        
         user = {
           id: data.user.id,
           email: data.user.email ?? undefined,
           name: data.user.user_metadata?.full_name,
-          role: data.user.user_metadata?.role,
+          role: userRole,
           avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
-          admin: isAdmin || data.user.user_metadata?.admin === true,
+          admin: isAdminUser,
         };
       }
     } catch (err) {
