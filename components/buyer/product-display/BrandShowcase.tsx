@@ -71,7 +71,7 @@ export default function BrandShowcase({
                 disabled={!canScrollLeft}
                 className={`p-1.5 sm:p-2 rounded-full transition-all ${
                   canScrollLeft
-                    ? 'bg-[#8451E1] hover:bg-[#9468F2]'
+                    ? 'bg-[#8451E1] hover:bg-[#9468F2] cursor-pointer'
                     : 'bg-[#333] text-[#666] cursor-not-allowed'
                 }`}
               >
@@ -82,7 +82,7 @@ export default function BrandShowcase({
                 disabled={!canScrollRight}
                 className={`p-1.5 sm:p-2 rounded-full transition-all ${
                   canScrollRight
-                    ? 'bg-[#8451E1] hover:bg-[#9468F2]'
+                    ? 'bg-[#8451E1] hover:bg-[#9468F2] cursor-pointer'
                     : 'bg-[#333] text-[#666] cursor-not-allowed'
                 }`}
               >
@@ -117,7 +117,7 @@ export default function BrandShowcase({
               disabled={!canScrollLeft}
               className={`p-1.5 sm:p-2 rounded-full transition-all ${
                 canScrollLeft
-                  ? 'bg-[#8451E1] hover:bg-[#9468F2]'
+                  ? 'bg-[#8451E1] hover:bg-[#9468F2] cursor-pointer'
                   : 'bg-[#333] text-[#666] cursor-not-allowed'
               }`}
             >
@@ -128,7 +128,7 @@ export default function BrandShowcase({
               disabled={!canScrollRight}
               className={`p-1.5 sm:p-2 rounded-full transition-all ${
                 canScrollRight
-                  ? 'bg-[#8451E1] hover:bg-[#9468F2]'
+                  ? 'bg-[#8451E1] hover:bg-[#9468F2] cursor-pointer'
                   : 'bg-[#333] text-[#666] cursor-not-allowed'
               }`}
             >

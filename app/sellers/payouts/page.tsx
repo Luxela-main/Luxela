@@ -57,7 +57,7 @@ export default function PayoutsPage() {
 
   return (
     <div className="relative">
-      {/* Header Section */}
+      {}
       <div className="mb-8 mt-12 md:mt-0 pb-6 border-b-2 border-[#E5E7EB]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -70,7 +70,7 @@ export default function PayoutsPage() {
             </div>
             <Button
               onClick={() => setIsScheduleModalOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white whitespace-nowrap"
+              className="bg-purple-600 hover:bg-purple-700 text-white whitespace-nowrap cursor-pointer"
             >
               Schedule Payout
             </Button>
@@ -78,7 +78,7 @@ export default function PayoutsPage() {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-[#1a1a1a] border-l-4 border-l-[#E5E7EB] rounded-lg p-6 hover:border-l-[#6B7280] transition-colors">
           <div className="flex items-center justify-between">
@@ -129,14 +129,14 @@ export default function PayoutsPage() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {}
       <div className="border-b border-[#2a2a2a] mb-6">
         <div className="flex space-x-1 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 whitespace-nowrap transition-colors border-b-2 ${
+              className={`px-4 py-3 whitespace-nowrap transition-colors border-b-2 cursor-pointer ${
                 activeTab === tab.id
                   ? "border-purple-600 text-white"
                   : "border-transparent text-gray-400 hover:text-gray-300"
@@ -149,14 +149,14 @@ export default function PayoutsPage() {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {}
       <div>
         {activeTab === "overview" && <PayoutStats />}
         {activeTab === "history" && <PayoutHistory searchTerm={search} />}
         {activeTab === "methods" && <PayoutMethods />}
       </div>
 
-      {/* Schedule Payout Modal */}
+      {}
       {isScheduleModalOpen && (
         <SchedulePayoutModal
           isOpen={isScheduleModalOpen}

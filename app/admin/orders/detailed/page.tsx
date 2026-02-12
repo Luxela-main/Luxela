@@ -69,7 +69,7 @@ export default function DetailedOrdersPage() {
   const [sortBy, setSortBy] = useState('date-desc');
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
-  // Fetch all orders
+  
   const { data: pendingOrders, isLoading: pendingLoading } =
     trpc.orderStatus.getOrdersByStatus.useQuery(
       { status: 'pending' as const, limit: 1000 },
@@ -90,7 +90,7 @@ export default function DetailedOrdersPage() {
 
   const isLoading = pendingLoading || processingLoading || deliveredLoading;
 
-  // Combine all orders
+  
   const allOrders = useMemo(() => {
     const combined = [
       ...(pendingOrders?.orders || []),
@@ -100,11 +100,11 @@ export default function DetailedOrdersPage() {
     return combined;
   }, [pendingOrders, processingOrders, deliveredOrders]);
 
-  // Filter and sort orders
+  
   const filteredOrders = useMemo(() => {
     let filtered = allOrders;
 
-    // Search filter
+    
     if (searchTerm) {
       filtered = filtered.filter(
         (order) =>
@@ -113,12 +113,12 @@ export default function DetailedOrdersPage() {
       );
     }
 
-    // Status filter
+    
     if (statusFilter !== 'all') {
       filtered = filtered.filter((order) => order.order_status === statusFilter);
     }
 
-    // Date range filter
+    
     if (dateRange !== 'all') {
       const now = new Date();
       const filterDate = new Date();
@@ -145,7 +145,7 @@ export default function DetailedOrdersPage() {
       );
     }
 
-    // Sort
+    
     const sorted = [...filtered];
     switch (sortBy) {
       case 'date-desc':
@@ -222,7 +222,7 @@ export default function DetailedOrdersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">All Orders</h1>
         <p className="text-gray-400">
@@ -230,13 +230,13 @@ export default function DetailedOrdersPage() {
         </p>
       </div>
 
-      {/* Filters and Controls */}
+      {}
       <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
         <CardContent className="pt-6">
           <div className="space-y-4">
-            {/* Primary filters */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Search */}
+              {}
               <div className="relative">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
                 <Input
@@ -247,7 +247,7 @@ export default function DetailedOrdersPage() {
                 />
               </div>
 
-              {/* Status filter */}
+              {}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
                   <SelectValue placeholder="Filter by status" />
@@ -274,7 +274,7 @@ export default function DetailedOrdersPage() {
                 </SelectContent>
               </Select>
 
-              {/* Date range filter */}
+              {}
               <Select value={dateRange} onValueChange={setDateRange}>
                 <SelectTrigger className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
                   <Calendar className="w-4 h-4 mr-2" />
@@ -299,7 +299,7 @@ export default function DetailedOrdersPage() {
                 </SelectContent>
               </Select>
 
-              {/* Sort */}
+              {}
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="bg-[#1a1a1a] border-[#2a2a2a] text-white">
                   <DollarSign className="w-4 h-4 mr-2" />
@@ -322,7 +322,7 @@ export default function DetailedOrdersPage() {
               </Select>
             </div>
 
-            {/* Action buttons */}
+            {}
             <div className="flex gap-2 justify-end">
               <Button
                 onClick={handleExport}
@@ -337,7 +337,7 @@ export default function DetailedOrdersPage() {
         </CardContent>
       </Card>
 
-      {/* Orders Table */}
+      {}
       <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
         <CardHeader>
           <div className="flex items-center justify-between">

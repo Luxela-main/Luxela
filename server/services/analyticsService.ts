@@ -238,15 +238,15 @@ export class AnalyticsService {
 
     return {
       total: totalRevenue,
-      daily: dailyData.map((d) => ({
+      daily: dailyData.map((d: typeof dailyData[number]) => ({
         date: d.date,
         amount: (Number(d.amount) || 0) / 100,
       })),
-      monthly: monthly.map((m) => ({
+      monthly: monthly.map((m: typeof monthly[number]) => ({
         month: m.month,
         amount: (Number(m.amount) || 0) / 100,
       })),
-      topSellers: topSellers.map((s) => ({
+      topSellers: topSellers.map((s: typeof topSellers[number]) => ({
         sellerId: s.sellerId || '',
         sellerName: s.sellerName,
         revenue: (Number(s.revenue) || 0) / 100,
@@ -265,7 +265,7 @@ export class AnalyticsService {
       .groupBy(orders.orderStatus);
 
     const stats: Record<string, number> = {};
-    result.forEach((r) => {
+    result.forEach((r: typeof result[number]) => {
       stats[r.status || 'unknown'] = r.count || 0;
     });
 
@@ -368,7 +368,7 @@ export class AnalyticsService {
       .groupBy(orders.buyerId);
 
     const avgLTV = ltvResult.length > 0
-      ? ltvResult.reduce((sum, r) => sum + ((Number(r.totalSpent) || 0) / 100), 0) / ltvResult.length
+      ? ltvResult.reduce((sum: any, r: any) => sum + ((Number(r.totalSpent) || 0) / 100), 0) / ltvResult.length
       : 0;
 
     const avgOrderValue = await db

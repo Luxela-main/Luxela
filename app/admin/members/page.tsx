@@ -69,7 +69,7 @@ export default function AdminMembersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  // Modal states
+  
   const [viewProfileOpen, setViewProfileOpen] = useState(false);
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
   const [suspendAccountOpen, setSuspendAccountOpen] = useState(false);
@@ -86,7 +86,7 @@ export default function AdminMembersPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteFullName, setInviteFullName] = useState('');
 
-  // TRPC mutations
+  
   const viewProfileMutation = trpc.adminMembers.viewProfile.useMutation({
     onSuccess: (data) => {
       if (data.success && data.profile) {
@@ -160,7 +160,7 @@ export default function AdminMembersPage() {
     },
   });
 
-  // Fetch real members data
+  
   const { data: membersData, isLoading: membersLoading } =
     trpc.adminMembers.getAllMembers.useQuery({
       page: currentPage,
@@ -203,7 +203,7 @@ export default function AdminMembersPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Header */}
+      {}
       <div className="flex flex-col gap-2 mb-4 sm:mb-6">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -225,7 +225,7 @@ export default function AdminMembersPage() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 sm:pb-3">
@@ -288,7 +288,7 @@ export default function AdminMembersPage() {
         </Card>
       </div>
 
-      {/* Members Table */}
+      {}
       <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -446,7 +446,7 @@ export default function AdminMembersPage() {
             </div>
           )}
 
-          {/* Pagination */}
+          {}
           {membersData && membersData.totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-[#2B2B2B]">
               <div className="text-sm text-[#9CA3AF]">
@@ -475,7 +475,7 @@ export default function AdminMembersPage() {
         </CardContent>
       </Card>
 
-      {/* View Profile Dialog */}
+      {}
       <Dialog open={viewProfileOpen} onOpenChange={setViewProfileOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#2B2B2B] text-white max-w-md">
           <DialogHeader>
@@ -521,7 +521,7 @@ export default function AdminMembersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Send Message Dialog */}
+      {}
       <Dialog open={sendMessageOpen} onOpenChange={setSendMessageOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#2B2B2B] text-white max-w-md">
           <DialogHeader>
@@ -574,7 +574,7 @@ export default function AdminMembersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Verify Account Confirmation */}
+      {}
       <AlertDialog open={verifyConfirmOpen} onOpenChange={setVerifyConfirmOpen}>
         <AlertDialogContent className="bg-[#1a1a1a] border-[#2B2B2B]">
           <AlertDialogHeader>
@@ -607,7 +607,7 @@ export default function AdminMembersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Suspend Account Dialog */}
+      {}
       <Dialog open={suspendAccountOpen} onOpenChange={setSuspendAccountOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#2B2B2B] text-white max-w-md">
           <DialogHeader>
@@ -680,7 +680,7 @@ export default function AdminMembersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invite Admin Dialog */}
+      {}
       <Dialog open={inviteAdminOpen} onOpenChange={setInviteAdminOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#2B2B2B] text-white max-w-md">
           <DialogHeader>

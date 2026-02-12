@@ -17,7 +17,7 @@ const calculateCollectionTotalPrice = async (collectionId: string): Promise<{ to
       .leftJoin(listings, eq(products.id, listings.productId))
       .where(eq(collectionItems.collectionId, collectionId));
 
-    const totalPrice = itemsWithListings.reduce((sum, item) => sum + (item.priceCents || 0), 0);
+    const totalPrice = itemsWithListings.reduce((sum: any, item: any) => sum + (item.priceCents || 0), 0);
     const avgPrice = itemsWithListings.length > 0 ? totalPrice / itemsWithListings.length : 0;
     
     return { totalPrice, avgPrice };
@@ -50,7 +50,7 @@ export const collectionRouter = createTRPCRouter({
           .from(collectionItems)
           .where(eq(collectionItems.collectionId, input.collectionId));
 
-        const productIds = items.map((item) => item.productId);
+        const productIds = items.map((item: any) => item.productId);
         const productsData =
           productIds.length > 0
             ? await db
@@ -75,10 +75,10 @@ export const collectionRouter = createTRPCRouter({
                 )
             : [];
 
-        const itemsWithProducts = items.map((item) => ({
+        const itemsWithProducts = items.map((item: any) => ({
           ...item,
-          product: productsData.find((p) => p.id === item.productId),
-          images: images.filter((img) => img.productId === item.productId),
+          product: productsData.find((p: any) => p.id === item.productId),
+          images: images.filter((img: any) => img.productId === item.productId),
         }));
 
         return {
@@ -255,7 +255,7 @@ export const collectionRouter = createTRPCRouter({
           .limit(input.limit)
           .offset(input.offset);
 
-        const productIds = items.map((item) => item.productId);
+        const productIds = items.map((item: any) => item.productId);
         const productsData =
           productIds.length > 0
             ? await db
@@ -282,10 +282,10 @@ export const collectionRouter = createTRPCRouter({
             : [];
 
         return {
-          items: items.map((item) => ({
+          items: items.map((item: any) => ({
             ...item,
-            product: productsData.find((p) => p.id === item.productId),
-            images: images.filter((img) => img.productId === item.productId),
+            product: productsData.find((p: any) => p.id === item.productId),
+            images: images.filter((img: any) => img.productId === item.productId),
           })),
           count: items.length,
         };
@@ -371,7 +371,9 @@ export const collectionRouter = createTRPCRouter({
           .from(collectionItems)
           .where(eq(collectionItems.collectionId, input.collectionId));
 
-        const productIds = items.map((item) => item.productId);
+        const productIds = items.map((item: any) => item.productId);
+        console.log('[getBuyerCollectionWithProducts] Product IDs:', productIds);
+        
         const productsData =
           productIds.length > 0
             ? await db
@@ -383,6 +385,8 @@ export const collectionRouter = createTRPCRouter({
                     : inArray(products.id, productIds)
                 )
             : [];
+        
+        console.log('[getBuyerCollectionWithProducts] Found products:', productsData.length);
 
         // Fetch listings for all products in the collection to get individual prices
         const productListings =
@@ -394,14 +398,21 @@ export const collectionRouter = createTRPCRouter({
                   productIds.length === 1
                     ? and(
                         eq(listings.productId, productIds[0]),
+                        eq(listings.type, "single"),
                         inArray(listings.status, ["approved", "pending_review"])
                       )
                     : and(
                         inArray(listings.productId, productIds),
+                        eq(listings.type, "single"),
                         inArray(listings.status, ["approved", "pending_review"])
                       )
                 )
             : [];
+        
+        console.log('[getBuyerCollectionWithProducts] Product listings found:', productListings.length, 'for', productIds.length, 'products');
+        productListings.forEach((l: any) => {
+          console.log(`  Listing: id=${l.id}, productId=${l.productId}, status=${l.status}, priceCents=${l.priceCents}`);
+        });
 
         const images =
           productIds.length > 0
@@ -416,17 +427,55 @@ export const collectionRouter = createTRPCRouter({
                 .orderBy(productImages.position)
             : [];
 
-        const itemsWithProducts = items.map((item) => {
+        const itemsWithProducts = items.map((item: any) => {
           // Find the listing for this specific product
           const productListing = productListings.find(
-            (l) => l.productId === item.productId
+            (l: any) => l.productId === item.productId
           );
+          
+          const selectedListing = productListing || listing[0];
+          
+          // Extract colors and sizes from the listing
+          let colors: any[] = [];
+          let sizes: any[] = [];
+          
+          if (selectedListing) {
+            // Try to parse colors
+            const colorSource = selectedListing.colorsAvailable || selectedListing.colors_available || selectedListing.colors;
+            if (colorSource) {
+              try {
+                colors = typeof colorSource === 'string' ? JSON.parse(colorSource) : Array.isArray(colorSource) ? colorSource : [];
+              } catch (e) {
+                colors = [];
+              }
+            }
+            
+            // Try to parse sizes
+            const sizeSource = selectedListing.sizesJson || selectedListing.sizes;
+            if (sizeSource) {
+              try {
+                sizes = typeof sizeSource === 'string' ? JSON.parse(sizeSource) : Array.isArray(sizeSource) ? sizeSource : [];
+              } catch (e) {
+                sizes = [];
+              }
+            }
+          }
+          
+          if (productListing) {
+            console.log(`[getBuyerCollectionWithProducts] Item productId=${item.productId}, using product listing id=${productListing.id}, priceCents=${productListing.priceCents}`);
+          } else {
+            console.log(`[getBuyerCollectionWithProducts] Item productId=${item.productId}, falling back to collection listing, priceCents=${listing[0].priceCents}`);
+          }
           
           return {
             ...item,
-            product: productsData.find((p) => p.id === item.productId),
-            images: images.filter((img) => img.productId === item.productId),
-            listing: productListing || listing[0], // Use product's own listing, fallback to collection listing
+            product: productsData.find((p: any) => p.id === item.productId),
+            images: images.filter((img: any) => img.productId === item.productId),
+            listing: selectedListing,
+            colors: colors,
+            sizes: sizes,
+            colorsAvailable: colors,
+            sizesJson: sizes
           };
         })
 
@@ -456,7 +505,7 @@ export const collectionRouter = createTRPCRouter({
       try {
         console.log('[getApprovedCollections] Starting query with input:', input);
         
-        // Fetch approved collection listings with pagination
+        // OPTIMIZATION: Fetch only basic listing info first (minimal fields, fast query)
         const approvedListings = await db
           .select({
             id: listings.id,
@@ -484,207 +533,168 @@ export const collectionRouter = createTRPCRouter({
           .limit(input.limit)
           .offset(input.offset);
         
-        console.log('[getApprovedCollections] Found approved collection listings:', approvedListings.length);
+        console.log('[getApprovedCollections] Found', approvedListings.length, 'approved collection listings');
 
         if (approvedListings.length === 0) {
-          console.log('[getApprovedCollections] No approved collection listings found, returning empty array');
-          return {
-            collections: [],
-            total: 0,
-          };
+          return { collections: [], total: 0 };
         }
 
-        // Get total count for pagination
-        const totalCount = await db
-          .select()
+        // Get total count - optimized separate query
+        const countResult = await db
+          .select({ count: listings.id })
           .from(listings)
           .where(and(
             eq(listings.type, "collection"),
             eq(listings.status, "approved")
           ));
-        console.log('[getApprovedCollections] Total visible collections (approved):', totalCount.length);
+        const totalCount = countResult.length;
 
-        const enrichedCollections = await Promise.all(
-          approvedListings.map(async (listing) => {
-            try {
-              console.log(`[getApprovedCollections] Processing listing: ${listing.id}, collectionId: ${listing.collectionId}`);
-              
-              if (!listing.collectionId) {
-                console.warn(`[getApprovedCollections] WARNING: Listing ${listing.id} has NO collectionId! This collection will be empty.`);
-              }
-              
-              // Get the actual collection details from collections table
-              const collectionDetails = await db
-                .select()
-                .from(collections)
-                .where(eq(collections.id, listing.collectionId!))
-                .limit(1);
-              
-              console.log(`[getApprovedCollections] Collection details found:`, collectionDetails.length > 0);
+        const collectionIds = approvedListings
+          .filter((l: typeof approvedListings[number]) => l.collectionId)
+          .map((l: typeof approvedListings[number]) => l.collectionId as string);
+        const sellerIds = approvedListings
+          .filter((l: typeof approvedListings[number]) => l.sellerId)
+          .map((l: typeof approvedListings[number]) => l.sellerId as string);
+        
+        console.log(`[getApprovedCollections] Fetching data for ${collectionIds.length} collections...`);
 
-              // Fetch ALL collection items with products, images, and listings (no limit)
-              const collectionItemsWithProducts = await db
-                .select({
-                  itemId: collectionItems.id,
-                  position: collectionItems.position,
-                  productId: collectionItems.productId,
-                  productName: products.name,
-                  productSlug: products.slug,
-                  productDescription: products.description,
-                  productImage: productImages.imageUrl,
-                  productImagePosition: productImages.position,
-                  // Include full listing details for each item
-                  listingId: listings.id,
-                  listingTitle: listings.title,
-                  listingDescription: listings.description,
-                  listingPriceCents: listings.priceCents,
-                  listingCurrency: listings.currency,
-                  listingColorsAvailable: listings.colorsAvailable,
-                  listingSizesJson: listings.sizesJson,
-                  listingMaterialComposition: listings.materialComposition,
-                  listingCategory: listings.category,
-                  listingQuantityAvailable: listings.quantityAvailable,
-                  listingCareInstructions: listings.careInstructions,
-                  listingRefundPolicy: listings.refundPolicy,
-                  listingVideoUrl: listings.videoUrl,
-                  listingShippingOption: listings.shippingOption,
-                  listingEtaDomestic: listings.etaDomestic,
-                  listingEtaInternational: listings.etaInternational,
-                  listingSku: listings.sku,
-                  listingBarcode: listings.barcode,
-                  listingMetaDescription: listings.metaDescription,
-                  listingImage: listings.image,
-                  listingImagesJson: listings.imagesJson,
-                  listingStatus: listings.status,
-                })
-                .from(collectionItems)
-                .innerJoin(products, eq(collectionItems.productId, products.id))
-                .leftJoin(productImages, eq(products.id, productImages.productId))
-                .leftJoin(listings, and(
-                  eq(listings.productId, collectionItems.productId),
-                  inArray(listings.status, ['approved', 'pending_review'])
-                ))
-                .where(eq(collectionItems.collectionId, listing.collectionId!))
-                .orderBy(collectionItems.position);
-              
-              // Count unique products in collection
-              const uniqueProductIds = new Set(collectionItemsWithProducts.map(item => item.productId));
-              const itemCount = uniqueProductIds.size || collectionItemsWithProducts.length;
-              console.log(`[getApprovedCollections] Collection ${listing.collectionId} has ${itemCount} unique items`);
+        // OPTIMIZATION: Batch fetch with minimal fields and item limit
+        const [allCollectionDetails, allSellers, allCollectionItemsWithProducts] = await Promise.all([
+          collectionIds.length > 0
+            ? db.select().from(collections).where(inArray(collections.id, collectionIds))
+            : Promise.resolve([]),
+          sellerIds.length > 0
+            ? db.select({ id: sellers.id }).from(sellers).where(inArray(sellers.id, sellerIds))
+            : Promise.resolve([]),
+          collectionIds.length > 0
+            ? db.select({
+                collectionId: collectionItems.collectionId,
+                itemId: collectionItems.id,
+                position: collectionItems.position,
+                productId: collectionItems.productId,
+                productName: products.name,
+                productSlug: products.slug,
+                productDescription: products.description,
+                productImage: productImages.imageUrl,
+                productImagePosition: productImages.position,
+                listingId: listings.id,
+                listingTitle: listings.title,
+                listingDescription: listings.description,
+                listingPriceCents: listings.priceCents,
+                listingCurrency: listings.currency,
+                listingCategory: listings.category,
+                listingQuantityAvailable: listings.quantityAvailable,
+                listingImage: listings.image,
+                listingImagesJson: listings.imagesJson,
+              })
+              .from(collectionItems)
+              .innerJoin(products, eq(collectionItems.productId, products.id))
+              .leftJoin(productImages, eq(products.id, productImages.productId))
+              .leftJoin(listings, and(
+                eq(listings.productId, collectionItems.productId),
+                inArray(listings.status, ['approved', 'pending_review'])
+              ))
+              .where(inArray(collectionItems.collectionId, collectionIds))
+              .orderBy(collectionItems.position)
+            : Promise.resolve([]),
+        ]);
+        
+        console.log('[getApprovedCollections] Batch fetch complete. Processing...');
+        
+        // Create maps for O(1) lookup
+        const collectionDetailsMap = new Map<string, typeof allCollectionDetails[number]>(allCollectionDetails.map((c: typeof allCollectionDetails[number]) => [c.id, c]));
+        const sellersMap = new Map(allSellers.map((s: typeof allSellers[number]) => [s.id, s]));
+        
+        // Group items by collection with limit per collection
+        const itemsByCollection = new Map<string, any[]>();
+        const itemCountByCollection = new Map<string, number>();
+        const MAX_ITEMS_PER_COLLECTION = 5; // Limit items for faster response
+        
+        allCollectionItemsWithProducts.forEach((item: typeof allCollectionItemsWithProducts[number]) => {
+          const collId = item.collectionId;
+          if (!itemsByCollection.has(collId)) {
+            itemsByCollection.set(collId, []);
+            itemCountByCollection.set(collId, 0);
+          }
+          
+          // Count all items
+          itemCountByCollection.set(collId, (itemCountByCollection.get(collId) || 0) + 1);
+          
+          // Only keep first MAX_ITEMS_PER_COLLECTION items in response
+          if ((itemsByCollection.get(collId) || []).length < MAX_ITEMS_PER_COLLECTION) {
+            itemsByCollection.get(collId)!.push(item);
+          }
+        });
 
-              // Group items by product to organize images and include listing details
-              const itemsMap = new Map();
-              collectionItemsWithProducts.forEach((row) => {
-                const key = row.productId;
-                if (!itemsMap.has(key)) {
-                  itemsMap.set(key, {
-                    itemId: row.itemId,
-                    position: row.position,
-                    productId: row.productId,
-                    productName: row.productName,
-                    productSlug: row.productSlug,
-                    productDescription: row.productDescription,
-                    images: [],
-                    // Include listing details for complete item information
-                    title: row.listingTitle || row.productName,
-                    description: row.listingDescription || row.productDescription,
-                    priceCents: row.listingPriceCents,
-                    currency: row.listingCurrency,
-                    colorsAvailable: row.listingColorsAvailable,
-                    sizesJson: row.listingSizesJson,
-                    material: row.listingMaterialComposition,
-                    category: row.listingCategory,
-                    quantityAvailable: row.listingQuantityAvailable,
-                    careInstructions: row.listingCareInstructions,
-                    refundPolicy: row.listingRefundPolicy,
-                    videoUrl: row.listingVideoUrl,
-                    shippingOption: row.listingShippingOption,
-                    etaDomestic: row.listingEtaDomestic,
-                    etaInternational: row.listingEtaInternational,
-                    sku: row.listingSku,
-                    barcode: row.listingBarcode,
-                    metaDescription: row.listingMetaDescription,
-                    listingImage: row.listingImage,
-                    listingImagesJson: row.listingImagesJson,
-                    listingStatus: row.listingStatus,
-                  });
-                }
-                if (row.productImage) {
-                  itemsMap.get(key).images.push({
-                    image: row.productImage,
-                    position: row.productImagePosition,
-                  });
-                }
+        // Process each listing with pre-fetched data (no more async calls per listing!)
+        const enrichedCollections = approvedListings.map((listing: any) => {
+          console.log('[getApprovedCollections] Processing collection listing:', { listingId: listing.id, collectionId: listing.collectionId });
+          const collectionItemsWithProducts = itemsByCollection.get(listing.collectionId!) || [];
+          const totalItemsInCollection = itemCountByCollection.get(listing.collectionId!) || collectionItemsWithProducts.length;
+          
+          // Group items by product
+          const itemsMap = new Map();
+          collectionItemsWithProducts.forEach((row: any) => {
+            const key = row.productId;
+            if (!itemsMap.has(key)) {
+              itemsMap.set(key, {
+                itemId: row.itemId,
+                position: row.position,
+                productId: row.productId,
+                productName: row.productName,
+                productSlug: row.productSlug,
+                productDescription: row.productDescription,
+                images: [],
+                title: row.listingTitle || row.productName,
+                description: row.listingDescription || row.productDescription,
+                priceCents: row.listingPriceCents,
+                currency: row.listingCurrency,
+                category: row.listingCategory,
+                quantityAvailable: row.listingQuantityAvailable,
+                listingImage: row.listingImage,
+                listingImagesJson: row.listingImagesJson,
+                listingId: row.listingId,
               });
-
-              const items = Array.from(itemsMap.values());
-              console.log(`[getApprovedCollections] Grouped into ${items.length} unique products with full listing details`);
-
-              // Fetch seller info
-              const seller = await db
-                .select()
-                .from(sellers)
-                .where(eq(sellers.id, listing.sellerId))
-                .limit(1);
-
-              // Calculate total price for collection
-              const collectionId = listing.collectionId || '';
-              const { totalPrice, avgPrice } = await calculateCollectionTotalPrice(collectionId);
-
-              const enriched = {
-                id: listing.id,
-                collectionId: listing.collectionId,
-                title: listing.title,
-                description: listing.description,
-                image: listing.image,
-                imagesJson: listing.imagesJson,
-                slug: listing.slug,
-                collectionName: collectionDetails[0]?.name || listing.title,
-                collectionDescription: collectionDetails[0]?.description || listing.description,
-                itemCount: itemCount,
-                items: items,  // Each item now includes full listing details (colors, sizes, pricing, shipping, refund info)
-                sellerId: listing.sellerId,
-                sellerName: seller[0]?.id ? "Seller" : "Unknown Seller",
-                shippingOption: listing.shippingOption,
-                refundPolicy: listing.refundPolicy,
-                createdAt: listing.createdAt,
-                updatedAt: listing.updatedAt,
-                totalPriceCents: totalPrice,  // totalPrice from calculateCollectionTotalPrice is already in cents
-                avgPrice: avgPrice / 100,  // avgPrice is in cents, convert to decimal
-              };
-              
-              console.log(`[getApprovedCollections] Enriched collection with ${items.length} items`);
-              return enriched;
-            } catch (itemError) {
-              console.error(`[getApprovedCollections] Error processing listing ${listing.id}:`, itemError);
-              // Return empty collection on error
-              return {
-                id: listing.id,
-                collectionId: listing.collectionId,
-                title: listing.title,
-                description: listing.description,
-                image: listing.image,
-                imagesJson: listing.imagesJson,
-                slug: listing.slug,
-                collectionName: listing.title,
-                collectionDescription: listing.description,
-                itemCount: 0,
-                items: [],
-                sellerId: listing.sellerId,
-                sellerName: "Unknown Seller",
-                shippingOption: listing.shippingOption,
-                refundPolicy: listing.refundPolicy,
-                createdAt: listing.createdAt,
-                updatedAt: listing.updatedAt,
-              };
             }
-          })
-        );
+            if (row.productImage) {
+              const images = itemsMap.get(key).images;
+              if (!images.find((img: any) => img.image === row.productImage)) {
+                images.push({
+                  image: row.productImage,
+                  position: row.productImagePosition,
+                });
+              }
+            }
+          });
 
-        console.log('[getApprovedCollections] ✓ Successfully returning', enrichedCollections.length, 'collections (total in db:', totalCount.length, ')');
+          const items = Array.from(itemsMap.values());
+          const collectionDetails = collectionDetailsMap.get(listing.collectionId!);
+
+          return {
+            id: listing.id,
+            collectionId: listing.collectionId,
+            title: listing.title,
+            description: listing.description,
+            image: listing.image,
+            imagesJson: listing.imagesJson,
+            slug: listing.slug,
+            collectionName: collectionDetails?.name || listing.title,
+            collectionDescription: collectionDetails?.description || listing.description,
+            itemCount: totalItemsInCollection,
+            items: items,
+            sellerId: listing.sellerId,
+            sellerName: sellersMap.has(listing.sellerId) ? "Seller" : "Unknown Seller",
+            shippingOption: listing.shippingOption,
+            refundPolicy: listing.refundPolicy,
+            createdAt: listing.createdAt,
+            updatedAt: listing.updatedAt,
+          };
+        });
+
+        console.log('[getApprovedCollections] ✓ Returning', enrichedCollections.length, 'collections');
         return {
           collections: enrichedCollections,
-          total: totalCount.length,
+          total: totalCount,
         };
       } catch (error) {
         console.error("[getApprovedCollections] Failed to fetch approved collections:", error);

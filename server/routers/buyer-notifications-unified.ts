@@ -259,7 +259,7 @@ async function generateAndStoreBuyerNotifications(
           try {
             await db.insert(buyerNotifications).values({
             buyerId,
-            type: 'dispute_alert' as any,
+            type: 'dispute_open' as any,
             title,
             message,
             relatedEntityId: dispute.id,
@@ -374,7 +374,7 @@ export const buyerNotificationsRouter = createTRPCRouter({
         .offset(input.offset);
 
       return {
-        notifications: notifs.map((n) => ({
+        notifications: notifs.map((n: any) => ({
           id: n.id,
           type: n.type,
           title: n.title,
@@ -420,7 +420,7 @@ export const buyerNotificationsRouter = createTRPCRouter({
       }
 
       // Generate fresh notifications
-      generateAndStoreBuyerNotifications(buyer.id).catch((err) =>
+      await generateAndStoreBuyerNotifications(buyer.id).catch((err) =>
         console.error('Error generating notifications:', err)
       );
 
@@ -450,7 +450,7 @@ export const buyerNotificationsRouter = createTRPCRouter({
       const unreadCount = Number(unreadResult[0]?.count ?? 0);
 
       return {
-        notifications: notifs.map((n) => ({
+        notifications: notifs.map((n: any) => ({
           id: n.id,
           type: n.type,
           title: n.title,
@@ -575,7 +575,7 @@ export const buyerNotificationsRouter = createTRPCRouter({
 
       const grouped: Record<string, any[]> = {};
 
-      notifs.forEach((notif) => {
+      notifs.forEach((notif: any) => {
         if (!grouped[notif.type]) {
           grouped[notif.type] = [];
         }
@@ -855,7 +855,7 @@ export const buyerNotificationsRouter = createTRPCRouter({
       const total = Number(totalResult[0]?.count ?? 0);
 
       return {
-        notifications: notifs.map((n) => ({
+        notifications: notifs.map((n: any) => ({
           id: n.id,
           type: n.type,
           title: n.title,

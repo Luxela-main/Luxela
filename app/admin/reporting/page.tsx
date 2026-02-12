@@ -19,11 +19,11 @@ export default function ReportingPage() {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [exportFormat, setExportFormat] = useState('pdf');
 
-  // Fetch data
+  
   const templatesQuery = trpc.adminReportGenerator.getReportTemplates.useQuery();
   const scheduledQuery = trpc.adminReportGenerator.getScheduledReports.useQuery();
 
-  // Mutations
+  
   const generateMutation = trpc.adminReportGenerator.generateReport.useMutation();
   const createScheduledMutation = trpc.adminReportGenerator.createScheduledReport.useMutation();
   const deleteMutation = trpc.adminReportGenerator.deleteScheduledReport.useMutation();
@@ -37,7 +37,7 @@ export default function ReportingPage() {
         format: exportFormat as any,
       });
 
-      // Trigger download
+      
       const blob = new Blob([JSON.stringify(result.data, null, 2)], {
         type: 'application/json',
       });
@@ -53,7 +53,7 @@ export default function ReportingPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div>
         <h1 className="text-3xl font-light tracking-tight">Report Generator</h1>
         <p className="text-gray-400 mt-1">Generate and schedule comprehensive business reports</p>
@@ -66,14 +66,14 @@ export default function ReportingPage() {
           <TabsTrigger value="templates">Templates</TabsTrigger>
         </TabsList>
 
-        {/* Generate Report Tab */}
+        {}
         <TabsContent value="generate" className="space-y-6">
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
               <CardTitle className="text-lg font-light">Create On-Demand Report</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Report Type */}
+              {}
               <div className="space-y-2">
                 <Label htmlFor="report-type">Report Type</Label>
                 <Select value={reportType} onValueChange={setReportType}>
@@ -92,7 +92,7 @@ export default function ReportingPage() {
                 </Select>
               </div>
 
-              {/* Date Range */}
+              {}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start-date">Start Date</Label>
@@ -116,7 +116,7 @@ export default function ReportingPage() {
                 </div>
               </div>
 
-              {/* Format */}
+              {}
               <div className="space-y-2">
                 <Label htmlFor="format">Export Format</Label>
                 <Select value={exportFormat} onValueChange={setExportFormat}>
@@ -132,7 +132,7 @@ export default function ReportingPage() {
                 </Select>
               </div>
 
-              {/* Summary Preview */}
+              {}
               {generateMutation.data && (
                 <Card className="bg-gray-800/50 border-gray-700">
                   <CardHeader className="pb-2">
@@ -161,9 +161,9 @@ export default function ReportingPage() {
           </Card>
         </TabsContent>
 
-        {/* Scheduled Reports Tab */}
+        {}
         <TabsContent value="scheduled" className="space-y-6">
-          {/* Create New Scheduled Report */}
+          {}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
               <CardTitle className="text-lg font-light flex items-center gap-2">
@@ -223,7 +223,7 @@ export default function ReportingPage() {
             </CardContent>
           </Card>
 
-          {/* Scheduled Reports List */}
+          {}
           {scheduledQuery.data && scheduledQuery.data.length > 0 && (
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
@@ -285,7 +285,7 @@ export default function ReportingPage() {
           )}
         </TabsContent>
 
-        {/* Templates Tab */}
+        {}
         <TabsContent value="templates" className="space-y-6">
           {templatesQuery.data && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

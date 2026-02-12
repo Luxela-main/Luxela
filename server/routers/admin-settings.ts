@@ -94,7 +94,7 @@ export const adminSettingsRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const settings = await getSettingsByCategory(input.category);
       const result: Record<string, any> = {};
-      settings.forEach((setting) => {
+      settings.forEach((setting: any) => {
         const key = setting.settingKey.split(':')[1] || setting.settingKey;
         result[key] = setting.settingValue;
       });
@@ -110,7 +110,7 @@ export const adminSettingsRouter = createTRPCRouter({
       const allSettings = await db.select().from(adminSettings);
       const result: Record<string, Record<string, any>> = {};
 
-      allSettings.forEach((setting) => {
+      allSettings.forEach((setting: any) => {
         if (!result[setting.category]) {
           result[setting.category] = {};
         }
@@ -179,7 +179,7 @@ export const adminSettingsRouter = createTRPCRouter({
         ],
       };
 
-      settings.forEach((setting) => {
+      settings.forEach((setting: any) => {
         const keyParts = setting.settingKey.split(':');
         const key = keyParts[1] || keyParts[0];
         const value = setting.settingValue;
@@ -215,7 +215,7 @@ export const adminSettingsRouter = createTRPCRouter({
         ],
       };
 
-      settings.forEach((setting) => {
+      settings.forEach((setting: any) => {
         const keyParts = setting.settingKey.split(':');
         const key = keyParts[1] || keyParts[0];
         const value = setting.settingValue;
@@ -257,7 +257,7 @@ export const adminSettingsRouter = createTRPCRouter({
         },
       };
 
-      settings.forEach((setting) => {
+      settings.forEach((setting: any) => {
         const keyParts = setting.settingKey.split(':');
         const key = keyParts[1] || keyParts[0];
         const value = setting.settingValue;
@@ -292,7 +292,7 @@ export const adminSettingsRouter = createTRPCRouter({
       await verifyAdminRole(ctx);
       const userId = ctx.user?.id || 'system';
 
-      const updates = [];
+      const updates: Array<{ settingKey: string; settingValue: string; category: string }> = [];
       for (const [key, value] of Object.entries(input)) {
         if (value !== undefined) {
           updates.push({
@@ -517,14 +517,14 @@ export const adminSettingsRouter = createTRPCRouter({
         }
 
         // Get all listing IDs that already have review records
-        const listingIds = pendingListings.map((l) => l.id);
+        const listingIds = pendingListings.map((l: any) => l.id);
         const reviewedListingIds = await db
           .select({ listingId: listingReviews.listingId })
           .from(listingReviews)
           .where(inArray(listingReviews.listingId, listingIds));
 
-        const reviewedIds = new Set(reviewedListingIds.map((r) => r.listingId));
-        const missingReviews = pendingListings.filter((l) => !reviewedIds.has(l.id));
+        const reviewedIds = new Set(reviewedListingIds.map((r: any) => r.listingId));
+        const missingReviews = pendingListings.filter((l: any) => !reviewedIds.has(l.id));
 
         if (missingReviews.length === 0) {
           return {
@@ -535,7 +535,7 @@ export const adminSettingsRouter = createTRPCRouter({
         }
 
         // Create review records for missing listings
-        const reviewsToInsert = missingReviews.map((listing) => ({
+        const reviewsToInsert = missingReviews.map((listing: any) => ({
           listingId: listing.id,
           sellerId: listing.sellerId,
           status: 'pending' as const,

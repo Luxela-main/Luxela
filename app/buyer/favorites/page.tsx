@@ -23,7 +23,7 @@ interface Favorite {
 }
 
 export default function FavoritesPage() {
-  useRealtimeListings(); // Enable realtime product syncing
+  useRealtimeListings(); 
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -36,16 +36,16 @@ export default function FavoritesPage() {
   const { addToCart } = useCartState();
 
   useEffect(() => {
-    // Wait for auth to finish loading
+    
     if (authLoading) return;
 
-    // If user is not authenticated, redirect
+    
     if (!user) {
       router.push('/signin');
       return;
     }
 
-    // Prevent fetching multiple times (for React strict mode and subsequent renders)
+    
     if (hasFetched) return;
 
     const fetchFavorites = async () => {
@@ -102,7 +102,8 @@ export default function FavoritesPage() {
       if (isAuthError) {
         router.push(`/signin?redirect=/buyer/favorites`);
       } else {
-        toast?.error?.('Failed to add to cart');
+        const errorMessage = error?.data?.message || error?.message || 'Failed to add to cart';
+        toast?.error?.(errorMessage);
       }
     } finally {
       setAddingToCartId(null);
@@ -123,7 +124,7 @@ export default function FavoritesPage() {
   return (
     <div className="bg-black min-h-screen text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12 sm:py-16">
-        {/* Header */}
+        {}
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-4">
             <Heart className="w-8 h-8 text-red-500 fill-red-500" />
@@ -138,7 +139,7 @@ export default function FavoritesPage() {
           </p>
         </div>
 
-        {/* Favorites Grid */}
+        {}
         {favorites.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Heart className="w-16 h-16 text-gray-700 mb-4" />
@@ -160,7 +161,7 @@ export default function FavoritesPage() {
                 key={favorite.id}
                 className="group bg-gradient-to-br from-[#0f0f0f] to-[#0a0a0a] rounded-xl border border-[#1a1a1a] overflow-hidden hover:border-[#8451E1]/30 transition-all hover:shadow-lg hover:shadow-[#8451E1]/10"
               >
-                {/* Image Container */}
+                {}
                 <Link
                   href={`/buyer/product/${favorite.listing.id}`}
                   className="relative overflow-hidden bg-black h-64 block"
@@ -173,9 +174,9 @@ export default function FavoritesPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
 
-                {/* Content */}
+                {}
                 <div className="p-4">
-                  {/* Title */}
+                  {}
                   <Link
                     href={`/buyer/product/${favorite.listing.id}`}
                     className="block"
@@ -185,7 +186,7 @@ export default function FavoritesPage() {
                     </h3>
                   </Link>
 
-                  {/* Price */}
+                  {}
                   <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-lg font-light text-white">
                       {(favorite.listing.price_cents / 100).toLocaleString(
@@ -198,7 +199,7 @@ export default function FavoritesPage() {
                     </span>
                   </div>
 
-                  {/* Stock Status */}
+                  {}
                   <p
                     className={`text-xs font-semibold mb-4 ${
                       favorite.listing.quantity_available > 0
@@ -211,7 +212,7 @@ export default function FavoritesPage() {
                       : 'Out of stock'}
                   </p>
 
-                  {/* Action Buttons */}
+                  {}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleAddToCart(favorite.listing.id)}

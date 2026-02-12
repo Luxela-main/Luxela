@@ -49,7 +49,9 @@ export async function checkPoolHealth(): Promise<boolean> {
     client.release();
     
     lastHealthCheck = now;
-    console.log('[DB_POOL] Health check passed');
+    if (process.env.DEBUG_DB_POOL === 'true') {
+      console.log('[DB_POOL] Health check passed');
+    }
     return true;
   } catch (error) {
     console.error('[DB_POOL] Health check failed:', error);

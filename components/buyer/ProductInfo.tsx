@@ -9,6 +9,7 @@ import { useCartState } from "@/modules/cart/context";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/hooks/useToast";
 import { useAuth } from "@/context/AuthContext";
+import { formatCurrency } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -38,8 +39,8 @@ const UI_COLOR_MAP: { [key: string]: string } = {
 };
 
 export default function ProductInfo({ product, business }: ProductInfoProps) {
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<number>(0);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<number[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -126,8 +127,8 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       return false;
     }
 
-    if (sizes.length > 0 && !selectedSize) {
-      toast.warning("Please select a size");
+    if (sizes.length > 0 && selectedSizes.length === 0) {
+      toast.warning("Please select at least one size");
       return false;
     }
 
@@ -144,8 +145,9 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       if (isAuthError) {
         setShowAuthModal(true);
       } else {
-        console.error("Failed to add to cart:", error);
-        toast.warning("Failed to add item to cart. Please try again.");
+        const errorMessage = error?.data?.message || error?.message || "Failed to add item to cart. Please try again.";
+        console.error("Failed to add to cart:", { message: errorMessage, error });
+        toast.warning(errorMessage);
       }
       return false;
     } finally {
@@ -239,12 +241,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
               </p>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-light text-white">
-                  {(product.price_cents / 100).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-                <span className="text-sm text-gray-400 font-medium">
-                  {product.currency}
+                  {formatCurrency(product.price_cents / 100, product.currency || 'NGN')}
                 </span>
               </div>
             </div>
@@ -288,22 +285,26 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
 
       {/* Product Options Section */}
       <section className="border border-[#1a1a1a] flex flex-col gap-0 rounded-2xl bg-[#0a0a0a] overflow-hidden">
-        {/* Color Selection */}
+        {/* Color Selection - Multi-choice */}
         {colors.length > 0 && (
           <div className="border-b border-[#1a1a1a] p-6">
             <h3 className="text-xs font-semibold mb-4 text-white uppercase tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
-              Color: <span className="text-gray-400 font-normal capitalize">
-                ({colors[selectedColor]?.colorName})
-              </span>
+              Select Colors ({selectedColors.length})
             </h3>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 mb-4">
               {colors.map((color: any, index: number) => (
                 <button
                   key={index}
-                  onClick={() => setSelectedColor(index)}
+                  onClick={() => {
+                    setSelectedColors(
+                      selectedColors.includes(index)
+                        ? selectedColors.filter(i => i !== index)
+                        : [...selectedColors, index]
+                    );
+                  }}
                   className={`relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${
-                    selectedColor === index
+                    selectedColors.includes(index)
                       ? "border-[#8451E1] scale-110"
                       : "border-gray-800 hover:border-gray-600"
                   }`}
@@ -313,7 +314,10 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
                     className="w-[85%] h-[85%] rounded-full flex items-center justify-center overflow-hidden shadow-inner"
                     style={{ backgroundColor: color.displayHex || "#1a1a1a" }}
                   >
-                    {!color.displayHex && (
+                    {selectedColors.includes(index) && (
+                      <Check className="w-4 h-4 text-white" />
+                    )}
+                    {!selectedColors.includes(index) && !color.displayHex && (
                       <span className="text-[10px] text-white font-bold uppercase">
                         {color.colorName?.charAt(0)}
                       </span>
@@ -322,31 +326,76 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
                 </button>
               ))}
             </div>
+            {selectedColors.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedColors.map((colorIndex) => (
+                  <span
+                    key={colorIndex}
+                    className="px-3 py-1 bg-[#8451E1]/20 border border-[#8451E1]/50 rounded-full text-xs text-[#8451E1] font-medium flex items-center gap-2"
+                  >
+                    {colors[colorIndex]?.colorName}
+                    <button
+                      onClick={() => setSelectedColors(selectedColors.filter(i => i !== colorIndex))}
+                      className="hover:text-[#8451E1] opacity-70 hover:opacity-100"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Size Selection */}
+        {/* Size Selection - Multi-choice */}
         {sizes.length > 0 && (
           <div className="border-b border-[#1a1a1a] p-6">
             <h3 className="text-xs font-semibold mb-4 text-white uppercase tracking-widest flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
-              Select Size
+              Select Sizes ({selectedSizes.length})
             </h3>
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-5 gap-3 mb-4">
               {sizes.map((size: string) => (
                 <button
                   key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`py-3 rounded-lg border text-sm font-medium transition-all ${
-                    selectedSize === size
+                  onClick={() => {
+                    setSelectedSizes(
+                      selectedSizes.includes(size)
+                        ? selectedSizes.filter(s => s !== size)
+                        : [...selectedSizes, size]
+                    );
+                  }}
+                  className={`py-3 rounded-lg border text-sm font-medium transition-all relative ${
+                    selectedSizes.includes(size)
                       ? "bg-white text-black border-white"
                       : "border-gray-800 text-gray-400 hover:border-gray-600"
                   }`}
                 >
+                  {selectedSizes.includes(size) && (
+                    <Check className="w-4 h-4 absolute top-1 right-1" />
+                  )}
                   {size}
                 </button>
               ))}
             </div>
+            {selectedSizes.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedSizes.map((size) => (
+                  <span
+                    key={size}
+                    className="px-3 py-1 bg-[#8451E1]/20 border border-[#8451E1]/50 rounded-full text-xs text-[#8451E1] font-medium flex items-center gap-2"
+                  >
+                    {size}
+                    <button
+                      onClick={() => setSelectedSizes(selectedSizes.filter(s => s !== size))}
+                      className="hover:text-[#8451E1] opacity-70 hover:opacity-100"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

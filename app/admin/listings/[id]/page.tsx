@@ -52,7 +52,7 @@ export default function ListingDetailPage() {
         comments: comments || undefined,
       });
       
-      // Invalidate buyer catalog cache to show newly approved listings immediately
+      
       invalidateCatalogCache();
       
       toastSvc.success("Listing approved successfully!", {
@@ -182,7 +182,7 @@ export default function ListingDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0e0e0e] to-[#1a1a1a] p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex items-center gap-4 mb-6 pb-4 border-b-2 border-[#2B2B2B]">
           <Link href="/admin/listings">
             <Button variant="outline" size="icon" className="border-[#2B2B2B] text-[#9CA3AF] hover:bg-[#8451e1] hover:text-white">
@@ -200,7 +200,7 @@ export default function ListingDetailPage() {
           </div>
         </div>
 
-        {/* Status Badges */}
+        {}
         <div className="flex gap-3 mb-6 flex-wrap">
           <Badge className={getStatusColor(listing.status)}>
             Status: {listing.status.replace(/_/g, " ")}
@@ -218,9 +218,9 @@ export default function ListingDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {}
           <div className="lg:col-span-2 space-y-6">
-            {/* Product Images */}
+            {}
             {images.length > 0 && (
               <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
                 <CardHeader>
@@ -243,7 +243,7 @@ export default function ListingDetailPage() {
               </Card>
             )}
 
-            {/* Seller Information */}
+            {}
             <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
               <CardHeader>
                 <CardTitle>Seller Information</CardTitle>
@@ -262,7 +262,7 @@ export default function ListingDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Product Details */}
+            {}
             <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
               <CardHeader>
                 <CardTitle>Product Details</CardTitle>
@@ -299,7 +299,7 @@ export default function ListingDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Collection Products (if applicable) */}
+            {}
             {listing.type === 'collection' && listing.collectionProducts && listing.collectionProducts.length > 0 && (
               <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
                 <CardHeader>
@@ -354,7 +354,7 @@ export default function ListingDetailPage() {
               </Card>
             )}
 
-            {/* Product Specifications */}
+            {}
             {(listing.sku || listing.materialComposition || listing.careInstructions) && (
               <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
                 <CardHeader>
@@ -385,7 +385,7 @@ export default function ListingDetailPage() {
               </Card>
             )}
 
-            {/* Timestamps */}
+            {}
             <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
               <CardHeader>
                 <CardTitle>Timeline</CardTitle>
@@ -403,7 +403,7 @@ export default function ListingDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Activity History */}
+            {}
             <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
               <CardHeader>
                 <CardTitle>Review History</CardTitle>
@@ -457,7 +457,7 @@ export default function ListingDetailPage() {
             </Card>
           </div>
 
-          {/* Sidebar - Review Actions */}
+          {}
           <div>
             <Card className="sticky top-6 bg-[#1a1a1a] border-[#2B2B2B]">
               <CardHeader>
@@ -537,7 +537,7 @@ export default function ListingDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Review Modal */}
+            {}
             {reviewAction && (
               <ListingReviewModal
                 action={reviewAction}

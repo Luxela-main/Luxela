@@ -41,7 +41,7 @@ export default function GoogleSignInButton({ redirectPath }: GoogleSignInButtonP
   return (
     <button
       onClick={handleGoogleSignIn}
-      className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm text-white transition-colors"
+      className="w-full flex items-center justify-center gap-3 bg-zinc-900 hover:bg-zinc-800 py-2 rounded text-sm text-white transition-colors cursor-pointer"
     >
       <Image src="/google.svg" alt="Google" width={16} height={16} />
       Continue with Google

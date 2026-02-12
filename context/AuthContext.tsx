@@ -15,57 +15,57 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [supabase] = useState(() => {
-    if (typeof window === 'undefined') {
-      return null as any;
-    }
-    return createClient();
-  }); 
+  const [supabase] = useState(() => createClient()); 
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
     let mounted = true;
-    (async () => {
+    
+    const initAuth = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (mounted) setUser(data?.session?.user ?? null);
+        console.log('[AUTH] Initializing session from server cookies...');
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('[AUTH] Session error:', error.message);
+        }
+        
+        if (mounted) {
+          setUser(data?.session?.user ?? null);
+          console.log('[AUTH] Session initialized, user:', data?.session?.user?.id || 'none');
+        }
       } catch (e) {
+        console.error('[AUTH] Init error:', e);
+        if (mounted) setUser(null);
       } finally {
         if (mounted) setLoading(false);
       }
-    })();
+    };
+    
+    initAuth();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       if (!mounted) return;
+      console.log('[AUTH] State changed:', event);
       setUser(session?.user ?? null);
-      setLoading(false);
     });
 
     return () => {
       mounted = false;
       listener?.subscription?.unsubscribe?.();
     };
-  }, [supabase]); 
+  }, []); 
   
 
   const logout = async () => {
-    if (!supabase) return;
     try {
       setUser(null);
       await supabase.auth.signOut();
-      // Redirect to home page after successful logout
       router.push('/');
     } catch (e) {
       console.error("Logout error", e);
-      // Still redirect even if there's an error
-      router.push('/');
     }
   };
 

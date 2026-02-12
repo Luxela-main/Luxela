@@ -312,7 +312,7 @@ export class ReturnsRefundsService {
         where: eq(refunds.buyerId, buyerId),
         limit,
         offset,
-        orderBy: (r) => [r.createdAt],
+        orderBy: (r: any) => [r.createdAt],
         with: {
           order: {
             columns: {
@@ -337,7 +337,7 @@ export class ReturnsRefundsService {
         where: eq(refunds.sellerId, sellerId),
         limit,
         offset,
-        orderBy: (r) => [r.createdAt],
+        orderBy: (r: any) => [r.createdAt],
         with: {
           order: {
             columns: {
@@ -380,14 +380,14 @@ export class ReturnsRefundsService {
       const stats = {
         totalReturns: allRefunds.length,
         totalRefunded: allRefunds
-          .filter((r) => r.refundStatus === 'refunded')
-          .reduce((sum, r) => sum + r.amountCents, 0),
+          .filter((r: any) => r.refundStatus === 'refunded')
+          .reduce((sum: any, r: any) => sum + r.amountCents, 0),
         returnRate: allRefunds.length > 0 ? ((allRefunds.length / 100) * 100).toFixed(2) : '0',
         byStatus: {
-          pending: allRefunds.filter((r) => r.refundStatus === 'pending').length,
-          approved: allRefunds.filter((r) => r.refundStatus === 'return_approved').length,
-          rejected: allRefunds.filter((r) => r.refundStatus === 'return_rejected').length,
-          refunded: allRefunds.filter((r) => r.refundStatus === 'refunded').length,
+          pending: allRefunds.filter((r: any) => r.refundStatus === 'pending').length,
+          approved: allRefunds.filter((r: any) => r.refundStatus === 'return_approved').length,
+          rejected: allRefunds.filter((r: any) => r.refundStatus === 'return_rejected').length,
+          refunded: allRefunds.filter((r: any) => r.refundStatus === 'refunded').length,
         },
         topReasons: this.getTopReasons(allRefunds),
       };
@@ -401,7 +401,7 @@ export class ReturnsRefundsService {
 
   private static getTopReasons(refunds: any[]) {
     const reasonCounts: Record<string, number> = {};
-    refunds.forEach((r) => {
+    refunds.forEach((r: any) => {
       reasonCounts[r.reason] = (reasonCounts[r.reason] || 0) + 1;
     });
     return Object.entries(reasonCounts)
@@ -409,4 +409,4 @@ export class ReturnsRefundsService {
       .slice(0, 5)
       .map(([reason, count]) => ({ reason, count }));
   }
-}
+}

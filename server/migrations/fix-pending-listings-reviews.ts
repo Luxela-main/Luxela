@@ -30,7 +30,7 @@ async function fixPendingListingsReviews() {
     }
 
     // Find which pending listings don't have review records
-    const listingIds = pendingListings.map(l => l.id);
+    const listingIds = pendingListings.map((l: any) => l.id);
 
     // Get all listing IDs that already have review records
     const reviewedListingIds = await db
@@ -42,8 +42,8 @@ async function fixPendingListingsReviews() {
         )})`
       );
 
-    const reviewedIds = new Set(reviewedListingIds.map(r => r.listingId));
-    const missingReviews = pendingListings.filter(l => !reviewedIds.has(l.id));
+    const reviewedIds = new Set(reviewedListingIds.map((r: any) => r.listingId));
+    const missingReviews = pendingListings.filter((l: any) => !reviewedIds.has(l.id));
 
     console.log(`Found ${missingReviews.length} pending listings missing review records`);
 
@@ -53,7 +53,7 @@ async function fixPendingListingsReviews() {
     }
 
     // Create review records for missing listings
-    const reviewsToInsert = missingReviews.map(listing => ({
+    const reviewsToInsert = missingReviews.map((listing: any) => ({
       listingId: listing.id,
       sellerId: listing.sellerId,
       status: 'pending' as const,

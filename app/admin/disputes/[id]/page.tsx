@@ -95,23 +95,23 @@ export default function DisputeDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Fetch dispute details
+  
   const ticketDetailsQuery = trpc.support.getTicket.useQuery(
     { ticketId: disputeId },
     { enabled: !!disputeId }
   );
 
-  // Fetch dispute replies
+  
   const repliesQuery = trpc.support.getTicketReplies.useQuery(
     { ticketId: disputeId },
     { enabled: !!disputeId }
   );
 
-  // Mutations
+  
   const replyMutation = trpc.support.replyToTicket.useMutation();
   const updateStatusMutation = trpc.supportAdmin.updateTicketStatus.useMutation();
 
-  // Load dispute data
+  
   useEffect(() => {
     if (ticketDetailsQuery.data && repliesQuery.data) {
       const ticketData = ticketDetailsQuery.data;
@@ -158,7 +158,7 @@ export default function DisputeDetailPage() {
 
       setReplyMessage('');
       toast.success('Reply sent successfully');
-      // Refetch replies
+      
       repliesQuery.refetch();
     } catch (error) {
       console.error('Reply error:', error);
@@ -232,7 +232,7 @@ export default function DisputeDetailPage() {
 
   return (
     <div className="min-h-screen bg-black p-6 space-y-6">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <Link href="/admin/disputes">
           <Button
@@ -246,9 +246,9 @@ export default function DisputeDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
+        {}
         <div className="lg:col-span-2 space-y-6">
-          {/* Dispute Overview */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -275,7 +275,7 @@ export default function DisputeDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Dispute Description */}
+              {}
               <div>
                 <h3 className="text-sm font-semibold text-gray-300 mb-2">
                   Description
@@ -285,7 +285,7 @@ export default function DisputeDetailPage() {
                 </p>
               </div>
 
-              {/* Details Grid */}
+              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Case ID</p>
@@ -330,7 +330,7 @@ export default function DisputeDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Conversation Thread */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -343,7 +343,7 @@ export default function DisputeDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Messages */}
+              {}
               <div className="space-y-4 max-h-[400px] overflow-y-auto">
                 {dispute.replies && dispute.replies.length > 0 ? (
                   dispute.replies.map((reply) => (
@@ -388,7 +388,7 @@ export default function DisputeDetailPage() {
                 )}
               </div>
 
-              {/* Reply Input */}
+              {}
               <div className="space-y-3 pt-4 border-t border-[#1a1a1a]">
                 <Textarea
                   placeholder="Type your reply..."
@@ -428,9 +428,9 @@ export default function DisputeDetailPage() {
           </Card>
         </div>
 
-        {/* Sidebar */}
+        {}
         <div className="space-y-6">
-          {/* Status Management */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white">Status Management</CardTitle>
@@ -480,7 +480,7 @@ export default function DisputeDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Info Card */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white text-sm">Details</CardTitle>

@@ -77,7 +77,7 @@ export default function SellerSupportTicketsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [replyMessage, setReplyMessage] = useState('');
 
-  // Form states for creating ticket
+  
   const [formData, setFormData] = useState({
     subject: '',
     description: '',
@@ -85,12 +85,12 @@ export default function SellerSupportTicketsPage() {
     priority: 'medium',
   });
 
-  // Fetch tickets using React Query
+  
   const ticketsQuery = useSupportTickets();
   const selectedTicketQuery = useSupportTicketById(selectedTicketId || '');
   const repliesQuery = useTicketReplies(selectedTicketId || '');
 
-  // Mutations
+  
   const createMutation = useCreateSupportTicket();
   const replyMutation = useReplyToTicket();
 
@@ -141,7 +141,7 @@ export default function SellerSupportTicketsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
+      {}
       <div className="bg-gradient-to-r from-[#1a1a1a] to-black border-b border-[#333] p-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">Support Tickets</h1>
@@ -151,9 +151,9 @@ export default function SellerSupportTicketsPage() {
 
       <div className="p-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tickets List */}
+          {}
           <div className="lg:col-span-1 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
-            {/* Search and Create */}
+            {}
             <div className="p-4 border-b border-[#333] space-y-4">
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
@@ -187,7 +187,7 @@ export default function SellerSupportTicketsPage() {
               </select>
             </div>
 
-            {/* Tickets */}
+            {}
             <div className="flex-1 overflow-y-auto">
               {ticketsQuery.isLoading ? (
                 <div className="p-4 text-center text-gray-600">
@@ -234,10 +234,10 @@ export default function SellerSupportTicketsPage() {
             </div>
           </div>
 
-          {/* Ticket Details */}
+          {}
           {selectedTicket ? (
             <div className="lg:col-span-2 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
-              {/* Header */}
+              {}
               <div className="p-6 border-b border-[#333] space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -254,7 +254,7 @@ export default function SellerSupportTicketsPage() {
                   </button>
                 </div>
 
-                {/* Metadata */}
+                {}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#333]">
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Category</p>
@@ -283,7 +283,7 @@ export default function SellerSupportTicketsPage() {
                 </div>
               </div>
 
-              {/* Conversation */}
+              {}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {repliesQuery.isLoading ? (
                   <div className="text-center text-gray-600 py-8">
@@ -317,7 +317,7 @@ export default function SellerSupportTicketsPage() {
                 )}
               </div>
 
-              {/* Reply Input */}
+              {}
               {selectedTicket.status !== 'closed' && (
                 <div className="p-6 border-t border-[#333]">
                   <div className="space-y-3">
@@ -360,7 +360,7 @@ export default function SellerSupportTicketsPage() {
         </div>
       </div>
 
-      {/* Create Ticket Modal */}
+      {}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-[#1a1a1a] border border-[#333] rounded-lg max-w-md w-full p-6 space-y-4">

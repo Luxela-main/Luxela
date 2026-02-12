@@ -74,7 +74,7 @@ export const refundRouter = createTRPCRouter({
           });
         }
 
-        const [refund] = await db.transaction(async (tx) => {
+        const [refund] = await db.transaction(async (tx: any) => {
           const [createdRefund] = await tx
             .insert(refunds)
             .values({
@@ -235,7 +235,7 @@ export const refundRouter = createTRPCRouter({
 
         const rmaNumber = `RMA-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-        const [returnRecord] = await db.transaction(async (tx) => {
+        const [returnRecord] = await db.transaction(async (tx: any) => {
           const [created] = await tx
             .insert(refunds)
             .values({
@@ -342,7 +342,7 @@ export const refundRouter = createTRPCRouter({
           ? Math.round((refund.amountCents * input.restockPercentage) / 100)
           : 0;
 
-        const [updated] = await db.transaction(async (tx) => {
+        const [updated] = await db.transaction(async (tx: any) => {
           const [result] = await tx
             .update(refunds)
             .set({
@@ -423,7 +423,7 @@ export const refundRouter = createTRPCRouter({
           (refund.amountCents * (refund.restockPercentage || 100)) / 100
         );
 
-        const [updated] = await db.transaction(async (tx) => {
+        const [updated] = await db.transaction(async (tx: any) => {
           const [result] = await tx
             .update(refunds)
             .set({
@@ -527,7 +527,7 @@ export const refundRouter = createTRPCRouter({
 
         const rmaNumber = `RMA-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-        const [refund] = await db.transaction(async (tx) => {
+        const [refund] = await db.transaction(async (tx: any) => {
           const [createdRefund] = await tx
             .insert(refunds)
             .values({
@@ -597,11 +597,11 @@ export const refundRouter = createTRPCRouter({
           .select()
           .from(refunds)
           .where(eq(refunds.buyerId, buyerId))
-          .orderBy((table) => table.requestedAt)
+          .orderBy((table: any) => table.requestedAt)
           .limit(input.limit)
           .offset(input.offset);
 
-        return allRefunds.filter((r) => r.refundStatus?.includes('return'));
+        return allRefunds.filter((r: any) => r.refundStatus?.includes('return'));
       } catch (error: any) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -609,4 +609,4 @@ export const refundRouter = createTRPCRouter({
         });
       }
     }),
-});
+});

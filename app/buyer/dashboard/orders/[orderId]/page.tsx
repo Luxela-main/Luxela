@@ -32,7 +32,7 @@ export default function OrderDetailPage() {
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const { toast } = useToast();
 
-  // Fetch order details
+  
   const { data: ordersData, isLoading: isDataLoading, error: queryError, refetch } = trpc.buyer.getPurchaseHistory.useQuery(
     { page: 1, limit: 100 },
     { retry: 2, retryDelay: 1000 }
@@ -40,20 +40,23 @@ export default function OrderDetailPage() {
 
   const confirmDeliveryMutation = trpc.checkout.confirmDelivery.useMutation();
 
-  // Initialize real-time order syncing with polling
+  
   const { startPolling } = useRealtimeOrders({
     enabled: true,
-    refetchInterval: 30000, // Poll every 30 seconds
-    refetchOnWindowFocus: true, // Refresh when user returns to tab
-    refetchOnInteraction: true, // Refresh on user interactions
+    refetchInterval: 30000, 
+    staleTime: 10000, 
+    refetchOnWindowFocus: true, 
+    refetchOnInteraction: true, 
+    adaptiveRefresh: true, 
+    maxRetries: 5, 
   });
 
-  // Start polling when component mounts
+  
   useEffect(() => {
     startPolling();
   }, [startPolling]);
 
-  // Find the specific order
+  
   useEffect(() => {
     if (ordersData?.data) {
       const foundOrder = ordersData.data.find((item: any) => item.orderId === orderId);
@@ -207,6 +210,9 @@ export default function OrderDetailPage() {
     );
   }
 
+  // Type narrowing for TypeScript
+  const typedOrder = order as Order;
+
   return (
     <div className="min-h-screen bg-[#0e0e0e]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -214,7 +220,7 @@ export default function OrderDetailPage() {
           items={[
             { label: 'Dashboard', href: '/buyer/dashboard' },
             { label: 'Orders', href: '/buyer/dashboard/orders' },
-            { label: `Order ${order.orderId.slice(0, 8)}` },
+            { label: `Order ${typedOrder.orderId.slice(0, 8)}` },
           ]}
         />
 
@@ -227,17 +233,17 @@ export default function OrderDetailPage() {
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {}
           <div className="lg:col-span-2 space-y-6">
-            {/* Status Section */}
-            <div className={`${getStatusBgColor(order.orderStatus)} border border-[#333] rounded-lg p-6`}>
+            {}
+            <div className={`${getStatusBgColor(typedOrder.orderStatus)} border border-[#333] rounded-lg p-6`}>
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">
-                    Order #{order.orderId.slice(0, 8)}
+                    Order #{typedOrder.orderId.slice(0, 8)}
                   </h2>
                   <p className="text-gray-400 text-sm">
-                    {order.orderDate.toLocaleDateString('en-US', {
+                    {typedOrder.orderDate.toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
@@ -245,56 +251,56 @@ export default function OrderDetailPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {getStatusIcon(order.orderStatus)}
+                  {getStatusIcon(typedOrder.orderStatus)}
                   <div>
-                    <span className={`font-bold text-lg ${getStatusColor(order.orderStatus)}`}>
-                      {order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1)}
+                    <span className={`font-bold text-lg ${getStatusColor(typedOrder.orderStatus)}`}>
+                      {typedOrder.orderStatus.charAt(0).toUpperCase() + typedOrder.orderStatus.slice(1)}
                     </span>
                   </div>
                 </div>
               </div>
 
               <p className="text-gray-300">
-                {order.orderStatus === 'delivered'
-                  ? `Your order was delivered on ${order.deliveredDate?.toLocaleDateString()}`
-                  : order.orderStatus === 'shipped'
+                {typedOrder.orderStatus === 'delivered'
+                  ? `Your order was delivered on ${typedOrder.deliveredDate?.toLocaleDateString()}`
+                  : typedOrder.orderStatus === 'shipped'
                     ? 'Your order is on its way to you'
-                    : order.orderStatus === 'canceled' || order.orderStatus === 'returned'
+                    : typedOrder.orderStatus === 'canceled' || typedOrder.orderStatus === 'returned'
                       ? 'This order has been canceled or returned'
                       : 'We are preparing your order for shipment'}
               </p>
             </div>
 
-            {/* Product Information */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Product Information</h3>
 
               <div className="flex gap-4">
-                {order.productImage && (
+                {typedOrder.productImage && (
                   <img
-                    src={order.productImage}
-                    alt={order.productTitle}
+                    src={typedOrder.productImage}
+                    alt={typedOrder.productTitle}
                     className="w-24 h-32 object-cover rounded bg-[#2a2a2a]"
                   />
                 )}
 
                 <div className="flex-1">
-                  <h4 className="text-white font-semibold mb-2">{order.productTitle}</h4>
+                  <h4 className="text-white font-semibold mb-2">{typedOrder.productTitle}</h4>
                   <p className="text-gray-400 text-sm mb-3">
-                    Category: <span className="text-white capitalize">{order.productCategory || 'Fashion'}</span>
+                    Category: <span className="text-white capitalize">{typedOrder.productCategory || 'Fashion'}</span>
                   </p>
                   <p className="text-[#8451e1] font-bold text-lg">
-                    ${(order.amountCents / 100).toFixed(2)}
+                    ${(typedOrder.amountCents / 100).toFixed(2)}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Tracking Timeline */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-6">Tracking Timeline</h3>
               <div className="space-y-4">
-                {getTrackingSteps(order).map((step, idx) => (
+                {getTrackingSteps(typedOrder).map((step, idx) => (
                   <div key={idx} className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div
@@ -306,7 +312,7 @@ export default function OrderDetailPage() {
                       >
                         {step.completed && <CheckCircle className="text-white" size={18} />}
                       </div>
-                      {idx < getTrackingSteps(order).length - 1 && (
+                      {idx < getTrackingSteps(typedOrder).length - 1 && (
                         <div
                           className={`w-0.5 h-12 ${
                             step.completed ? 'bg-[#8451e1]' : 'bg-[#333]'
@@ -333,24 +339,24 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {/* Shipping Details */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
                 <h3 className="text-white font-bold text-lg mb-4">Shipping Address</h3>
                 <div className="space-y-2">
-                  <p className="text-white">{order.customerName}</p>
+                  <p className="text-white">{typedOrder.customerName}</p>
                   <p className="text-gray-300 text-sm">
-                    {order.shippingAddress || '123 Fashion Street, Style City, SC 12345'}
+                    {typedOrder.shippingAddress || '123 Fashion Street, Style City, SC 12345'}
                   </p>
-                  <p className="text-gray-400 text-sm mt-3">Email: {order.customerEmail}</p>
+                  <p className="text-gray-400 text-sm mt-3">Email: {typedOrder.customerEmail}</p>
                 </div>
               </div>
 
-              {order.trackingNumber && (
+              {typedOrder.trackingNumber && (
                 <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
                   <h3 className="text-white font-bold text-lg mb-4">Tracking Number</h3>
                   <div className="bg-[#0e0e0e] rounded p-3 border border-[#2a2a2a]">
-                    <p className="text-gray-300 font-mono text-sm break-all">{order.trackingNumber}</p>
+                    <p className="text-gray-300 font-mono text-sm break-all">{typedOrder.trackingNumber}</p>
                   </div>
                   <p className="text-gray-400 text-xs mt-3">
                     Use this number to track your shipment with the carrier
@@ -360,15 +366,15 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {}
           <div className="space-y-6">
-            {/* Order Summary */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Order Summary</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Subtotal</span>
-                  <span className="text-white">${(order.amountCents / 100).toFixed(2)}</span>
+                  <span className="text-white">${(typedOrder.amountCents / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Shipping</span>
@@ -382,21 +388,21 @@ export default function OrderDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-white font-bold">Total</span>
                     <span className="text-[#8451e1] font-bold text-lg">
-                      ${(order.amountCents / 100).toFixed(2)}
+                      ${(typedOrder.amountCents / 100).toFixed(2)}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Payment Info */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Payment Details</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Method</span>
                   <span className="text-white text-sm capitalize">
-                    {order.paymentMethod?.replace(/_/g, ' ') || 'Credit Card'}
+                    {typedOrder.paymentMethod?.replace(/_/g, ' ') || 'Credit Card'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -408,14 +414,14 @@ export default function OrderDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Currency</span>
-                  <span className="text-white text-sm">{order.currency}</span>
+                  <span className="text-white text-sm">{typedOrder.currency}</span>
                 </div>
               </div>
             </div>
 
-            {/* Actions */}
+            {}
             <div className="space-y-3">
-              {order.orderStatus === 'shipped' && (
+              {typedOrder.orderStatus === 'shipped' && (
                 <button
                   onClick={handleConfirmDelivery}
                   disabled={isConfirmingDelivery}
@@ -436,7 +442,7 @@ export default function OrderDetailPage() {
               )}
 
               <Link
-                href={`/seller/dashboard/orders/${order.orderId}`}
+                href={`/seller/dashboard/orders/${typedOrder.orderId}`}
                 className="block"
               >
                 <button className="w-full bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2">
@@ -451,17 +457,95 @@ export default function OrderDetailPage() {
               </button>
             </div>
 
-            {/* Payout Status */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
-              <h3 className="text-white font-bold text-lg mb-4">Payout Status</h3>
-              <div className="bg-[#0e0e0e] rounded p-3 border border-[#2a2a2a]">
-                <p className="text-gray-300 text-sm capitalize">
-                  {order.payoutStatus?.replace(/_/g, ' ') || 'In Escrow'}
+              <h3 className="text-white font-bold text-lg mb-4">Escrow & Payout Status</h3>
+              
+              {}
+              <div className="mb-4">
+                <div className={`rounded p-4 border ${
+                  typedOrder.payoutStatus === 'released'
+                    ? 'bg-green-500/10 border-green-500/30'
+                    : typedOrder.payoutStatus === 'in_escrow'
+                      ? 'bg-yellow-500/10 border-yellow-500/30'
+                      : 'bg-red-500/10 border-red-500/30'
+                }`}>
+                  <p className={`font-semibold text-sm ${
+                    typedOrder.payoutStatus === 'released'
+                      ? 'text-green-400'
+                      : typedOrder.payoutStatus === 'in_escrow'
+                        ? 'text-yellow-400'
+                        : 'text-red-400'
+                  }`}>
+                    {typedOrder.payoutStatus === 'in_escrow' && '🔐 Payment Held in Escrow'}
+                    {typedOrder.payoutStatus === 'released' && '✅ Payment Released to Seller'}
+                    {['refunded', 'disputed'].includes(typedOrder.payoutStatus) && `⚠️ ${typedOrder.payoutStatus.charAt(0).toUpperCase() + typedOrder.payoutStatus.slice(1)}`}
+                  </p>
+                </div>
+              </div>
+
+              {}
+              <div className="mb-4 p-3 bg-[#0e0e0e] rounded border border-[#2a2a2a]">
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {typedOrder.payoutStatus === 'in_escrow' && (
+                    <>Your payment is securely held until you confirm delivery. This protects you as the buyer and ensures the seller ships the item.</>
+                  )}
+                  {typedOrder.payoutStatus === 'released' && (
+                    <>You've confirmed delivery and payment has been released to the seller.</>
+                  )}
+                  {typedOrder.payoutStatus === 'refunded' && (
+                    <>Your payment has been refunded. The refund should appear in your account within 1-2 business days.</>
+                  )}
+                  {typedOrder.payoutStatus === 'disputed' && (
+                    <>This order is under dispute resolution. We're investigating to reach a fair outcome for both parties.</>
+                  )}
                 </p>
               </div>
-              <p className="text-gray-400 text-xs mt-3">
-                The seller will receive payment once the order is confirmed as delivered.
-              </p>
+
+              {/* Escrow Timeline */}
+              <div>
+                <p className="text-gray-400 text-xs font-semibold mb-3 uppercase tracking-wide">Escrow Timeline</p>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#8451e1]/20 border border-[#8451e1]/50 flex items-center justify-center flex-shrink-0 text-sm font-bold text-[#8451e1]">✓</div>
+                    <div>
+                      <p className="text-white text-sm font-medium">Payment Received</p>
+                      <p className="text-gray-400 text-xs mt-1">{typedOrder.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold ${ typedOrder.payoutStatus !== 'in_escrow' ? 'bg-[#8451e1]/20 border border-[#8451e1]/50 text-[#8451e1]' : 'bg-[#333]/50 border border-[#333] text-gray-500' }`}>{typedOrder.payoutStatus !== 'in_escrow' ? '✓' : '⏳'}</div>
+                    <div>
+                      <p className="text-white text-sm font-medium">Funds in Escrow</p>
+                      <p className="text-gray-400 text-xs mt-1">Held securely until delivery confirmed</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold ${ typedOrder.payoutStatus === 'released' ? 'bg-[#8451e1]/20 border border-[#8451e1]/50 text-[#8451e1]' : 'bg-[#333]/50 border border-[#333] text-gray-500' }`}>{typedOrder.payoutStatus === 'released' ? '✓' : '○'}</div>
+                    <div>
+                      <p className="text-white text-sm font-medium">Delivery Confirmed</p>
+                      <p className="text-gray-400 text-xs mt-1">{typedOrder.orderStatus === 'delivered' ? typedOrder.deliveredDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Awaiting confirmation'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold ${ typedOrder.payoutStatus === 'released' ? 'bg-[#8451e1]/20 border border-[#8451e1]/50 text-[#8451e1]' : 'bg-[#333]/50 border border-[#333] text-gray-500' }`}>{typedOrder.payoutStatus === 'released' ? '✓' : '○'}</div>
+                    <div>
+                      <p className="text-white text-sm font-medium">Payment Released</p>
+                      <p className="text-gray-400 text-xs mt-1">Seller receives the funds</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded">
+                <p className="text-blue-300 text-xs leading-relaxed">
+                  <strong>ℹ️ Escrow Protection:</strong> Your payment is held in escrow for buyer protection. Once you confirm delivery, the seller receives payment and your order is complete.
+                </p>
+              </div>
             </div>
           </div>
         </div>

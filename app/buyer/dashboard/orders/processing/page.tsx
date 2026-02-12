@@ -19,26 +19,26 @@ export default function ProcessingOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const itemsPerPage = 10;
 
-  // Fetch ongoing orders (pending, confirmed, processing, shipped)
+  
   const { data: ordersData, isLoading: isDataLoading, error: queryError, refetch } = trpc.buyer.getPurchaseHistory.useQuery(
     { status: 'ongoing', page: currentPage, limit: itemsPerPage },
     { retry: 2, retryDelay: 1000 }
   );
 
-  // Initialize real-time order syncing with polling
+  
   const { startPolling } = useRealtimeOrders({
     enabled: true,
-    refetchInterval: 30000, // Poll every 30 seconds
-    refetchOnWindowFocus: true, // Refresh when user returns to tab
-    refetchOnInteraction: true, // Refresh on user interactions
+    refetchInterval: 30000, 
+    refetchOnWindowFocus: true, 
+    refetchOnInteraction: true, 
   });
 
-  // Start polling when component mounts
+  
   useEffect(() => {
     startPolling();
   }, [startPolling]);
 
-  // Map API response
+  
   useEffect(() => {
     if (ordersData?.data) {
       const mappedOrders: Order[] = ordersData.data.map((item: any) => ({
@@ -75,7 +75,7 @@ export default function ProcessingOrdersPage() {
     }
   }, [ordersData, isDataLoading, queryError]);
 
-  // Search filtering
+  
   useEffect(() => {
     const filtered = orders.filter((order) =>
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,7 +111,7 @@ export default function ProcessingOrdersPage() {
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition text-sm"
+          className="flex items-center gap-2 px-4 py-2 rounded bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition text-sm cursor-pointer"
         >
           <ArrowLeft size={18} />
           Back
@@ -138,7 +138,7 @@ export default function ProcessingOrdersPage() {
           <p className="text-red-400">{error}</p>
           <button
             onClick={() => refetch()}
-            className="ml-auto px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm"
+            className="ml-auto px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm cursor-pointer"
           >
             Retry
           </button>

@@ -143,8 +143,8 @@ export const adminListingReviewRouter = createTRPCRouter({
 
       // For collection listings, fetch all items and calculate total price
       const collectionListingIds = result
-        .filter((item) => item.listing.type === 'collection')
-        .map((item) => item.listing.id);
+        .filter((item: any) => item.listing.type === 'collection')
+        .map((item: any) => item.listing.id);
 
       let collectionData: Record<string, { itemCount: number; totalPrice: number }> = {};
       if (collectionListingIds.length > 0) {
@@ -161,7 +161,7 @@ export const adminListingReviewRouter = createTRPCRouter({
           .where(inArray(listings.id, collectionListingIds));
 
         // Process collection data
-        collectionItemsData.forEach((row) => {
+        collectionItemsData.forEach((row: any) => {
           if (row.listingId) {
             if (!collectionData[row.listingId]) {
               collectionData[row.listingId] = { itemCount: 0, totalPrice: 0 };
@@ -172,7 +172,7 @@ export const adminListingReviewRouter = createTRPCRouter({
         });
       }
 
-      const formattedListings = result.map((item) => {
+      const formattedListings = result.map((item: any) => {
         const isCollection = item.listing.type === 'collection';
         let price: number | undefined;
         let collectionItemCount: number | undefined;
@@ -353,9 +353,9 @@ export const adminListingReviewRouter = createTRPCRouter({
         ? item.listing.priceCents / 100
         : undefined;
 
-      let collectionProducts = null;
-      let collectionName = null;
-      let collectionDescription = null;
+      let collectionProducts: Array<any> | null = null;
+      let collectionName: string | null = null;
+      let collectionDescription: string | null = null;
 
       if (item.listing.type === 'collection' && item.listing.collectionId) {
         // Fetch collection metadata
@@ -388,7 +388,7 @@ export const adminListingReviewRouter = createTRPCRouter({
           .orderBy(collectionItems.position);
 
         if (collectionItemsList.length > 0) {
-          const productIds = collectionItemsList.map(item => item.productId);
+          const productIds = collectionItemsList.map((item: any) => item.productId);
 
           // Fetch all products in the collection
           const productsInCollection = await db
@@ -411,7 +411,7 @@ export const adminListingReviewRouter = createTRPCRouter({
 
           // Build map of images by product ID
           const imagesByProductId: Record<string, string[]> = {};
-          allProductImages.forEach(img => {
+          allProductImages.forEach((img: any) => {
             if (!imagesByProductId[img.productId]) {
               imagesByProductId[img.productId] = [];
             }
@@ -420,7 +420,7 @@ export const adminListingReviewRouter = createTRPCRouter({
 
           // Build map of care instructions by product ID
           const careInstructionsByProductId: Record<string, string | null> = {};
-          productListings.forEach(listing => {
+          productListings.forEach((listing: any) => {
             if (listing.productId) {
               careInstructionsByProductId[listing.productId] = listing.careInstructions || null;
             }
@@ -428,13 +428,13 @@ export const adminListingReviewRouter = createTRPCRouter({
 
           // Build collection products array
           collectionProducts = collectionItemsList
-            .map(collectionItem => {
-              const product = productsInCollection.find(p => p.id === collectionItem.productId);
+            .map((collectionItem: any) => {
+              const product = productsInCollection.find((p: any) => p.id === collectionItem.productId);
               if (!product) return null;
 
               const productImages = imagesByProductId[product.id] || [];
               const imagesJsonStr = productImages.length > 0 
-                ? JSON.stringify(productImages.map(url => ({ url })))
+                ? JSON.stringify(productImages.map((url: any) => ({ url })))
                 : null;
 
               return {
@@ -450,7 +450,7 @@ export const adminListingReviewRouter = createTRPCRouter({
                 careInstructions: careInstructionsByProductId[product.id] || null,
               };
             })
-            .filter((p) => p !== null);
+            .filter((p: any) => p !== null) as Array<any>;
         }
       }
 
@@ -462,7 +462,7 @@ export const adminListingReviewRouter = createTRPCRouter({
           .from(productImages)
           .where(eq(productImages.productId, item.listing.productId))
           .orderBy(productImages.position);
-        images = productImgData.map(img => img.imageUrl);
+        images = productImgData.map((img: any) => img.imageUrl);
       }
 
       // Parse sizes and colors if available
@@ -627,7 +627,7 @@ export const adminListingReviewRouter = createTRPCRouter({
             .where(eq(collectionItems.collectionId, listing.collectionId));
 
           if (collectionItemsList.length > 0) {
-            const productIds = collectionItemsList.map(item => item.productId);
+            const productIds = collectionItemsList.map((item: any) => item.productId);
             
             // Get all individual product listings for these products
             const productListings = await db
@@ -641,7 +641,7 @@ export const adminListingReviewRouter = createTRPCRouter({
               );
 
             if (productListings.length > 0) {
-              const productListingIds = productListings.map(l => l.id);
+              const productListingIds = productListings.map((l: any) => l.id);
               
               // Approve all individual product listings
               await db
@@ -809,7 +809,7 @@ export const adminListingReviewRouter = createTRPCRouter({
             .where(eq(collectionItems.collectionId, listing.collectionId));
 
           if (collectionItemsList.length > 0) {
-            const productIds = collectionItemsList.map(item => item.productId);
+            const productIds = collectionItemsList.map((item: any) => item.productId);
             
             // Get all individual product listings for these products
             const productListings = await db
@@ -823,7 +823,7 @@ export const adminListingReviewRouter = createTRPCRouter({
               );
 
             if (productListings.length > 0) {
-              const productListingIds = productListings.map(l => l.id);
+              const productListingIds = productListings.map((l: any) => l.id);
               
               // Reject all individual product listings
               await db
@@ -970,7 +970,7 @@ export const adminListingReviewRouter = createTRPCRouter({
             .where(eq(collectionItems.collectionId, listing.collectionId));
 
           if (collectionItemsList.length > 0) {
-            const productIds = collectionItemsList.map(item => item.productId);
+            const productIds = collectionItemsList.map((item: any) => item.productId);
             
             // Get all individual product listings for these products
             const productListings = await db
@@ -984,7 +984,7 @@ export const adminListingReviewRouter = createTRPCRouter({
               );
 
             if (productListings.length > 0) {
-              const productListingIds = productListings.map(l => l.id);
+              const productListingIds = productListings.map((l: any) => l.id);
               
               // Update all individual product listings status back to pending_review
               await db
@@ -1078,7 +1078,7 @@ export const adminListingReviewRouter = createTRPCRouter({
         orderBy: desc(listingActivityLog.createdAt),
       });
 
-      return result.map((item) => ({
+      return result.map((item: any) => ({
         id: item.id,
         action: item.action,
         actionType: item.actionType,

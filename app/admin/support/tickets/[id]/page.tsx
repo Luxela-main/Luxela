@@ -79,25 +79,25 @@ export default function AdminTicketDetailPage() {
   const [replyMessage, setReplyMessage] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
 
-  // Fetch ticket details
+  
   const ticketDetailsQuery = trpc.supportAdmin.getTicketDetails.useQuery(
     { ticketId },
     { enabled: !!ticketId, refetchInterval: 15000 }
   );
 
-  // Fetch replies
+  
   const repliesQuery = trpc.support.getTicketReplies.useQuery(
     { ticketId },
     { enabled: !!ticketId, refetchInterval: 15000 }
   );
 
-  // Update ticket status mutation
+  
   const updateTicketMutation = trpc.supportAdmin.updateTicketStatus.useMutation();
 
-  // Reply to ticket mutation
+  
   const replyMutation = trpc.support.replyToTicket.useMutation();
 
-  // Load ticket details
+  
   useEffect(() => {
     if (ticketDetailsQuery.data) {
       const convertedTicket: TicketDetails = {
@@ -120,7 +120,7 @@ export default function AdminTicketDetailPage() {
     }
   }, [ticketDetailsQuery.data]);
 
-  // Load replies
+  
   useEffect(() => {
     if (repliesQuery.data) {
       const convertedReplies = repliesQuery.data.map(r => ({
@@ -144,7 +144,7 @@ export default function AdminTicketDetailPage() {
       setReplyMessage('');
       toast.success('Reply sent successfully');
 
-      // Refetch replies
+      
       await repliesQuery.refetch();
     } catch (error) {
       toast.error('Failed to send reply');
@@ -208,7 +208,7 @@ export default function AdminTicketDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      {/* Header */}
+      {}
       <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#E5E7EB] p-4 sm:p-8">
         <div className="max-w-5xl mx-auto">
           <button
@@ -223,13 +223,13 @@ export default function AdminTicketDetailPage() {
       </div>
 
       <div className="p-4 sm:p-8 max-w-5xl mx-auto">
-        {/* Ticket Details */}
+        {}
         <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 mb-6">
           <div className="mb-6">
             <p className="text-[#DCDCDC] mb-4">{ticket.description}</p>
           </div>
 
-          {/* Metadata Grid */}
+          {}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 pb-6 border-b border-[#2B2B2B]">
             <div>
               <p className="text-xs text-[#808080] mb-2">Category</p>
@@ -261,14 +261,14 @@ export default function AdminTicketDetailPage() {
             </div>
           </div>
 
-          {/* Timestamps */}
+          {}
           <div className="text-xs text-[#808080]">
             <p>Last updated: {new Date(ticket.updatedAt).toLocaleString()}</p>
             {ticket.resolvedAt && <p>Resolved at: {new Date(ticket.resolvedAt).toLocaleString()}</p>}
           </div>
         </div>
 
-        {/* Conversation */}
+        {}
         <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg overflow-hidden flex flex-col">
           <div className="p-6 border-b border-[#2B2B2B] bg-[#0E0E0E]">
             <h2 className="font-semibold text-white">Conversation</h2>
@@ -301,7 +301,7 @@ export default function AdminTicketDetailPage() {
             )}
           </div>
 
-          {/* Reply Input */}
+          {}
           <div className="p-6 border-t border-[#2B2B2B] bg-[#0E0E0E]">
             <div className="flex flex-col gap-3">
               <textarea

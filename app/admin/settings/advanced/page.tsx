@@ -17,12 +17,12 @@ export default function AdvancedSettingsPage() {
   const [activeTab, setActiveTab] = useState('payment');
   const [saving, setSaving] = useState(false);
 
-  // Fetch all settings
+  
   const paymentQuery = trpc.adminSettings.getPaymentSettings.useQuery();
   const emailQuery = trpc.adminSettings.getEmailTemplateSettings.useQuery();
   const platformQuery = trpc.adminSettings.getPlatformRules.useQuery();
 
-  // Mutations
+  
   const paymentMutation = trpc.adminSettings.updatePaymentSettings.useMutation();
   const emailMutation = trpc.adminSettings.updateEmailSettings.useMutation();
   const platformMutation = trpc.adminSettings.updatePlatformRules.useMutation();
@@ -32,7 +32,7 @@ export default function AdvancedSettingsPage() {
     setSaving(true);
     try {
       await paymentMutation.mutateAsync(data);
-      // Show success toast
+      
     } catch (error) {
       console.error('Error saving payment settings:', error);
     } finally {
@@ -42,7 +42,7 @@ export default function AdvancedSettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div>
         <h1 className="text-3xl font-light tracking-tight">Advanced Settings</h1>
         <p className="text-gray-400 mt-1">Configure payment, email, and platform rules</p>
@@ -56,11 +56,11 @@ export default function AdvancedSettingsPage() {
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
-        {/* Payment Tab */}
+        {}
         <TabsContent value="payment" className="space-y-6">
           {paymentQuery.data && (
             <>
-              {/* Commission */}
+              {}
               <Card className="bg-gray-900 border-gray-800">
                 <CardHeader>
                   <CardTitle className="text-lg font-light">Platform Commission</CardTitle>

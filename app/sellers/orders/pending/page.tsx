@@ -328,7 +328,7 @@ export default function PendingOrdersPage() {
               }`}
             >
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                {/* Checkbox */}
+                {}
                 <div className="md:col-span-1 flex items-center">
                   <input
                     type="checkbox"
@@ -338,7 +338,7 @@ export default function PendingOrdersPage() {
                   />
                 </div>
 
-                {/* Order Details */}
+                {}
                 <div className="md:col-span-4 space-y-2">
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Order ID</p>
@@ -354,7 +354,7 @@ export default function PendingOrdersPage() {
                   </div>
                 </div>
 
-                {/* Amount & Status */}
+                {}
                 <div className="md:col-span-2 space-y-2">
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Amount</p>
@@ -366,7 +366,7 @@ export default function PendingOrdersPage() {
                   </Badge>
                 </div>
 
-                {/* Actions */}
+                {}
                 <div className="md:col-span-3 flex flex-col gap-2">
                   <Button
                     size="sm"
@@ -398,7 +398,7 @@ export default function PendingOrdersPage() {
         </div>
       )}
 
-      {/* Cancel Dialog */}
+      {}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <DialogContent className="bg-[#1a1a1a] border-[#333] max-w-md">
           <DialogHeader>

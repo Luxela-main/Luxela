@@ -103,7 +103,7 @@ export const productRouter = createTRPCRouter({
           .from(productImages)
           .where(eq(productImages.productId, input.productId));
 
-        return images.map((img) => ({
+        return images.map((img: any) => ({
           id: img.id,
           productId: img.productId,
           imageUrl: img.imageUrl,

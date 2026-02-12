@@ -98,11 +98,11 @@ export const payoutSubscriptionsRouter = createTRPCRouter({
 
       const sellerOrders = await db.query.orders.findMany({
         where: eq(orders.sellerId, input.sellerId),
-        orderBy: (orders) => desc(orders.createdAt),
+        orderBy: (orders: any) => desc(orders.createdAt),
         limit: input.limit,
       });
 
-      return sellerOrders.map((order) => ({
+      return sellerOrders.map((order: any) => ({
         id: order.id,
         orderId: order.id.substring(0, 8),
         amountCents: order.amountCents,
@@ -144,11 +144,11 @@ export const payoutSubscriptionsRouter = createTRPCRouter({
 
       const transactions = await db.query.financialLedger.findMany({
         where: eq(financialLedger.sellerId, input.sellerId),
-        orderBy: (ledger) => desc(ledger.createdAt),
+        orderBy: (ledger: any) => desc(ledger.createdAt),
         limit: input.limit,
       });
 
-      return transactions.map((tx) => ({
+      return transactions.map((tx: any) => ({
         id: tx.id,
         type: tx.transactionType,
         amountCents: tx.amountCents,

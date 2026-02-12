@@ -86,7 +86,7 @@ function ResetPasswordFormContent() {
 
   return (
     <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
-      {/* Left Side */}
+      {}
       <div className="relative md:flex items-center justify-center p-10 hidden">
         <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
         <div className="relative z-10 max-w-md p-10 rounded-2xl border border-purple-500 backdrop-blur-md bg-black/30">
@@ -179,7 +179,7 @@ function ResetPasswordFormContent() {
               >
                 {({ errors, touched, isSubmitting, values }) => (
                   <Form className="space-y-4">
-                    {/* Password */}
+                    {}
                     <div>
                       <Label htmlFor="password" className="mb-1">
                         New Password
@@ -266,7 +266,7 @@ function ResetPasswordFormContent() {
                       )}
                     </div>
 
-                    {/* Confirm Password */}
+                    {}
                     <div>
                       <Label htmlFor="confirmPassword" className="mb-1">
                         Confirm Password

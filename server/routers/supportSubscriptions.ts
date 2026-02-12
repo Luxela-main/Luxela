@@ -69,9 +69,9 @@ async function getMetrics(sellerId: string): Promise<Metrics> {
   }
 
   return {
-    totalOpen: tickets.filter(t => t.status === 'open').length,
-    totalInProgress: tickets.filter(t => t.status === 'in_progress').length,
-    totalResolved: tickets.filter(t => t.status === 'resolved').length,
+    totalOpen: tickets.filter((t: any) => t.status === 'open').length,
+    totalInProgress: tickets.filter((t: any) => t.status === 'in_progress').length,
+    totalResolved: tickets.filter((t: any) => t.status === 'resolved').length,
     avgResponseTimeMinutes: responseCount > 0 ? responseTime / responseCount : 0,
     avgResolutionTimeMinutes: resolutionCount > 0 ? resolutionTime / resolutionCount : 0,
     timestamp: new Date(),
@@ -108,9 +108,9 @@ export const supportSubscriptionsRouter = createTRPCRouter({
 
       return {
         totalTickets: allTickets.length,
-        openTickets: allTickets.filter(t => t.status === 'open').length,
-        inProgressTickets: allTickets.filter(t => t.status === 'in_progress').length,
-        resolvedTickets: allTickets.filter(t => t.status === 'resolved').length,
+        openTickets: allTickets.filter((t: any) => t.status === 'open').length,
+        inProgressTickets: allTickets.filter((t: any) => t.status === 'in_progress').length,
+        resolvedTickets: allTickets.filter((t: any) => t.status === 'resolved').length,
         avgResponseTime: 0,
         avgResolutionTime: 0,
         recentTickets: allTickets.slice(-10),

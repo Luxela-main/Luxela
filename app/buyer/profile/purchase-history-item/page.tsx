@@ -32,7 +32,7 @@ const timeline = [
   },
 ];
 
-// TODO: Change the label on image and display the timeline depending on status of order
+
 
 export default function PurchaseHistoryItem() {
   return (
@@ -87,7 +87,7 @@ export default function PurchaseHistoryItem() {
               <div className="relative border-l border-gray-700 space-y-12">
                 {timeline.map((item, i) => (
                   <div key={i} className="flex items-start relative">
-                    {/* Timeline Dot */}
+                    {}
                     <div className="absolute -left-[11px] flex flex-col items-center">
                       <div
                         className={`w-5 h-5 rounded-full border-2 ${item.active
@@ -102,7 +102,7 @@ export default function PurchaseHistoryItem() {
                       </div>
                     </div>
 
-                    {/* Text */}
+                    {}
                     <div className="ml-8 flex flex-col sm:flex-row sm:items-start sm:justify-between w-full">
                       <div className=''>
                         <p className="text-base font-medium text-[#F2F2F2]">

@@ -16,7 +16,6 @@ interface BillingAddressStepProps {
 export function BillingAddressStep({ onNext }: BillingAddressStepProps) {
   const { profile, loading: profileLoading } = useProfile();
 
-  // 1. Fetch existing addresses from the database
   const { data: existingAddresses, isLoading: fetchingAddresses } =
     trpc.buyer.getBillingAddresses.useQuery({
       page: 1,
@@ -34,7 +33,6 @@ export function BillingAddressStep({ onNext }: BillingAddressStepProps) {
     saveInfo: false,
   });
 
-  // 2. Priority Sync: Database Address > Profile Data > Default
   useEffect(() => {
     const dbAddress = existingAddresses?.data?.[0];
     const isProfileReady = profile && !profileLoading;
@@ -60,7 +58,7 @@ export function BillingAddressStep({ onNext }: BillingAddressStepProps) {
       onNext();
     },
     onError: (error) => {
-      toastSvc.error(error.message || "Failed to save shipping details");
+      toastSvc.error((error.data as any)?.message || "Failed to save shipping details");
     },
   });
 

@@ -5,6 +5,8 @@ import { useListings } from "@/context/ListingsContext";
 import { useCartState } from "@/modules/cart/context";
 import { useAuth } from "@/context/AuthContext";
 import { trpc } from "@/app/_trpc/client";
+import { addToFavorites, removeFromFavorites, isFavorite } from "@/server/actions/favorites";
+import { toastSvc } from "@/services/toast";
 
 import Link from "next/link";
 import {
@@ -37,7 +39,6 @@ import {
   Send,
   X,
 } from "lucide-react";
-import { toastSvc } from "@/services/toast";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -50,7 +51,7 @@ import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { generateProductSchema, generateBreadcrumbSchema } from "@/lib/seo/structured-data";
 import { SITE } from "@/lib/seo/config";
 
-// Helper function to format refund policies
+
 const formatRefundPolicy = (policy: string) => {
   const policies: Record<string, string> = {
     no_refunds: "No Refunds",
@@ -66,7 +67,7 @@ const formatRefundPolicy = (policy: string) => {
   return policies[policy] || policy;
 };
 
-// Helper function to format shipping ETAs
+
 const formatShippingEta = (eta: string) => {
   const etas: Record<string, string> = {
     same_day: "Same Day",
@@ -81,7 +82,7 @@ const formatShippingEta = (eta: string) => {
   return etas[eta] || eta;
 };
 
-// Helper function to format shipping options
+
 const formatShippingOption = (option: string) => {
   const options: Record<string, string> = {
     local: "Local Only",
@@ -99,50 +100,54 @@ export default function CollectionDetailPage({
   const { id } = use(params);
   const { getListingById, loading } = useListings();
   const { user } = useAuth();
+  const { addToCart: addToCartCtx } = useCartState();
   const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [filterColor, setFilterColor] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [collectionId, setCollectionId] = useState<string | null>(null);
   const [resolvedCollectionId, setResolvedCollectionId] = useState<string | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
+  const [isAddingCollection, setIsAddingCollection] = useState(false);
+  const [collectionAddedCount, setCollectionAddedCount] = useState(0);
+  const [collectionListingId, setCollectionListingId] = useState<string | null>(null);
 
-  // Only set collectionId once when params changes
+  
   useEffect(() => {
     if (!id) return;
     setCollectionId(id);
   }, [id]);
 
-  // Query approved collections - runs once due to stabilized params
+  
   const { data: collectionData, isLoading: isLoadingCollectionData } = trpc.collection.getApprovedCollections.useQuery(
     {
       limit: 100,
       offset: 0,
     },
     {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      staleTime: 5 * 60 * 1000, 
+      gcTime: 10 * 60 * 1000, 
     }
   );
 
-  // Resolve collection ID from listing ID - only when collectionData changes
+  
   useEffect(() => {
     if (!collectionId) return;
     
-    // First check if the ID from URL is a collectionId directly
+    
     if (collectionData?.collections) {
       const matchedCollection = collectionData.collections.find((c: any) => c.id === collectionId);
       if (matchedCollection?.collectionId) {
-        // URL param was a listing ID
+        
         setResolvedCollectionId(matchedCollection.collectionId);
         return;
       }
     }
     
-    // If no listing match found, assume the ID itself is a collectionId
+    
     setResolvedCollectionId(collectionId);
   }, [collectionData?.collections, collectionId]);
 
-  // Query detailed collection data - only when resolvedCollectionId is available
   const { data: detailedCollectionData, isLoading: isLoadingDetailedData } = trpc.collection.getBuyerCollectionWithProducts.useQuery(
     { collectionId: resolvedCollectionId! },
     {
@@ -152,13 +157,29 @@ export default function CollectionDetailPage({
     }
   );
 
+  // Track collection listing ID and check favorite status
+  useEffect(() => {
+    if (!detailedCollectionData?.listing?.id) return;
+    
+    setCollectionListingId(detailedCollectionData.listing.id);
+    
+    // Check if collection is favorited
+    if (user) {
+      const checkFavorite = async () => {
+        const result = await isFavorite(detailedCollectionData.listing.id);
+        setIsFavorited(result.isFavorite);
+      };
+      checkFavorite();
+    }
+  }, [detailedCollectionData?.listing?.id, user]);
+
   const isLoadingPage = loading || isLoadingCollectionData || isLoadingDetailedData;
   const collectionProductsData = useMemo(() => {
     if (!collectionData?.collections || !collectionId) return null;
-    // First try to find by listing ID
+    
     const byListingId = collectionData.collections.find((c: any) => c.id === collectionId);
     if (byListingId) return byListingId;
-    // Then try to find by collectionId
+    
     const byCollectionId = collectionData.collections.find((c: any) => c.collectionId === collectionId);
     return byCollectionId || null;
   }, [collectionData?.collections, collectionId]);
@@ -166,22 +187,38 @@ export default function CollectionDetailPage({
   const collection = collectionProductsData || detailedCollectionData;
   const products = collectionProductsData?.items || detailedCollectionData?.items || [];
 
-  // Memoize items processing to prevent recalculation
+  
   const items = useMemo(() => {
     const sourceItems = collectionProductsData?.items || detailedCollectionData?.items || [];
     
     if (!sourceItems || sourceItems.length === 0) return [];
 
+    
+    const collectionListingId = detailedCollectionData?.listing?.id || collection?.id;
+    console.log('[Collection items] collectionListingId:', collectionListingId);
+
     return sourceItems.map((item: any, idx: number) => {
-      // Items from getBuyerCollectionWithProducts have listing object with price/color/size fields
-      // If item has a listing property, use it; otherwise use the item itself
-      const isEnriched = !item.listing; // item is enriched if it doesn't have a listing (data is on item itself)
+      
+      
+      const hasEmbeddedListing = !item.listing; 
       const listingData = item.listing || item;
       const product = item.product;
       
+      // Use the individual product's listing ID from the backend response
+      // Backend now returns listingId at the root level for each collection item
+      const itemListingId = item.listingId || item.listing?.id || collectionListingId;
+      
+      console.log(`[Collection items] Item ${idx} listingId check:`, {
+        backendListingId: item.listingId,
+        hasListing: !!item.listing,
+        itemListingId: item.listing?.id,
+        collectionListingId,
+        finalListingId: itemListingId,
+      });
+      
       let colors_available: any[] = [];
-      // Try multiple field names: colorsAvailable (from listing), colors_available, colors
-      const colorSource = listingData?.colorsAvailable || listingData?.colors_available || listingData?.colors;
+      
+      const colorSource = listingData?.colorsAvailable || listingData?.colors_available || listingData?.colors || item.listing?.colorsAvailable || item.listing?.colors_available;
       if (colorSource) {
         try {
           colors_available = typeof colorSource === 'string' 
@@ -195,7 +232,7 @@ export default function CollectionDetailPage({
       }
       
       let sizes: any[] = [];
-      const sizeSource = listingData?.sizesJson || listingData?.sizes;
+      const sizeSource = listingData?.sizesJson || listingData?.sizes || item.listing?.sizesJson || item.listing?.sizes;
       if (sizeSource) {
         try {
           sizes = typeof sizeSource === 'string' 
@@ -209,20 +246,32 @@ export default function CollectionDetailPage({
       const materialSource = listingData?.material;
       const itemTitle = item.title || item.productName || product?.name || `Item ${idx + 1}`;
       
-      let itemImages = [];
-      if (isEnriched && item.images) {
+      // Prepare shipping details for easy access
+      const shippingDetails = {
+        option: listingData?.shippingOption,
+        etaDomestic: listingData?.etaDomestic,
+        etaInternational: listingData?.etaInternational
+      };
+      
+      let itemImages: Array<{ imageUrl: string; position?: number }> = [];
+      if (hasEmbeddedListing && item.images) {
         itemImages = item.images.map((img: any) => ({ imageUrl: img.image || img.imageUrl, position: img.position }));
       } else if (item.images) {
-        itemImages = item.images;
+        itemImages = item.images as Array<{ imageUrl: string; position?: number }>;
       }
       
+      // Backend returns 'listingImage' for collection items (from getApprovedCollections query)
+      const listingImage = item.listingImage || item.image;
       const mainImage = itemImages?.[0]?.imageUrl || 
-                        (item.image && isEnriched ? item.image : null) ||
+                        (listingImage && hasEmbeddedListing ? listingImage : null) ||
                         product?.images?.[0]?.imageUrl || 
                         null;
       
-      return {
-        id: product?.id || item.productId || item.id,
+      const mappedItem = {
+        id: product?.id || item.productId || item.id, 
+        productId: product?.id || item.productId || item.id, 
+        listingId: itemListingId,
+        collectionItemListingId: itemListingId, 
         title: itemTitle,
         name: itemTitle,
         priceCents: listingData?.priceCents || item?.priceCents || 0,
@@ -230,6 +279,7 @@ export default function CollectionDetailPage({
         currency: listingData?.currency || item?.currency || 'NGN',
         image: mainImage,
         colors_available: colors_available,
+        colors: colors_available,
         sizes: sizes,
         description: listingData?.description || product?.description,
         material_composition: materialSource || product?.description,
@@ -246,31 +296,48 @@ export default function CollectionDetailPage({
         barcode: listingData?.barcode,
         metaDescription: listingData?.metaDescription,
         category: listingData?.category,
+        shippingDetails: shippingDetails,
         rating: 4.5,
         reviewCount: 12,
       };
+      
+      console.log(`[Collection items] Final mapped item ${idx}:`, {
+        id: mappedItem.id,
+        listingId: mappedItem.listingId,
+        title: mappedItem.title,
+        priceCents: mappedItem.priceCents,
+      });
+      
+      return mappedItem;
     });
-  }, [collectionProductsData?.items, products]);
+  }, [collectionProductsData?.items, detailedCollectionData?.items, collection, products]);
 
   const avgRating = useMemo(() => {
     if (items.length === 0) return 0;
-    const totalRating = items.reduce((sum, item) => sum + (item.rating || 0), 0);
+    const totalRating = items.reduce((sum: number, item: any) => sum + (item.rating || 0), 0);
     return totalRating / items.length;
   }, [items]);
 
   const totalReviews = useMemo(() => {
-    return items.reduce((sum, item) => sum + (item.reviewCount || 0), 0);
+    return items.reduce((sum: number, item: any) => sum + (item.reviewCount || 0), 0);
   }, [items]);
 
   const allColors = useMemo(() => {
     const colorMap = new Map<string, { colorName: string; colorHex: string }>();
     items.forEach((item) => {
       try {
-        const colors = item.colors_available
+        let colors = item.colors_available
           ? Array.isArray(item.colors_available)
             ? item.colors_available
             : typeof item.colors_available === 'string' ? JSON.parse(item.colors_available) : []
           : [];
+        
+        // Normalize color format
+        colors = colors.map((color: any) => ({
+          colorName: color.colorName || color.name || '',
+          colorHex: color.colorHex || color.hex || '#000000',
+        })).filter((c: any) => c.colorName && c.colorHex);
+        
         console.log('[allColors] Item colors:', {  itemTitle: item.title, colorCount: colors.length, colorsData: item.colors_available });
         colors.forEach((color: any) => {
           if (!colorMap.has(color.colorHex)) {
@@ -293,7 +360,7 @@ export default function CollectionDetailPage({
             ? item.colors_available
             : JSON.parse(item.colors_available)
           : [];
-        return colors.some((c: any) => c.colorHex === filterColor);
+        return colors.some((c: any) => (c.colorHex || c.hex) === filterColor);
       } catch (e) {
         return true;
       }
@@ -314,6 +381,74 @@ export default function CollectionDetailPage({
 
   const totalPriceCents = items.reduce((sum, item) => sum + (item.priceCents || item.price_cents || 0), 0);
   const totalPrice = totalPriceCents > 0 ? totalPriceCents / 100 : 0;
+
+  const handleAddCollectionToCart = useCallback(async () => {
+    if (!user) {
+      toastSvc.warning('Please sign in to add items to cart');
+      return;
+    }
+
+    if (items.length === 0) {
+      toastSvc.warning('No items in this collection');
+      return;
+    }
+
+    setIsAddingCollection(true);
+    setCollectionAddedCount(0);
+
+    try {
+      let addedCount = 0;
+      const skippedItems: string[] = [];
+
+      
+      // Add each item in the collection individually to the cart
+      for (const item of items) {
+        if (!item.listingId) {
+          console.warn('Item missing listingId, skipping:', {
+            itemId: item.id,
+            itemTitle: item.title,
+            itemProductId: item.productId,
+          });
+          skippedItems.push(item.title || 'Unknown item');
+          continue;
+        }
+        
+        try {
+          await addToCartCtx(item.listingId, 1);
+          addedCount++;
+          // Update progress in real-time
+          setCollectionAddedCount(addedCount);
+        } catch (itemErr: any) {
+          const errorMsg = itemErr?.data?.message || itemErr?.message || itemErr?.toString() || 'Unknown error';
+          console.error(`Failed to add item ${item.listingId}:`, {
+            listingId: item.listingId,
+            itemTitle: item.title,
+            message: errorMsg,
+            code: itemErr?.data?.code,
+            error: itemErr,
+          });
+          // Continue with other items even if one fails
+          toastSvc.error(`Could not add "${item.title || 'item'}" to cart: ${errorMsg}`);
+        }
+      }
+      
+      if (skippedItems.length > 0) {
+        console.warn('[handleAddCollectionToCart] Skipped items without listings:', skippedItems);
+      }
+      
+      setCollectionAddedCount(addedCount);
+      if (addedCount > 0) {
+        toastSvc.success(`🎉 Added ${addedCount} item${addedCount !== 1 ? 's' : ''} to cart!`);
+      } else {
+        toastSvc.error('Failed to add any items from this collection to cart.');
+      }
+    } catch (err: any) {
+      console.error('Failed to add collection to cart:', err);
+      toastSvc.error(err?.message || 'Failed to add collection to cart. Please try again.');
+    } finally {
+      setIsAddingCollection(false);
+    }
+  }, [items, user, addToCartCtx]);
 
   if (isLoadingPage)
     return (
@@ -392,17 +527,51 @@ export default function CollectionDetailPage({
                       </div>
                       <div className="flex gap-3">
                         <button 
-                          onClick={() => {
+                          onClick={async () => {
                             if (!user) {
                               toastSvc.warning('Please sign in to favorite');
                               return;
                             }
-                            setIsFavorited(!isFavorited);
-                            toastSvc.success(isFavorited ? 'Removed from favorites' : 'Added to favorites!');
+                            
+                            if (!collectionListingId) {
+                              toastSvc.error('Collection listing not found');
+                              return;
+                            }
+                            
+                            setIsLoadingFavorite(true);
+                            try {
+                              if (isFavorited) {
+                                const result = await removeFromFavorites(collectionListingId!);
+                                if (result.success) {
+                                  setIsFavorited(false);
+                                  toastSvc.success('Removed from favorites');
+                                } else {
+                                  toastSvc.error(result.error || 'Failed to remove from favorites');
+                                }
+                              } else {
+                                const result = await addToFavorites(collectionListingId!);
+                                if (result.success) {
+                                  setIsFavorited(true);
+                                  toastSvc.success('Added to favorites!');
+                                } else {
+                                  toastSvc.error(result.error || 'Failed to add to favorites');
+                                }
+                              }
+                            } catch (error) {
+                              console.error('Error toggling favorite:', error);
+                              toastSvc.error('Failed to update favorites');
+                            } finally {
+                              setIsLoadingFavorite(false);
+                            }
                           }}
-                          className="p-3 bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/30 hover:from-[#8451E1]/50 hover:to-[#5C2EAF]/50 rounded-lg transition-all duration-300 backdrop-blur-sm border border-[#8451E1]/40 hover:border-[#8451E1]/70 hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110 cursor-pointer active:scale-95"
+                          disabled={isLoadingFavorite}
+                          className="p-3 bg-gradient-to-br from-[#8451E1]/30 to-[#5C2EAF]/30 hover:from-[#8451E1]/50 hover:to-[#5C2EAF]/50 rounded-lg transition-all duration-300 backdrop-blur-sm border border-[#8451E1]/40 hover:border-[#8451E1]/70 hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                          {isLoadingFavorite ? (
+                            <Loader2 className="w-5 h-5 text-[#8451E1] animate-spin" />
+                          ) : (
+                            <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                          )}
                         </button>
                         <button 
                           onClick={() => {
@@ -532,6 +701,26 @@ export default function CollectionDetailPage({
                   <div className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#8451E1]/20 to-[#5C2EAF]/20 border border-[#8451E1]/40 text-[#8451E1] text-sm font-semibold">
                     {sortedItems.length} items
                   </div>
+
+                  {sortedItems.length > 0 && (
+                    <button
+                      onClick={handleAddCollectionToCart}
+                      disabled={isAddingCollection}
+                      className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 text-white text-sm font-semibold transition-all duration-300 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                    >
+                      {isAddingCollection ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Adding ({collectionAddedCount}/{items.length})
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="w-4 h-4" />
+                          Add All to Cart
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -554,7 +743,7 @@ export default function CollectionDetailPage({
                       key={item.id}
                       item={item}
                       collectionId={id}
-                      productId={item.id}
+                      productId={item.listingId} 
                       brandName={collectionProductsData?.sellerName ?? undefined}
                       index={index}
                       itemNumber={items.indexOf(item) + 1}
@@ -616,14 +805,34 @@ function CollectionItemCard({
 
     if (isAdding || !productId) return;
 
+    console.log('[CollectionItemCard.handleAddToCart] Attempting to add to cart:', {
+      productId,
+      itemId: item.id,
+      itemTitle: item.title || item.name,
+      itemListingId: item.listingId,
+      itemData: item,
+    });
+
     setIsAdding(true);
     try {
+      if (!productId) {
+        throw new Error('Product ID (listing ID) is missing. Cannot add to cart.');
+      }
       await addToCart(productId, 1);
       setAdded(true);
       toastSvc.success(`${item.title || item.name} added to cart`);
       setTimeout(() => setAdded(false), 2000);
-    } catch (err) {
-      toastSvc.error("Failed to add to cart");
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || err?.toString() || "Failed to add to cart";
+      console.error("[CollectionItemCard.handleAddToCart] Error:", {
+        productId,
+        itemId: item.id,
+        itemListingId: item.listingId,
+        message: errorMessage,
+        code: err?.data?.code,
+        fullError: err,
+      });
+      toastSvc.error(errorMessage);
     } finally {
       setIsAdding(false);
     }
@@ -745,6 +954,11 @@ function CollectionItemCard({
                   <span className="text-[#8451E1] font-semibold">Care:</span> {item.careInstructions}
                 </p>
               )}
+              {item.refundPolicy && (
+                <p className="text-[#999] line-clamp-1">
+                  <span className="text-[#8451E1] font-semibold">Return:</span> {formatRefundPolicy(item.refundPolicy)}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#8451E1]/20">
@@ -768,16 +982,20 @@ function CollectionItemCard({
               {productId && (
                 <button
                   onClick={handleAddToCart}
-                  disabled={isAdding || item.quantity_available === 0}
+                  disabled={isAdding || added || item.quantity_available === 0}
                   className={`
                     flex items-center justify-center p-2 rounded-lg transition-all duration-300
                     ${
                       added
-                        ? "bg-green-500 scale-105 shadow-lg shadow-green-500/30"
-                        : "bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110 active:scale-95"
+                        ? "bg-green-500 scale-105 shadow-lg shadow-green-500/30 cursor-default"
+                        : item.quantity_available === 0
+                          ? "bg-[#5C2EAF]/50 cursor-not-allowed"
+                          : "bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 hover:scale-110 active:scale-95 cursor-pointer"
                     }
-                    disabled:opacity-50
+                    ${isAdding ? 'opacity-75' : ''}
                   `}
+                  aria-label="Add to cart"
+                  type="button"
                 >
                   {isAdding ? (
                     <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
@@ -849,13 +1067,15 @@ function ItemDetailModal({
   const [selectedRating, setSelectedRating] = useState(5);
   const [reviews, setReviews] = useState<any[]>([]);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [selectedColors, setSelectedColors] = useState<number[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
 
   const { data: reviewsData, refetch: refetchReviews } = trpc.products.getProductReviews.useQuery(
     { productId: item.id, limit: 10, offset: 0 },
     { 
       enabled: !!item.id,
-      staleTime: 1 * 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 1 * 60 * 1000, 
+      gcTime: 5 * 60 * 1000, 
     }
   );
 
@@ -882,9 +1102,15 @@ function ItemDetailModal({
   let colors: Array<{ colorName: string; colorHex: string }> = [];
   try {
     if (item.colors_available) {
-      colors = Array.isArray(item.colors_available)
+      let parsedColors = Array.isArray(item.colors_available)
         ? item.colors_available
         : typeof item.colors_available === 'string' ? JSON.parse(item.colors_available) : [];
+      
+      // Normalize color format to { colorName, colorHex }
+      colors = parsedColors.map((color: any) => ({
+        colorName: color.colorName || color.name || '',
+        colorHex: color.colorHex || color.hex || '#000000',
+      })).filter((c: any) => c.colorName && c.colorHex);
     }
     console.log('[ItemDetailModal] Colors parsed:', { colors, itemTitle: item.title });
   } catch (e) {
@@ -930,7 +1156,6 @@ function ItemDetailModal({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6">
-          {/* Image Gallery */}
           <div className="space-y-4">
             {imageGallery.length > 0 ? (
               <>
@@ -992,7 +1217,6 @@ function ItemDetailModal({
             )}
           </div>
 
-          {/* Details */}
           <div className="space-y-4 text-sm overflow-y-auto max-h-[600px] pr-2">
             <div className="bg-[#1a1a2e]/50 rounded-lg p-3 border border-[#8451E1]/20">
               <p className="text-[#666] text-xs uppercase tracking-wider mb-1 font-semibold">
@@ -1039,29 +1263,113 @@ function ItemDetailModal({
             </div>
 
             {colors.length > 0 && (
-              <div>
+              <div className="bg-[#1a1a2e]/50 rounded-lg p-3 border border-[#8451E1]/20">
                 <p className="text-[#666] text-xs uppercase tracking-wider mb-3 font-semibold">
-                  Available Colors
+                  Available Colors ({colors.length} total, {selectedColors.length} selected)
                 </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {colors.map((color, i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full border-2 border-[#8451E1]/50 shadow-lg hover:scale-110 transition-transform"
-                      style={{ backgroundColor: color.colorHex }}
-                      title={color.colorName}
-                    />
-                  ))}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {colors.map((color, i) => {
+                    const isSelected = selectedColors.includes(i);
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setSelectedColors(
+                            isSelected
+                              ? selectedColors.filter(idx => idx !== i)
+                              : [...selectedColors, i]
+                          );
+                        }}
+                        className="relative w-8 h-8 rounded-full border-2 hover:scale-110 transition-all duration-300 cursor-pointer"
+                        style={{
+                          backgroundColor: color.colorHex,
+                          borderColor: isSelected ? '#8451E1' : 'rgba(132, 81, 225, 0.3)',
+                          boxShadow: isSelected ? '0 0 12px rgba(132, 81, 225, 0.6)' : 'none',
+                        }}
+                        title={color.colorName}
+                      >
+                        {isSelected && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white drop-shadow-lg" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
+                {selectedColors.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedColors.map((colorIdx) => (
+                      <div key={colorIdx} className="flex items-center gap-1.5 bg-[#8451E1]/20 border border-[#8451E1]/50 rounded-full pl-3 pr-2 py-1">
+                        <div
+                          className="w-3 h-3 rounded-full border border-[#8451E1]/70"
+                          style={{ backgroundColor: colors[colorIdx].colorHex }}
+                        />
+                        <span className="text-xs text-[#8451E1] font-medium">{colors[colorIdx].colorName}</span>
+                        <button
+                          onClick={() => setSelectedColors(selectedColors.filter(idx => idx !== colorIdx))}
+                          className="text-[#8451E1]/70 hover:text-[#8451E1] font-bold text-xs"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {sizes.length > 0 && (
-              <div>
-                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
-                  Available Sizes
+              <div className="bg-gradient-to-br from-[#1a1a2e]/50 to-[#0f0f1a]/50 rounded-lg p-4 border border-[#8451E1]/30 shadow-lg shadow-[#8451E1]/10">
+                <p className="text-[#8451E1] text-xs uppercase tracking-wider mb-4 font-bold flex items-center gap-2">
+                  <Shirt className="w-4 h-4" />
+                  Available Sizes ({sizes.length} Total)
                 </p>
-                <p className="text-white font-medium">{sizes.join(", ")}</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {sizes.map((size) => {
+                    const isSelected = selectedSizes.includes(size);
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => {
+                          setSelectedSizes(
+                            isSelected
+                              ? selectedSizes.filter(s => s !== size)
+                              : [...selectedSizes, size]
+                          );
+                        }}
+                        className={`relative px-4 py-2 rounded-lg font-bold text-sm transition-all duration-300 cursor-pointer shadow-md ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/50 border border-[#8451E1]/70 hover:scale-105'
+                            : 'bg-[#0a0a0a] text-[#acacac] border border-[#8451E1]/40 hover:border-[#8451E1]/70 hover:text-[#8451E1]'
+                        }`}
+                      >
+                        {size}
+                        {isSelected && (
+                          <Check className="w-4 h-4 inline-block ml-2" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedSizes.length > 0 && (
+                  <div className="pt-3 border-t border-[#8451E1]/20">
+                    <p className="text-xs text-[#666] mb-2 font-semibold">Selected ({selectedSizes.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSizes.map((size) => (
+                        <div key={size} className="flex items-center gap-1.5 bg-[#8451E1]/20 border border-[#8451E1]/50 rounded-full px-3 py-1">
+                          <span className="text-xs text-[#8451E1] font-medium">{size}</span>
+                          <button
+                            onClick={() => setSelectedSizes(selectedSizes.filter(s => s !== size))}
+                            className="text-[#8451E1]/70 hover:text-[#8451E1] font-bold text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1136,13 +1444,12 @@ function ItemDetailModal({
           </div>
         </div>
 
-        {/* Reviews Section */}
         <div className="mt-8 pt-6 border-t border-[#8451E1]/20">
           <h3 className="text-lg font-semibold mb-4 bg-gradient-to-r from-white to-[#d0d0d0] bg-clip-text text-transparent">
             Customer Reviews & Ratings
           </h3>
 
-          {/* Review Form */}
+          {}
           {user ? (
             <div className="bg-[#1a1a2e]/50 rounded-lg p-4 border border-[#8451E1]/20 mb-6">
               <p className="text-sm text-[#999] mb-3">Share your experience with this product</p>
@@ -1206,7 +1513,7 @@ function ItemDetailModal({
             </div>
           )}
 
-          {/* Reviews List */}
+          {}
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {reviews.length > 0 ? (
               reviews.map((review: any, idx: number) => (

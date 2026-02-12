@@ -61,7 +61,7 @@ export default function CollectionShowcase({
                 disabled={!canScrollLeft}
                 className={`p-1.5 sm:p-2 rounded-full transition-all ${
                   canScrollLeft
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
                     : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
                 }`}
               >
@@ -72,7 +72,7 @@ export default function CollectionShowcase({
                 disabled={!canScrollRight}
                 className={`p-1.5 sm:p-2 rounded-full transition-all ${
                   canScrollRight
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
                     : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
                 }`}
               >
@@ -108,7 +108,7 @@ export default function CollectionShowcase({
             disabled={!canScrollLeft}
             className={`p-1.5 sm:p-2 rounded-full transition-all ${
               canScrollLeft
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
                 : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
             }`}
           >
@@ -119,7 +119,7 @@ export default function CollectionShowcase({
             disabled={!canScrollRight}
             className={`p-1.5 sm:p-2 rounded-full transition-all ${
               canScrollRight
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
                 : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
             }`}
           >

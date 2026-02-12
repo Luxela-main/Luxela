@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useLocalStorage, useLocalStorageClear } from '@/lib/hooks/useLocalStorage';
-import { Loader2, AlertCircle, XCircle } from 'lucide-react';
+import { Loader2, AlertCircle, XCircle, CreditCard, Landmark, Bitcoin, Check } from 'lucide-react';
 
 interface CheckoutFormData {
   firstName: string;
@@ -47,7 +47,7 @@ export default function CheckoutPage() {
   });
   const [showTermsError, setShowTermsError] = useState(false);
 
-  // Use localStorage for form data
+  
   const [checkoutForm, setCheckoutForm] = useLocalStorage<CheckoutFormData>('checkout-form', {
     firstName: '',
     lastName: '',
@@ -62,10 +62,10 @@ export default function CheckoutPage() {
     agreeToTerms: false,
   });
 
-  // Get user's cart
+  
   const { data: cart, isLoading: cartLoading, error: cartError } = trpc.cart.getCart.useQuery();
 
-  // Checkout mutations - Extract cartId safely
+  
   const cartId = cart?.cart?.id;
   const prepareCheckout = trpc.checkout.prepareCheckout.useQuery(
     { cartId: cartId || '' },
@@ -93,7 +93,7 @@ export default function CheckoutPage() {
     },
   });
 
-  // Field validation functions
+  
   const validateField = useCallback((name: string, value: string): string => {
     const trimmedValue = value.trim();
 
@@ -266,7 +266,7 @@ export default function CheckoutPage() {
           <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
           <button
             onClick={() => router.push('/buyer/collections')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
           >
             Continue Shopping
           </button>
@@ -281,14 +281,34 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+              <span className="text-sm font-medium text-gray-900">Shipping</span>
+            </div>
+            <div className="flex-1 h-1 mx-3 bg-blue-600"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-200 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+              <span className="text-sm font-medium text-gray-600">Payment</span>
+            </div>
+            <div className="flex-1 h-1 mx-3 bg-gray-300"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+              <span className="text-sm font-medium text-gray-600">Confirm</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">Step 1 of 3 - Enter shipping information</p>
+        </div>
+
         <div className="bg-white rounded-lg shadow">
-          {/* Header */}
+          {}
           <div className="border-b-4 border-b-[#E5E7EB] bg-gradient-to-r from-[#E5E7EB]/10 via-transparent px-6 py-8">
             <h1 className="text-3xl font-bold">Checkout</h1>
             <p className="text-gray-600 mt-2">Review your order and complete payment</p>
           </div>
 
-          {/* Shipping Address */}
+          {}
           <div className="px-6 py-8 border-l-4 border-l-[#6B7280]">
             <h2 className="text-xl font-semibold mb-6">Shipping Address</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -512,7 +532,7 @@ export default function CheckoutPage() {
           </div>
 
           <form onSubmit={handleCheckout} className="divide-y divide-gray-200">
-            {/* Order Summary */}
+            {}
             <div className="px-6 py-8">
               <h2 className="text-xl font-semibold mb-6">Order Summary</h2>
               
@@ -542,14 +562,27 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {/* Pricing Breakdown */}
+              {}
               <div className="border-t pt-6 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
                   <span>₦{((summary?.subtotalCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
+                <div className="bg-gray-50 -mx-6 px-6 py-3 my-2">
+                  <div className="text-sm text-gray-600 mb-2">
+                    <p className="font-medium mb-1">Shipping Breakdown:</p>
+                    {(summary?.subtotalCents || 0) > 5000000 ? (
+                      <p className="text-green-600">✓ Free shipping (order over ₦50,000)</p>
+                    ) : (
+                      <>
+                        <p>Base fee: ₦200.00</p>
+                        <p>Per item ({checkoutData?.items?.length || 0} items): ₦{((checkoutData?.items?.length || 0) * 50).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-between text-base">
+                  <span className="text-gray-600">Shipping Fee</span>
                   <span>₦{((summary?.shippingCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t pt-2 mt-4">
@@ -561,59 +594,77 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Payment Method Selection */}
+            {}
             <div className="px-6 py-8">
               <h2 className="text-xl font-semibold mb-6">Payment Method</h2>
               
               <div className="space-y-3">
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  checkoutForm.paymentMethod === 'card' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}>
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="card"
                     checked={checkoutForm.paymentMethod === 'card'}
                     onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-blue-600"
                   />
-                  <span className="ml-3">
+                  <CreditCard className="w-6 h-6 ml-3 text-blue-600 flex-shrink-0" />
+                  <span className="ml-3 flex-1">
                     <span className="font-medium">Credit/Debit Card</span>
                     <p className="text-sm text-gray-600">Visa, Mastercard, American Express</p>
                   </span>
+                  {checkoutForm.paymentMethod === 'card' && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
                 </label>
 
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  checkoutForm.paymentMethod === 'bank_transfer' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}>
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="bank_transfer"
                     checked={checkoutForm.paymentMethod === 'bank_transfer'}
                     onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-blue-600"
                   />
-                  <span className="ml-3">
+                  <Landmark className="w-6 h-6 ml-3 text-green-600 flex-shrink-0" />
+                  <span className="ml-3 flex-1">
                     <span className="font-medium">Bank Transfer</span>
                     <p className="text-sm text-gray-600">Direct bank transfer (NGN)</p>
                   </span>
+                  {checkoutForm.paymentMethod === 'bank_transfer' && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
                 </label>
 
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  checkoutForm.paymentMethod === 'crypto' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}>
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="crypto"
                     checked={checkoutForm.paymentMethod === 'crypto'}
                     onChange={(e) => handleFieldChange('paymentMethod', e.target.value)}
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-blue-600"
                   />
-                  <span className="ml-3">
+                  <Bitcoin className="w-6 h-6 ml-3 text-orange-600 flex-shrink-0" />
+                  <span className="ml-3 flex-1">
                     <span className="font-medium">Cryptocurrency</span>
                     <p className="text-sm text-gray-600">USDC on Solana blockchain</p>
                   </span>
+                  {checkoutForm.paymentMethod === 'crypto' && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
                 </label>
               </div>
             </div>
 
-            {/* Escrow Notice */}
+            {}
             <div className="px-6 py-8 bg-blue-50 border-l-4 border-blue-600">
               <h3 className="font-semibold text-blue-900 mb-2">🛡️ Buyer Protection</h3>
               <p className="text-sm text-blue-800">
@@ -622,7 +673,7 @@ export default function CheckoutPage() {
               </p>
             </div>
 
-            {/* Payment Status Messages */}
+            {}
             {paymentStatus.state === 'error' && (
               <div className="px-6 py-4 bg-red-50 border-l-4 border-red-600">
                 <div className="flex items-start gap-3">
@@ -647,7 +698,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Terms & Conditions */}
+            {}
             <div className="px-6 py-6 border-t border-gray-200">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -678,13 +729,13 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Action Buttons */}
+            {}
             <div className="px-6 py-8 bg-gray-50 flex gap-4">
               <button
                 type="button"
                 onClick={() => router.push('/cart')}
                 disabled={paymentStatus.state === 'processing'}
-                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 aria-label="Go back to shopping cart"
               >
                 Back to Cart
@@ -693,7 +744,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={handleRetryPayment}
-                  className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                  className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   aria-label="Retry payment"
                 >
                   Retry Payment
@@ -719,7 +770,7 @@ export default function CheckoutPage() {
           </form>
         </div>
 
-        {/* Additional Info */}
+        {}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-2xl mb-2">🚚</div>

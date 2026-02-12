@@ -46,14 +46,14 @@ export function getValidPayoutMethodsForSchedule(
   availableMethods: PayoutMethodDetails[]
 ): PayoutMethodDetails[] {
   if (scheduleType === 'immediate') {
-    return availableMethods.filter((m) => m.type !== 'tsara');
+    return availableMethods.filter((m: any) => m.type !== 'tsara');
   }
 
   if (['daily', 'weekly', 'bi_weekly', 'monthly'].includes(scheduleType)) {
     return availableMethods;
   }
 
-  return availableMethods.filter((m) => m.type !== 'tsara');
+  return availableMethods.filter((m: any) => m.type !== 'tsara');
 }
 
 export function validatePayoutMethod(
@@ -309,7 +309,7 @@ async function processSingleScheduledPayout(payout: any): Promise<void> {
       ? JSON.parse(seller[0].payoutMethods)
       : [];
 
-    const selectedMethod = payoutMethods.find((m) => m.id === payout.payoutMethodId);
+    const selectedMethod = payoutMethods.find((m: any) => m.id === payout.payoutMethodId);
     if (!selectedMethod) {
       throw new Error(`Payout method ${payout.payoutMethodId} not found`);
     }
@@ -348,7 +348,7 @@ async function processSingleScheduledPayout(payout: any): Promise<void> {
       );
     }
 
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       const newNextScheduledAt = calculateNextScheduleDate(payout.schedule);
 
       await tx
@@ -399,7 +399,7 @@ async function processSingleScheduledPayout(payout: any): Promise<void> {
         note: `Error: ${err.message}`,
       })
       .where(eq(scheduledPayouts.id, payoutId))
-      .catch((e) => console.error('Failed to update payout status:', e));
+      .catch((e: any) => console.error('Failed to update payout status:', e));
 
     throw err;
   }
@@ -443,7 +443,7 @@ export async function processImmediatePayout(
       ? JSON.parse(seller[0].payoutMethods)
       : [];
 
-    const method = payoutMethods.find((m) => m.id === methodId);
+    const method = payoutMethods.find((m: any) => m.id === methodId);
     if (!method) {
       throw new Error('Payout method not found');
     }
@@ -475,7 +475,7 @@ export async function processImmediatePayout(
       });
     }
 
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       await tx.insert(financialLedger).values({
         id: uuidv4(),
         sellerId,
@@ -538,7 +538,7 @@ export async function getAvailablePayoutBalance(
     let available = 0;
     let processing = 0;
 
-    ledgerEntries.forEach((entry) => {
+    ledgerEntries.forEach((entry: any) => {
       if (entry.status === 'paid' && !['payout', 'refund_completed'].includes(entry.transactionType)) {
         available += entry.amountCents;
       } else if (entry.status === 'processing') {
@@ -555,4 +555,4 @@ export async function getAvailablePayoutBalance(
     console.error('Get payout balance error:', err);
     return { available: 0, processing: 0, total: 0 };
   }
-}
+}

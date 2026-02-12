@@ -161,7 +161,7 @@ function SignInContent() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent cursor-pointer"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -182,7 +182,7 @@ function SignInContent() {
                   {/* Submit */}
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-b from-purple-600 to-purple-400 via-purple-500 hover:from-purple-700 hover:to-purple-500"
+                    className="w-full bg-gradient-to-b from-purple-600 to-purple-400 via-purple-500 hover:from-purple-700 hover:to-purple-500 cursor-pointer"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Signing In..." : "Sign In"}

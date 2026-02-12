@@ -35,7 +35,7 @@ function SignUpContent() {
   const toast = useToast();
   const searchParams = useSearchParams();
 
-  // Check if email is already registered
+  
   const checkEmailExists = async (email: string) => {
     try {
       const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
@@ -51,7 +51,7 @@ function SignUpContent() {
   values: SignUpFormValues,
   { setSubmitting, resetForm }: any
 ) => {
-  // Basic pre-submit validations
+  
   if (!values.role) {
     toast.error("Please select a role before signing up.");
     setSubmitting(false);
@@ -73,7 +73,7 @@ function SignUpContent() {
   try {
     const { email, password, role } = values;
 
-    // Check if email is already registered BEFORE attempting signup
+    
     setIsCheckingEmail(true);
     const emailCheckResult = await checkEmailExists(email);
     setIsCheckingEmail(false);
@@ -107,7 +107,7 @@ function SignUpContent() {
       return;
     }
 
-    // Handle common signup errors
+    
     if (error?.toLowerCase().includes("already registered")) {
       toast.error("Email already registered. Please sign in instead.");
     } else if (error?.toLowerCase().includes("weak password")) {
@@ -147,12 +147,12 @@ const handleResendVerification = async () => {
   return (
     <>
       <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
-        {/* Left side - Enhanced */}
+        {}
         <div className="relative md:flex items-center justify-center p-10 hidden overflow-hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
-          {/* Gradient Overlay */}
+          {}
           <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#D1D5DB]/25 via-[#8451E1]/10 to-[#9CA3AF]/25" />
-          {/* Corner Decorations */}
+          {}
           <div className="absolute top-0 left-0 w-40 h-40 bg-[#E5E7EB]/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-0 w-32 h-32 bg-[#D1D5DB]/10 rounded-full blur-3xl" />
           
@@ -235,7 +235,7 @@ const handleResendVerification = async () => {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent cursor-pointer"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -268,7 +268,7 @@ const handleResendVerification = async () => {
                       <Field
                         as="select"
                         name="role"
-                        className={`w-full bg-black mt-1 rounded-md border-2 px-10 py-2 text-sm transition-all ${errors.role && touched.role ? "border-destructive" : "border-[#E5E7EB]/30 focus:border-[#E5E7EB]/60"}`}
+                        className={`w-full bg-black mt-1 rounded-md border-2 px-10 py-2 text-sm transition-all cursor-pointer ${errors.role && touched.role ? "border-destructive" : "border-[#E5E7EB]/30 focus:border-[#E5E7EB]/60"}`}
                       >
                         <option value="" disabled>Select role</option>
                         <option value="buyer">Buyer</option>
@@ -284,7 +284,7 @@ const handleResendVerification = async () => {
                       type="checkbox"
                       id="agreeTerms"
                       name="agreeTerms"
-                      className="mr-2 accent-[#8451E1] cursor-pointer"
+                      className="mr-2 accent-[#8451E1] cursor-pointer w-4 h-4"
                     />
                     <Label htmlFor="agreeTerms" className="cursor-pointer">
                       I agree to all{" "}
@@ -296,7 +296,7 @@ const handleResendVerification = async () => {
                   {/* Submit */}
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-b from-[#8451E1] to-[#7240D0] hover:from-[#9468F2] hover:to-[#8451E1] text-white font-semibold py-6 mt-6 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/50"
+                    className="w-full bg-gradient-to-b from-[#8451E1] to-[#7240D0] hover:from-[#9468F2] hover:to-[#8451E1] text-white font-semibold py-6 mt-6 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/50 cursor-pointer"
                     disabled={isSubmitting || isCheckingEmail}
                   >
                     {isCheckingEmail ? "Checking email..." : isSubmitting ? "Signing Up..." : "Sign up"}

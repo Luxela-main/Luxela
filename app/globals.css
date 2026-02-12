@@ -89,6 +89,23 @@ body {
   @apply bg-[#0E0E0E] text-[#f1f1f1] scroll-smooth;
 }
 
+/* Global button and clickable element cursor styling */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+a[href] {
+  @apply cursor-pointer;
+}
+
+/* Disabled state should show not-allowed cursor */
+button:disabled,
+[role="button"][aria-disabled="true"],
+input:disabled {
+  @apply cursor-not-allowed;
+}
+
 .layout {
   @apply px-2 md:px-5 mx-auto w-full;
 }

@@ -16,6 +16,14 @@ import {
   User,
   Palette,
   Ruler,
+  AlertCircle,
+  Badge,
+  Clock,
+  Film,
+  FileText,
+  BarChart3,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 interface ListingDetailsModalProps {
@@ -104,7 +112,9 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
   const sizes = (() => {
     try {
-      if (listing.sizeOptions && typeof listing.sizeOptions === "string") {
+      if (listing.sizesJson && typeof listing.sizesJson === "string") {
+        return JSON.parse(listing.sizesJson);
+      } else if (listing.sizeOptions && typeof listing.sizeOptions === "string") {
         return JSON.parse(listing.sizeOptions);
       } else if (listing.sizes) {
         return typeof listing.sizes === "string"
@@ -334,6 +344,247 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
                 </h4>
                 <p className="text-sm text-gray-300 leading-relaxed">
                   {listing.description}
+                </p>
+              </div>
+            )}
+
+            {/* Meta Description */}
+            {listing.metaDescription && (
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                  Meta Description
+                </h4>
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  {listing.metaDescription}
+                </p>
+              </div>
+            )}
+
+            {/* SKU & Barcode */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {listing.sku && (
+                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                  <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                    SKU
+                  </h4>
+                  <p className="text-sm font-mono text-purple-400 bg-black/50 px-3 py-2 rounded break-all">
+                    {listing.sku}
+                  </p>
+                </div>
+              )}
+              {listing.barcode && (
+                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                  <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                    Barcode
+                  </h4>
+                  <p className="text-sm font-mono text-green-400 bg-black/50 px-3 py-2 rounded break-all">
+                    {listing.barcode}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Video URL */}
+            {listing.videoUrl && (
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                <h4 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                  <Film className="w-4 h-4" />
+                  Video URL
+                </h4>
+                <a
+                  href={listing.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-400 hover:text-blue-300 hover:underline break-all"
+                >
+                  {listing.videoUrl}
+                </a>
+              </div>
+            )}
+
+            {/* Care Instructions */}
+            {listing.careInstructions && (
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Care Instructions
+                </h4>
+                <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                  {listing.careInstructions}
+                </p>
+              </div>
+            )}
+
+            {/* Material Composition */}
+            {listing.materialComposition && (
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                  Material Composition
+                </h4>
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  {listing.materialComposition}
+                </p>
+              </div>
+            )}
+
+            {/* Limited Edition & Release Duration */}
+            {(listing.limitedEditionBadge || listing.releaseDuration) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {listing.limitedEditionBadge && (
+                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                      <Badge className="w-4 h-4" />
+                      Limited Edition
+                    </h4>
+                    <p className="text-sm text-amber-400">
+                      {listing.limitedEditionBadge === "show_badge"
+                        ? "✓ Badge will be shown"
+                        : "✗ Badge hidden"}
+                    </p>
+                  </div>
+                )}
+                {listing.releaseDuration && (
+                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Release Duration
+                    </h4>
+                    <p className="text-sm text-white">{listing.releaseDuration}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Shipping & Supply Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {listing.supplyCapacity && (
+                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                  <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    Supply Capacity
+                  </h4>
+                  <p className="text-sm text-white">
+                    {listing.supplyCapacity === "no_max" ? "Unlimited" : "Limited"}
+                  </p>
+                </div>
+              )}
+              {listing.shippingOption && (
+                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                  <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                    Shipping Options
+                  </h4>
+                  <p className="text-sm text-white capitalize">
+                    {listing.shippingOption.replace(/_/g, " ")}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Shipping ETA */}
+            {(listing.etaDomestic || listing.etaInternational) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {listing.etaDomestic && (
+                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                      <Truck className="w-4 h-4" />
+                      Domestic Shipping ETA
+                    </h4>
+                    <p className="text-sm text-white capitalize">
+                      {listing.etaDomestic.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                )}
+                {listing.etaInternational && (
+                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                      <Truck className="w-4 h-4" />
+                      International Shipping ETA
+                    </h4>
+                    <p className="text-sm text-white capitalize">
+                      {listing.etaInternational.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Refund Policy */}
+            {listing.refundPolicy && (
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                  Refund Policy
+                </h4>
+                <p className="text-sm text-white capitalize">
+                  {listing.refundPolicy === "no_refunds"
+                    ? "No Refunds"
+                    : listing.refundPolicy === "1week"
+                    ? "1 Week"
+                    : listing.refundPolicy === "14days"
+                    ? "14 Days"
+                    : listing.refundPolicy === "30days"
+                    ? "30 Days"
+                    : listing.refundPolicy === "60days"
+                    ? "60 Days"
+                    : listing.refundPolicy === "1_2_weeks"
+                    ? "1-2 Weeks"
+                    : listing.refundPolicy === "2_3_weeks"
+                    ? "2-3 Weeks"
+                    : listing.refundPolicy === "48hrs"
+                    ? "48 Hours"
+                    : listing.refundPolicy === "72hrs"
+                    ? "72 Hours"
+                    : listing.refundPolicy === "5_working_days"
+                    ? "5 Working Days"
+                    : listing.refundPolicy.replace(/_/g, " ")}
+                </p>
+              </div>
+            )}
+
+            {/* Local Pricing */}
+            {listing.localPricing && (
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                  Pricing Type
+                </h4>
+                <p className="text-sm text-white capitalize">
+                  {listing.localPricing === "fiat"
+                    ? "Fiat Currency"
+                    : listing.localPricing === "cryptocurrency"
+                    ? "Cryptocurrency"
+                    : "Fiat & Cryptocurrency"}
+                </p>
+              </div>
+            )}
+
+            {/* Listing Status */}
+            {listing.status && (
+              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
+                <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                  {listing.status === "approved" ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : listing.status === "rejected" ? (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-yellow-500" />
+                  )}
+                  Listing Status
+                </h4>
+                <p
+                  className={`text-sm font-semibold ${
+                    listing.status === "approved"
+                      ? "text-green-400"
+                      : listing.status === "rejected"
+                      ? "text-red-400"
+                      : listing.status === "draft"
+                      ? "text-gray-400"
+                      : "text-yellow-400"
+                  }`}
+                >
+                  {listing.status === "pending_review"
+                    ? "Pending Review"
+                    : listing.status === "revision_requested"
+                    ? "Revision Requested"
+                    : listing.status.replace(/_/g, " ")}
                 </p>
               </div>
             )}

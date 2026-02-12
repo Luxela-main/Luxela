@@ -118,7 +118,7 @@ export default function AdminTicketsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile
+  
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -128,30 +128,30 @@ export default function AdminTicketsPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Fetch all tickets
+  
   const ticketsQuery = trpc.supportAdmin.getAllTickets.useQuery(undefined, {
     refetchInterval: 30000,
   });
 
-  // Fetch ticket details with replies
+  
   const ticketDetailsQuery = trpc.supportAdmin.getTicketDetails.useQuery(
     { ticketId: selectedTicket?.id || '' },
     { enabled: !!selectedTicket?.id, refetchInterval: 15000 }
   );
 
-  // Fetch replies
+  
   const repliesQuery = trpc.support.getTicketReplies.useQuery(
     { ticketId: selectedTicket?.id || '' },
     { enabled: !!selectedTicket?.id, refetchInterval: 15000 }
   );
 
-  // Update ticket status mutation
+  
   const updateTicketMutation = trpc.supportAdmin.updateTicketStatus.useMutation();
 
-  // Reply to ticket mutation
+  
   const replyMutation = trpc.support.replyToTicket.useMutation();
 
-  // Load tickets
+  
   useEffect(() => {
     if (ticketsQuery.data) {
       const convertedTickets = ticketsQuery.data.map(ticket => ({
@@ -167,7 +167,7 @@ export default function AdminTicketsPage() {
       setTickets(convertedTickets);
       setLoading(false);
 
-      // Auto-select ticket from URL query parameter
+      
       const selectedId = searchParams.get('selected');
       if (selectedId) {
         const ticketToSelect = convertedTickets.find(t => t.id === selectedId);
@@ -178,7 +178,7 @@ export default function AdminTicketsPage() {
     }
   }, [ticketsQuery.data, searchParams]);
 
-  // Load ticket details and replies
+  
   useEffect(() => {
     if (ticketDetailsQuery.data && repliesQuery.data && selectedTicket) {
       const updatedTicket: TicketWithReplies = {
@@ -206,7 +206,7 @@ export default function AdminTicketsPage() {
     }
   }, [ticketDetailsQuery.data, repliesQuery.data]);
 
-  // Filter tickets
+  
   useEffect(() => {
     let filtered = tickets;
 
@@ -246,7 +246,7 @@ export default function AdminTicketsPage() {
       setReplyMessage('');
       toast.success('Reply sent successfully');
       
-      // Await both refetch calls to ensure UI updates
+      
       await Promise.all([
         repliesQuery.refetch(),
         ticketDetailsQuery.refetch(),
@@ -300,7 +300,7 @@ export default function AdminTicketsPage() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      {/* Header */}
+      {}
       <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#E5E7EB] p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl sm:text-4xl font-bold mb-1 sm:mb-2 text-white">Support Tickets</h1>
@@ -310,9 +310,9 @@ export default function AdminTicketsPage() {
 
       <div className="p-4 sm:p-8 max-w-7xl mx-auto">
         {isMobile ? (
-          // Mobile Layout
+          
           <div className="space-y-4">
-            {/* Search */}
+            {}
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-[#808080]" />
               <input
@@ -324,7 +324,7 @@ export default function AdminTicketsPage() {
               />
             </div>
 
-            {/* Filter Toggle */}
+            {}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1a1a] border border-[#2B2B2B] rounded text-white font-medium cursor-pointer"
@@ -333,7 +333,7 @@ export default function AdminTicketsPage() {
               <ChevronDown className={`w-5 h-5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Filters */}
+            {}
             {showFilters && (
               <div className="space-y-3 bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4">
                 <div>
@@ -386,7 +386,7 @@ export default function AdminTicketsPage() {
               </div>
             )}
 
-            {/* Tickets List - Mobile Card View */}
+            {}
             {filteredTickets.length === 0 ? (
               <div className="p-6 text-center bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg text-[#808080]">
                 <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -428,11 +428,11 @@ export default function AdminTicketsPage() {
               </div>
             )}
 
-            {/* Ticket Details - Mobile Slide In */}
+            {}
             {selectedTicket && (
-              <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSelectedTicket(null)}>
+              <div className="fixed inset-0 bg-black/50 z-40 md:hidden cursor-pointer" onClick={() => setSelectedTicket(null)}>
                 <div className="absolute inset-0 right-auto w-full sm:w-96 bg-[#1a1a1a] border-l border-[#2B2B2B] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                  {/* Ticket Header */}
+                  {}
                   <div className="p-4 border-b border-[#2B2B2B] sticky top-0 bg-[#1a1a1a]">
                     <div className="flex items-start justify-between mb-3">
                       <h2 className="text-lg font-bold text-white flex-1 line-clamp-2">{selectedTicket.subject}</h2>
@@ -445,7 +445,7 @@ export default function AdminTicketsPage() {
                     </div>
                   </div>
 
-                  {/* Metadata */}
+                  {}
                   <div className="p-4 space-y-3 border-b border-[#2B2B2B]">
                     <div>
                       <p className="text-xs text-[#808080] mb-1">Description</p>
@@ -486,7 +486,7 @@ export default function AdminTicketsPage() {
                     </div>
                   </div>
 
-                  {/* Conversation */}
+                  {}
                   <div className="p-4 space-y-3 min-h-40 border-b border-[#2B2B2B]">
                     {selectedTicket.replies && selectedTicket.replies.length > 0 ? (
                       selectedTicket.replies.map((reply, idx) => (
@@ -513,7 +513,7 @@ export default function AdminTicketsPage() {
                     )}
                   </div>
 
-                  {/* Reply Input */}
+                  {}
                   <div className="p-4 border-t border-[#2B2B2B] bg-[#0E0E0E]">
                     <textarea
                       value={replyMessage}
@@ -542,11 +542,11 @@ export default function AdminTicketsPage() {
             )}
           </div>
         ) : (
-          // Desktop Layout
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Tickets List */}
+            {}
             <div className="lg:col-span-1 bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
-              {/* Search and Filters */}
+              {}
               <div className="p-4 border-b border-[#2B2B2B] space-y-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 w-4 h-4 text-[#808080]" />
@@ -608,7 +608,7 @@ export default function AdminTicketsPage() {
                 </div>
               </div>
 
-              {/* Tickets */}
+              {}
               <div className="flex-1 overflow-y-auto">
                 {filteredTickets.length === 0 ? (
                   <div className="p-4 text-center text-[#808080]">
@@ -652,10 +652,10 @@ export default function AdminTicketsPage() {
               </div>
             </div>
 
-            {/* Ticket Details */}
+            {}
             {selectedTicket ? (
               <div className="lg:col-span-2 bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
-                {/* Ticket Header */}
+                {}
                 <div className="p-6 border-b border-[#2B2B2B] space-y-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -670,7 +670,7 @@ export default function AdminTicketsPage() {
                     </button>
                   </div>
 
-                  {/* Metadata */}
+                  {}
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#2B2B2B]">
                     <div>
                       <p className="text-xs text-[#808080] mb-1">Category</p>
@@ -703,7 +703,7 @@ export default function AdminTicketsPage() {
                   </div>
                 </div>
 
-                {/* Conversation */}
+                {}
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {selectedTicket.replies && selectedTicket.replies.length > 0 ? (
                     selectedTicket.replies.map((reply, idx) => (
@@ -731,7 +731,7 @@ export default function AdminTicketsPage() {
                   )}
                 </div>
 
-                {/* Reply Input */}
+                {}
                 <div className="p-6 border-t border-[#2B2B2B]">
                   <div className="flex flex-col gap-2">
                     <textarea

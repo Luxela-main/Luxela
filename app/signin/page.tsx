@@ -95,12 +95,12 @@ function SignInContent() {
   return (
     <>
       <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
-        {/* Left Side - Enhanced with Gradients */}
+        {}
         <div className="relative md:flex items-center justify-center p-10 hidden overflow-hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
-          {/* Gradient Overlay */}
+          {}
           <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#E5E7EB]/25 via-[#8451E1]/10 to-[#E5E7EB]/25" />
-          {/* Corner Decorations */}
+          {}
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#6B7280]/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#9CA3AF]/10 rounded-full blur-3xl" />
           

@@ -21,15 +21,62 @@ export interface BuyerNotificationInput {
   metadata?: Record<string, any>;
 }
 
+// In-memory cache for deduplication (in production, use Redis)
+const notificationDeduplicationCache = new Map<string, {timestamp: number, count: number}>();
+const DEDUPLICATION_WINDOW_MS = 60000; // 60 seconds
+const MAX_DUPLICATES_PER_WINDOW = 1; // Allow only 1 notification per window
+
+/**
+ * Check if this notification should be deduplicated
+ * Returns true if the notification should be skipped (it's a duplicate)
+ */
+function shouldDeduplicateNotification(dedupeKey: string): boolean {
+  const now = Date.now();
+  const cached = notificationDeduplicationCache.get(dedupeKey);
+  
+  // If no cache entry, allow this notification
+  if (!cached) {
+    notificationDeduplicationCache.set(dedupeKey, { timestamp: now, count: 1 });
+    return false;
+  }
+  
+  // If cache entry expired, allow this notification
+  if (now - cached.timestamp > DEDUPLICATION_WINDOW_MS) {
+    notificationDeduplicationCache.set(dedupeKey, { timestamp: now, count: 1 });
+    return false;
+  }
+  
+  // If within window and we've already created this notification, skip it
+  if (cached.count >= MAX_DUPLICATES_PER_WINDOW) {
+    console.warn(
+      `[BuyerNotification] Duplicate notification detected and skipped: ${dedupeKey}`
+    );
+    return true;
+  }
+  
+  // Within window but haven't hit limit yet, increment count and allow
+  cached.count++;
+  return false;
+}
+
 /**
  * Generic notification creator - all other functions use this
  */
 async function createBuyerNotification(
-  input: BuyerNotificationInput
+  input: BuyerNotificationInput,
+  dedupeKey?: string
 ): Promise<string> {
   const notificationId = uuidv4();
 
   try {
+    // Check for duplicates if dedupeKey is provided
+    if (dedupeKey && shouldDeduplicateNotification(dedupeKey)) {
+      console.log(
+        `[BuyerNotification] Skipped duplicate notification for buyer ${input.buyerId}`
+      );
+      return notificationId; // Return a fake ID to satisfy the return type
+    }
+
     const result = await db
       .insert(buyerNotifications)
       .values({
@@ -197,20 +244,24 @@ export async function notifyBrandFollowed(
   brandId: string,
   brandName: string
 ): Promise<string> {
-  return createBuyerNotification({
-    buyerId,
-    type: 'product_back_in_stock',
-    title: 'Brand Followed',
-    message: `You're now following ${brandName}. Get updates on new products and exclusive offers!`,
-    relatedEntityId: brandId,
-    relatedEntityType: 'brand',
-    actionUrl: `/buyer/brands/${brandId}`,
-    metadata: {
-      brandName,
-      brandId,
-      action: 'brand_followed',
+  const dedupeKey = `brand_followed_${buyerId}_${brandId}`;
+  return createBuyerNotification(
+    {
+      buyerId,
+      type: 'system_alert',
+      title: 'Brand Followed',
+      message: `You're now following ${brandName}. Get updates on new products and exclusive offers!`,
+      relatedEntityId: brandId,
+      relatedEntityType: 'brand',
+      actionUrl: `/buyer/brands/${brandId}`,
+      metadata: {
+        brandName,
+        brandId,
+        action: 'brand_followed',
+      },
     },
-  });
+    dedupeKey
+  );
 }
 
 /**
@@ -221,20 +272,24 @@ export async function notifyBrandUnfollowed(
   brandId: string,
   brandName: string
 ): Promise<string> {
-  return createBuyerNotification({
-    buyerId,
-    type: 'product_back_in_stock',
-    title: 'Brand Unfollowed',
-    message: `You're no longer following ${brandName}`,
-    relatedEntityId: brandId,
-    relatedEntityType: 'brand',
-    actionUrl: `/buyer/brands`,
-    metadata: {
-      brandName,
-      brandId,
-      action: 'brand_unfollowed',
+  const dedupeKey = `brand_unfollowed_${buyerId}_${brandId}`;
+  return createBuyerNotification(
+    {
+      buyerId,
+      type: 'system_alert',
+      title: 'Brand Unfollowed',
+      message: `You're no longer following ${brandName}`,
+      relatedEntityId: brandId,
+      relatedEntityType: 'brand',
+      actionUrl: `/buyer/brands`,
+      metadata: {
+        brandName,
+        brandId,
+        action: 'brand_unfollowed',
+      },
     },
-  });
+    dedupeKey
+  );
 }
 
 // ============================================================================

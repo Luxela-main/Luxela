@@ -94,7 +94,7 @@ export const sellerListingNotificationsRouter = createTRPCRouter({
         .limit(input.limit)
         .offset(offset);
 
-      const notifications = result.map((item) => ({
+      const notifications = result.map((item: any) => ({
         id: item.review.id,
         listingId: item.review.listingId,
         title: item.listing.title,
@@ -264,13 +264,13 @@ export const sellerListingNotificationsRouter = createTRPCRouter({
         .where(
           eq(listingReviews.sellerId, seller.id)
         )
-        .orderBy((t) => t.review.updatedAt)
+        .orderBy((t: any) => t.review.updatedAt)
         .limit(50);
 
       const now = new Date();
       const newNotifications = newReviews
-        .filter((item) => item.review.updatedAt > lastPolledAt)
-        .map((item) => {
+        .filter((item: typeof newReviews[number]) => item.review.updatedAt > lastPolledAt)
+        .map((item: typeof newReviews[number]) => {
           const status = item.review.status;
           let message = "";
           

@@ -54,17 +54,17 @@ export default function SupportTeamPage() {
     resolutionTimeMinutes: 480,
   });
 
-  // Fetch team members
+  
   const teamQuery = trpc.supportAdmin.getTeamMembers.useQuery(undefined, {
     refetchInterval: 30000,
   });
 
-  // Fetch SLA policies
+  
   const slaQuery = trpc.supportAdmin.getSLAPolicies.useQuery(undefined, {
     refetchInterval: 30000,
   });
 
-  // Add team member mutation
+  
   const addMemberMutation = trpc.supportAdmin.addTeamMember.useMutation({
     onSuccess: () => {
       toast.success('Team member added successfully');
@@ -77,7 +77,7 @@ export default function SupportTeamPage() {
     },
   });
 
-  // Add SLA policy mutation
+  
   const addSLAMutation = trpc.supportAdmin.setSLAPolicy.useMutation({
     onSuccess: () => {
       toast.success('SLA policy created successfully');
@@ -95,7 +95,7 @@ export default function SupportTeamPage() {
     },
   });
 
-  // Load data
+  
   useEffect(() => {
     if (teamQuery.data && slaQuery.data) {
       setTeamMembers(teamQuery.data);
@@ -112,14 +112,14 @@ export default function SupportTeamPage() {
 
     try {
       await addMemberMutation.mutateAsync({
-        userId: Math.random().toString(), // In production, use actual user ID
+        userId: Math.random().toString(), 
         name: newMember.name,
         email: newMember.email,
         role: newMember.role,
         maxCapacity: newMember.maxCapacity,
       });
     } catch (error) {
-      // Error is handled by mutation
+      
     }
   };
 
@@ -137,7 +137,7 @@ export default function SupportTeamPage() {
         resolutionTimeMinutes: newSLA.resolutionTimeMinutes,
       });
     } catch (error) {
-      // Error is handled by mutation
+      
     }
   };
 
@@ -151,7 +151,7 @@ export default function SupportTeamPage() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      {/* Header */}
+      {}
       <div className="bg-gradient-to-r from-[#1a1a1a] to-[#0E0E0E] border-b-2 border-[#E5E7EB] p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold mb-2 text-white">Support Team Management</h1>
@@ -160,7 +160,7 @@ export default function SupportTeamPage() {
       </div>
 
       <div className="p-4 sm:p-8 max-w-7xl mx-auto">
-        {/* Tabs */}
+        {}
         <div className="flex gap-4 mb-8 border-b border-[#2B2B2B]">
           <button
             onClick={() => setActiveTab('team')}
@@ -186,7 +186,7 @@ export default function SupportTeamPage() {
           </button>
         </div>
 
-        {/* Team Members Tab */}
+        {}
         {activeTab === 'team' && (
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -200,7 +200,7 @@ export default function SupportTeamPage() {
               </button>
             </div>
 
-            {/* Add Member Form */}
+            {}
             {showAddMember && (
               <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 mb-6">
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -255,7 +255,7 @@ export default function SupportTeamPage() {
               </div>
             )}
 
-            {/* Team Members List */}
+            {}
             <div className="space-y-4">
               {teamMembers.length === 0 ? (
                 <div className="text-center py-12">
@@ -320,7 +320,7 @@ export default function SupportTeamPage() {
           </div>
         )}
 
-        {/* SLA Policies Tab */}
+        {}
         {activeTab === 'sla' && (
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -334,7 +334,7 @@ export default function SupportTeamPage() {
               </button>
             </div>
 
-            {/* Add SLA Form */}
+            {}
             {showAddSLA && (
               <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 mb-6">
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -395,7 +395,7 @@ export default function SupportTeamPage() {
               </div>
             )}
 
-            {/* SLA Policies List */}
+            {}
             <div className="space-y-4">
               {slaPolicies.length === 0 ? (
                 <div className="text-center py-12">

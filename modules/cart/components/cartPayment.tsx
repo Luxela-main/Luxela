@@ -28,9 +28,9 @@ export default function CartPaymentPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const { items, subtotal, discountAmount, total } = useCartState();
   const [showTsaraModal, setShowTsaraModal] = useState(false);
+  const [checkoutResult, setCheckoutResult] = useState<any>(null);
   const { profile } = useProfile();
   const router = useRouter();
-  const [exchangeRate, setExchangeRate] = useState<number>(1);
 
   // Payment method options with enterprise details
   const paymentMethods: PaymentMethodOption[] = [
@@ -78,7 +78,6 @@ export default function CartPaymentPage() {
     },
   ]
 
-  // 1. Fetch Billing Addresses (Real Step 2 data)
   const { data: billingData, isLoading: billingLoading } =
     trpc.buyer.getBillingAddresses.useQuery({
       page: 1,
@@ -87,23 +86,21 @@ export default function CartPaymentPage() {
 
   const activeAddress =
     billingData?.data.find((a: any) => a.isDefault) || billingData?.data[0];
-  // 2. Tsara Payment Mutation
-  const initializePaymentMutation = trpc.checkout.initializePayment.useMutation({
-    onSuccess: (data) => {
-      if (data.paymentUrl) {
-        // Redirect to Tsara's secure hosted page
-        window.location.href = data.paymentUrl;
+  const checkoutMutation = trpc.cart.checkout.useMutation({
+    onSuccess: (checkoutData) => {
+      if (checkoutData.orders.length > 0) {
+        setCheckoutResult(checkoutData);
+        setShowTsaraModal(true);
+        toastSvc.success("Orders created! Processing payment...");
       }
     },
     onError: (error) => {
-      toastSvc.error(error.message || "Failed to initiate payment");
+      toastSvc.error((error.data as any)?.message || "Checkout failed. Please try again.");
     },
   });
 
-  const isProcessing = initializePaymentMutation.isPending;
+  const isProcessing = checkoutMutation.isPending;
   
-  // Shipping calculation based on number of items
-  // Free shipping over ₦50,000, otherwise ₦2,000 base + ₦500 per item
   const shippingFees = subtotal > 5000000 
     ? 0 
     : 200000 + (items.length * 50000);
@@ -313,35 +310,14 @@ export default function CartPaymentPage() {
 
           <Button
             onClick={async () => {
-              // Validate required data
-              if (!profile?.email) {
-                toastSvc.error('Profile email not found. Please update your profile.');
-                return;
-              }
-              
               if (!activeAddress) {
-                toastSvc.error('Please add a shipping address before proceeding.');
+                toastSvc.error("Please add a billing address first");
                 return;
               }
-              
-              if (items.length === 0) {
-                toastSvc.error('Your cart is empty. Add items to proceed.');
-                return;
-              }
-              
-              // Initialize payment with all required data
-              await (initializePaymentMutation as any).mutate({
-                customerName: profile?.name || 'Customer',
-                customerEmail: profile.email,
-                customerPhone: profile?.phoneNumber || '',
-                shippingAddress: activeAddress.houseAddress,
-                shippingCity: activeAddress.city,
-                shippingPostalCode: activeAddress.postalCode || '',
-                shippingCountry: 'Nigeria',
+
+              // Atomic checkout creates orders AND payment records
+              await checkoutMutation.mutateAsync({
                 paymentMethod: paymentMethod,
-                currency: 'NGN',
-                successUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/checkout/success`,
-                cancelUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/checkout/cancel`,
               });
             }}
             disabled={isProcessing || billingLoading}
@@ -365,18 +341,15 @@ export default function CartPaymentPage() {
         </div>
       </div>
 
-      {/* We only render the modal if we have an activeAddress 
-        to ensure the backend mutation doesn't fail on missing data.
-      */}
-      {activeAddress && (
+      {/* Modal with actual checkout data */}
+      {activeAddress && checkoutResult && (
         <TsaraPaymentModal
           isOpen={showTsaraModal}
           onClose={() => setShowTsaraModal(false)}
-          totalAmount={finalTotal / 100}
-          // Using logic to generate/fetch an Order ID or pass a temp one if creation happens in mutation
-          orderId={`ORDER-${Date.now()}`}
+          totalAmount={checkoutResult.total / 100}
+          orderId={checkoutResult.orders[0]?.id || ""}
           buyerId={profile?.id || ""}
-          listingId={items[0]?.listingId || ""}
+          listingId={checkoutResult.orders[0]?.listingId || ""}
         />
       )}
     </div>

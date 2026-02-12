@@ -20,7 +20,7 @@ async function main() {
     
     console.log(`✓ Found ${allBrands.length} brand(s):\n`);
     
-    allBrands.forEach((brand, index) => {
+    allBrands.forEach((brand: any, index: number) => {
       console.log(`${index + 1}. Brand: ${brand.name}`);
       console.log(`   ID: ${brand.id}`);
       console.log(`   Slug: ${brand.slug || '❌ NULL/EMPTY'}`);
@@ -28,7 +28,7 @@ async function main() {
       console.log();
     });
     
-    const brandsWithoutSlugs = allBrands.filter(b => !b.slug);
+    const brandsWithoutSlugs = allBrands.filter((b: any) => !b.slug);
     if (brandsWithoutSlugs.length > 0) {
       console.log(`\n⚠️ Found ${brandsWithoutSlugs.length} brand(s) without slugs!`);
       console.log('Running update to generate slugs...\n');

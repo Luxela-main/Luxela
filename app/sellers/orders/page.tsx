@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { ShoppingBag, TrendingUp, Clock, Truck, CheckCircle, AlertCircle, Loader, RotateCw } from "lucide-react"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/utils"
@@ -11,7 +11,7 @@ import EmptyState from "@/components/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import SearchBar from "@/components/search-bar"
-import type { Sale } from "@/modules/sellers/model/sales"
+import { Sale } from "@/modules/seller/queries/useSales"
 
 const ORDER_STATUSES = {
   pending: { label: "Pending", color: "bg-gray-900/30 text-gray-200 border-gray-700/30", icon: Clock },
@@ -56,7 +56,7 @@ export default function SellerOrdersHub() {
   }, [orders])
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order: Sale) => {
+    return orders.filter((order) => {
       const matchesSearch =
         search === "" ||
         order.orderId?.toLowerCase().includes(search.toLowerCase()) ||

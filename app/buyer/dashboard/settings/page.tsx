@@ -39,21 +39,21 @@ function SettingsPageContent() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
 
-  // tRPC mutations and queries
+  
   const updateAccountMutation = trpc.buyer.updateAccountDetails.useMutation();
   const updatePasswordMutation = trpc.buyer.updatePassword.useMutation();
   const deleteAccountMutation = trpc.buyer.deleteAccount.useMutation();
   const updatePreferencesMutation = trpc.buyer.updateNotificationPreferences.useMutation();
   const { data: preferences } = trpc.buyer.getNotificationPreferences.useQuery();
 
-  // Account form state
+  
   const [accountData, setAccountData] = useState({
     fullName: '',
     email: '',
     phoneNumber: '',
   });
 
-  // Password form state
+  
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -76,14 +76,14 @@ function SettingsPageContent() {
 
   const [passwordError, setPasswordError] = useState('');
 
-  // Preferences form state
+  
   const [preferencesData, setPreferencesData] = useState({
     orderUpdates: true,
     promotionalEmails: true,
     securityAlerts: true,
   });
 
-  // Sync profile data into account form when profile loads
+  
   useEffect(() => {
     if (profile) {
       setAccountData({
@@ -94,7 +94,7 @@ function SettingsPageContent() {
     }
   }, [profile]);
 
-  // Load preferences from database
+  
   useEffect(() => {
     if (preferences) {
       setPreferencesData({
@@ -105,7 +105,7 @@ function SettingsPageContent() {
     }
   }, [preferences]);
 
-  // Check password requirements
+  
   const checkPasswordRequirements = (password: string) => {
     setPasswordRequirements({
       minLength: password.length >= 8,

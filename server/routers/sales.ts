@@ -4,6 +4,7 @@ import { orders, sellers, sellerPayoutMethods } from "../db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { notifyOrderConfirmed } from "../services/notificationService";
 
 const OrderFilterEnum = z.enum([
   "all",
@@ -94,7 +95,7 @@ export const salesRouter = createTRPCRouter({
                 .limit(limit)
                 .offset(offset);
 
-        return rows.map((o) => ({
+        return rows.map((o: any) => ({
           id: o.id,
           orderId: o.id,
           product: o.productTitle,
@@ -728,6 +729,11 @@ export const salesRouter = createTRPCRouter({
           })
           .where(eq(orders.id, input.orderId))
           .returning();
+
+        // Notify buyer that order is confirmed
+        if (updated.buyerId) {
+          await notifyOrderConfirmed(updated.sellerId, updated.buyerId, updated.id);
+        }
 
         return {
           orderId: updated.id,

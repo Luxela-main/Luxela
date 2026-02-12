@@ -75,7 +75,7 @@ export async function createOrderFromCart(
   let totalAmountCents = 0;
   let currency = '';
 
-  const result = await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx: any) => {
     // Verify all items, validate seller, and collect product data
     let primaryListing: any = null;
     let productTitle = '';
@@ -415,7 +415,7 @@ export async function processRefund(
     });
   }
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     // Record refund
     await recordRefund(orderId, amountCents, currency, reason);
 
@@ -538,7 +538,7 @@ export async function getSellerActiveHolds(
       )
     );
 
-  return holds.map((result) => {
+  return holds.map((result: any) => {
     const hold = result.payment_holds;
     return {
       id: hold.id,
@@ -591,7 +591,7 @@ export async function getBuyerActiveOrders(buyerId: string): Promise<EscrowOrder
       )
     );
 
-  return activeOrders.map((order) => ({
+  return activeOrders.map((order: any) => ({
     id: order.id,
     buyerId: order.buyerId,
     sellerId: order.sellerId,
@@ -626,7 +626,7 @@ export async function autoReleaseExpiredHolds(holdDurationDays: number = 30): Pr
   if (!expiredHolds.length) return 0;
 
   await Promise.all(
-    expiredHolds.map((hold) =>
+    expiredHolds.map((hold: any) =>
       db
         .update(paymentHolds)
         .set({
@@ -638,4 +638,4 @@ export async function autoReleaseExpiredHolds(holdDurationDays: number = 30): Pr
   );
 
   return expiredHolds.length;
-}
+}

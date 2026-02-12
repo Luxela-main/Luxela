@@ -5,9 +5,12 @@ const isVercelEnv = !!process.env.VERCEL;
 const isLocalEnv = !isVercelEnv && process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
+  // Performance: Enable Turbopack for faster builds
   turbopack: {
     root: path.resolve(__dirname),
   },
+
+  // Image optimization
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh1.googleusercontent.com" },
@@ -19,21 +22,69 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "bychpijffixdnqonbxyj.supabase.co" },
     ],
     unoptimized: !isVercelEnv,
+    // Performance: Optimize image sizes for different devices
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+
+  // Enable React Strict Mode for development
+  reactStrictMode: true,
+
+  // Performance: Aggressive caching and compression headers
   ...(isVercelEnv && {
     headers: async () => {
       return [
+        // Security headers
         {
           source: "/(.*)",
           headers: [
             { key: "X-Content-Type-Options", value: "nosniff" },
             { key: "X-Frame-Options", value: "SAMEORIGIN" },
             { key: "X-XSS-Protection", value: "1; mode=block" },
+            // Performance: Enable compression
+            { key: "Content-Encoding", value: "gzip" },
+          ],
+        },
+        // Cache static assets aggressively (1 year)
+        {
+          source: "/static/(.*)",
+          headers: [
+            { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          ],
+        },
+        // Cache images (30 days)
+        {
+          source: "/images/(.*)",
+          headers: [
+            { key: "Cache-Control", value: "public, max-age=2592000, immutable" },
+          ],
+        },
+        // Cache fonts (1 year)
+        {
+          source: "/fonts/(.*)",
+          headers: [
+            { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          ],
+        },
+        // Cache versioned JS/CSS bundles (1 year)
+        {
+          source: "/_next/static/(.*)",
+          headers: [
+            { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          ],
+        },
+        // Cache pages with revalidation (1 hour)
+        {
+          source: "/(.*)",
+          headers: [
+            { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
           ],
         },
       ];
     },
+    compress: true,
   }),
+
   ...(isLocalEnv && {}),
 };
 

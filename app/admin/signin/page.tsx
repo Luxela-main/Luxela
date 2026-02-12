@@ -44,7 +44,7 @@ function AdminSignInContent() {
     try {
       const { email, adminPassword } = values;
 
-      // Verify email and admin password
+      
       const expectedAdminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
       
       if (!expectedAdminPassword) {
@@ -59,7 +59,7 @@ function AdminSignInContent() {
         return;
       }
 
-      // Verify admin status with database
+      
       setIsCheckingAdmin(true);
       const adminStatus = await checkAdminStatus();
 
@@ -77,10 +77,10 @@ function AdminSignInContent() {
         return;
       }
 
-      // Admin verified and has access
+      
       toast.success('Admin access verified!');
       
-      // Wait a moment then redirect to dashboard
+      
       await new Promise(resolve => setTimeout(resolve, 800));
       router.push('/admin/dashboard');
       
@@ -98,7 +98,7 @@ function AdminSignInContent() {
 
   return (
     <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
-      {/* Left Side */}
+      {}
       <div className="relative md:flex items-center justify-center p-10 hidden">
         <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
         <div className="relative z-10 max-w-md p-10 rounded-2xl border border-amber-500 backdrop-blur-md bg-black/30">
@@ -115,7 +115,7 @@ function AdminSignInContent() {
         </div>
       </div>
 
-      {/* Right Side */}
+      {}
       <div className="flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-2 mb-6">
@@ -134,7 +134,7 @@ function AdminSignInContent() {
           >
             {({ errors, touched, isSubmitting }) => (
               <Form className="space-y-3 sm:space-y-4">
-                {/* Email */}
+                {}
                 <div>
                   <Label htmlFor="email" className="mb-1">
                     Email
@@ -152,7 +152,7 @@ function AdminSignInContent() {
                   <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
                 </div>
 
-                {/* Admin Password */}
+                {}
                 <div>
                   <Label htmlFor="adminPassword" className="mb-1">
                     Admin Password
@@ -179,13 +179,13 @@ function AdminSignInContent() {
                   <ErrorMessage name="adminPassword" component="div" className="text-sm text-destructive mt-1" />
                 </div>
 
-                {/* Remember */}
+                {}
                 <div className="flex items-center">
                   <input type="checkbox" id="rememberMe" className="mr-2 accent-amber-600" />
                   <Label htmlFor="rememberMe">Remember me</Label>
                 </div>
 
-                {/* Submit */}
+                {}
                 <Button
                   type="submit"
                   className="w-full bg-gradient-to-b from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600"
@@ -197,7 +197,7 @@ function AdminSignInContent() {
             )}
           </Formik>
 
-          {/* Divider */}
+          {}
           <div className="flex items-center my-4">
             <div className="flex-grow border-t border-zinc-700" />
             <span className="px-2 text-zinc-500 text-sm">Or</span>
@@ -206,7 +206,7 @@ function AdminSignInContent() {
 
           <GoogleSignInButton redirectPath="/admin/setup" />
 
-          {/* Back to regular signin */}
+          {}
           <p className="text-center text-zinc-500 text-sm mt-4">
             Not an admin?{' '}
             <Link href="/signin" className="text-amber-400 underline cursor-pointer">

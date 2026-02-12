@@ -130,7 +130,7 @@ export const reviewRouter = router({
           .where(eq(reviews.listingId, input.listingId))
           .orderBy(desc(reviews.createdAt));
 
-        return reviewData.map((review) => ({
+        return reviewData.map((review: any) => ({
           ...review,
           buyerName: review.buyerName || 'Anonymous Buyer',
         }));

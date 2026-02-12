@@ -52,26 +52,26 @@ export default function AdminSetupPage() {
     if (result.success) {
       setSuccess(true);
       
-      // Force client-side session refresh to get the updated JWT token with admin flag
+      
       try {
         const { createClient } = await import('@/utils/supabase/client');
         const supabase = createClient();
         
-        // Refresh the session to load the new JWT token from the server
+        
         const { error: refreshError } = await supabase.auth.refreshSession();
         
         if (refreshError) {
           console.warn('Session refresh warning:', refreshError.message);
-          // Continue anyway - the metadata was updated server-side
+          
         }
         
-        // Wait for session to be fully updated
+        
         await new Promise(resolve => setTimeout(resolve, 500));
       } catch (refreshErr) {
         console.warn('Failed to refresh client session:', refreshErr);
       }
       
-      // Now redirect to dashboard
+      
       setTimeout(() => {
         router.push('/admin/support');
       }, 1000);

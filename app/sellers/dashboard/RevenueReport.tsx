@@ -33,9 +33,9 @@ export function RevenueReport() {
   const step = maxIncome / 10;
 
   return (
-    <div className="bg-[#1a1a1a] rounded-lg p-4 border-2 border-l-4 border-l-[#6B7280] bg-gradient-to-br from-[#6B7280]/10 via-transparent to-[#E5E7EB]/5 border-[#6B7280]/40">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#6B7280] to-[#E5E7EB]">Revenue Report</h3>
+    <div className="bg-[#1a1a1a] rounded-lg p-4 sm:p-5 border-2 border-l-4 border-l-[#6B7280] bg-gradient-to-br from-[#6B7280]/10 via-transparent to-[#E5E7EB]/5 border-[#6B7280]/40 h-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <h3 className="text-base sm:text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#6B7280] to-[#E5E7EB]">Revenue Report</h3>
         <div className="flex items-center">
           <div className="flex items-center mr-4">
             <div className="w-3 h-3 bg-gradient-to-r from-[#6B7280] to-[#E5E7EB] rounded-full mr-2"></div>
@@ -44,7 +44,7 @@ export function RevenueReport() {
           <div className="relative" ref={dropdownRef}>
             <Button
               variant="outline"
-              className="bg-[#222] border-[#9CA3AF]/40 text-white hover:bg-[#9CA3AF]/20 hover:border-[#9CA3AF]/60"
+              className="bg-[#222] border-[#9CA3AF]/40 text-white hover:bg-[#9CA3AF]/20 hover:border-[#9CA3AF]/60 cursor-pointer"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
               {timeframe}
@@ -76,7 +76,7 @@ export function RevenueReport() {
                       setTimeframe(option);
                       setIsDropdownOpen(false);
                     }}
-                    className={`block w-full text-left px-4 py-2 text-sm ${
+                    className={`block w-full text-left px-4 py-2 text-sm cursor-pointer ${
                       timeframe === option
                         ? "bg-gradient-to-r from-[#6B7280] to-[#E5E7EB] text-white"
                         : "text-gray-400 hover:bg-[#9CA3AF]/20 hover:text-white"
@@ -90,8 +90,8 @@ export function RevenueReport() {
           </div>
         </div>
       </div>
-      <div className="h-64 relative">
-        <div className="absolute inset-0 flex items-end">
+      <div className="h-48 sm:h-56 md:h-64 relative mt-4 sm:mt-6">
+        <div className="absolute inset-0 flex items-end gap-1">
           {revenueReport.map((item, index) => {
             return (
               <div key={index} className="flex-1 flex flex-col items-center">

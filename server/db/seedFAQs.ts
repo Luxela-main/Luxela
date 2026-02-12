@@ -187,7 +187,7 @@ async function seedFAQs() {
     for (let i = 0; i < allFaqSeeds.length; i += BATCH_SIZE) {
       const batch = allFaqSeeds.slice(i, i + BATCH_SIZE);
       await db.insert(faqs).values(
-        batch.map(faq => ({
+        batch.map((faq: any) => ({
           id: faq.id,
           question: faq.question,
           answer: faq.answer,

@@ -27,7 +27,7 @@ import { Badge } from '@/components/ui/badge';
 export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch admin dashboard stats from real data
+  
   const { data: listingStats, isLoading: statsLoading } =
     trpc.adminListingReview.getDashboardStats.useQuery();
 
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
     },
   ];
 
-  // Build recent activity from real data
+  
   const recentActivity = (ordersData?.orders || []).slice(0, 4).map((order: any, idx: number) => {
     const statuses = ['approved', 'rejected', 'revision', 'approved'];
     const status = statuses[idx % statuses.length];
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Header */}
+      {}
       <div className="mb-4 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">
           Admin Dashboard

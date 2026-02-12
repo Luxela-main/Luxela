@@ -36,8 +36,6 @@ export interface FormData {
   quantity: string;
   showBadge: "show_badge" | "do_not_show";
   releaseDuration: string;
-  releaseDurationDays: string;
-  releaseDurationMinutes: string;
 
   // Additional Information
   material: string;

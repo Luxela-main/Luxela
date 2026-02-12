@@ -32,13 +32,13 @@ export function VisitorTraffic() {
   }, [isDropdownOpen]);
 
   return (
-    <div className="bg-[#1a1a1a] rounded-lg p-4 border-2 border-l-4 border-l-[#9CA3AF] bg-gradient-to-br from-[#9CA3AF]/10 via-transparent border-[#9CA3AF]/40">
-      <div className="flex justify-between items-center mb-4 border-b border-[#9CA3AF]/20 pb-4">
-        <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#9CA3AF] to-[#E5E7EB]">Visitors Traffic</h3>
+    <div className="bg-[#1a1a1a] rounded-lg p-4 sm:p-5 border-2 border-l-4 border-l-[#9CA3AF] bg-gradient-to-br from-[#9CA3AF]/10 via-transparent border-[#9CA3AF]/40 h-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-[#9CA3AF]/20 pb-4 gap-4">
+        <h3 className="text-base sm:text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#9CA3AF] to-[#E5E7EB]">Visitors Traffic</h3>
         <div className="relative" ref={dropdownRef}>
           <Button
             variant="outline"
-            className="bg-[#222] border-[#333] text-white hover:bg-[#333] hover:text-white"
+            className="bg-[#222] border-[#333] text-white hover:bg-[#333] hover:text-white cursor-pointer"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             {visitorTimeframe}
@@ -70,7 +70,7 @@ export function VisitorTraffic() {
                     setVisitorTimeframe(option);
                     setIsDropdownOpen(false);
                   }}
-                  className={`block w-full text-left px-4 py-2 text-sm ${
+                  className={`block w-full text-left px-4 py-2 text-sm cursor-pointer ${
                     visitorTimeframe === option
                       ? "bg-blue-500 text-white"
                       : "text-gray-400 hover:bg-[#333] hover:text-white"
@@ -83,8 +83,8 @@ export function VisitorTraffic() {
           )}
         </div>
       </div>
-      <div className="flex justify-center">
-        <div className="relative w-48 h-48">
+      <div className="flex justify-center my-4 sm:my-6">
+        <div className="relative w-40 h-40 sm:w-48 sm:h-48">
           <svg viewBox="0 0 100 100" className="w-full h-full">
             <circle
               cx="50"
@@ -143,7 +143,7 @@ export function VisitorTraffic() {
           </svg>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 mt-4">
+      <div className="grid grid-cols-2 gap-3 mt-4 px-2 sm:px-0">
         {visitorTraffic.map((item, index) => (
           <div key={index} className="flex items-center">
             <div

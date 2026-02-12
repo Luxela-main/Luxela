@@ -21,7 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
-// Extended type to handle serialized createdAt from TRPC (ISO string)
+
 interface Notification {
   id: string;
   category: 'urgent_ticket' | 'sla_breach' | 'escalation' | 'team_capacity' | 'system_alert' | 'new_reply';
@@ -207,7 +207,7 @@ export default function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNotif, setSelectedNotif] = useState<string | null>(null);
 
-  // Fetch notifications with real-time auto-refetch
+  
   const { data: notificationsData, isLoading: isLoadingNotifications, refetch } = trpc.adminNotifications.getNotifications.useQuery({
     category: filter.category,
     severity: filter.severity,
@@ -218,37 +218,37 @@ export default function NotificationsPage() {
     refetchIntervalInBackground: true,
   });
 
-  // Fetch unread count
+  
   const { data: unreadData } = trpc.adminNotifications.getUnreadCount.useQuery(undefined, {
     refetchInterval: 10000, 
   });
 
-  // Mark as read mutation
+  
   const markAsReadMutation = trpc.adminNotifications.markAsRead.useMutation({
     onSuccess: () => {
       refetch();
     },
   });
 
-  // Mark all as read mutation
+  
   const markAllAsReadMutation = trpc.adminNotifications.markAllAsRead.useMutation({
     onSuccess: () => {
       refetch();
     },
   });
 
-  // Filter notifications based on search
+  
   const filteredNotifications = useMemo(() => {
     if (!notificationsData?.notifications) return [];
 
     return notificationsData.notifications.filter(
-      (notif) =>
+      (notif: any) =>
         notif.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         notif.message.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [notificationsData?.notifications, searchTerm]);
 
-  // Group by category
+  
   const groupedByCategory = useMemo(() => {
     const groups: Record<string, Notification[]> = {
       urgent_ticket: [],
@@ -274,7 +274,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0e0e0e] via-[#1a1a1a] to-[#0e0e0e]">
-      {/* Header */}
+      {}
       <div className="border-b border-[#2B2B2B] bg-black/30 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between">
@@ -299,12 +299,12 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Toolbar */}
+        {}
         <div className="bg-slate-800/50 rounded-lg border border-[#2B2B2B] p-4 mb-6 backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row gap-4 items-end">
-            {/* Search */}
+            {}
             <div className="flex-1 min-w-0">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Search
@@ -321,7 +321,7 @@ export default function NotificationsPage() {
               </div>
             </div>
 
-            {/* Severity Filter */}
+            {}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Severity
@@ -345,12 +345,12 @@ export default function NotificationsPage() {
               </select>
             </div>
 
-            {/* Unread Filter */}
+            {}
             <div>
               <button
                 onClick={() => setFilter({ ...filter, unreadOnly: !filter.unreadOnly })}
                 className={cn(
-                  'px-4 py-2 rounded-lg border transition-colors',
+                  'px-4 py-2 rounded-lg border transition-colors cursor-pointer',
                   filter.unreadOnly
                     ? 'bg-purple-600 text-white border-purple-600'
                     : 'bg-slate-700 text-gray-300 border-[#2B2B2B] hover:bg-slate-600'
@@ -361,12 +361,12 @@ export default function NotificationsPage() {
               </button>
             </div>
 
-            {/* Mark All as Read */}
+            {}
             {notificationsData && notificationsData.unreadCount > 0 && (
               <button
                 onClick={() => markAllAsReadMutation.mutate(undefined)}
                 disabled={markAllAsReadMutation.isPending}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
               >
                 <CheckCircle className="w-4 h-4 inline mr-2" />
                 Mark All Read
@@ -375,7 +375,7 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {/* Notifications Content */}
+        {}
         {isLoadingNotifications ? (
           <div className="flex items-center justify-center py-12">
             <Loader className="w-6 h-6 text-blue-400 animate-spin" />
@@ -403,7 +403,7 @@ export default function NotificationsPage() {
           </div>
         )}
 
-        {/* Pagination Info */}
+        {}
         {notificationsData && (
           <div className="mt-8 pt-6 border-t border-[#2B2B2B] text-center text-sm text-gray-400">
             Showing {filteredNotifications.length} of {notificationsData.total} notifications • Auto-refreshing every 5 seconds

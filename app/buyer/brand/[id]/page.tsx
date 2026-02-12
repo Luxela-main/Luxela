@@ -266,12 +266,12 @@ export default function BrandPage({
           </div>
 
           {/* Tabs Navigation */}
-          <div className="flex items-center justify-between gap-6 mb-8 pb-6 border-b border-[#222]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6 mb-8 pb-6 border-b border-[#222]">
             <h2 className="text-2xl font-bold text-white">
               {activeTab === "products" ? "Products" : "Collections"}
             </h2>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
               {/* Tab Buttons */}
               <div className="inline-flex bg-[#0f0f0f] border border-[#222] rounded-lg p-1">
                 <button
@@ -297,13 +297,13 @@ export default function BrandPage({
               </div>
 
               {/* Sort Dropdown */}
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <button
                   onClick={() => setShowSortMenu(!showSortMenu)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f0f0f] border border-[#222] hover:border-[#8451E1] rounded-lg transition-colors text-[#acacac] text-sm font-medium"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f0f0f] border border-[#222] hover:border-[#8451E1] rounded-lg transition-colors text-[#acacac] text-sm font-medium w-full sm:w-auto justify-between sm:justify-start"
                 >
                   <span className="hidden sm:inline">Sort: {sortOptions.find((o) => o.value === sortBy)?.label}</span>
-                  <span className="sm:hidden">Sort</span>
+                  <span className="sm:hidden flex-1 text-left">Sort: {sortOptions.find((o) => o.value === sortBy)?.label}</span>
                   <ChevronDown
                     className={`w-4 h-4 transition-transform ${
                       showSortMenu ? "rotate-180" : ""
@@ -312,7 +312,7 @@ export default function BrandPage({
                 </button>
 
                 {showSortMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-[#0f0f0f] border border-[#222] rounded-xl shadow-2xl z-50">
+                  <div className="absolute left-0 sm:right-0 top-full mt-2 w-full sm:w-64 bg-[#0f0f0f] border border-[#222] rounded-xl shadow-2xl z-50">
                     {sortOptions.map((option) => (
                       <button
                         key={option.value}

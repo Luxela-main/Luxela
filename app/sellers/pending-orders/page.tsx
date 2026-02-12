@@ -32,7 +32,7 @@ import {
 } from "@/modules/sellers"
 import type { Sale } from "@/modules/sellers/model/sales"
 
-// Map Sale to OrderWithDetails
+
 type OrderWithDetails = Sale & {
   customerEmail?: string
 }
@@ -82,7 +82,7 @@ interface PendingOrdersFilters {
   dateTo: string
 }
 
-// Order Details Modal Component
+
 function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDetails | null, open: boolean, onOpenChange: (open: boolean) => void }) {
   if (!order) return null
 
@@ -114,7 +114,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
-          {/* Order Information */}
+          {}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-[#242424] border border-[#333] rounded-lg p-4">
               <p className="text-xs text-gray-500 uppercase mb-3 font-medium">Order Information</p>
@@ -140,7 +140,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
               </div>
             </div>
 
-            {/* Product Information */}
+            {}
             <div className="bg-[#242424] border border-[#333] rounded-lg p-4">
               <p className="text-xs text-gray-500 uppercase mb-3 font-medium">Product</p>
               <div className="space-y-3">
@@ -158,7 +158,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
             </div>
           </div>
 
-          {/* Customer Information */}
+          {}
           <div className="bg-[#242424] border border-[#333] rounded-lg p-4">
             <p className="text-xs text-gray-500 uppercase mb-3 font-medium">Customer Information</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -173,7 +173,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
             </div>
           </div>
 
-          {/* Shipping Address */}
+          {}
           {order.shippingAddress && (
             <div className="bg-[#242424] border border-[#333] rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -184,7 +184,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
             </div>
           )}
 
-          {/* Payment Status */}
+          {}
           <div className="bg-[#242424] border border-[#333] rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
               <CreditCard className="h-4 w-4 text-gray-500" />
@@ -204,7 +204,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
             </div>
           </div>
 
-          {/* Delivery Status */}
+          {}
           <div className="bg-[#242424] border border-[#333] rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
               <ShoppingBag className="h-4 w-4 text-gray-500" />
@@ -236,7 +236,7 @@ export default function PendingOrders() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedBulkOrders, setSelectedBulkOrders] = useState<Set<string>>(new Set())
   
-  // Use localStorage for search and filter state
+  
   const [filters, setFilters] = useLocalStorage<PendingOrdersFilters>('pending-orders-filters', {
     search: '',
     cancelReason: '',
@@ -253,19 +253,19 @@ export default function PendingOrders() {
   const dateFrom = filters.dateFrom
   const dateTo = filters.dateTo
 
-  // Fetch pending orders
+  
   const { data: orders = [], isLoading, error } = usePendingOrders(
     { status: "pending", limit: 50, offset: 0 }
   )
 
-  // Debug logging
+  
   React.useEffect(() => {
     if (error) {
       console.error('Pending orders error:', error);
     }
   }, [error])
 
-  // Setup mutations with React Query automatic invalidation
+  
   const confirmMutation = useConfirmOrder()
   const cancelMutation = useCancelOrder()
 
@@ -339,13 +339,13 @@ export default function PendingOrders() {
 
   const filteredOrders = useMemo(() => {
     let result = orders.filter((order: Sale) => {
-      // Search filter
+      
       const matchesSearch = search === '' || 
         order.orderId?.toLowerCase().includes(search.toLowerCase()) ||
         order.product?.toLowerCase().includes(search.toLowerCase()) ||
         order.customer?.toLowerCase().includes(search.toLowerCase())
       
-      // Date range filter
+      
       let matchesDateRange = true
       if (dateFrom || dateTo) {
         const orderDate = new Date(order.orderDate).getTime()
@@ -362,7 +362,7 @@ export default function PendingOrders() {
       return matchesSearch && matchesDateRange
     })
 
-    // Sorting
+    
     result.sort((a: Sale, b: Sale) => {
       let compareValue = 0
       
@@ -383,11 +383,11 @@ export default function PendingOrders() {
   if (error) {
     let errorMessage = 'Unknown error';
     
-    // TRPC errors have a different structure
+    
     if (error instanceof Error) {
       errorMessage = error.message;
     } else if (typeof error === 'object' && error !== null) {
-      // Try to extract message from TRPC error structure
+      
       const errorObj = error as any;
       errorMessage = errorObj.message || errorObj.data?.message || JSON.stringify(error);
     }
@@ -421,10 +421,10 @@ export default function PendingOrders() {
         </div>
       </div>
 
-      {/* Filters and Sorting Bar */}
+      {}
       <div className="mb-6 flex flex-col gap-4">
         <div className="flex flex-col md:flex-row gap-3 flex-wrap">
-          {/* Sort Dropdown */}
+          {}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">Sort by:</span>
             <Select value={sortBy} onValueChange={(val: any) => setFilters({...filters, sortBy: val})}>
@@ -448,7 +448,7 @@ export default function PendingOrders() {
             </Button>
           </div>
 
-          {/* Date Range Filters */}
+          {}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">Date Range:</span>
             <input
@@ -468,7 +468,7 @@ export default function PendingOrders() {
             />
           </div>
 
-          {/* Clear Filters */}
+          {}
           {(dateFrom || dateTo) && (
             <Button
               size="sm"
@@ -482,7 +482,7 @@ export default function PendingOrders() {
         </div>
       </div>
 
-      {/* Bulk Actions Bar */}
+      {}
       {selectedBulkOrders.size > 0 && (
         <div className="mb-6 bg-blue-900/20 border border-blue-700/30 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -554,7 +554,7 @@ export default function PendingOrders() {
         />
       ) : (
         <div className="space-y-3">
-          {/* Header with Select All */}
+          {}
           {filteredOrders.length > 0 && (
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-3 flex items-center gap-3">
               <input
@@ -577,7 +577,7 @@ export default function PendingOrders() {
               }`}
             >
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                {/* Checkbox */}
+                {}
                 <div className="md:col-span-1 flex items-center">
                   <input
                     type="checkbox"
@@ -587,7 +587,7 @@ export default function PendingOrders() {
                   />
                 </div>
 
-                {/* Product Image */}
+                {}
                 <div className="md:col-span-1">
                   {false ? (
                     <div className="relative h-24 w-24 bg-[#242424] rounded-lg overflow-hidden flex-shrink-0">
@@ -605,7 +605,7 @@ export default function PendingOrders() {
                   )}
                 </div>
 
-                {/* Order Details */}
+                {}
                 <div className="md:col-span-4 space-y-2">
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Order ID</p>
@@ -622,7 +622,7 @@ export default function PendingOrders() {
                   </div>
                 </div>
 
-                {/* Amount & Status */}
+                {}
                 <div className="md:col-span-2 space-y-2 flex flex-col justify-start">
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Amount</p>
@@ -638,7 +638,7 @@ export default function PendingOrders() {
                   </div>
                 </div>
 
-                {/* Actions */}
+                {}
                 <div className="md:col-span-2 flex flex-col gap-2">
                   <Button
                     size="sm"
@@ -682,7 +682,7 @@ export default function PendingOrders() {
         </div>
       )}
 
-      {/* Cancel Order Dialog */}
+      {}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <DialogContent className="bg-[#1a1a1a] border-[#333] max-w-md">
           <DialogHeader>
@@ -747,7 +747,7 @@ export default function PendingOrders() {
         </DialogContent>
       </Dialog>
 
-      {/* Order Details Modal */}
+      {}
       <OrderDetailsModal 
         order={selectedOrder} 
         open={showDetailsModal} 

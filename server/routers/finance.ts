@@ -93,8 +93,7 @@ export const financeRouter = createTRPCRouter({
         });
       }
 
-      const summary = (entries || []).reduce(
-        (acc, entry) => {
+      const summary = (entries || []).reduce((acc: any, entry: any) => {
           if (entry.type === 'income') {
             acc.totalIncome += entry.amount;
           } else if (entry.type === 'expense') {
@@ -256,8 +255,7 @@ export const financeRouter = createTRPCRouter({
         });
       }
 
-      const stats = (entries || []).reduce(
-        (acc, entry) => {
+      const stats = (entries || []).reduce((acc: any, entry: any) => {
           if (entry.transaction_type === 'income' && entry.status !== 'paid_out') {
             acc.availableBalance += entry.amount_cents / 100;
           }
@@ -280,13 +278,13 @@ export const financeRouter = createTRPCRouter({
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
       const thisMonthTotal = (entries || [])
         .filter((e) => new Date(e.created_at) >= new Date(now.getFullYear(), now.getMonth(), 1))
-        .reduce((sum, e) => sum + (e.amount_cents / 100), 0);
+        .reduce((sum: any, e: any) => sum + (e.amount_cents / 100), 0);
       const lastMonthTotal = (entries || [])
         .filter((e) => {
           const d = new Date(e.created_at);
           return d >= lastMonth && d < new Date(now.getFullYear(), now.getMonth(), 1);
         })
-        .reduce((sum, e) => sum + (e.amount_cents / 100), 0);
+        .reduce((sum: any, e: any) => sum + (e.amount_cents / 100), 0);
 
       stats.monthlyGrowthPercentage = lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0;
 
@@ -603,7 +601,7 @@ export const financeRouter = createTRPCRouter({
 
       const payouts = await db.select().from(scheduledPayouts).where(eq(scheduledPayouts.sellerId, seller.id));
 
-      return payouts.map((p) => ({
+      return payouts.map((p: any) => ({
         id: p.id,
         amountCents: p.amountCents,
         amount: p.amountCents / 100,

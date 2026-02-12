@@ -417,12 +417,12 @@ export default function BrowsePage() {
             {/* Background glow */}
             <div className="absolute -left-10 -top-10 w-96 h-96 bg-[#8451E1]/10 rounded-full blur-3xl pointer-events-none opacity-50"></div>
             <div className="relative z-10">
-              <div className="mb-4 sm:mb-6 group">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-3xl group-hover:scale-125 transition-transform duration-300">⭐</span>
-                  <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-[#e0e0e0] to-[#b0b0b0] bg-clip-text text-transparent group-hover:via-[#ffffff] transition-all duration-300">New Arrivals</h2>
+              <div className="mb-4 sm:mb-6">
+                <div className="inline-flex items-center gap-2 p-3 rounded-xl bg-gradient-to-r from-[#8451E1]/10 to-[#5C2EAF]/10 border border-[#8451E1]/20 mb-3">
+                  <span className="text-2xl">⭐</span>
+                  <h2 className="text-lg sm:text-2xl font-bold text-white">New Arrivals</h2>
                 </div>
-                <p className="text-[#999] text-sm sm:text-base font-light ml-10 group-hover:text-[#8451E1]/60 transition-colors duration-300">Discover the latest luxury collections</p>
+                <p className="text-[#999] text-sm sm:text-base font-light ml-12">Discover the latest luxury collections</p>
               </div>
               <ProductCarousel
                 title="New Arrivals"

@@ -441,7 +441,7 @@ export async function getOrderFlowStatus(
 
     // Determine flow stage
     let flowStage = 'pending';
-    let nextAction = undefined;
+    let nextAction: string | undefined = undefined;
 
     if (!payment || payment.status === 'pending') {
       flowStage = 'awaiting_payment';
@@ -460,9 +460,9 @@ export async function getOrderFlowStatus(
         if (order.payoutStatus === 'in_escrow') {
           flowStage = 'processing_payout';
           nextAction = 'System: Process payout';
-        } else if (order.payoutStatus === 'processing') {
-          flowStage = 'payout_processing';
-          nextAction = 'System: Complete payout';
+        } else if (['refunded', 'disputed'].includes(order.payoutStatus)) {
+          flowStage = order.payoutStatus;
+          nextAction = `System: ${order.payoutStatus} payout`;
         } else if (order.payoutStatus === 'paid') {
           flowStage = 'completed';
         }
@@ -502,23 +502,23 @@ export async function getPaymentFlowStats(): Promise<{
     const allHolds = await db.select().from(paymentHolds);
 
     const completedOrders = allOrders.filter(
-      (o) => o.deliveryStatus === 'delivered' && o.payoutStatus === 'paid'
+      (o: any) => o.deliveryStatus === 'delivered' && o.payoutStatus === 'paid'
     );
 
-    const pendingPayments = allPayments.filter((p) => p.status === 'pending');
-    const failedPayments = allPayments.filter((p) => p.status === 'failed');
-    const activeEscrows = allHolds.filter((h) => h.holdStatus === 'active');
+    const pendingPayments = allPayments.filter((p: any) => p.status === 'pending');
+    const failedPayments = allPayments.filter((p: any) => p.status === 'failed');
+    const activeEscrows = allHolds.filter((h: any) => h.holdStatus === 'active');
 
     const pendingPayouts = allOrders.filter(
-      (o) => o.payoutStatus === 'in_escrow' || o.payoutStatus === 'processing'
+      (o: any) => o.payoutStatus === 'in_escrow' || o.payoutStatus === 'processing'
     );
 
-    const totalEscrowAmount = activeEscrows.reduce((sum, h) => sum + h.amountCents, 0);
+    const totalEscrowAmount = activeEscrows.reduce((sum: any, h: any) => sum + h.amountCents, 0);
 
-    const deliveredOrders = allOrders.filter((o) => o.deliveryStatus === 'delivered');
+    const deliveredOrders = allOrders.filter((o: any) => o.deliveryStatus === 'delivered');
     const averageTimeToDelivery =
       deliveredOrders.length > 0
-        ? deliveredOrders.reduce((sum, o) => {
+        ? deliveredOrders.reduce((sum: any, o: any) => {
             const created = new Date(o.createdAt).getTime();
             const delivered = new Date(o.updatedAt).getTime();
             return sum + (delivered - created);
@@ -539,4 +539,4 @@ export async function getPaymentFlowStats(): Promise<{
     console.error('Error getting payment flow stats:', err);
     throw err;
   }
-}
+}

@@ -19,6 +19,7 @@ import {
   desc,
   asc,
   ilike,
+  or,
   gte,
   lte,
   sql,
@@ -176,7 +177,7 @@ async function getProductImages(
     .where(eq(productImages.productId, productId))
     .orderBy(asc(productImages.position));
 
-  return images.map((img) => ({
+  return images.map((img: any) => ({
     id: img.id,
     productId: img.productId,
     imageUrl: img.imageUrl,
@@ -326,9 +327,11 @@ export const productsRouter = createTRPCRouter({
 
       // Search filter (title + description)
       if (search) {
-        const searchPattern = `%${search}%`;
         filters.push(
-          sql`(${listings.title} ILIKE ${searchPattern} OR ${listings.description} ILIKE ${searchPattern})`
+          or(
+            ilike(listings.title, `%${search}%`),
+            ilike(listings.description, `%${search}%`)
+          )
         );
       }
 
@@ -381,7 +384,7 @@ export const productsRouter = createTRPCRouter({
 
       // Map to products
       const products = await Promise.all(
-        listingsData.map((listing) => mapListingToProduct(listing))
+        listingsData.map((listing: any) => mapListingToProduct(listing))
       );
 
       return {
@@ -437,7 +440,7 @@ export const productsRouter = createTRPCRouter({
         .limit(input.limit);
 
       return Promise.all(
-        listingsData.map((listing) => mapListingToProduct(listing))
+        listingsData.map((listing: any) => mapListingToProduct(listing))
       );
     }),
 
@@ -522,7 +525,7 @@ export const productsRouter = createTRPCRouter({
 
       // Map to products
       const products = await Promise.all(
-        listingsData.map((listing) => mapListingToProduct(listing))
+        listingsData.map((listing: any) => mapListingToProduct(listing))
       );
 
       return {
@@ -677,3 +680,4 @@ export const productsRouter = createTRPCRouter({
       }
     }),
 });
+

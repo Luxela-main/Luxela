@@ -24,16 +24,16 @@ interface SalesMetrics {
   salesGrowth?: number
 }
 
-/**
- * Calculate metrics from actual sales data
- * This replaces hardcoded percentages with real calculations
- */
+
+
+
+
 const generateMetrics = (orders: any[], previousOrders: any[]): SalesMetrics => {
   const totalSales = orders.length
   const totalRevenue = orders.reduce((sum, order) => sum + (order.amountCents || 0), 0)
   const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0
 
-  // Calculate real growth metrics from previous period
+  
   const previousRevenue = previousOrders.reduce((sum, order) => sum + (order.amountCents || 0), 0)
   const revenueGrowth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0
   const salesGrowth = previousOrders.length > 0 ? ((totalSales - previousOrders.length) / previousOrders.length) * 100 : 0
@@ -52,24 +52,24 @@ export default function Reports() {
   const [timeRange, setTimeRange] = useState("all")
   const [orderStatus, setOrderStatus] = useState("all")
 
-  // Fetch all sales data with real-time updates
+  
   const { data: allSalesData = [], isLoading, error } = (trpc.sales as any).getAllSales.useQuery(
     { status: "all" },
     {
-      staleTime: 1000 * 30, // 30 seconds
-      gcTime: 1000 * 60 * 5, // 5 minutes
-      refetchInterval: 1000 * 60, // 1 minute - reports don't need frequent updates
+      staleTime: 1000 * 30, 
+      gcTime: 1000 * 60 * 5, 
+      refetchInterval: 1000 * 60, 
       refetchOnWindowFocus: true,
     }
   )
 
-  // Fetch listings with cache
+  
   const { data: listingsData = [] } = (trpc.listing as any).getMyListings.useQuery({}, {
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 60 * 5, 
+    gcTime: 1000 * 60 * 30, 
   })
 
-  // Calculate metrics with real data from database
+  
   const metrics = useMemo(() => {
     const now = new Date()
     const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -96,10 +96,10 @@ export default function Reports() {
     )
   }
 
-  // Filter orders by status
+  
   const filteredOrders = orderStatus === "all" ? allSalesData : allSalesData.filter((o: any) => o.orderStatus === orderStatus)
 
-  // Group orders by date for revenue trend
+  
   const getRevenueByDate = () => {
     const grouped: { [key: string]: number } = {}
     filteredOrders.forEach((order: any) => {
@@ -111,7 +111,7 @@ export default function Reports() {
 
   const revenueByDate = getRevenueByDate()
 
-  // Get top selling products
+  
   const getTopProducts = () => {
     const productSales: { [key: string]: { title: string; count: number; revenue: number } } = {}
     filteredOrders.forEach((order: any) => {
@@ -128,13 +128,13 @@ export default function Reports() {
 
   return (
     <div className="px-6 mt-4 md:mt-0">
-      {/* Header */}
+      {}
       <div className="mb-6 md:max-lg:pt-10 pb-6 border-b-2 border-[#E5E7EB]">
         <h1 className="text-2xl font-semibold text-white">Reports & Analytics</h1>
         <p className="text-[#6B7280] mt-1 font-medium">View detailed reports and analytics for your store.</p>
       </div>
 
-      {/* Filters */}
+      {}
       <div className="flex gap-4 mb-6 flex-wrap">
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-40 bg-[#1a1a1a] border-[#333] cursor-pointer">
@@ -165,7 +165,7 @@ export default function Reports() {
         </Button>
       </div>
 
-      {/* Key Metrics - Real Data */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Total Sales</p>
@@ -193,9 +193,9 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Revenue and Products */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Recent Revenue Trend */}
+        {}
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-green-400" />
@@ -227,7 +227,7 @@ export default function Reports() {
           )}
         </div>
 
-        {/* Top Products */}
+        {}
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-blue-400" />
@@ -253,7 +253,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Sales by Status */}
+      {}
       <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 mt-6">
         <h3 className="text-lg font-semibold mb-4">Orders by Status</h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

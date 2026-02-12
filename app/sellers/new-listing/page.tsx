@@ -27,18 +27,18 @@ const NewListing: React.FC = () => {
   const isInitialLoadRef = useRef(true);
   const STORAGE_KEY = 'luxela_listing_form_draft';
 
-  // Fetch listings for edit mode
-  // Type assertion needed because API returns string image URLs but form expects File[]
+  
+  
   const { data: listings = [] } = trpc.listing.getMyListings.useQuery()
 
-  // Helper to get initial form data from localStorage or defaults
+  
   const getInitialFormData = (): FormData => {
     if (typeof window !== 'undefined' && !editId) {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          // Don't restore images as File objects (they can't be serialized)
+          
           return { ...parsed, images: [] };
         }
       } catch (e) {
@@ -57,8 +57,6 @@ const NewListing: React.FC = () => {
       quantity: "",
       showBadge: "do_not_show",
       releaseDuration: "",
-      releaseDurationDays: "",
-      releaseDurationMinutes: "",
       material: "",
       colors: "",
       targetAudience: "",
@@ -100,7 +98,7 @@ const NewListing: React.FC = () => {
   const [formData, setFormData] = useState<FormData>(getInitialFormData());
 
 
-  // Auto-save form data to localStorage whenever it changes (but not images)
+  
   useEffect(() => {
     if (!editId && isInitialLoadRef.current === false && view !== "empty") {
       try {
@@ -112,12 +110,12 @@ const NewListing: React.FC = () => {
     }
   }, [formData, editId, view]);
 
-  // Mark initial load as complete after first render
+  
   useEffect(() => {
     isInitialLoadRef.current = false;
   }, []);
 
-  // Load existing listing if editing
+  
   useEffect(() => {
     const loadExistingListing = async () => {
       if (!editId || !listings || listings.length === 0) {
@@ -129,20 +127,20 @@ const NewListing: React.FC = () => {
         
         const response = listings.find((l) => l.id === editId);
         if (response) {
-          // Safely parse collection items which might be string, array, or object
+          
           let collectionItems: CollectionItem[] = [];
           try {
             if (response.itemsJson) {
               let items = response.itemsJson;
-              // Handle string format
+              
               if (typeof items === 'string') {
                 items = JSON.parse(items);
               }
-              // Ensure we have an array
+              
               if (!Array.isArray(items)) {
                 items = [];
               }
-              // Map items and ensure all required fields are present
+              
               collectionItems = (items as any[]).map((item: any) => ({
                 id: item.id || item.productId || '',
                 title: item.title || '',
@@ -152,7 +150,7 @@ const NewListing: React.FC = () => {
                 category: item.category || '',
                 productId: item.id || item.productId || '',
                 sku: item.sku || '',
-                // Handle images - could be array of strings, array of objects with url property, or single string
+                
                 images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
                 imagesJson: item.imagesJson,
                 sizes: item.sizes || [],
@@ -176,8 +174,6 @@ const NewListing: React.FC = () => {
             quantity: response.quantityAvailable?.toString() || "",
             showBadge: (response.limitedEditionBadge === "show_badge" ? "show_badge" : "do_not_show"),
             releaseDuration: response.releaseDuration || "",
-            releaseDurationDays: "",
-            releaseDurationMinutes: "",
             material: response.materialComposition || "",
             colors: (response.colorsAvailable && Array.isArray(response.colorsAvailable)) ? ((response.colorsAvailable as { colorName: string; colorHex: string; }[]).map((c: any) => String(c.colorName)).join(", ")) : "",
             targetAudience: response.additionalTargetAudience || "",
@@ -221,7 +217,7 @@ const NewListing: React.FC = () => {
     loadExistingListing();
   }, [editId, listings]);
 
-  // Validation functions
+  
   const validateProductInfo = (): { valid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
@@ -389,7 +385,7 @@ const handleBackToListings = () => {
     setActiveTab(tab);
   };
 
-// Handler for single items
+
 const handleSubmitSingle = async () => {
   setIsSubmitting(true);
   try {
@@ -446,10 +442,10 @@ const handleSubmitSingle = async () => {
     if (!allowedAudiences.includes(additionalTargetAudience))
       additionalTargetAudience = "unisex";
 
-    let colorsAvailable = undefined;
+    let colorsAvailable: { colorName: string; colorHex: string }[] | undefined = undefined;
     if (formData.colors) {
-      // Convert comma-separated color names to array of objects with colorName and colorHex
-      // Color palette matching AdditionalInfoForm
+      
+      
       const COLOR_PALETTE: { [key: string]: string } = {
         Black: "#000000",
         White: "#FFFFFF",
@@ -484,7 +480,7 @@ const handleSubmitSingle = async () => {
           const colorName = c.trim();
           return {
             colorName,
-            colorHex: COLOR_PALETTE[colorName] || "#808080" // Default to gray if not found
+            colorHex: COLOR_PALETTE[colorName] || "#808080" 
           };
         });
     }
@@ -528,7 +524,7 @@ const handleSubmitSingle = async () => {
         ? uploadedImageUrls[0]
         : LUXELA_PLACEHOLDER;
 
-    // Store all images as JSON
+    
     const allImages = uploadedImageUrls.length > 0 ? uploadedImageUrls : [LUXELA_PLACEHOLDER];
 
     const supabase = createClient();
@@ -618,7 +614,7 @@ const handleSubmitSingle = async () => {
   }
 };
 
-// Helper to convert File objects to Base64 strings for serialization
+
 const AVAILABLE_COLORS = [
   { name: "Black", hex: "#000000" },
   { name: "White", hex: "#FFFFFF" },
@@ -694,14 +690,14 @@ const convertCollectionItemsForSubmission = async (items: CollectionItem[]): Pro
   );
 };
 
-// Handler for collections
+
 const handleSubmitCollection = async () => {
   setIsSubmitting(true);
   try {
-    // Convert File objects to Base64 strings for submission
+    
     const convertedItems = await convertCollectionItemsForSubmission(formData.collectionItems || []);
     
-    // Generate slug from title if not provided
+    
     let collectionSlug = formData.collectionSlug || "";
     if (!collectionSlug || collectionSlug.trim() === "") {
       collectionSlug = (formData.collectionTitle || "")
@@ -746,7 +742,7 @@ const handleSubmitCollection = async () => {
   const handleCancel = (): void => {
     setView("empty");
     setActiveTab("product-info");
-    // Form data is preserved in localStorage - user will have it if they navigate back
+    
   };
 
   const handleViewListings = () => {
@@ -760,7 +756,7 @@ const handleSubmitCollection = async () => {
   const createSingleMutation = (trpc.listing as any).createSingle.useMutation({
     onSuccess: () => {
       toastSvc.success("Single listing created successfully!");
-      // Clear saved form data after successful submission
+      
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
       }
@@ -813,7 +809,7 @@ const handleSubmitCollection = async () => {
   ).createCollection.useMutation({
     onSuccess: () => {
       toastSvc.success("Collection created successfully!");
-      // Clear saved form data after successful submission
+      
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
       }
@@ -841,7 +837,7 @@ const handleSubmitCollection = async () => {
   ).updateCollection.useMutation({
     onSuccess: () => {
       toastSvc.success("Collection updated successfully!");
-      // Clear saved form data after successful submission
+      
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
       }
@@ -864,7 +860,7 @@ const handleSubmitCollection = async () => {
     },
   });
 
-  // If loading edit mode listing, show loading state
+  
   if (isLoadingExisting) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -876,12 +872,12 @@ const handleSubmitCollection = async () => {
     );
   }
 
-  // Show listings browser if no active view
+  
   if (view === "empty" || showListings) {
     return <ProductListings onAddProduct={handleAddProduct} />;
   }
 
-  // Show creation/editing form
+  
   return (
     <div className="min-h-screen bg-black text-white px-2 lg:px-6 pt-10">
     <div className="flex items-center gap-2 text-sm mb-6 text-gray-400">

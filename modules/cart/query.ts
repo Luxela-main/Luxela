@@ -4,133 +4,130 @@ import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { useAuth } from "@/context/AuthContext";
 
-/**
- * HOOK: Fetch the current user's cart
- * Corresponds to: getCart
- */
-
-
 export const useGetCart = () => {
   const { user, loading: authLoading } = useAuth();
 
   return trpc.cart.getCart.useQuery(undefined, {
-    // ONLY run this query if user exists AND auth is done loading
     enabled: !!user && !authLoading,
-
-    staleTime: 1000 * 60 * 5, // 5 minutes
-
-    // Prevents constant retries on 401/error
+    staleTime: 30 * 1000, // 30 seconds - cart data updates frequently
     retry: false,
-
-    // Optional: keeps the console cleaner during dev
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Refetch when user returns to window
   });
 };
 
-/**
- * HOOK: Add an item to the cart
- * Corresponds to: addToCart
- */
 export const useAddToCart = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.addToCart.useMutation({
-    onSuccess: () => {
-      // toastSvc.success("Item added to cart successfully.");
-      utils.cart.getCart.invalidate();
+    onSuccess: async () => {
+      // Immediately refetch the cart to show newly added items
+      await utils.cart.getCart.refetch();
     },
-    onError: (error) => {
-      // toastSvc.error(error.message || "Failed to add item to cart");
+    onError: (error: any) => {
+      // Extract error message from TRPC error structure
+      let errorMessage = "Failed to add item to cart";
+      let errorCode = "UNKNOWN";
+      
+      // TRPC error structure: { data: { code, message }, message, shape }
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+        errorCode = error.data.code || "UNKNOWN";
+      } else if (error?.message && error.message !== '{}') {
+        errorMessage = error.message;
+        errorCode = error.code || "UNKNOWN";
+      } else if (typeof error === 'string' && error !== '{}') {
+        errorMessage = error;
+      } else if (error?.shape?.message) {
+        // Fallback to shape.message if available
+        errorMessage = error.shape.message;
+        errorCode = error.shape.code || "UNKNOWN";
+      } else if (error && typeof error === 'object') {
+        // Last resort: log full error for debugging
+        console.warn('[useAddToCart] Unable to extract standard error message from:', error);
+      }
+      
+      console.error('[useAddToCart] Error:', { 
+        message: errorMessage,
+        code: errorCode,
+        errorType: typeof error,
+        fullError: error,
+      });
+      toastSvc.error(errorMessage);
     },
   });
 };
 
-/**
- * HOOK: Set or Update quantity
- * Corresponds to: setItemQuantity
- */
 export const useUpdateCartItem = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.setItemQuantity.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toastSvc.success("Cart updated successfully.");
-      utils.cart.getCart.invalidate();
+      await utils.cart.getCart.refetch();
     },
-    onError: (error) => {
-      toastSvc.error(error.message || "Failed to update cart");
+    onError: (error: any) => {
+      const errorMessage = error?.data?.message || error?.message || "Failed to update cart";
+      toastSvc.error(errorMessage);
     },
   });
 };
 
-/**
- * HOOK: Remove a specific item from the cart
- * Corresponds to: removeItem
- */
 export const useRemoveCartItem = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.removeItem.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toastSvc.success("Item removed from cart.");
-      utils.cart.getCart.invalidate();
+      await utils.cart.getCart.refetch();
     },
-    onError: (error) => {
-      toastSvc.error(error.message || "Failed to remove item");
+    onError: (error: any) => {
+      const errorMessage = error?.data?.message || error?.message || "Failed to remove item";
+      toastSvc.error(errorMessage);
     },
   });
 };
 
-/**
- * HOOK: Clear all items and discounts
- * Corresponds to: clearCart
- */
 export const useClearCart = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.clearCart.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toastSvc.success("Cart cleared successfully.");
-      utils.cart.getCart.invalidate();
+      await utils.cart.getCart.refetch();
     },
-    onError: (error) => {
-      toastSvc.error(error.message || "Failed to clear cart");
+    onError: (error: any) => {
+      const errorMessage = error?.data?.message || error?.message || "Failed to clear cart";
+      toastSvc.error(errorMessage);
     },
   });
 };
 
-/**
- * HOOK: Apply a discount code
- * Corresponds to: applyDiscount
- */
 export const useApplyDiscount = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.applyDiscount.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toastSvc.success("Discount applied successfully.");
-      utils.cart.getCart.invalidate();
+      await utils.cart.getCart.refetch();
     },
-    onError: (error) => {
-      toastSvc.error(error.message || "Invalid discount code");
+    onError: (error: any) => {
+      const errorMessage = error?.data?.message || error?.message || "Invalid discount code";
+      toastSvc.error(errorMessage);
     },
   });
 };
 
-/**
- * HOOK: Process checkout
- * Corresponds to: checkout
- */
 export const useCheckout = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.checkout.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toastSvc.success("Order placed successfully!");
-      utils.cart.getCart.invalidate();
+      await utils.cart.getCart.refetch();
     },
-    onError: (error) => {
-      toastSvc.error(error.message || "Checkout failed");
+    onError: (error: any) => {
+      const errorMessage = error?.data?.message || error?.message || "Checkout failed";
+      toastSvc.error(errorMessage);
     },
   });
 };

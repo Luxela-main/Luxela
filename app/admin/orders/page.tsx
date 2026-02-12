@@ -94,7 +94,7 @@ export default function AdminOrdersDashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [deliveryFilter, setDeliveryFilter] = useState('all');
 
-  // Fetch orders data from tRPC
+  
   const { data: ordersData, isLoading: ordersLoading } =
     trpc.orderStatus.getOrdersByStatus.useQuery(
       { status: 'pending' as const, limit: 1000 },
@@ -112,7 +112,7 @@ export default function AdminOrdersDashboard() {
     }
   }, [ordersLoading]);
 
-  // Calculate stats
+  
   const stats = useMemo(() => {
     const orders = ordersData?.orders || [];
     
@@ -139,14 +139,14 @@ export default function AdminOrdersDashboard() {
       pendingOrders,
       completedOrders,
       returnsRequests,
-      totalRevenue: totalRevenue / 100, // Convert from cents
+      totalRevenue: totalRevenue / 100, 
       averageOrderValue: averageOrderValue / 100,
       disputeCount: returnsRequests,
       resolutionRate: totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0,
     };
   }, [ordersData]);
 
-  // Chart data for status distribution
+  
   const statusChartData = useMemo(() => {
     const orders = ordersData?.orders || [];
     const statusCounts: Record<string, number> = {
@@ -174,7 +174,7 @@ export default function AdminOrdersDashboard() {
       }));
   }, [ordersData]);
 
-  // Revenue trend data
+  
   const revenueTrendData = useMemo(() => {
     const orders = ordersData?.orders || [];
     const dailyRevenue: Record<string, number> = {};
@@ -197,7 +197,7 @@ export default function AdminOrdersDashboard() {
       }));
   }, [ordersData]);
 
-  // Filter orders
+  
   const filteredOrders = useMemo(() => {
     let filtered = ordersData?.orders || [];
 
@@ -259,7 +259,7 @@ export default function AdminOrdersDashboard() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Header */}
+      {}
       <div className="mb-4 sm:mb-6 flex flex-col gap-2">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">Orders Management</h1>
         <p className="text-sm sm:text-base text-[#9CA3AF]">
@@ -267,7 +267,7 @@ export default function AdminOrdersDashboard() {
         </p>
       </div>
 
-      {/* Key Metrics */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Package}
@@ -299,9 +299,9 @@ export default function AdminOrdersDashboard() {
         />
       </div>
 
-      {/* Charts */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Status Distribution */}
+        {}
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
             <CardTitle className="text-white">Order Status Distribution</CardTitle>
@@ -345,7 +345,7 @@ export default function AdminOrdersDashboard() {
           </CardContent>
         </Card>
 
-        {/* Revenue Trend */}
+        {}
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
             <CardTitle className="text-white">Revenue Trend (Last 7 Days)</CardTitle>
@@ -386,7 +386,7 @@ export default function AdminOrdersDashboard() {
         </Card>
       </div>
 
-      {/* Dispute & Fulfillment Stats */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
@@ -463,7 +463,7 @@ export default function AdminOrdersDashboard() {
         </Card>
       </div>
 
-      {/* Orders List */}
+      {}
       <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -481,7 +481,7 @@ export default function AdminOrdersDashboard() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Filters */}
+          {}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
@@ -516,7 +516,7 @@ export default function AdminOrdersDashboard() {
             </Select>
           </div>
 
-          {/* Orders Table */}
+          {}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

@@ -57,6 +57,36 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
       links: [
         httpBatchLink({
           url: apiUrl,
+          fetch: async (url, options) => {
+            // Add 180s timeout for tRPC requests (buffer before 300s Vercel limit)
+            // Increased to handle slower batch queries like getApprovedCollections
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 180000);
+            
+            try {
+              const response = await fetch(url, {
+                ...options,
+                signal: controller.signal,
+              });
+              return response;
+            } catch (error) {
+              if (error instanceof TypeError && error.message === 'Failed to fetch') {
+                console.error('[tRPC] Network error - Failed to fetch', {
+                  url,
+                  isAborted: controller.signal.aborted,
+                  timestamp: new Date().toISOString(),
+                });
+              } else if (error instanceof DOMException && error.name === 'AbortError') {
+                console.error('[tRPC] Request timeout - Query took longer than 180 seconds', {
+                  url,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+              throw error;
+            } finally {
+              clearTimeout(timeoutId);
+            }
+          },
           async headers() {
             // Only try to access browser APIs in browser environment
             if (typeof window === 'undefined') {
@@ -77,6 +107,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
               ]);
 
               if (session?.access_token) {
+                console.log('[TRPC-CLIENT] Token found, sending to server');
                 return {
                   authorization: `Bearer ${session.access_token}`,
                 };

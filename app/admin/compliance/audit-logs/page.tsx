@@ -16,7 +16,7 @@ export default function AuditLogsPage() {
   const [actionType, setActionType] = useState<string | undefined>();
   const [search, setSearch] = useState('');
 
-  // Fetch audit logs and summary
+  
   const logsQuery = trpc.adminAuditLogs.getLogs.useQuery({
     limit,
     offset,
@@ -32,7 +32,7 @@ export default function AuditLogsPage() {
   const handleExport = async (format: 'csv' | 'json') => {
     try {
       const result = await exportMutation.mutateAsync({ days, format });
-      // Trigger download
+      
       const blob = new Blob([result.data], {
         type: format === 'json' ? 'application/json' : 'text/csv',
       });
@@ -59,7 +59,7 @@ export default function AuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-light tracking-tight">Audit Logs</h1>
@@ -86,7 +86,7 @@ export default function AuditLogsPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {}
       {summaryQuery.data && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gray-900 border-gray-800">
@@ -142,7 +142,7 @@ export default function AuditLogsPage() {
         </div>
       )}
 
-      {/* Risk Alerts */}
+      {}
       {summaryQuery.data && summaryQuery.data.riskFlags.length > 0 && (
         <Card className="bg-red-500/10 border-red-500/30">
           <CardHeader>
@@ -171,7 +171,7 @@ export default function AuditLogsPage() {
         </Card>
       )}
 
-      {/* Top Admins */}
+      {}
       {summaryQuery.data && summaryQuery.data.topAdmins.length > 0 && (
         <Card className="bg-gray-900 border-gray-800">
           <CardHeader>
@@ -197,7 +197,7 @@ export default function AuditLogsPage() {
         </Card>
       )}
 
-      {/* Filters */}
+      {}
       <div className="flex gap-4">
         <div className="flex-1">
           <Input
@@ -219,7 +219,7 @@ export default function AuditLogsPage() {
         </Select>
       </div>
 
-      {/* Logs Table */}
+      {}
       <Card className="bg-gray-900 border-gray-800">
         <CardHeader>
           <CardTitle className="text-lg font-light">Activity Logs</CardTitle>
@@ -269,7 +269,7 @@ export default function AuditLogsPage() {
             </div>
           )}
 
-          {/* Pagination */}
+          {}
           {logsQuery.data && logsQuery.data.hasMore && (
             <div className="mt-4 flex justify-center">
               <Button

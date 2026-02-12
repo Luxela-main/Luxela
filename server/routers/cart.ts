@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/trpc';
 import { db } from '../db';
-import { buyers, buyerAccountDetails, buyerBillingAddress, carts, cartItems, discounts, listings, orders, sellers } from '../db/schema';
-import { and, eq } from 'drizzle-orm';
+import { buyers, buyerAccountDetails, buyerBillingAddress, carts, cartItems, discounts, listings, orders, sellers, productImages } from '../db/schema';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from "uuid";
@@ -55,6 +55,23 @@ const CartOutput = z.object({
       quantity: z.number().int(),
       unitPriceCents: z.number().int(),
       currency: z.string(),
+      name: z.string().nullable().optional(),
+      image: z.string().nullable().optional(),
+      imagesJson: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+      colors: z.array(z.any()).nullable().optional(),
+      sizes: z.array(z.string()).nullable().optional(),
+      material_composition: z.string().nullable().optional(),
+      careInstructions: z.string().nullable().optional(),
+      refundPolicy: z.string().nullable().optional(),
+      videoUrl: z.string().nullable().optional(),
+      shippingOption: z.string().nullable().optional(),
+      etaDomestic: z.string().nullable().optional(),
+      etaInternational: z.string().nullable().optional(),
+      sku: z.string().nullable().optional(),
+      barcode: z.string().nullable().optional(),
+      metaDescription: z.string().nullable().optional(),
+      category: z.string().nullable().optional(),
     })
   ),
   discount: z
@@ -86,11 +103,148 @@ export const cartRouter = createTRPCRouter({
       try {
         const buyer = await ensureBuyer(userId);
         const cart = await ensureCart(buyer.id);
-        const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cart.id));
+        
+        // Join cart items with listings to get product details including productId for collection items
+        const query = db
+          .select({
+            // Cart item fields
+            id: cartItems.id,
+            cartId: cartItems.cartId,
+            listingId: cartItems.listingId,
+            quantity: cartItems.quantity,
+            unitPriceCents: cartItems.unitPriceCents,
+            currency: cartItems.currency,
+            // Product details from listing
+            name: listings.title,
+            image: listings.image,
+            imagesJson: listings.imagesJson,
+            description: listings.description,
+            // Product reference for collection items image fallback
+            productId: listings.productId,
+            // Collection item details with colors and sizes
+            itemsJson: listings.itemsJson,
+            // Additional listing details
+            materialComposition: listings.materialComposition,
+            colorsAvailable: listings.colorsAvailable,
+            sizesJson: listings.sizesJson,
+            careInstructions: listings.careInstructions,
+            refundPolicy: listings.refundPolicy,
+            videoUrl: listings.videoUrl,
+            shippingOption: listings.shippingOption,
+            etaDomestic: listings.etaDomestic,
+            etaInternational: listings.etaInternational,
+            sku: listings.sku,
+            barcode: listings.barcode,
+            metaDescription: listings.metaDescription,
+            category: listings.category,
+          })
+          .from(cartItems)
+          .leftJoin(listings, eq(cartItems.listingId, listings.id))
+          .where(eq(cartItems.cartId, cart.id));
+        
+        let items = await query;
+        
+        // Parse and enrich items with all collection details
+        items = items.map((item: any) => {
+          // Parse colors from colorsAvailable
+          if (item.colorsAvailable) {
+            try {
+              if (typeof item.colorsAvailable === 'string') {
+                item.colors = JSON.parse(item.colorsAvailable);
+              } else if (Array.isArray(item.colorsAvailable)) {
+                item.colors = item.colorsAvailable;
+              }
+            } catch (e) {
+              console.error('[Cart] Failed to parse colorsAvailable:', e);
+              item.colors = undefined;
+            }
+          }
+          
+          // Parse sizes from sizesJson
+          if (item.sizesJson) {
+            try {
+              if (typeof item.sizesJson === 'string') {
+                item.sizes = JSON.parse(item.sizesJson);
+              } else if (Array.isArray(item.sizesJson)) {
+                item.sizes = item.sizesJson;
+              }
+            } catch (e) {
+              console.error('[Cart] Failed to parse sizesJson:', e);
+              item.sizes = undefined;
+            }
+          }
+          
+          // Map material composition
+          if (item.materialComposition) {
+            item.material_composition = item.materialComposition;
+          }
+          
+          return item;
+        });
+        
+        // Enhance items with product images
+        
+        // Enhance items with product images and collection details (colors, sizes)
+        const itemsWithProductImages = await Promise.all(
+          items.map(async (item: any) => {
+            // If listing has image, use it directly
+            if (item.image) {
+              console.log(`[Cart getCart] Item: ${item.name} - hasImage: true (from listing.image)`);
+              return item;
+            }
+            
+            // If listing has imagesJson, try to parse first image
+            if (item.imagesJson) {
+              try {
+                let images: any[] | any;
+                if (typeof item.imagesJson === 'string') {
+                  const parsed = JSON.parse(item.imagesJson);
+                  images = Array.isArray(parsed) ? parsed : [parsed];
+                } else if (Array.isArray(item.imagesJson)) {
+                  images = item.imagesJson;
+                } else {
+                  images = [];
+                }
+                
+                if (Array.isArray(images) && images.length > 0) {
+                  item.image = images[0];
+                  console.log(`[Cart getCart] Item: ${item.name} - hasImage: true (from imagesJson)`);
+                  return item;
+                }
+              } catch (e) {
+                console.error('[Cart] Failed to parse imagesJson:', e);
+              }
+            }
+            
+            // For collection items without listing image, fetch from productImages table
+            if (item.productId) {
+              try {
+                const productImgs = await db
+                  .select({ imageUrl: productImages.imageUrl })
+                  .from(productImages)
+                  .where(eq(productImages.productId, item.productId))
+                  .limit(1);
+                
+                if (productImgs.length > 0) {
+                  item.image = productImgs[0].imageUrl;
+                  console.log(`[Cart getCart] Item: ${item.name} - hasImage: true (from productImages)`);
+                }
+                
+                return item;
+              } catch (e) {
+                console.error('[Cart] Failed to fetch product images:', e);
+              }
+            }
+            
+            console.log(`[Cart getCart] Item: ${item.name} - hasImage: false (no image found)`);
+            return item;
+          })
+        );
+        
         const discountRow = cart.discountId
           ? (await db.select().from(discounts).where(eq(discounts.id, cart.discountId)))[0]
           : null;
-        return { cart, items, discount: discountRow || null };
+        return { cart, items: itemsWithProductImages, discount: discountRow || null };
       } catch (err: any) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Failed to load cart' });
       }
@@ -119,14 +273,24 @@ export const cartRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'You must be logged in to add items to cart' });
       try {
         const buyer = await ensureBuyer(userId);
         const cart = await ensureCart(buyer.id);
         const listingRows = await db.select().from(listings).where(eq(listings.id, input.listingId));
         const listing = listingRows[0];
         if (!listing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Product not found' });
-        if (listing.type !== 'single') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only single products can be added to cart' });
+        
+        console.log(`[addToCart] Listing:`, { listingId: listing.id, title: listing.title, hasImage: !!listing.image });
+        if (listing.status !== 'approved') throw new TRPCError({ code: 'BAD_REQUEST', message: `Product is not available for purchase (status: ${listing.status})` });
+        // CRITICAL: Validate price data exists before adding to cart
+        if (!listing.priceCents || listing.priceCents <= 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Product price is not set. Please contact the seller.' });
+        if (!listing.currency) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Product currency is not configured. Please contact the seller.' });
+        // Allow both single listings and items within collections
+        if (listing.type !== 'single' && !listing.collectionId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only single products or collection items can be added to cart.' });
+        }
+
 
         const existing = await db
           .select()
@@ -148,8 +312,8 @@ export const cartRouter = createTRPCRouter({
               cartId: cart.id,
               listingId: input.listingId,
               quantity: input.quantity,
-              unitPriceCents: listing.priceCents!,
-              currency: listing.currency!,
+              unitPriceCents: listing.priceCents || 0,
+              currency: listing.currency || 'USD',
             })
             .returning();
           
@@ -169,7 +333,31 @@ export const cartRouter = createTRPCRouter({
           return created;
         }
       } catch (err: any) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Failed to add to cart' });
+        // Ensure we always have a message
+        let errorMessage = 'Failed to add to cart';
+        
+        if (err instanceof TRPCError) {
+          errorMessage = err.message || errorMessage;
+        } else if (err?.message) {
+          errorMessage = err.message;
+        } else if (err?.toString && typeof err.toString === 'function') {
+          const str = err.toString();
+          if (str && str !== '[object Object]') {
+            errorMessage = str;
+          }
+        }
+        
+        console.error('[Cart.addToCart] Error:', {
+          listingId: input.listingId,
+          quantity: input.quantity,
+          message: errorMessage,
+          code: err?.code,
+        });
+        
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+        throw new TRPCError({ code: 'BAD_REQUEST', message: errorMessage });
       }
     }),
 
@@ -219,7 +407,7 @@ export const cartRouter = createTRPCRouter({
               .select()
               .from(listings)
               .where(eq(listings.id, input.listingId))
-              .then(r => r[0]);
+              .then((r: any) => r[0]);
             
             if (listing) {
               await notifyItemRemovedFromCart(buyer.id, input.listingId, listing.title || 'Product');
@@ -412,7 +600,7 @@ export const cartRouter = createTRPCRouter({
           .select()
           .from(buyerAccountDetails)
           .where(eq(buyerAccountDetails.buyerId, buyer.id))
-          .then((r) => r[0]);
+          .then((r: any) => r[0]);
 
         const billingAddress = await db
           .select()
@@ -423,7 +611,7 @@ export const cartRouter = createTRPCRouter({
               eq(buyerBillingAddress.isDefault, true)
             )
           )
-          .then((r) => r[0]);
+          .then((r: any) => r[0]);
 
         if (!accountDetails) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Account details required for checkout' });
         if (!billingAddress) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Billing address required for checkout' });
@@ -437,7 +625,7 @@ export const cartRouter = createTRPCRouter({
 
         let discountCents = 0;
         if (cart.discountId) {
-          const discountRow = await db.select().from(discounts).where(eq(discounts.id, cart.discountId)).then((r) => r[0]);
+          const discountRow = await db.select().from(discounts).where(eq(discounts.id, cart.discountId)).then((r: any) => r[0]);
           if (discountRow && discountRow.active && (!discountRow.expiresAt || new Date(discountRow.expiresAt) > new Date())) {
             if (discountRow.percentOff) discountCents = Math.floor((subtotal * discountRow.percentOff) / 100);
             if (discountRow.amountOffCents) discountCents += discountRow.amountOffCents;
@@ -449,10 +637,10 @@ export const cartRouter = createTRPCRouter({
         // Create orders per item
         const createdOrders = [] as any[];
         for (const it of items) {
-          const listingRow = await db.select().from(listings).where(eq(listings.id, it.listingId)).then((r) => r[0]);
+          const listingRow = await db.select().from(listings).where(eq(listings.id, it.listingId)).then((r: any) => r[0]);
           if (!listingRow) continue;
 
-          const sellerRow = await db.select().from(sellers).where(eq(sellers.id, listingRow.sellerId)).then((r) => r[0]);
+          const sellerRow = await db.select().from(sellers).where(eq(sellers.id, listingRow.sellerId)).then((r: any) => r[0]);
           if (!sellerRow) continue;
 
           const orderId = uuidv4();

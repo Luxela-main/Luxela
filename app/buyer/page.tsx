@@ -151,10 +151,10 @@ const Homepage = () => {
               Try searching by brand name, product name, collection, or category
             </p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 justify-center">
-              <button className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-[#8451E1]/20 border border-[#8451E1]/50 text-[#8451E1] text-xs sm:text-sm font-semibold hover:bg-[#8451E1]/30 transition-all active:scale-95">
+              <button className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-[#8451E1]/20 border border-[#8451E1]/50 text-[#8451E1] text-xs sm:text-sm font-semibold hover:bg-[#8451E1]/30 transition-all active:scale-95 cursor-pointer">
                 Browse All Products
               </button>
-              <button className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-[#1a1a1a] border border-[#333] text-[#acacac] text-xs sm:text-sm font-semibold hover:border-[#8451E1] hover:text-white transition-all active:scale-95">
+              <button className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-[#1a1a1a] border border-[#333] text-[#acacac] text-xs sm:text-sm font-semibold hover:border-[#8451E1] hover:text-white transition-all active:scale-95 cursor-pointer">
                 View Collections
               </button>
             </div>
@@ -240,7 +240,7 @@ const Homepage = () => {
                         <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white mb-2 sm:mb-3">New Arrivals</h2>
                         <p className="text-[#999] text-sm sm:text-base md:text-lg">Latest additions to our exclusive collection</p>
                       </div>
-                      <a href="/buyer/browse" className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-[#8451E1]/20 border border-[#8451E1]/50 text-[#8451E1] hover:bg-[#8451E1]/30 transition-all font-semibold text-xs sm:text-sm active:scale-95 whitespace-nowrap">
+                      <a href="/buyer/browse" className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg bg-[#8451E1]/20 border border-[#8451E1]/50 text-[#8451E1] hover:bg-[#8451E1]/30 transition-all font-semibold text-xs sm:text-sm active:scale-95 whitespace-nowrap cursor-pointer">
                         View All →
                       </a>
                     </div>
@@ -257,3 +257,5 @@ const Homepage = () => {
 };
 
 export default Homepage;
+
+

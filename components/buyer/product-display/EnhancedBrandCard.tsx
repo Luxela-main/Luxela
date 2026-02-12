@@ -192,7 +192,7 @@ export default function EnhancedBrandCard({
 
                 <button
                   onClick={handleMessage}
-                  className="p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                  className="p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors cursor-pointer"
                   title="Message brand"
                 >
                   <MessageCircle className="w-5 h-5 text-gray-600" />
@@ -201,7 +201,7 @@ export default function EnhancedBrandCard({
                 <button
                   onClick={handleFollow}
                   disabled={isFollowLoading}
-                  className="p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors disabled:opacity-50"
+                  className="p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   title={isFollowing ? 'Unfollow' : 'Follow'}
                 >
                   <Heart
@@ -283,7 +283,7 @@ export default function EnhancedBrandCard({
 
               <button
                 onClick={handleMessage}
-                className="p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                className="p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors cursor-pointer"
                 title="Message brand"
               >
                 <MessageCircle className="w-5 h-5 text-gray-600" />
@@ -292,7 +292,7 @@ export default function EnhancedBrandCard({
               <button
                 onClick={handleFollow}
                 disabled={isFollowLoading}
-                className="p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors disabled:opacity-50"
+                className="p-3 rounded-lg border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <Heart
                   className="w-5 h-5"

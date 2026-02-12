@@ -119,7 +119,7 @@ export default function Sales() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] pb-8">
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
+        {}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-6 border-b-2 border-[#E5E7EB]">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Sales</h1>
@@ -130,7 +130,7 @@ export default function Sales() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-[#1a1a1a] rounded-lg p-4 border-l-4 border-l-[#E5E7EB] hover:border-l-[#6B7280] transition-colors">
             <div className="flex items-center justify-between">
@@ -177,7 +177,7 @@ export default function Sales() {
           </div>
         </div>
 
-        {/* Tabs and Controls */}
+        {}
         <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto">
             {tabs.map((tab) => (
@@ -210,9 +210,9 @@ export default function Sales() {
           </div>
         </div>
 
-        {/* Sales Table - Desktop */}
+        {}
         <div className="hidden md:block bg-[#1a1a1a] rounded-lg overflow-hidden border border-[#2a2a2a]">
-          {/* Header Row */}
+          {}
           <div className="grid grid-cols-12 gap-4 p-4 border-b border-[#2a2a2a] bg-[#141414]">
             <div className="col-span-1 text-gray-400 text-xs font-semibold uppercase">
               <input type="checkbox" className="w-4 h-4 rounded border-gray-600" />
@@ -226,7 +226,7 @@ export default function Sales() {
             <div className="col-span-1 text-gray-400 text-xs font-semibold uppercase">Action</div>
           </div>
 
-          {/* Rows */}
+          {}
           {paginatedSales.length === 0 ? (
             <div className="p-8 text-center">
               <Package className="mx-auto mb-4 text-gray-600" size={48} />
@@ -266,7 +266,7 @@ export default function Sales() {
                     {order.payoutStatus === 'paid'
                       ? '✓ Paid'
                       : order.payoutStatus === 'processing'
-                        ? '⏱ Processing'
+                        ? '⏳ Processing'
                         : '🔒 In Escrow'}
                   </span>
                 </div>
@@ -292,7 +292,7 @@ export default function Sales() {
           )}
         </div>
 
-        {/* Sales Cards - Mobile */}
+        {}
         <div className="md:hidden space-y-3">
           {paginatedSales.length === 0 ? (
             <div className="bg-[#1a1a1a] rounded-lg p-8 text-center border border-[#2a2a2a]">
@@ -355,8 +355,8 @@ export default function Sales() {
                     {order.payoutStatus === 'paid'
                       ? '✓ Paid'
                       : order.payoutStatus === 'processing'
-                        ? '⏱ Processing'
-                        : '🔒 Escrow'}
+                        ? '⏳ Processing'
+                        : '🔒 In Escrow'}
                   </span>
                 </div>
               </div>
@@ -364,7 +364,7 @@ export default function Sales() {
           )}
         </div>
 
-        {/* Pagination */}
+        {}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
             <button
@@ -401,7 +401,7 @@ export default function Sales() {
           </div>
         )}
 
-        {/* Order Details Modal */}
+        {}
         {selectedOrder && selectedOrderData && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-[#1a1a1a] rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -421,7 +421,7 @@ export default function Sales() {
               </div>
 
               <div className="p-4 sm:p-6 space-y-6">
-                {/* Status */}
+                {}
                 <div className={`${getStatusBg(selectedOrderData.deliveryStatus)} border rounded-lg p-4`}>
                   <div className="flex items-center justify-between">
                     <h3 className="text-white font-semibold">Delivery Status</h3>
@@ -434,7 +434,7 @@ export default function Sales() {
                   </div>
                 </div>
 
-                {/* Order Summary */}
+                {}
                 <div className="border border-[#333] rounded-lg p-4">
                   <h3 className="text-white font-semibold mb-4">Order Summary</h3>
                   <div className="space-y-3">
@@ -465,7 +465,7 @@ export default function Sales() {
                   </div>
                 </div>
 
-                {/* Payment Status */}
+                {}
                 <div className="border border-[#333] rounded-lg p-4">
                   <h3 className="text-white font-semibold mb-4">Payment Status</h3>
                   <div className="space-y-2">
@@ -483,20 +483,20 @@ export default function Sales() {
                         {selectedOrderData.payoutStatus === 'paid'
                           ? '✓ Paid'
                           : selectedOrderData.payoutStatus === 'processing'
-                            ? '⏱ Processing'
+                            ? '⏳ Processing'
                             : '🔒 In Escrow'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Shipping Address */}
+                {}
                 <div className="border border-[#333] rounded-lg p-4">
                   <h3 className="text-white font-semibold mb-3">Shipping Address</h3>
                   <p className="text-gray-300 text-sm">{selectedOrderData.shippingAddress || 'N/A'}</p>
                 </div>
 
-                {/* Actions */}
+                {}
                 <div className="flex flex-col sm:flex-row gap-3">
                   {selectedOrderData.deliveryStatus !== 'delivered' && (
                     <button
@@ -536,3 +536,4 @@ export default function Sales() {
     </div>
   );
 }
+

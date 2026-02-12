@@ -15,7 +15,7 @@ export default function EnhancedAnalyticsPage() {
   const [days, setDays] = useState(30);
   const [activeTab, setActiveTab] = useState('funnel');
 
-  // Fetch data
+  
   const funnelQuery = trpc.adminAnalytics.getFunnelAnalysis.useQuery({ days });
   const sellerPerfQuery = trpc.adminAnalytics.getSellerPerformance.useQuery({ days, limit: 10 });
   const conversionQuery = trpc.adminAnalytics.getConversionAnalysis.useQuery({ days });
@@ -23,7 +23,7 @@ export default function EnhancedAnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-light tracking-tight">Enhanced Analytics</h1>
@@ -35,7 +35,7 @@ export default function EnhancedAnalyticsPage() {
         </Button>
       </div>
 
-      {/* Time Period Selector */}
+      {}
       <div className="flex gap-2">
         {[7, 30, 90, 365].map((d) => (
           <Button
@@ -49,7 +49,7 @@ export default function EnhancedAnalyticsPage() {
         ))}
       </div>
 
-      {/* Tabs */}
+      {}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 bg-black border border-gray-800">
           <TabsTrigger value="funnel">Funnel Analysis</TabsTrigger>
@@ -58,9 +58,9 @@ export default function EnhancedAnalyticsPage() {
           <TabsTrigger value="products">Product Performance</TabsTrigger>
         </TabsList>
 
-        {/* Funnel Analysis Tab */}
+        {}
         <TabsContent value="funnel" className="space-y-6">
-          {funnelQuery.data && (
+          {funnelQuery.data?.stages && funnelQuery.data.stages.length > 0 && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {funnelQuery.data.stages.map((stage: typeof funnelQuery.data.stages[number]) => (
@@ -81,14 +81,14 @@ export default function EnhancedAnalyticsPage() {
                 ))}
               </div>
 
-              {/* Funnel Visualization */}
+              {}
               <Card className="bg-gray-900 border-gray-800">
                 <CardHeader>
                   <CardTitle className="text-lg font-light">Funnel Flow</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {funnelQuery.data.stages.map((stage: typeof funnelQuery.data.stages[number], idx: number) => (
+                    {funnelQuery.data.stages?.map((stage: typeof funnelQuery.data.stages[number], idx: number) => (
                       <div key={stage.stage}>
                         <div className="flex justify-between mb-1">
                           <span className="text-sm font-medium capitalize">{stage.stage.replace(/_/g, ' ')}</span>
@@ -108,7 +108,7 @@ export default function EnhancedAnalyticsPage() {
                 </CardContent>
               </Card>
 
-              {/* Key Metrics */}
+              {}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="bg-gray-900 border-gray-800">
                   <CardHeader>
@@ -140,9 +140,9 @@ export default function EnhancedAnalyticsPage() {
           )}
         </TabsContent>
 
-        {/* Seller Performance Tab */}
+        {}
         <TabsContent value="sellers" className="space-y-6">
-          {sellerPerfQuery.data && (
+          {sellerPerfQuery.data && Array.isArray(sellerPerfQuery.data) && sellerPerfQuery.data.length > 0 && (
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
                 <CardTitle className="text-lg font-light">Top Selling Sellers</CardTitle>
@@ -192,9 +192,9 @@ export default function EnhancedAnalyticsPage() {
           )}
         </TabsContent>
 
-        {/* Conversion Analysis Tab */}
+        {}
         <TabsContent value="conversion" className="space-y-6">
-          {conversionQuery.data && (
+          {conversionQuery.data && Array.isArray(conversionQuery.data) && conversionQuery.data.length > 0 && (
             <>
               <Card className="bg-gray-900 border-gray-800">
                 <CardHeader>
@@ -264,9 +264,9 @@ export default function EnhancedAnalyticsPage() {
           )}
         </TabsContent>
 
-        {/* Product Performance Tab */}
+        {}
         <TabsContent value="products" className="space-y-6">
-          {productPerfQuery.data && (
+          {productPerfQuery.data && Array.isArray(productPerfQuery.data) && productPerfQuery.data.length > 0 && (
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
                 <CardTitle className="text-lg font-light">Top Performing Products</CardTitle>

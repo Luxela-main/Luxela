@@ -10,6 +10,7 @@ import {
   Package,
   Clock,
   AlertCircle,
+  RotateCcw,
 } from "lucide-react";
 
 interface EnhancedListingCardProps {
@@ -24,9 +25,11 @@ interface EnhancedListingCardProps {
   createdAt: Date;
   type: "single" | "collection";
   itemCount?: number;
+  status?: string;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onRestock: () => void;
 }
 
 export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
@@ -41,11 +44,20 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
   createdAt,
   type,
   itemCount,
+  status,
   onView,
   onEdit,
   onDelete,
+  onRestock,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Debug status
+  React.useEffect(() => {
+    if (status) {
+      console.log(`Card ${id}: status = ${status}`);
+    }
+  }, [status, id]);
 
   // Determine stock status
   const getStockStatus = () => {
@@ -104,6 +116,26 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
             >
               {stockStatus.label}
             </div>
+            {status === "pending" && (
+              <div className="backdrop-blur-md bg-amber-500/20 border border-amber-500/40 rounded-lg px-3 py-1.5 text-xs font-semibold text-amber-300 uppercase tracking-widest">
+                Pending
+              </div>
+            )}
+            {status === "revision_requested" && (
+              <div className="backdrop-blur-md bg-orange-500/20 border border-orange-500/40 rounded-lg px-3 py-1.5 text-xs font-semibold text-orange-300 uppercase tracking-widest">
+                Needs Revision
+              </div>
+            )}
+            {status === "rejected" && (
+              <div className="backdrop-blur-md bg-red-500/20 border border-red-500/40 rounded-lg px-3 py-1.5 text-xs font-semibold text-red-300 uppercase tracking-widest">
+                Rejected
+              </div>
+            )}
+            {(status === "approved" || status === "listed") && (
+              <div className="backdrop-blur-md bg-emerald-500/20 border border-emerald-500/40 rounded-lg px-3 py-1.5 text-xs font-semibold text-emerald-300 uppercase tracking-widest">
+                Listed
+              </div>
+            )}
           </div>
 
           {/* Views & Conversions - Top Left */}
@@ -141,6 +173,13 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
               title="Edit listing"
             >
               <SquarePen className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onRestock}
+              className="p-3 rounded-full bg-blue-600/30 backdrop-blur-md border border-blue-400/30 text-blue-300 hover:bg-blue-600/50 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
+              title="Restock"
+            >
+              <RotateCcw className="w-5 h-5" />
             </button>
             <button
               onClick={onDelete}

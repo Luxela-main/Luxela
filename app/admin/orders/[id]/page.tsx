@@ -81,19 +81,19 @@ export default function OrderDetailPage() {
   const [disputeReason, setDisputeReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
 
-  // Fetch order details
+  
   const { data: orderData, isLoading } = trpc.orderStatus.getOrderById.useQuery(
     { orderId }
   ) as { data: OrderDetail | undefined; isLoading: boolean };
 
   const handleResolveDispute = () => {
-    // Handle dispute resolution
+    
     setShowDisputeDialog(false);
     setDisputeReason('');
   };
 
   const handleCancelOrder = () => {
-    // Handle order cancellation
+    
     setShowCancelDialog(false);
     setCancelReason('');
   };
@@ -122,7 +122,7 @@ export default function OrderDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/admin/orders">
@@ -142,7 +142,7 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Order Status Overview */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
           <CardContent className="pt-6">
@@ -200,11 +200,11 @@ export default function OrderDetailPage() {
         </Card>
       </div>
 
-      {/* Main Content */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Order Details */}
+        {}
         <div className="lg:col-span-2 space-y-6">
-          {/* Product Information */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -244,7 +244,7 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Customer Information */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -276,7 +276,7 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Shipping Information */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -309,7 +309,7 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Timeline/History */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -344,9 +344,9 @@ export default function OrderDetailPage() {
           </Card>
         </div>
 
-        {/* Right Column - Actions */}
+        {}
         <div className="space-y-6">
-          {/* Quick Actions */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white">Actions</CardTitle>
@@ -377,7 +377,7 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Order Summary */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white">Order Summary</CardTitle>
@@ -404,7 +404,7 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Related Orders */}
+          {}
           <Card className="bg-[#0e0e0e] border-[#1a1a1a]">
             <CardHeader>
               <CardTitle className="text-white text-sm">Customer Info</CardTitle>
@@ -428,7 +428,7 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Dispute Dialog */}
+      {}
       <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
         <DialogContent className="bg-[#1a1a1a] border-[#2a2a2a]">
           <DialogHeader>
@@ -468,7 +468,7 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Cancel Dialog */}
+      {}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <DialogContent className="bg-[#1a1a1a] border-[#2a2a2a]">
           <DialogHeader>

@@ -162,7 +162,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         collectionItemCount = collectionItemsList.length;
 
         if (collectionItemsList.length > 0) {
-          const productIds = collectionItemsList.map(item => item.productId);
+          const productIds = collectionItemsList.map((item: any) => item.productId);
 
           // Fetch all products in the collection
           const productsInCollection = await db
@@ -185,7 +185,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
 
           // Build map of images by product ID
           const imagesByProductId: Record<string, string[]> = {};
-          allProductImages.forEach(img => {
+          allProductImages.forEach((img: any) => {
             if (!imagesByProductId[img.productId]) {
               imagesByProductId[img.productId] = [];
             }
@@ -194,7 +194,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
 
           // Build map of product specs by product ID
           const specsByProductId: Record<string, any> = {};
-          productListings.forEach(listing => {
+          productListings.forEach((listing: any) => {
             if (listing.productId) {
               let colors = null;
               let sizes = null;
@@ -222,14 +222,14 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
 
           // Build collection products array
           collectionProducts = collectionItemsList
-            .map(collectionItem => {
-              const product = productsInCollection.find(p => p.id === collectionItem.productId);
+            .map((collectionItem: any) => {
+              const product = productsInCollection.find((p: any) => p.id === collectionItem.productId);
               if (!product) return null;
 
               const productImages = imagesByProductId[product.id] || [];
               const specs = specsByProductId[product.id] || {};
               const imagesJsonStr = productImages.length > 0
-                ? JSON.stringify(productImages.map(url => ({ url })))
+                ? JSON.stringify(productImages.map((url: any) => ({ url })))
                 : null;
 
               collectionTotalPrice += (product.priceCents || 0) / 100;
@@ -249,7 +249,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
                 sizes: specs.sizes,
               };
             })
-            .filter((p) => p !== null);
+            .filter((p: any) => p !== null);
         }
       }
 
@@ -424,12 +424,36 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
     .query(async ({ input }) => {
       console.log('[BUYER_CATALOG] getListingById called for:', input.listingId);
 
-      // Fetch the listing
-      const listing = await db
+      // Fetch the listing - try direct approved listing first
+      let listing = await db
         .select()
         .from(listings)
         .where(and(eq(listings.id, input.listingId), eq(listings.status, 'approved')))
         .limit(1);
+
+      // If not found, check if it's part of an approved collection
+      if (listing.length === 0) {
+        const item = await db
+          .select()
+          .from(listings)
+          .where(eq(listings.id, input.listingId))
+          .limit(1);
+        
+        if (item.length > 0 && item[0].collectionId) {
+          const parent = await db
+            .select()
+            .from(listings)
+            .where(and(
+              eq(listings.id, item[0].collectionId),
+              eq(listings.status, 'approved')
+            ))
+            .limit(1);
+          
+          if (parent.length > 0) {
+            listing = item;
+          }
+        }
+      }
 
       if (listing.length === 0) {
         throw new Error('Listing not found or not approved');
@@ -643,7 +667,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         .selectDistinct({ productId: collectionItems.productId })
         .from(collectionItems);
 
-      const productIdsInCollections = productsInCollections.map((item) => item.productId);
+      const productIdsInCollections = productsInCollections.map((item: any) => item.productId);
       
       console.log('[DEBUG getApprovedListingsCatalog] Collection filter:', {
         collectionCount: productIdsInCollections.length,
@@ -697,24 +721,40 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       
       console.log('[DEBUG getApprovedListingsCatalog] Listings query result:', {
         fetchedCount: approvedListings.length,
-        types: approvedListings.map(l => ({ id: l.id.slice(0, 8), type: l.type, productId: l.productId?.slice(0, 8) })),
+        types: approvedListings.map((l: any) => ({ id: l.id.slice(0, 8), type: l.type, productId: l.productId?.slice(0, 8) })),
       });
 
       const listingsWithSeller = await Promise.all(
-        approvedListings.map(async (listing) => {
-          const seller = await db
-            .select()
-            .from(sellers)
-            .where(eq(sellers.id, listing.sellerId))
-            .limit(1);
+        approvedListings.map(async (listing: any) => {
+          let seller: any = null;
+          let sellerBiz: any = null;
+          
+          try {
+            const sellerData = await db
+              .select()
+              .from(sellers)
+              .where(eq(sellers.id, listing.sellerId))
+              .limit(1);
+            seller = sellerData;
 
-          const sellerBiz = seller.length > 0
-            ? await db
-                .select()
-                .from(sellerBusiness)
-                .where(eq(sellerBusiness.sellerId, seller[0].id))
-                .limit(1)
-            : null;
+            if (seller && seller.length > 0) {
+              try {
+                const sellerBizData = await db
+                  .select()
+                  .from(sellerBusiness)
+                  .where(eq(sellerBusiness.sellerId, seller[0].id))
+                  .limit(1);
+                sellerBiz = sellerBizData;
+              } catch (err: any) {
+                console.warn('[BUYER_CATALOG] Failed to fetch sellerBusiness for seller:', seller[0].id, err?.message);
+                sellerBiz = null;
+              }
+            }
+          } catch (err: any) {
+            console.warn('[BUYER_CATALOG] Failed to fetch seller:', listing.sellerId, err?.message);
+            seller = null;
+            sellerBiz = null;
+          }
 
           // Fetch images - ALWAYS from productImages table for complete image data
           let listingImages: any[] = [];
@@ -790,8 +830,8 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
             category: listing.category,
             type: (listing.type ?? 'single') as 'single' | 'collection',
             seller: {
-              id: seller[0].id,
-              brandName: sellerBiz?.[0]?.brandName ?? null,
+              id: seller && seller.length > 0 ? seller[0].id : listing.sellerId,
+              brandName: (sellerBiz && sellerBiz.length > 0) ? sellerBiz[0]?.brandName ?? null : null,
             },
             status,
             createdAt: listing.createdAt,
@@ -886,7 +926,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         .where(eq(collectionItems.collectionId, input.collectionId))
         .orderBy(collectionItems.position);
 
-      const productIds = collectionItemsList.map((item) => item.productId);
+      const productIds = collectionItemsList.map((item: any) => item.productId);
       let productsInCollection: any[] = [];
       let allProductImages: any[] = [];
       let productListings: any[] = [];
@@ -945,7 +985,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       });
 
       const collectionProducts = collectionItemsList
-        .map((collectionItem) => {
+        .map((collectionItem: any) => {
           const product = productsInCollection.find(
             (p) => p.id === collectionItem.productId
           );
@@ -974,7 +1014,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
             colors: productData.colors,
           };
         })
-        .filter((p) => p !== null);
+        .filter((p: any) => p !== null);
 
       let listingImages: any[] = [];
       if (collectionListing.productId) {

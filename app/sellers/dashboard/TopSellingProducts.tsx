@@ -31,9 +31,9 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
   };
 
   return (
-    <div className="bg-[#1a1a1a] rounded-lg overflow-hidden border-2 border-l-4 border-l-[#D1D5DB] bg-gradient-to-br from-[#D1D5DB]/10 via-transparent border-[#D1D5DB]/40">
-      <div className="flex justify-between items-center p-4 border-b-2 border-b-[#D1D5DB]/30">
-        <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#D1D5DB] to-[#E5E7EB]">Top Selling Product</h3>
+    <div className="bg-[#1a1a1a] rounded-lg overflow-x-auto border-2 border-l-4 border-l-[#D1D5DB] bg-gradient-to-br from-[#D1D5DB]/10 via-transparent border-[#D1D5DB]/40">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 sm:p-5 border-b-2 border-b-[#D1D5DB]/30">
+        <h3 className="text-base sm:text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#D1D5DB] to-[#E5E7EB]">Top Selling Product</h3>
         <Button
           variant="outline"
           className="bg-transparent border-[#D1D5DB]/40 text-white hover:bg-[#D1D5DB]/20 hover:border-[#D1D5DB]/60 text-sm"
@@ -41,7 +41,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
           View All
         </Button>
       </div>
-      <div className="grid grid-cols-6 gap-4 p-4 border-b-2 border-b-[#D1D5DB]/30 text-gray-400 text-sm bg-gradient-to-r from-[#D1D5DB]/5 to-transparent">
+      <div className="hidden sm:grid grid-cols-6 gap-4 p-4 sm:p-5 border-b-2 border-b-[#D1D5DB]/30 text-gray-400 text-xs sm:text-sm bg-gradient-to-r from-[#D1D5DB]/5 to-transparent">
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -59,7 +59,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
       {currentProducts.length > 0 ? (
         currentProducts.map((product, index) => (
           <div key={product.id || index} className="border-b border-[#D1D5DB]/20 hover:bg-[#D1D5DB]/5 transition-colors">
-            <div className="grid grid-cols-6 gap-4 p-4 items-center">
+            <div className="grid sm:grid-cols-6 gap-4 p-4 sm:p-5 items-center">
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -129,7 +129,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
             size="sm"
             onClick={goToPreviousPage}
             disabled={currentPage === 1}
-            className="bg-transparent border-[#D1D5DB]/40 hover:bg-[#D1D5DB]/20 hover:border-[#D1D5DB]/60 disabled:opacity-50"
+            className="bg-transparent border-[#D1D5DB]/40 hover:bg-[#D1D5DB]/20 hover:border-[#D1D5DB]/60 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Previous
@@ -144,7 +144,7 @@ export function TopSellingProducts({ products }: TopSellingProductsProps) {
             size="sm"
             onClick={goToNextPage}
             disabled={currentPage === totalPages || totalPages === 0}
-            className="bg-transparent border-[#D1D5DB]/40 hover:bg-[#D1D5DB]/20 hover:border-[#D1D5DB]/60 disabled:opacity-50"
+            className="bg-transparent border-[#D1D5DB]/40 hover:bg-[#D1D5DB]/20 hover:border-[#D1D5DB]/60 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           >
             Next
             <ChevronRight className="h-4 w-4 ml-1" />

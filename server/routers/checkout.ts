@@ -11,6 +11,7 @@ import {
   confirmPayment,
   getBuyerActiveOrders,
 } from '../services/escrowService';
+import { notifyDeliveryConfirmed } from '../services/notificationService';
 import {
   createFiatPaymentLink,
   createStablecoinPaymentLink,
@@ -150,7 +151,7 @@ export const checkoutRouter = createTRPCRouter({
 
         // Fetch listing details for each item
         const itemsWithDetails = await Promise.all(
-          items.map(async (item) => {
+          items.map(async (item: any) => {
             const [listing] = await db
               .select()
               .from(listings)
@@ -163,6 +164,21 @@ export const checkoutRouter = createTRPCRouter({
               });
             }
 
+            // Use imagesJson as fallback when image is NULL
+            let imageUrl = listing.image;
+            if (!imageUrl && listing.imagesJson) {
+              try {
+                const images = JSON.parse(listing.imagesJson);
+                if (Array.isArray(images) && images.length > 0) {
+                  imageUrl = images[0];
+                } else if (images && images.imageUrl) {
+                  imageUrl = images.imageUrl;
+                }
+              } catch (e) {
+                // Fall back to empty if parsing fails
+              }
+            }
+
             return {
               id: item.id,
               listingId: item.listingId,
@@ -171,14 +187,14 @@ export const checkoutRouter = createTRPCRouter({
               unitPriceCents: item.unitPriceCents,
               totalPriceCents: item.unitPriceCents * item.quantity,
               currency: item.currency,
-              image: listing.image || undefined,
+              image: imageUrl || undefined,
               sellerId: listing.sellerId,
             };
           })
         );
 
         // Calculate totals
-        const subtotalCents = itemsWithDetails.reduce((sum, item) => sum + item.totalPriceCents, 0);
+        const subtotalCents = itemsWithDetails.reduce((sum: any, item: any) => sum + item.totalPriceCents, 0);
         const shippingCents = 50000; // ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¦500 flat rate (in cents)
         const totalCents = subtotalCents + shippingCents;
 
@@ -269,7 +285,7 @@ export const checkoutRouter = createTRPCRouter({
 
         // Get all unique sellers from cart items
         const itemsWithListings = await Promise.all(
-          items.map(async (item) => {
+          items.map(async (item: any) => {
             const [listing] = await db
               .select()
               .from(listings)
@@ -298,7 +314,7 @@ export const checkoutRouter = createTRPCRouter({
         }
 
         // Calculate total
-        const totalCents = items.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0);
+        const totalCents = items.reduce((sum: any, item: any) => sum + item.unitPriceCents * item.quantity, 0);
         const totalAmount = totalCents / 100; // Convert to currency units
 
         // Get seller ID from the primary listing (already validated to be same for all items)
@@ -372,7 +388,7 @@ export const checkoutRouter = createTRPCRouter({
         const orderResult = await createOrderFromCart(
           buyer.id,
           sellerId,
-          items.map((item) => ({
+          items.map((item: any) => ({
             listingId: item.listingId,
             quantity: item.quantity,
             unitPriceCents: item.unitPriceCents,
@@ -647,7 +663,7 @@ export const checkoutRouter = createTRPCRouter({
 
         const buyerOrders = await query;
 
-        return buyerOrders.map((order) => ({
+        return buyerOrders.map((order: any) => ({
           id: order.id,
           buyerId: order.buyerId,
           sellerId: order.sellerId,
@@ -716,6 +732,11 @@ export const checkoutRouter = createTRPCRouter({
           })
           .where(eq(orders.id, input.orderId))
           .returning();
+
+        // Notify seller that delivery is confirmed
+        if (updated.sellerId && updated.buyerId) {
+          await notifyDeliveryConfirmed(updated.sellerId, updated.buyerId, updated.id);
+        }
 
         return {
           id: updated.id,

@@ -301,7 +301,7 @@ export const inventoryRouter = createTRPCRouter({
           eq(inventoryReservations.status, 'reserved')
         );
 
-      const totalReserved = reservations.reduce((acc, r) => acc + r.quantity, 0);
+      const totalReserved = reservations.reduce((acc: any, r: any) => acc + r.quantity, 0);
       const quantityAvailable = Math.max(0, (listing[0].quantityAvailable || 0) - totalReserved);
 
       return {

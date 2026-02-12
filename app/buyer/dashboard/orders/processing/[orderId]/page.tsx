@@ -31,15 +31,15 @@ export default function ProcessingOrderDetailPage() {
     { retry: 2, retryDelay: 1000 }
   );
 
-  // Initialize real-time order syncing with polling
+  
   const { startPolling } = useRealtimeOrders({
     enabled: true,
-    refetchInterval: 30000, // Poll every 30 seconds
-    refetchOnWindowFocus: true, // Refresh when user returns to tab
-    refetchOnInteraction: true, // Refresh on user interactions
+    refetchInterval: 30000, 
+    refetchOnWindowFocus: true, 
+    refetchOnInteraction: true, 
   });
 
-  // Start polling when component mounts
+  
   useEffect(() => {
     startPolling();
   }, [startPolling]);
@@ -131,7 +131,7 @@ export default function ProcessingOrderDetailPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 px-4 py-2 rounded bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition text-sm mb-6"
+            className="flex items-center gap-2 px-4 py-2 rounded bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition text-sm mb-6 cursor-pointer"
           >
             <ArrowLeft size={18} />
             Back
@@ -144,7 +144,7 @@ export default function ProcessingOrderDetailPage() {
             </div>
             <button
               onClick={() => refetch()}
-              className="ml-auto px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition"
+              className="ml-auto px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition cursor-pointer"
             >
               Retry
             </button>
@@ -168,16 +168,16 @@ export default function ProcessingOrderDetailPage() {
 
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 px-4 py-2 rounded bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition text-sm mb-6"
+          className="flex items-center gap-2 px-4 py-2 rounded bg-[#1a1a1a] hover:bg-[#252525] text-gray-400 hover:text-white transition text-sm mb-6 cursor-pointer"
         >
           <ArrowLeft size={18} />
           Back to Processing Orders
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {}
           <div className="lg:col-span-2 space-y-6">
-            {/* Status Section */}
+            {}
             <div className="bg-yellow-500/10 border border-[#333] rounded-lg p-6">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -203,7 +203,7 @@ export default function ProcessingOrderDetailPage() {
               </p>
             </div>
 
-            {/* Product Information */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Product Information</h3>
 
@@ -228,7 +228,7 @@ export default function ProcessingOrderDetailPage() {
               </div>
             </div>
 
-            {/* Tracking Timeline */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-6">Tracking Timeline</h3>
               <div className="space-y-4">
@@ -269,7 +269,7 @@ export default function ProcessingOrderDetailPage() {
               </div>
             </div>
 
-            {/* Shipping Details */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Shipping Address</h3>
               <div className="space-y-2">
@@ -282,9 +282,9 @@ export default function ProcessingOrderDetailPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {}
           <div className="space-y-6">
-            {/* Order Summary */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Order Summary</h3>
               <div className="space-y-3">
@@ -307,7 +307,7 @@ export default function ProcessingOrderDetailPage() {
               </div>
             </div>
 
-            {/* Payment Info */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Payment Details</h3>
               <div className="space-y-3">
@@ -327,7 +327,7 @@ export default function ProcessingOrderDetailPage() {
               </div>
             </div>
 
-            {/* Actions */}
+            {}
             <div className="space-y-3">
               <button className="w-full bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2">
                 <MessageCircle size={16} />
@@ -340,7 +340,7 @@ export default function ProcessingOrderDetailPage() {
               </button>
             </div>
 
-            {/* Info Box */}
+            {}
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
               <p className="text-yellow-400 text-sm font-semibold mb-2">Processing</p>
               <p className="text-gray-300 text-xs">

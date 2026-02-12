@@ -13,29 +13,29 @@ import CTA from "@/components/CTA";
 export default function LandingPage() {
   return (
     <main className="overflow-x-hidden">
-      {/* Header */}
+      {}
       <Header />
 
-      {/* Partners Section */}
+      {}
       <Partners />
 
-      {/* About Section */}
+      {}
       <About />
 
-      {/* Featured Brands Section */}
+      {}
       <Feature />
       <Brand />
 
-      {/* Getting Started Section */}
+      {}
       <GettingStarted />
 
-      {/* FAQ Section */}
+      {}
       <FAQ />
 
-      {/* CTA Section */}
+      {}
       <CTA />
 
-      {/* Footer */}
+      {}
       <Footer />
     </main>
   );

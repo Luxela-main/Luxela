@@ -27,7 +27,7 @@ export default function HelpCenterPage() {
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch FAQs for buyer role with polling
+  
   const faqQuery = trpc.faqs.getFAQsByRole.useQuery(
     {
       userRole: 'buyer',
@@ -40,11 +40,11 @@ export default function HelpCenterPage() {
     }
   );
 
-  // Use optimized polling for FAQ updates
+  
   useOptimizedPolling(faqQuery, {
-    initialInterval: 30000, // 30 seconds for FAQ updates
-    maxInterval: 120000, // Max 2 minutes
-    minInterval: 15000, // Min 15 seconds
+    initialInterval: 30000, 
+    maxInterval: 120000, 
+    minInterval: 15000, 
     enableBackoff: true,
     pauseWhenUnfocused: true,
     maxFailedAttempts: 3,
@@ -52,10 +52,10 @@ export default function HelpCenterPage() {
 
   const { data: fetchedFaqs = [], isLoading, refetch } = faqQuery;
 
-  // Setup mutation for tracking FAQ views
+  
   const trackViewMutation = trpc.faqs.trackView.useMutation();
 
-  // Memoize converted FAQs to avoid infinite loops
+  
   const convertedFaqs = useMemo(() => 
     fetchedFaqs.map(faq => ({
       ...faq,
@@ -85,13 +85,13 @@ export default function HelpCenterPage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {}
         <div className="mb-8" style={{borderLeft: '4px solid #E5E7EB', paddingLeft: '12px'}}>
           <h1 className="text-3xl font-bold text-white mb-2">Buyer Help Center</h1>
           <p className="text-gray-400">Find answers to common questions and get support</p>
         </div>
 
-        {/* Quick Actions */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <button 
             onClick={() => toastSvc.info('Coming Soon')}
@@ -123,7 +123,7 @@ export default function HelpCenterPage() {
           </Link>
         </div>
 
-        {/* Search FAQs */}
+        {}
         <div className="mb-8">
           <div className="relative">
             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
@@ -137,7 +137,7 @@ export default function HelpCenterPage() {
           </div>
         </div>
 
-        {/* FAQs */}
+        {}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-white mb-4">Frequently Asked Questions</h2>
           {isLoading ? (
@@ -178,7 +178,7 @@ export default function HelpCenterPage() {
           )}
         </div>
 
-        {/* Contact Support */}
+        {}
         <div className="mt-12 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-lg p-6" style={{borderColor: '#E5E7EB'}}>
           <h3 className="text-xl font-semibold text-white mb-2 text-center">Didn't find what you need?</h3>
           <p className="text-gray-400 mb-6 text-center">Create a support ticket and our team will assist you</p>

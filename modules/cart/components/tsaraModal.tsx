@@ -39,7 +39,7 @@ export function TsaraPaymentModal({
     },
   });
 
-  const nairaAmount = totalAmount > 1000 ? totalAmount / 100 : totalAmount;
+  const nairaAmount = totalAmount / 100;
 
   const handleConfirm = () => {
     createPayment.mutate({
@@ -82,7 +82,7 @@ export function TsaraPaymentModal({
           <div className="w-full flex justify-between items-center py-4 border-t border-neutral-800/60 mb-8">
             <span className="text-gray-400 text-sm">Total amount</span>
             <span className="text-white font-medium text-lg">
-              NGN {totalAmount.toLocaleString()}
+              NGN {(nairaAmount).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 

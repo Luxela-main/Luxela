@@ -136,7 +136,13 @@ export const shippingRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       try {
-        const options = [];
+        const options: Array<{
+          zone: string;
+          costUSD: string;
+          costCents: number;
+          deliveryDays: number;
+          label: string;
+        }> = [];
 
         for (const [zone, rates] of Object.entries(SHIPPING_RATES)) {
           const weightInKg = parseFloat(input.weight.toFixed(2));
@@ -159,7 +165,7 @@ export const shippingRouter = createTRPCRouter({
 
         return {
           weight: input.weight,
-          options: options.sort((a, b) => a.costCents - b.costCents),
+          options: options.sort((a: any, b: any) => a.costCents - b.costCents),
         };
       } catch (error: any) {
         throw new TRPCError({

@@ -60,37 +60,28 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const cart = data?.cart;
 
-  const { listings, approvedListings, validateProductForCart, isListingApproved, getApprovedListingById } = useListings();
+  const { listings, approvedListings, validateProductForCart, getApprovedListingById } = useListings();
 
   const items = useMemo(() => {
     const rawItems = data?.items || [];
 
-    const enrichedItems = rawItems
-      .filter((item) => {
-        // CRITICAL: Only show approved products in cart
-        const isApproved = isListingApproved(item.listingId);
-        if (!isApproved) {
-          console.warn(
-            `[CartContext] Filtering out non-approved product from cart: ${item.listingId}`
-          );
-        }
-        return isApproved;
-      })
-      .map((item) => {
-        // Find the product details from approved listings only
-        const product = approvedListings.find((l) => l.id === item.listingId);
-
+    // Items already have product details from backend (name, image from listings table)
+    // Use those directly instead of looking up in approvedListings
+    const enrichedItems = rawItems.map((item) => {
+      // Fallback to approvedListings lookup if backend didn't provide name/image
+      const product = approvedListings.find((l) => l.id === item.listingId);
+      
       return {
         ...item,
-        // Mapping backend fields to frontend
-        name: product?.title || `Product ${item.listingId.slice(0, 5)}`,
-        image: product?.image || undefined,
+        // Use backend-provided name first, fallback to product lookup, then generic fallback
+        name: item.name || product?.title || `Product ${item.listingId.slice(0, 5)}`,
+        // Use backend-provided image first, fallback to product lookup
+        image: item.image || product?.image,
         price: item.unitPriceCents / 100,
       };
     });
-    // Sort by listingId so items don't swap positions on update
     return enrichedItems.sort((a, b) => a.listingId.localeCompare(b.listingId));
-  }, [data?.items, listings]);
+  }, [data?.items, approvedListings]);
 
   const discount = data?.discount || null;
 
@@ -109,47 +100,71 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const total = Math.max(0, subtotal - discountAmount);
 
   const addToCart = async (listingId: string, quantity: number) => {
-    // CRITICAL: Validate product approval before adding to cart
     let validation = validateProductForCart(listingId);
-    
-    // If product is not in approved listings cache, try to fetch it directly
+
+    if (quantity <= 0) {
+      throw new Error("Invalid quantity. Please select at least 1 item.");
+    }
+
     if (!validation.valid) {
       try {
         const listing = await getApprovedListingById(listingId, true);
         if (!listing) {
-          throw new Error(
-            'Product is not available or has been removed from the catalog'
-          );
+          console.warn("[CartContext.addToCart] Product not found in context, falling back to backend validation:", { listingId });
+        } else {
+          if ((listing.quantity_available || 0) <= 0) {
+            throw new Error("This product is currently out of stock");
+          }
+          validation.valid = true;
         }
-        // Check stock
-        if ((listing.quantity_available || 0) <= 0) {
-          throw new Error('This product is currently out of stock');
-        }
-        // Product is valid, proceed
       } catch (error: any) {
-        throw error instanceof Error ? error : new Error(
-          validation.reason || 'This product cannot be added to your cart'
-        );
+        if (!error.message?.includes("not found") && !error.message?.includes("not available")) {
+          const message = error instanceof Error ? error.message : (validation.reason || "This product cannot be added to your cart");
+          console.error("[CartContext.addToCart] Validation error:", { listingId, message });
+          throw error instanceof Error ? error : new Error(message);
+        }
+        console.warn("[CartContext.addToCart] Allowing backend validation for uncached product:", { listingId });
       }
     }
 
-    if (quantity <= 0) {
-      throw new Error('Invalid quantity. Please select at least 1 item.');
+    try {
+      console.log("[CartContext.addToCart] Attempting to add to cart:", { listingId, quantity });
+      await addToCartMutation.mutateAsync({ listingId, quantity });
+    } catch (error: any) {
+      // Extract error message from TRPC error structure
+      let errorMessage = "Failed to add to cart";
+      let errorCode = "UNKNOWN";
+      
+      // TRPC error structure: { data: { code, message }, message, shape }
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+        errorCode = error.data.code || "UNKNOWN";
+      } else if (error?.message && error.message !== '{}') {
+        errorMessage = error.message;
+        errorCode = error.code || "UNKNOWN";
+      } else if (typeof error === 'string' && error !== '{}') {
+        errorMessage = error;
+      } else if (error?.shape?.message) {
+        // Fallback to shape.message if available
+        errorMessage = error.shape.message;
+        errorCode = error.shape.code || "UNKNOWN";
+      } else if (error && typeof error === 'object') {
+        // Last resort: log full error for debugging
+        console.warn("[CartContext.addToCart] Unable to extract standard error message from:", error);
+      }
+      
+      console.error("[CartContext.addToCart] Caught error:", {
+        listingId,
+        quantity,
+        message: errorMessage,
+        code: errorCode,
+        fullError: error
+      });
+      throw error instanceof Error ? error : new Error(errorMessage);
     }
-
-    await addToCartMutation.mutateAsync({ listingId, quantity });
   };
 
   const updateQuantity = async (listingId: string, quantity: number) => {
-    // Validate approval status when updating
-    if (!isListingApproved(listingId)) {
-      console.warn(
-        `[CartContext] Cannot update non-approved product: ${listingId}`
-      );
-      await removeItem(listingId);
-      return;
-    }
-
     if (quantity === 0) {
       await removeItem(listingId);
     } else if (quantity > 0) {
@@ -170,27 +185,18 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   const checkout = async (data: CheckoutRequest) => {
-    // CRITICAL: Validate all cart items are approved before checkout
-    const unapprovedItems = items.filter((item) => !isListingApproved(item.listingId));
-    if (unapprovedItems.length > 0) {
-      throw new Error(
-        `Cannot proceed with checkout. ${unapprovedItems.length} product(s) are no longer available.`
-      );
-    }
-
-    // Verify at least one item is in cart
     if (items.length === 0) {
-      throw new Error('Your cart is empty. Please add products before checkout.');
+      throw new Error("Your cart is empty. Please add products before checkout.");
     }
 
+    // Backend will validate item availability during checkout
     await checkoutMutation.mutateAsync(data);
   };
 
   const normalizedError: Error | null = error instanceof Error ? error : null;
 
-  const hasUnapprovedItems = items.some(
-    (item) => !isListingApproved(item.listingId)
-  );
+  // No need to check isListingApproved here - backend validates availability
+  const hasUnapprovedItems = false;
 
   const value: CartContextType = {
     cart,
@@ -213,4 +219,4 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
+};

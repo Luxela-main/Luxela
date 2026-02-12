@@ -4,6 +4,7 @@ import { getTRPCClient } from '@/lib/trpc';
 import { sellerQueryKeys } from './queryKeys';
 
 export interface Sale {
+  id: string | null | undefined;
   orderId: string;
   product: string;
   customer: string;

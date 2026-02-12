@@ -45,7 +45,7 @@ export default function NotificationsPage() {
     refetch,
   } = useUnifiedNotifications();
 
-  // Enable real-time polling
+  
   useRealtimeSellerNotifications();
 
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
@@ -54,28 +54,28 @@ export default function NotificationsPage() {
   const deleteAllMutation = useDeleteAllNotifications();
   const markAsReadMutation = useMarkNotificationAsRead();
 
-  // Get unique notification types
+  
   const notificationTypes = useMemo(() => {
     return [...new Set(notifications.map((n: any) => n.type))].sort();
   }, [notifications]);
 
-  // Filter and sort logic
+  
   const filteredNotifications = useMemo(() => {
     let result = notifications;
 
-    // Tab filtering
+    
     if (activeTab === "Starred") {
       result = result.filter((n: any) => n.isStarred);
     } else if (activeTab === "Unread") {
       result = result.filter((n: any) => !n.isRead);
     }
 
-    // Type filtering
+    
     if (filterType) {
       result = result.filter((n: any) => n.type === filterType);
     }
 
-    // Search filtering
+    
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       result = result.filter(
@@ -85,7 +85,7 @@ export default function NotificationsPage() {
       );
     }
 
-    // Sorting
+    
     const sorted = [...result];
     sorted.sort((a: any, b: any) => {
       const timeA = new Date(a.createdAt).getTime();
@@ -168,7 +168,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      {/* Header */}
+      {}
       <div className="sticky top-16 z-30 bg-[#0E0E0E] border-b border-[#2B2B2B]">
         <div className="px-4 md:px-8 py-6">
           <div className="max-w-7xl mx-auto">
@@ -184,7 +184,7 @@ export default function NotificationsPage() {
                 </p>
               </div>
 
-              {/* Desktop Actions */}
+              {}
               <div className="hidden md:flex items-center gap-2">
                 {unreadCount > 0 && (
                   <Button
@@ -192,6 +192,7 @@ export default function NotificationsPage() {
                     variant="outline"
                     onClick={() => markAllAsReadMutation.mutate()}
                     disabled={markAllAsReadMutation.isPending}
+                    className="cursor-pointer"
                   >
                     <CheckCheck className="w-4 h-4 mr-2" />
                     Mark All Read
@@ -203,6 +204,7 @@ export default function NotificationsPage() {
                     variant="destructive"
                     onClick={() => deleteAllMutation.mutate()}
                     disabled={deleteAllMutation.isPending}
+                    className="cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Clear All
@@ -215,9 +217,9 @@ export default function NotificationsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-        {/* Search & Filter Bar */}
+        {}
         <div className="mb-6 flex flex-col lg:flex-row gap-3">
-          {/* Search */}
+          {}
           <div className="flex-1">
             <div className="relative">
               <input
@@ -230,7 +232,7 @@ export default function NotificationsPage() {
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -238,7 +240,7 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-          {/* Sort Dropdown */}
+          {}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortType)}
@@ -248,11 +250,11 @@ export default function NotificationsPage() {
             <option value="oldest">Oldest First</option>
           </select>
 
-          {/* Filter Button */}
+          {}
           <div className="relative">
             <button
               onClick={() => setShowFilterMenu(!showFilterMenu)}
-              className="w-full lg:w-auto px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-lg text-white text-sm hover:bg-[#222] transition-colors flex items-center gap-2 justify-center lg:justify-start"
+              className="w-full lg:w-auto px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-lg text-white text-sm hover:bg-[#222] transition-colors flex items-center gap-2 justify-center lg:justify-start cursor-pointer"
             >
               <Filter className="w-4 h-4" />
               Filter
@@ -267,7 +269,7 @@ export default function NotificationsPage() {
               )}
             </button>
 
-            {/* Filter Dropdown Menu */}
+            {}
             {showFilterMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-xl z-40">
                 <div className="p-2">
@@ -276,7 +278,7 @@ export default function NotificationsPage() {
                       setFilterType(null);
                       setShowFilterMenu(false);
                     }}
-                    className={`w-full px-3 py-2 text-left text-sm rounded ${
+                    className={`w-full px-3 py-2 text-left text-sm rounded cursor-pointer ${
                       !filterType
                         ? "bg-purple-600 text-white"
                         : "hover:bg-[#222] text-gray-300"
@@ -291,7 +293,7 @@ export default function NotificationsPage() {
                         setFilterType(type);
                         setShowFilterMenu(false);
                       }}
-                      className={`w-full px-3 py-2 text-left text-sm rounded ${
+                      className={`w-full px-3 py-2 text-left text-sm rounded cursor-pointer ${
                         filterType === type
                           ? "bg-purple-600 text-white"
                           : "hover:bg-[#222] text-gray-300"
@@ -306,13 +308,13 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {/* Tabs */}
+        {}
         <div className="flex flex-wrap gap-2 mb-6 border-b border-[#2B2B2B] pb-4">
           {(["All", "Unread", "Starred"] as TabType[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
                 activeTab === tab
                   ? "bg-purple-600 text-white"
                   : "bg-[#1a1a1a] text-gray-300 hover:bg-[#222]"
@@ -333,7 +335,7 @@ export default function NotificationsPage() {
           ))}
         </div>
 
-        {/* Notifications List */}
+        {}
         {filteredNotifications.length > 0 ? (
           <div className="space-y-3">
             {filteredNotifications.map((notification: any) => (
@@ -346,12 +348,12 @@ export default function NotificationsPage() {
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  {/* Icon */}
+                  {}
                   <div className="flex-shrink-0 mt-1">
                     {getNotificationIcon(notification.type)}
                   </div>
 
-                  {/* Content */}
+                  {}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                       <div>
@@ -363,13 +365,13 @@ export default function NotificationsPage() {
                         </p>
                       </div>
 
-                      {/* Unread Indicator */}
+                      {}
                       {!notification.isRead && (
                         <div className="flex-shrink-0 w-2 h-2 bg-purple-500 rounded-full mt-2 sm:mt-1" />
                       )}
                     </div>
 
-                    {/* Metadata */}
+                    {}
                     <div className="flex flex-wrap items-center gap-2 mt-3">
                       <Badge
                         variant="outline"
@@ -385,7 +387,7 @@ export default function NotificationsPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {}
                   <div className="flex-shrink-0 flex gap-2 mt-3 sm:mt-0">
                     <button
                       onClick={() =>

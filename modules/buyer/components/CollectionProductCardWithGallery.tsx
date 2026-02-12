@@ -82,8 +82,9 @@ export function CollectionProductCardWithGallery({
       await onAddToCart(productId);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
-    } catch (err) {
-      console.error('Failed to add to cart:', err);
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || 'Failed to add to cart';
+      console.error('Failed to add to cart:', { message: errorMessage, error: err });
     } finally {
       setIsAdding(false);
     }

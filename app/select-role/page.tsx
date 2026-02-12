@@ -13,7 +13,7 @@ export default function SelectRolePage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Prevent logged-out access
+  
   useEffect(() => {
     const checkAuth = async () => {
       const {

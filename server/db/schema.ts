@@ -313,7 +313,11 @@ export const listings = pgTable('listings', {
   status: listingStatusEnum('status').default('pending_review').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+},
+(t) => ({
+  sellerIdIdx: index('idx_listings_seller_id').on(t.sellerId),
+})
+);
 
 // =======================
 // ORDERS

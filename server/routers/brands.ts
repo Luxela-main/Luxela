@@ -4,6 +4,7 @@ import { db } from "../db";
 import { brands, listings, sellerBusiness, buyerBrandFollows, reviews, productImages, collectionItems, products, collections } from "../db/schema";
 import { eq, desc, asc, countDistinct, count, sql, inArray, and } from "drizzle-orm";
 import { z } from "zod";
+import { redis } from "../lib/redis";
 
 export const brandsRouter = createTRPCRouter({
   getAllBrands: publicProcedure
@@ -64,7 +65,7 @@ export const brandsRouter = createTRPCRouter({
           : undefined;
 
         // Determine sort order based on sortBy parameter
-        let orderByClause = desc(brands.totalProducts); // default
+        let orderByClause = desc(brands.totalProducts); 
         if (input.sortBy === "name") {
           orderByClause = asc(brands.name);
         } else if (input.sortBy === "rating") {
@@ -123,44 +124,75 @@ export const brandsRouter = createTRPCRouter({
         console.log(`✓ Fetched ${allBrands.length} brands`);
 
         // Prepare seller and brand IDs for batch queries
-        const sellerIds = Array.from(new Set(allBrands.map(b => b.sellerId))); // deduplicate
-        const brandIds = allBrands.map(b => b.id);
+        const sellerIds: string[] = Array.from(new Set(allBrands.map((b: any) => b.sellerId))) as string[]; 
+        const brandIds: string[] = allBrands.map((b: any) => b.id) as string[];
 
-        // Execute product and follower count queries in parallel for better performance
-        console.log(`Fetching counts in parallel for ${allBrands.length} brands...`);
+        // Execute product and follower count queries with Redis caching
+        console.log(`Fetching counts for ${allBrands.length} brands...`);
         
-        const [productCountsResult, followerCountsResult] = await Promise.all([
-          // Fetch product counts for sellers
-          sellerIds.length > 0 ? db
-            .select({ sellerId: listings.sellerId, count: count() })
-            .from(listings)
-            .where(inArray(listings.sellerId, sellerIds))
-            .groupBy(listings.sellerId)
-            : Promise.resolve([]),
-          // Fetch follower counts for brands
-          brandIds.length > 0 ? db
-            .select({
-              brandId: buyerBrandFollows.brandId,
-              count: count(),
-            })
-            .from(buyerBrandFollows)
-            .where(inArray(buyerBrandFollows.brandId, brandIds))
-            .groupBy(buyerBrandFollows.brandId)
-            : Promise.resolve([]),
-        ]);
+        // Check Redis cache first
+        const cacheKey = 'brands:counts:cache';
+        let cachedCounts: any = null;
+        try {
+          const cached = await redis.get(cacheKey);
+          if (cached) {
+            cachedCounts = JSON.parse(cached);
+            console.log('✓ Using cached counts from Redis');
+          }
+        } catch (cacheErr) {
+          console.warn('Redis cache miss or error, will fetch from DB');
+        }
+
+        let productCountsResult: any, followerCountsResult: any;
+
+        if (cachedCounts) {
+          // Use cached data
+          productCountsResult = cachedCounts.products || [];
+          followerCountsResult = cachedCounts.followers || [];
+        } else {
+          // Fetch from database and cache for 5 minutes
+          [productCountsResult, followerCountsResult] = await Promise.all([
+            // Fetch product counts ONLY for sellers on current page
+            db
+              .select({ sellerId: listings.sellerId, count: count() })
+              .from(listings)
+              .where(inArray(listings.sellerId, sellerIds))
+              .groupBy(listings.sellerId),
+            // Fetch follower counts ONLY for brands on current page
+            db
+              .select({
+                brandId: buyerBrandFollows.brandId,
+                count: count(),
+              })
+              .from(buyerBrandFollows)
+              .where(inArray(buyerBrandFollows.brandId, brandIds))
+              .groupBy(buyerBrandFollows.brandId),
+          ]);
+
+          // Cache the results for 5 minutes
+          try {
+            await redis.setex(cacheKey, 300, JSON.stringify({
+              products: productCountsResult,
+              followers: followerCountsResult,
+            }));
+            console.log('✓ Cached counts in Redis for 5 minutes');
+          } catch (cacheErr) {
+            console.warn('Failed to cache counts in Redis:', cacheErr);
+          }
+        }
         console.log(`✓ Product and follower counts fetched in parallel`);
         
         const productCountsMap = new Map(
-          (productCountsResult || []).map(r => [r.sellerId, Number(r.count ?? 0)])
+          (productCountsResult || []).map((r: any) => [r.sellerId, Number(r.count ?? 0)])
         );
         const followerCountsMap = new Map(
-          (followerCountsResult || []).map(r => [r.brandId, Number(r.count ?? 0)])
+          (followerCountsResult || []).map((r: any) => [r.brandId, Number(r.count ?? 0)])
         );
         console.log(`✓ Counts fetched (product & follower)`);
 
         // Build final result
         console.log(`Building final result...`);
-        let brandsWithCounts = allBrands.map((item) => {
+        let brandsWithCounts = allBrands.map((item: any) => {
           const productCount = productCountsMap.get(item.sellerId) ?? 0;
           const followersCount = followerCountsMap.get(item.id) ?? 0;
             
@@ -184,7 +216,7 @@ export const brandsRouter = createTRPCRouter({
 
         // Handle in-memory sorting for followers (since we need the count which comes from a separate query)
         if (input.sortBy === "followers") {
-          brandsWithCounts.sort((a, b) => b.followersCount - a.followersCount);
+          brandsWithCounts.sort((a: any, b: any) => b.followersCount - a.followersCount);
         }
 
         const result = {
@@ -342,7 +374,7 @@ export const brandsRouter = createTRPCRouter({
             storeDescription: brand.storeDescription,
             brandName: brand.brandName,
           },
-          products: brandListings.map((p) => ({
+          products: brandListings.map((p: any) => ({
             id: p.id,
             name: p.name,
             slug: p.slug || p.id,
@@ -834,7 +866,7 @@ export const brandsRouter = createTRPCRouter({
           console.log(`[getBrandListings] Fetched ${brandListings.length} listings`);
           
           // Apply null coalescing for fields that can be nullable
-          const coalescedListings = brandListings.map(l => ({
+          const coalescedListings = brandListings.map((l: any) => ({
             ...l,
             price_cents: l.price_cents ?? 0,
             currency: l.currency ?? 'NGN',
@@ -846,7 +878,7 @@ export const brandsRouter = createTRPCRouter({
 
         // Enrich listings with product images and parsed data (only if there are listings)
         const enrichedListings = await Promise.all(
-          brandListings.map(async (listing) => {
+          brandListings.map(async (listing: any) => {
             // Check if this is a collection
             const isCollection = listing.type === 'collection';
             let collectionItemCount = 0;
@@ -867,7 +899,7 @@ export const brandsRouter = createTRPCRouter({
               console.log(`[getBrandListings] Collection has ${collectionItemCount} items`);
 
               if (collectionItemsList.length > 0) {
-                const productIds = collectionItemsList.map((item) => item.productId);
+                const productIds = collectionItemsList.map((item: any) => item.productId);
                 
                 // Fetch all products in collection
                 const productsInCollection = await db
@@ -892,10 +924,10 @@ export const brandsRouter = createTRPCRouter({
 
                 // Build product data with pricing
                 collectionProductsList = collectionItemsList
-                  .map((collectionItem) => {
-                    const product = productsInCollection.find((p) => p.id === collectionItem.productId);
-                    const productListing = productListings.find((l) => l.productId === collectionItem.productId);
-                    const productImages = allProductImages.filter((img) => img.productId === collectionItem.productId);
+                  .map((collectionItem: any) => {
+                    const product = productsInCollection.find((p: any) => p.id === collectionItem.productId);
+                    const productListing = productListings.find((l: any) => l.productId === collectionItem.productId);
+                    const productImages = allProductImages.filter((img: any) => img.productId === collectionItem.productId);
 
                     if (!product) return null;
 
@@ -903,7 +935,7 @@ export const brandsRouter = createTRPCRouter({
                     collectionTotalPrice += price;
 
                     // Collect all images for collection
-                    productImages.forEach((img) => {
+                    productImages.forEach((img: any) => {
                       if (img.imageUrl && !allCollectionImages.includes(img.imageUrl)) {
                         allCollectionImages.push(img.imageUrl);
                       }
@@ -935,14 +967,14 @@ export const brandsRouter = createTRPCRouter({
                       description: product.description,
                       price,
                       price_cents: productListing?.priceCents ?? product.priceCents ?? 0,
-                      images: productImages.map((img) => img.imageUrl),
+                      images: productImages.map((img: any) => img.imageUrl),
                       colors,
                       sizes,
                       material: productListing?.materialComposition || null,
                       careInstructions: productListing?.careInstructions || null,
                     };
                   })
-                  .filter((p) => p !== null);
+                  .filter((p: any) => p !== null);
               }
             }
 
@@ -1189,7 +1221,7 @@ export const brandsRouter = createTRPCRouter({
           };
         }
 
-        const brandIds = sellerBrands.map(b => b.id);
+        const brandIds = sellerBrands.map((b: any) => b.id);
 
         // Fetch all products for these brands
         const brandProducts = await db
@@ -1197,7 +1229,7 @@ export const brandsRouter = createTRPCRouter({
           .from(products)
           .where(inArray(products.brandId, brandIds));
 
-        const brandProductIds = brandProducts.map(p => p.id);
+        const brandProductIds = brandProducts.map((p: any) => p.id);
         console.log(`Found ${brandProductIds.length} products for seller's brands`);
 
         // Fetch listings for these products (approved and pending_review only)
@@ -1248,7 +1280,7 @@ export const brandsRouter = createTRPCRouter({
 
         // Fetch all images for these listings
         // Get productIds from listings to fetch their images
-        const productIds = productListings.map(l => l.productId).filter((id): id is string => id !== null && id !== undefined);
+        const productIds = productListings.map((l: any) => l.productId).filter((id: any): id is string => id !== null && id !== undefined);
         const listingImages = await db
           .select({
             productId: productImages.productId,
@@ -1270,26 +1302,26 @@ export const brandsRouter = createTRPCRouter({
           .groupBy(buyerBrandFollows.brandId);
 
         const followersMap = new Map(
-          followersData.map(f => [f.brandId, f.count])
+          followersData.map((f: any) => [f.brandId, f.count])
         );
 
         // Build the response by enriching brands with their products
-        const enrichedBrands = sellerBrands.map(brand => {
+        const enrichedBrands = sellerBrands.map((brand: any) => {
           // Get all listings for this brand's products
           const brandProductIds = brandProducts
-            .filter(p => p.brandId === brand.id)
-            .map(p => p.id);
+            .filter((p: any) => p.brandId === brand.id)
+            .map((p: any) => p.id);
 
-          const brandListings = productListings.filter(l =>
+          const brandListings = productListings.filter((l: any) =>
             l.productId ? brandProductIds.includes(l.productId) : false
           );
 
           // Enrich listings with images
-          const enrichedListings = brandListings.map(listing => {
+          const enrichedListings = brandListings.map((listing: any) => {
             const listingImageUrls = listingImages
-              .filter(img => img.productId === listing.productId)
-              .sort((a, b) => a.position - b.position)
-              .map(img => img.imageUrl);
+              .filter((img: any) => img.productId === listing.productId)
+              .sort((a: any, b: any) => a.position - b.position)
+              .map((img: any) => img.imageUrl);
 
             // Parse colors
             let colors = null;

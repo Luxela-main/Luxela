@@ -291,7 +291,7 @@ export class DisputeEscalationService {
       });
 
       if (allDisputes.length > 0) {
-        const totalTime = allDisputes.reduce((sum, d) => {
+        const totalTime = allDisputes.reduce((sum: any, d: any) => {
           const createdAt = new Date(d.createdAt);
           const resolvedAt = d.closedAt ? new Date(d.closedAt) : new Date();
           return sum + (resolvedAt.getTime() - createdAt.getTime());

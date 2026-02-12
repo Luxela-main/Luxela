@@ -56,6 +56,7 @@ export default function SellerNavbar() {
   const handleLogout = async () => {
     try {
       await logout();
+      // AuthContext handles navigation to /signin automatically
       toast.success("You have been successfully logged out.");
     } catch (err) {
       toast.error("Something went wrong while logging out.");
@@ -127,7 +128,7 @@ export default function SellerNavbar() {
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg hover:bg-[#1e1e1e] transition-colors group"
+                className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg hover:bg-[#1e1e1e] transition-colors group cursor-pointer"
               >
                 <Image
                   src={user.avatarUrl}
@@ -187,10 +188,7 @@ export default function SellerNavbar() {
                       <AlertDialog open={open} onOpenChange={setOpen}>
                         <AlertDialogOverlay />
                         <AlertDialogTrigger asChild>
-                          <button
-                            onClick={() => setIsUserMenuOpen(false)}
-                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                          >
+                          <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer">
                             <LogOut size={16} />
                             <span>Log out</span>
                           </button>
@@ -210,7 +208,7 @@ export default function SellerNavbar() {
                             </AlertDialogCancel>
                             <AlertDialogAction
                               onClick={handleLogout}
-                              className="bg-red-500 hover:bg-red-600 text-white"
+                              className="bg-red-500 hover:bg-red-600 text-white cursor-pointer"
                             >
                               Log out
                             </AlertDialogAction>

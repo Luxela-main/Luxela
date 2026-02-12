@@ -39,8 +39,9 @@ export function useCollectionProductActions(): UseCollectionProductActionsResult
         await addToCartCart(productId, quantity);
         toastSvc.success('Added to cart');
         return { success: true, message: 'Added to cart' };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to add to cart';
+      } catch (error: any) {
+        // Extract error message from TRPC error or regular Error
+        const errorMessage = error?.data?.message || (error instanceof Error ? error.message : error?.toString?.()) || 'Failed to add to cart';
         toastSvc.error(errorMessage);
         return { success: false, error: errorMessage };
       } finally {

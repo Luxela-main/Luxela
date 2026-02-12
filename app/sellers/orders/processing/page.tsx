@@ -26,7 +26,7 @@ export default function ProcessingOrdersPage() {
 
   const { data: allOrders = [], isLoading, error } = useSellerOrders({ limit: 50, offset: 0 })
 
-  // Filter for processing orders only
+  
   const processingOrders = useMemo(
     () => allOrders.filter((order: Sale) => order.orderStatus === "processing"),
     [allOrders]

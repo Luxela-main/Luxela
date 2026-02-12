@@ -38,11 +38,11 @@ export default function OrderSuccessPage() {
     <div className="min-h-screen bg-[#0E0E0E] text-[#F2F2F2] p-4 md:p-8">
    
 
-      {/* 2. Main Confirmation Card */}
+      {}
       <div className="max-w-2xl mx-auto bg-[#141414] border border-[#212121] rounded-2xl overflow-hidden shadow-2xl">
         <div className="p-8 md:p-12">
           
-          {/* Success Icon (Shield/Badge Style) */}
+          {}
           <div className="flex justify-center mb-6">
             <div className="relative">
                <div className="absolute inset-0 bg-purple-500 blur-xl opacity-20"></div>
@@ -59,7 +59,7 @@ export default function OrderSuccessPage() {
             </p>
           </div>
 
-          {/* Data Grid with thin separators (matching the image) */}
+          {}
           <div className="space-y-0 border-t border-[#212121]">
             <div className="py-5 border-b border-[#212121]">
               <p className="text-[#ACACAC] text-xs uppercase tracking-wider mb-2">Transaction date</p>
@@ -91,7 +91,7 @@ export default function OrderSuccessPage() {
             </div>
           </div>
 
-          {/* Buttons Section */}
+          {}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-10">
             <Button
               onClick={() => router.push("/buyer")}

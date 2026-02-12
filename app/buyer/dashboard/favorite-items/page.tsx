@@ -37,10 +37,11 @@ export default function FavoriteItemsPage() {
         title: 'Removed from favorites',
         description: 'Item removed successfully',
       });
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.data?.message || error?.message || 'Failed to remove item';
       toast({
         title: 'Error',
-        description: 'Failed to remove item',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -53,10 +54,11 @@ export default function FavoriteItemsPage() {
         title: 'Added to cart',
         description: 'Item added to your cart',
       });
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.data?.message || error?.message || 'Failed to add to cart';
       toast({
         title: 'Error',
-        description: 'Failed to add to cart',
+        description: errorMessage,
         variant: 'destructive',
       });
     }

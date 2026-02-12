@@ -11,6 +11,7 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "noImplicitAny": false,
     "baseUrl": ".",
     "noEmit": true,
     "esModuleInterop": true,

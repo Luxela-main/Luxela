@@ -76,7 +76,7 @@ export default function AdminListingsReview() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0e0e0e] to-[#1a1a1a] p-3 sm:p-6">
       <div className="max-w-7xl mx-auto w-full">
-        {/* Header */}
+        {}
         <div className="mb-6 sm:mb-8 pb-4 sm:pb-6 border-b-2 border-[#2B2B2B]">
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Listing Review Dashboard</h1>
           <p className="text-sm sm:text-base text-[#9CA3AF] mt-1 sm:mt-2 font-medium mb-4">
@@ -98,7 +98,7 @@ export default function AdminListingsReview() {
           </div>
         </div>
 
-        {/* Statistics Cards */}
+        {}
         {statsLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-[#8451e1]" />
@@ -172,7 +172,7 @@ export default function AdminListingsReview() {
           </div>
         ) : null}
 
-        {/* Listings Table */}
+        {}
         <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -194,7 +194,7 @@ export default function AdminListingsReview() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Filter Tabs */}
+            {}
             <Tabs value={filterStatus} onValueChange={(v) => handleFilterChange(v as FilterStatus)} className="mb-6 cursor-pointer">
               <TabsList className="bg-[#0e0e0e] border border-[#2B2B2B]">
                 <TabsTrigger value="pending" className="cursor-pointer">
@@ -212,7 +212,7 @@ export default function AdminListingsReview() {
               </TabsList>
             </Tabs>
 
-            {/* Loading State */}
+            {}
             {listingsLoading ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-[#8451e1]" />
@@ -303,7 +303,7 @@ export default function AdminListingsReview() {
                   </Table>
                 </div>
 
-                {/* Pagination */}
+                {}
                 {listingsData.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6 pt-6 border-t border-[#2B2B2B]">
                     <div className="text-sm text-[#9CA3AF]">

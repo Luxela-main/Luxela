@@ -56,11 +56,11 @@ export function NotificationSettings() {
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
+          <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700 cursor-pointer">
             Save Preferences
           </Button>
         </div>
       </div>
     </div>
   );
-}
+}

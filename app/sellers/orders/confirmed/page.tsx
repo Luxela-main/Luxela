@@ -27,7 +27,7 @@ export default function ConfirmedOrdersPage() {
 
   const { data: allOrders = [], isLoading, error } = useSellerOrders({ limit: 50, offset: 0 })
 
-  // Filter for confirmed orders only
+  
   const confirmedOrders = useMemo(
     () => allOrders.filter((order: Sale) => order.orderStatus === "confirmed"),
     [allOrders]

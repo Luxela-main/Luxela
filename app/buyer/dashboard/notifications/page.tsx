@@ -1,337 +1,502 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Bell, Search, Trash2, Star, MessageSquare } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { trpc } from '@/app/_trpc/client';
 import {
-  useNotifications,
-  useMarkNotificationAsRead,
-  useToggleNotificationFavorite,
-  useDeleteNotification,
-  useDeleteAllNotifications,
-} from '@/modules/buyer/queries/useNotifications';
-import { toast } from 'sonner';
+  Loader2,
+  Bell,
+  CheckCircle2,
+  AlertCircle,
+  Package,
+  TrendingDown,
+  MessageSquare,
+  Trash2,
+  Eye,
+  Filter,
+  Search,
+  Heart,
+} from 'lucide-react';
+import Link from 'next/link';
+import { toastSvc } from '@/services/toast';
+import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 
-export default function BuyerDashboardNotificationsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
-  const [selectedNotification, setSelectedNotification] = useState<string | null>(null);
-
-  const { data: notificationsData, isLoading, error } = useNotifications();
-  const markAsReadMutation = useMarkNotificationAsRead();
-  const toggleFavoriteMutation = useToggleNotificationFavorite();
-  const deleteNotificationMutation = useDeleteNotification();
-  const deleteAllMutation = useDeleteAllNotifications();
-
-  const notifications = notificationsData?.data || [];
-  const unreadCount = notifications.filter((n: any) => !n.isRead).length;
-
-  const typeColors: Record<string, { bg: string; text: string; badge: string }> = {
-    purchase: { bg: 'bg-purple-500/10', text: 'text-purple-300', badge: 'bg-purple-500' },
-    review: { bg: 'bg-blue-500/10', text: 'text-blue-300', badge: 'bg-blue-500' },
-    comment: { bg: 'bg-green-500/10', text: 'text-green-300', badge: 'bg-green-500' },
-    reminder: { bg: 'bg-amber-500/10', text: 'text-amber-300', badge: 'bg-amber-500' },
-    order_confirmed: { bg: 'bg-purple-500/10', text: 'text-purple-300', badge: 'bg-purple-500' },
-    payment_failed: { bg: 'bg-red-500/10', text: 'text-red-300', badge: 'bg-red-500' },
-    refund_issued: { bg: 'bg-green-500/10', text: 'text-green-300', badge: 'bg-green-500' },
-    delivery_confirmed: { bg: 'bg-blue-500/10', text: 'text-blue-300', badge: 'bg-blue-500' },
-    order_cancelled: { bg: 'bg-red-500/10', text: 'text-red-300', badge: 'bg-red-500' },
-    order_shipped: { bg: 'bg-blue-500/10', text: 'text-blue-300', badge: 'bg-blue-500' },
-    order_out_for_delivery: { bg: 'bg-amber-500/10', text: 'text-amber-300', badge: 'bg-amber-500' },
-    payment_processed: { bg: 'bg-green-500/10', text: 'text-green-300', badge: 'bg-green-500' },
-    default: { bg: 'bg-gray-500/10', text: 'text-gray-300', badge: 'bg-gray-500' },
-  };
-
-  const filteredNotifications = useMemo(() => {
-    let filtered = notifications.filter((n: any) => {
-      const matchesSearch =
-        !searchTerm ||
-        n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (n.message && n.message.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      const matchesFilter = filterType === 'all' || n.type === filterType;
-
-      return matchesSearch && matchesFilter;
-    });
-
-    if (sortBy === 'oldest') {
-      filtered = [...filtered].reverse();
-    } else if (sortBy === 'unread') {
-      filtered = [...filtered].sort((a: any, b: any) => (a.isRead ? 1 : -1));
-    }
-
-    return filtered;
-  }, [notifications, searchTerm, filterType, sortBy]);
-
-  const selectedNotificationData = selectedNotification
-    ? filteredNotifications.find((n: any) => n.id === selectedNotification)
-    : null;
-
-  const handleMarkAsRead = (id: string, currentIsRead: boolean) => {
-    markAsReadMutation.mutate(
-      { notificationId: id, isRead: !currentIsRead },
-      {
-        onSuccess: () => {
-          toast.success(!currentIsRead ? 'Marked as read' : 'Marked as unread');
-        },
-        onError: () => {
-          toast.error('Failed to update notification');
-        },
-      }
-    );
-  };
-
-  const handleToggleFavorite = (id: string) => {
-    toggleFavoriteMutation.mutate(
-      { notificationId: id },
-      {
-        onSuccess: () => {
-          toast.success('Notification favorited');
-        },
-        onError: () => {
-          toast.error('Failed to favorite notification');
-        },
-      }
-    );
-  };
-
-  const handleDelete = (id: string) => {
-    deleteNotificationMutation.mutate(
-      { notificationId: id },
-      {
-        onSuccess: () => {
-          toast.success('Notification deleted');
-          setSelectedNotification(null);
-        },
-        onError: () => {
-          toast.error('Failed to delete notification');
-        },
-      }
-    );
-  };
-
-  const handleDeleteAll = () => {
-    if (window.confirm('Are you sure you want to delete all notifications?')) {
-      deleteAllMutation.mutate(undefined, {
-        onSuccess: () => {
-          toast.success('All notifications deleted');
-          setSelectedNotification(null);
-        },
-        onError: () => {
-          toast.error('Failed to delete notifications');
-        },
-      });
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    return typeColors[type] || typeColors.default;
-  };
-
-  const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      purchase: 'Purchase',
-      review: 'Review',
-      comment: 'Comment',
-      reminder: 'Reminder',
-      order_confirmed: 'Order Confirmed',
-      payment_failed: 'Payment Failed',
-      refund_issued: 'Refund Issued',
-      delivery_confirmed: 'Delivery Confirmed',
-      order_cancelled: 'Order Cancelled',
-      order_shipped: 'Order Shipped',
-      order_out_for_delivery: 'Out for Delivery',
-      payment_processed: 'Payment Processed',
+// Debounce utility
+const debounce = (func: Function, wait: number) => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      timeoutId = null;
+      func(...args);
     };
-    return labels[type] || type;
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(later, wait);
   };
+};
+
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: Date;
+  relatedEntityId?: string | undefined;
+  metadata?: Record<string, any>;
+}
+
+type NotificationCategory = 'all' | 'orders' | 'shipping' | 'returns_refunds' | 'products' | 'communication' | 'account_system';
+
+// Map specific notification types to generalized categories
+const getCategoryForType = (type: string): string => {
+  const lowerType = type?.toLowerCase() || '';
+  
+  if (lowerType.includes('order') || lowerType.startsWith('order_')) return 'orders';
+  if (lowerType.includes('shipment') || lowerType.includes('delivery') || lowerType.includes('transit')) return 'shipping';
+  if (lowerType.includes('return') || lowerType.includes('refund')) return 'returns_refunds';
+  if (lowerType.includes('price_drop') || lowerType.includes('back_in_stock') || lowerType.includes('low_inventory') || lowerType.includes('favorite')) return 'products';
+  if (lowerType.includes('review') || lowerType.includes('reply') || lowerType.includes('message')) return 'communication';
+  return 'account_system'; // For brand_followed, disputes, payments, listings, system alerts, etc.
+};
+
+export default function NotificationsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
+  const [selectedType, setSelectedType] = useState<NotificationCategory>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  
+  const { 
+    data: notificationsData, 
+    isLoading: isLoadingNotifications,
+    refetch: refetchNotifications 
+  } = trpc.buyerNotifications.getNotifications.useQuery(
+    {
+      limit: 50,
+      offset: 0,
+    },
+    {
+      enabled: !!user && !authLoading,
+      staleTime: 1000 * 30, 
+    }
+  );
+
+  
+  const markAsReadMutation = trpc.buyerNotifications.markAsRead.useMutation({
+    onSuccess: () => {
+      // Don't refetch on success - optimistic update already updated the UI
+    },
+    onError: (error) => {
+      // Refetch on error to restore correct state
+      refetchNotifications();
+      toastSvc.error(error.message || 'Failed to update notification');
+    },
+  });
+
+  
+  const deleteNotificationMutation = trpc.buyerNotifications.deleteNotification.useMutation({
+    onSuccess: () => {
+      // Don't refetch - optimistic update already removed it
+      toastSvc.success('Notification deleted');
+    },
+    onError: (error) => {
+      // Refetch on error to restore correct state
+      refetchNotifications();
+      toastSvc.error(error.message || 'Failed to delete notification');
+    },
+  });
+
+  
+  const markAllAsReadMutation = trpc.buyerNotifications.markAllAsRead.useMutation({
+    onSuccess: () => {
+      refetchNotifications();
+      toastSvc.success('All notifications marked as read');
+    },
+    onError: (error) => {
+      toastSvc.error(error.message || 'Failed to mark all as read');
+    },
+  });
+
+  
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/signin');
+    }
+  }, [authLoading, user, router]);
+
+  
+  useEffect(() => {
+    if (notificationsData?.notifications) {
+      
+      const convertedNotifications: Notification[] = notificationsData.notifications.map((notification: any) => {
+        
+        const relatedEntityId = notification.relatedEntityId === null ? undefined : notification.relatedEntityId;
+        
+        return {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          isRead: notification.isRead,
+          createdAt: new Date(notification.createdAt),
+          relatedEntityId,
+          metadata: notification.metadata,
+        };
+      });
+      setNotifications(convertedNotifications);
+      setUnreadCount(notificationsData.unreadCount || 0);
+    }
+  }, [notificationsData]);
+
+  
+  useEffect(() => {
+    let filtered = notifications;
+
+    
+    if (selectedType !== 'all') {
+      filtered = filtered.filter((n) => getCategoryForType(n.type) === selectedType);
+    }
+
+    
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (n) =>
+          n.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          n.message?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredNotifications(filtered);
+  }, [notifications, selectedType, searchTerm]);
+
+  const handleMarkAsRead = useCallback(
+    debounce(async (notificationId: string) => {
+      // Optimistic update - update UI immediately
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, isRead: true } : n
+        )
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+
+      // Then mutate in background
+      try {
+        await markAsReadMutation.mutateAsync({ notificationId });
+      } catch (error) {
+        // Error already handled in mutation onError
+      }
+    }, 300),
+    [markAsReadMutation]
+  );
+
+  const handleDeleteNotification = useCallback(
+    debounce(async (notificationId: string) => {
+      // Optimistic update - remove from UI immediately
+      const deletedNotification = notifications.find((n) => n.id === notificationId);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      
+      // Update unread count if the deleted notification was unread
+      if (deletedNotification?.isRead === false) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
+      // Then mutate in background
+      try {
+        await deleteNotificationMutation.mutateAsync({ notificationId });
+      } catch (error) {
+        // Error already handled in mutation onError
+      }
+    }, 300),
+    [notifications, deleteNotificationMutation]
+  );
+
+  const handleMarkAllAsRead = async () => {
+    await markAllAsReadMutation.mutateAsync();
+  };
+
+  const getNotificationIcon = (type?: string, metadata?: Record<string, any>) => {
+    const lowerType = type?.toLowerCase() || '';
+    
+    // System alerts - check if it's a brand follow/unfollow (has brand action in metadata)
+    if (lowerType.includes('system_alert')) {
+      if (metadata?.action === 'brand_followed' || metadata?.action === 'brand_unfollowed') {
+        return <Heart className="w-5 h-5 text-pink-400" />;
+      }
+      // Other system alerts
+      return <AlertCircle className="w-5 h-5 text-yellow-400" />;
+    }
+    
+    // Order-related
+    if (lowerType.includes('order') || lowerType.includes('shipment') || lowerType.includes('delivery')) {
+      if (lowerType.includes('delivered') || lowerType.includes('out_for_delivery')) {
+        return <CheckCircle2 className="w-5 h-5 text-green-400" />;
+      }
+      return <Package className="w-5 h-5 text-blue-400" />;
+    }
+    
+    // Price and product
+    if (lowerType.includes('price_drop') || lowerType.includes('back_in_stock')) {
+      return <TrendingDown className="w-5 h-5 text-orange-400" />;
+    }
+    
+    // Review and communication
+    if (lowerType.includes('review') || lowerType.includes('reply')) {
+      return <MessageSquare className="w-5 h-5 text-purple-400" />;
+    }
+    
+    // Refunds and returns
+    if (lowerType.includes('refund') || lowerType.includes('return')) {
+      return <CheckCircle2 className="w-5 h-5 text-yellow-400" />;
+    }
+    
+    // Payment
+    if (lowerType.includes('payment')) {
+      return <AlertCircle className="w-5 h-5 text-yellow-400" />;
+    }
+    
+    // Dispute
+    if (lowerType.includes('dispute') || lowerType.includes('escalation') || lowerType.includes('sla_breach')) {
+      return <AlertCircle className="w-5 h-5 text-red-400" />;
+    }
+    
+    // Listing
+    if (lowerType.includes('listing')) {
+      return <Package className="w-5 h-5 text-cyan-400" />;
+    }
+    
+    // Default
+    return <Bell className="w-5 h-5 text-[#8451E1]" />;
+  };
+
+  const getTypeColor = (type?: string, metadata?: Record<string, any>): string => {
+    const lowerType = type?.toLowerCase() || '';
+    
+    // System alerts - brand follow/unfollow get pink theme
+    if (lowerType.includes('system_alert')) {
+      if (metadata?.action === 'brand_followed' || metadata?.action === 'brand_unfollowed') {
+        return 'bg-pink-500/10 border-pink-500/30';
+      }
+      // Other system alerts
+      return 'bg-yellow-500/10 border-yellow-500/30';
+    }
+    
+    // Order-related
+    if (lowerType.includes('order') || lowerType.includes('order_confirmed') || lowerType.includes('order_processing') || lowerType.includes('order_pending')) {
+      return 'bg-blue-500/10 border-blue-500/30';
+    }
+    
+    if (lowerType.includes('shipment') || lowerType.includes('delivery') || lowerType.includes('transit') || lowerType.includes('in_transit') || lowerType.includes('out_for_delivery')) {
+      return 'bg-green-500/10 border-green-500/30';
+    }
+    
+    // Price and product
+    if (lowerType.includes('price_drop') || lowerType.includes('back_in_stock') || lowerType.includes('low_inventory')) {
+      return 'bg-orange-500/10 border-orange-500/30';
+    }
+    
+    // Review and communication
+    if (lowerType.includes('review') || lowerType.includes('reply')) {
+      return 'bg-purple-500/10 border-purple-500/30';
+    }
+    
+    // Refunds and returns
+    if (lowerType.includes('refund') || lowerType.includes('return')) {
+      return 'bg-yellow-500/10 border-yellow-500/30';
+    }
+    
+    // Payment
+    if (lowerType.includes('payment')) {
+      if (lowerType.includes('failed')) {
+        return 'bg-red-500/10 border-red-500/30';
+      }
+      return 'bg-yellow-500/10 border-yellow-500/30';
+    }
+    
+    // Dispute
+    if (lowerType.includes('dispute') || lowerType.includes('escalation') || lowerType.includes('sla_breach')) {
+      return 'bg-red-500/10 border-red-500/30';
+    }
+    
+    // Listing
+    if (lowerType.includes('listing')) {
+      return 'bg-cyan-500/10 border-cyan-500/30';
+    }
+    
+    // Default
+    return 'bg-[#8451E1]/10 border-[#8451E1]/30';
+  };
+
+  if (authLoading) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-[#8451E1] animate-spin mx-auto mb-3" />
+          <p className="text-[#acacac]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      {/* Breadcrumb Navigation */}
-      <div className="px-8 py-4 bg-[#0a0a0a] border-b border-gray-800">
-        <div className="flex items-center gap-2 text-sm">
-          <a href="/buyer/dashboard" className="text-gray-400 hover:text-white transition-colors duration-200 cursor-pointer">
-            Dashboard
-          </a>
-          <span className="text-gray-600">/</span>
-          <span className="text-white">Notifications</span>
-        </div>
+    <div className="bg-gradient-to-br from-black via-[#0a0a0a] to-[#0f0a1a] min-h-screen">
+      {}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-20 right-1/4 w-80 h-80 bg-[#8451E1]/15 rounded-full blur-3xl opacity-40 animate-blob"></div>
+        <div className="absolute bottom-40 left-1/4 w-96 h-96 bg-[#5C2EAF]/10 rounded-full blur-3xl opacity-30 animate-blob animation-delay-2s"></div>
       </div>
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#1a1a1a] to-[#2d1a3d] border-b border-[#8451E1] px-8 py-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Bell className="w-8 h-8 text-purple-500" />
-          <h1 className="text-3xl font-bold">Notifications</h1>
-        </div>
-        <p className="text-gray-400">You have {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</p>
-      </div>
+      <div className="relative z-10">
+        {}
+        <div className="px-6 py-6 border-b border-[#8451E1]/10 sticky top-0 bg-gradient-to-b from-black/98 via-black/95 to-black/80 backdrop-blur-xl z-40 shadow-lg shadow-[#8451E1]/10">
+          <div className="max-w-7xl mx-auto">
+            <Breadcrumb items={[
+              { label: 'Dashboard', href: '/buyer/dashboard' },
+              { label: 'Notifications' }
+            ]} />
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-8 h-[calc(100vh-240px)]">
-        {/* Left: Search & Filter */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search notifications..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#1a1a1a] border border-purple-500/30 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none transition-colors duration-200 cursor-text"
-            />
-          </div>
-
-          {/* Type Filter */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-400">Filter by Type</label>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full bg-[#1a1a1a] border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none transition-colors duration-200 cursor-pointer"
-            >
-              <option value="all">All Types</option>
-              <option value="order_confirmed">Order Updates</option>
-              <option value="comment">Messages</option>
-              <option value="reminder">Reminders</option>
-              <option value="review">Reviews</option>
-            </select>
-          </div>
-
-          {/* Sort */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-400">Sort By</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full bg-[#1a1a1a] border border-purple-500/30 rounded-lg px-4 py-2 text-white focus:border-purple-500 focus:outline-none transition-colors duration-200 cursor-pointer"
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="unread">Unread First</option>
-            </select>
-          </div>
-
-          {/* Delete All Button */}
-          <button
-            onClick={handleDeleteAll}
-            disabled={filteredNotifications.length === 0 || deleteAllMutation.isPending}
-            className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/50 rounded-lg px-4 py-2 font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            Delete All
-          </button>
-        </div>
-
-        {/* Middle: Notifications List */}
-        <div className="lg:col-span-1 overflow-y-auto space-y-2 pr-2">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-purple-500"></div>
+            <div className="flex items-center justify-between mb-6 mt-6">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-[#f0f0f0] to-[#d0d0d0] bg-clip-text text-transparent mb-2 flex items-center gap-3">
+                  <Bell className="w-8 h-8 text-[#8451E1]" />
+                  Notifications
+                </h1>
+                <p className="text-[#acacac] text-sm">
+                  {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All notifications read'}
+                </p>
+              </div>
+              {unreadCount > 0 && (
+                <button
+                  onClick={() => handleMarkAllAsRead()}
+                  disabled={markAllAsReadMutation.isPending}
+                  className="px-4 py-2 bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 text-white text-sm font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 cursor-pointer"
+                >
+                  Mark All as Read
+                </button>
+              )}
             </div>
-          ) : error ? (
-            <div className="text-center py-8 text-red-400">Failed to load notifications</div>
+          </div>
+        </div>
+
+        {}
+        <div className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto">
+          <div className="flex flex-col gap-4 mb-8">
+            {}
+            <div className="w-full relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666]" />
+              <input
+                type="text"
+                placeholder="Search notifications..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-[#1a1a2e]/80 border border-[#8451E1]/30 rounded-lg text-white placeholder-[#666] focus:border-[#8451E1]/70 focus:outline-none text-sm"
+              />
+            </div>
+
+            {}
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-[#8451E1] flex-shrink-0" />
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as NotificationCategory)}
+                className="flex-1 md:flex-none px-3 md:px-4 py-2.5 bg-[#1a1a2e]/80 border border-[#8451E1]/30 rounded-lg text-white text-sm focus:border-[#8451E1]/70 focus:outline-none cursor-pointer"
+              >
+                <option value="all">📬 All Notifications</option>
+                <option value="orders">📦 Orders</option>
+                <option value="shipping">🚚 Shipping & Delivery</option>
+                <option value="returns_refunds">↩️ Returns & Refunds</option>
+                <option value="products">🛒 Products & Inventory</option>
+                <option value="communication">💬 Reviews & Messages</option>
+                <option value="account_system">⚙️ Account & System</option>
+              </select>
+            </div>
+          </div>
+
+          {}
+          {isLoadingNotifications ? (
+            <div className="text-center py-12">
+              <Loader2 className="w-10 h-10 text-[#8451E1] animate-spin mx-auto mb-3" />
+              <p className="text-[#acacac]">Loading notifications...</p>
+            </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">No notifications found</div>
+            <div className="text-center py-12">
+              <Bell className="w-12 h-12 text-[#8451E1]/40 mx-auto mb-4" />
+              <p className="text-[#acacac] text-lg font-medium">
+                {notifications.length === 0 ? 'No notifications yet' : 'No notifications match your filters'}
+              </p>
+              <p className="text-[#666] text-sm mt-2">
+                {notifications.length === 0 ? 'Check back soon for updates' : 'Try adjusting your search or filters'}
+              </p>
+            </div>
           ) : (
-            filteredNotifications.map((notification: any) => {
-              const colors = getTypeColor(notification.type);
-              return (
+            <div className="space-y-3">
+              {filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  onClick={() => setSelectedNotification(notification.id)}
-                  className={`p-4 rounded-lg border transition-all duration-200 cursor-pointer ${
-                    selectedNotification === notification.id
-                      ? 'border-purple-500 bg-purple-500/10'
-                      : 'border-gray-700/50 bg-[#1a1a1a] hover:bg-[#2a2a2a] hover:border-purple-500/50'
-                  } ${!notification.isRead ? 'bg-[#1f1a2e]' : ''}`}
+                  className={`p-3 md:p-4 rounded-xl border transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/20 ${
+                    notification.isRead
+                      ? 'bg-[#0f0f1a]/50 border-[#8451E1]/10'
+                      : 'bg-gradient-to-br from-[#1a1a2e]/80 to-[#0f0f1a]/80 border-[#8451E1]/30'
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white truncate">{notification.title}</h3>
-                        {!notification.isRead && <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0 animate-pulse"></div>}
+                  <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+                    <div className={`p-2 md:p-2.5 rounded-lg flex-shrink-0 ${getTypeColor(notification.type, notification.metadata)}`}>
+                      {getNotificationIcon(notification.type, notification.metadata)}
+                    </div>
+
+                    <div className="flex-1 w-full min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                        <div className="flex-1 min-w-0 w-full">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className={`font-semibold break-words ${notification.isRead ? 'text-[#999]' : 'text-white'} text-sm md:text-base`}>
+                              {notification.title}
+                            </h3>
+                            {!notification.isRead && (
+                              <span className="inline-block w-2 h-2 bg-[#8451E1] rounded-full flex-shrink-0"></span>
+                            )}
+                          </div>
+                          <p className={`text-xs md:text-sm break-words whitespace-pre-wrap ${notification.isRead ? 'text-[#666]' : 'text-[#acacac]'}`}>
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-[#666] mt-2 flex-shrink-0">
+                            {new Date(notification.createdAt).toLocaleDateString()} at{' '}
+                            {new Date(notification.createdAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-400 truncate">{notification.message}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`inline-block text-xs px-2 py-1 rounded ${colors.bg} ${colors.text} font-medium capitalize`}>
-                          {getTypeLabel(notification.type)}
-                        </span>
-                        <span className="text-xs text-gray-500">{new Date(notification.timestamp).toLocaleDateString()}</span>
-                      </div>
+                    </div>
+
+                    {}
+                    <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-start">
+                      {!notification.isRead && (
+                        <button
+                          onClick={() => handleMarkAsRead(notification.id)}
+                          disabled={markAsReadMutation.isPending}
+                          className="p-2 hover:bg-[#8451E1]/20 rounded-lg transition-colors disabled:opacity-50 cursor-pointer hover:scale-110 active:scale-95"
+                          title="Mark as read"
+                        >
+                          <Eye className="w-4 h-4 text-[#8451E1]" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteNotification(notification.id)}
+                        disabled={deleteNotificationMutation.isPending}
+                        className="p-2 hover:bg-red-500/20 rounded-lg transition-colors disabled:opacity-50 cursor-pointer hover:scale-110 active:scale-95"
+                        title="Delete notification"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
                     </div>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Right: Notification Details */}
-        <div className="lg:col-span-1">
-          {selectedNotificationData ? (
-            <div className="bg-[#1a1a1a] border border-purple-500/30 rounded-lg p-6 h-full flex flex-col">
-              <div className="flex-1 overflow-y-auto">
-                <h2 className="text-2xl font-bold mb-4">{selectedNotificationData.title}</h2>
-
-                {/* Metadata */}
-                <div className="space-y-3 mb-6 pb-6 border-b border-gray-700/50">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Type</p>
-                    <p className={`text-sm font-medium capitalize ${getTypeColor(selectedNotificationData.type).text}`}>
-                      {getTypeLabel(selectedNotificationData.type)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
-                    <p className="text-sm font-medium text-gray-300">{selectedNotificationData.isRead ? 'Read' : 'Unread'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
-                    <p className="text-sm font-medium text-gray-300">
-                      {new Date(selectedNotificationData.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Message */}
-                <div className="mb-6">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Message</p>
-                  <p className="text-gray-200 leading-relaxed">{selectedNotificationData.message}</p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-6 border-t border-gray-700/50">
-                <button
-                  onClick={() => handleMarkAsRead(selectedNotificationData.id, selectedNotificationData.isRead)}
-                  disabled={markAsReadMutation.isPending}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 font-medium transition-colors duration-200 disabled:opacity-50 cursor-pointer"
-                >
-                  {selectedNotificationData.isRead ? 'Mark Unread' : 'Mark Read'}
-                </button>
-                <button
-                  onClick={() => handleToggleFavorite(selectedNotificationData.id)}
-                  disabled={toggleFavoriteMutation.isPending}
-                  className="flex-1 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/50 rounded-lg px-4 py-2 font-medium transition-colors duration-200 disabled:opacity-50 cursor-pointer"
-                >
-                  <Star className="w-4 h-4 inline mr-1" />
-                  {selectedNotificationData.isFavorited ? 'Unfavorite' : 'Favorite'}
-                </button>
-                <button
-                  onClick={() => handleDelete(selectedNotificationData.id)}
-                  disabled={deleteNotificationMutation.isPending}
-                  className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/50 rounded-lg px-4 py-2 font-medium transition-colors duration-200 disabled:opacity-50 cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4 inline mr-1" />
-                  Delete
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-[#1a1a1a] border border-purple-500/30 rounded-lg p-6 h-full flex items-center justify-center">
-              <p className="text-gray-400">Select a notification to view details</p>
+              ))}
             </div>
           )}
         </div>

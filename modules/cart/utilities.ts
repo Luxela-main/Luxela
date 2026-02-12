@@ -1,11 +1,3 @@
-/**
- * CART UTILITIES - Approval & Payment Validation
- * 
- * Utilities for validating cart items are approved, handling
- * inventory checks, and ensuring payment safety throughout
- * the checkout flow.
- */
-
 export interface ValidatedCartItem {
   id: string;
   listingId: string;
@@ -27,10 +19,6 @@ export interface CartValidationResult {
   canCheckout: boolean;
 }
 
-/**
- * Validate cart items based on approval status
- * Separates approved from unapproved items with detailed feedback
- */
 export function validateCartApproval(items: any[]): CartValidationResult {
   const result: CartValidationResult = {
     isValid: true,
@@ -75,15 +63,11 @@ export function validateCartApproval(items: any[]): CartValidationResult {
     }
   });
 
-  // Can only checkout if all items are approved
   result.canCheckout = result.unapprovedItems.length === 0 && result.approvedItems.length > 0;
 
   return result;
 }
 
-/**
- * Check for inventory issues in cart
- */
 export function validateInventory(
   items: any[]
 ): { valid: boolean; warnings: string[] } {
@@ -107,9 +91,6 @@ export function validateInventory(
   };
 }
 
-/**
- * Format cart validation messages for UI display
- */
 export function formatValidationMessage(result: CartValidationResult): string[] {
   const messages: string[] = [];
 
@@ -131,9 +112,6 @@ export function formatValidationMessage(result: CartValidationResult): string[] 
   return messages;
 }
 
-/**
- * Check if user can proceed to checkout
- */
 export function canProceedToCheckout(
   items: any[]
 ): { allowed: boolean; reason?: string } {
@@ -161,9 +139,6 @@ export function canProceedToCheckout(
   return { allowed: true };
 }
 
-/**
- * Prepare cart for payment - ensure all items are validated
- */
 export function prepareCartForPayment(items: any[]) {
   const validation = validateCartApproval(items);
   const inventory = validateInventory(items);
@@ -183,18 +158,11 @@ export function prepareCartForPayment(items: any[]) {
   };
 }
 
-/**
- * Filter cart to only approved items
- * Use this when preparing final order
- */
 export function getApprovedCartItems(items: any[]) {
   const validation = validateCartApproval(items);
   return validation.approvedItems;
 }
 
-/**
- * Get cart summary with validation
- */
 export function getCartSummary(items: any[]) {
   const validation = validateCartApproval(items);
   const inventory = validateInventory(items);
@@ -204,7 +172,7 @@ export function getCartSummary(items: any[]) {
     0
   );
 
-  const shipping = subtotal > 50000 ? 0 : 2000; // Free over ₦50,000
+  const shipping = subtotal > 50000 ? 0 : 2000;
   const total = subtotal + shipping;
 
   return {
@@ -222,9 +190,6 @@ export function getCartSummary(items: any[]) {
   };
 }
 
-/**
- * Validate customer data before payment
- */
 export function validateCustomerData(customer: any): {
   valid: boolean;
   errors: string[];
@@ -253,10 +218,6 @@ export function validateCustomerData(customer: any): {
   };
 }
 
-/**
- * Safe payment initialization check
- * Run all validations before sending to server
- */
 export function validatePaymentReadiness(cart: any, customer: any): {
   ready: boolean;
   errors: string[];

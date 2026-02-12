@@ -127,9 +127,10 @@ export default function EnhancedProductCard({
       setAdded(true);
       toastSvc.success(`${product.title} added to cart`);
       setTimeout(() => setAdded(false), 2000);
-    } catch (err) {
-      console.error('Failed to add to cart:', err);
-      toastSvc.error('Failed to add to cart. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || 'Failed to add to cart. Please try again.';
+      console.error('Failed to add to cart:', { message: errorMessage, error: err });
+      toastSvc.error(errorMessage);
     } finally {
       setIsAdding(false);
     }

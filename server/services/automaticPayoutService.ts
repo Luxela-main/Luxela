@@ -1,9 +1,8 @@
 import { db } from '../db';
-import { orders, paymentHolds, financialLedger, sellers } from '../db/schema';
+import { orders, paymentHolds, financialLedger } from '../db/schema';
 import { eq, and, gte, sum } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
-import { createNotification } from './paymentFlowService';
 
 interface PayoutRecord {
   id: string;
@@ -190,7 +189,7 @@ export async function getSellerPayoutHistory(
     .limit(limit)
     .offset(offset);
 
-  return entries.map((entry) => ({
+  return entries.map((entry: any) => ({
     id: entry.id,
     orderId: entry.orderId || '',
     amountCents: entry.amountCents,
@@ -243,6 +242,7 @@ export async function requestManualPayout(
   try {
     // Record payout request in financial ledger
     await db.insert(financialLedger).values({
+      id: payoutId,
       sellerId,
       transactionType: 'payout',
       amountCents: -amount,
@@ -250,14 +250,6 @@ export async function requestManualPayout(
       status: 'pending',
       description: `Manual payout request to ${bankDetails.bankCode} - ${bankDetails.accountNumber}`,
     });
-
-    // Send seller notification
-    // await createNotification(
-    //   sellerId,
-    //   'payout_requested',
-    //   'Payout Requested',
-    //   `Your payout of ₦${(amount / 100).toFixed(2)} has been requested and will be processed within 1-3 business days.`
-    // );
 
     console.log(`Payout request created: ${payoutId} for seller ${sellerId}`);
 
@@ -333,7 +325,7 @@ export async function getSellerEarningsStats(
 
   const availableBalance = Math.max(
     0,
-    Number(availableResult[0]?.total) || 0 - totalPayedOut
+    (Number(availableResult[0]?.total) || 0) - totalPayedOut
   );
 
   // Pending balance

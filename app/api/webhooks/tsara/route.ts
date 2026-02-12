@@ -142,7 +142,7 @@ export const POST = async (req: NextRequest) => {
     const payment = paymentRecords[0];
 
     // Process within transaction
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       // Record webhook event
       await tx.insert(webhookEvents).values({
         eventId,

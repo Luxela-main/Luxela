@@ -1,6 +1,53 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+
+// Cache for brands data with TTL
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number; // TTL in milliseconds
+}
+
+const BRANDS_CACHE = new Map<string, CacheEntry<any>>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const REQUEST_TIMEOUT = 15000; // 15 seconds per request
+const MAX_RETRIES = 2; // Reduced from 3
+const RETRY_DELAY = 500; // ms between retries
+
+// Request deduplication
+const pendingRequests = new Map<string, Promise<any>>();
+
+function getCacheKey(params: any): string {
+  return JSON.stringify({ page: params.page, limit: params.limit, search: params.search, sortBy: params.sortBy });
+}
+
+function getCachedBrands(cacheKey: string): any | null {
+  const cached = BRANDS_CACHE.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    console.log('[useBrands] Using cached brands data');
+    return cached.data;
+  }
+  BRANDS_CACHE.delete(cacheKey);
+  return null;
+}
+
+function setCachedBrands(cacheKey: string, data: any): void {
+  BRANDS_CACHE.set(cacheKey, {
+    data,
+    timestamp: Date.now(),
+    ttl: CACHE_TTL,
+  });
+}
+
+function getDuplicateRequest(cacheKey: string): Promise<any> | null {
+  return pendingRequests.get(cacheKey) || null;
+}
+
+function setDuplicateRequest(cacheKey: string, promise: Promise<any>): void {
+  pendingRequests.set(cacheKey, promise);
+  promise.finally(() => pendingRequests.delete(cacheKey));
+}
 
 export interface Brand {
   id: string;
@@ -89,12 +136,42 @@ function extractBrandsFromResponse(response: any): {
     data = response[0];
   }
 
-  const brandsData = data.result?.data || data;
+  // Handle different response structures
+  let brandsData: any = null;
+  
+  if (data?.result?.data) {
+    brandsData = data.result.data;
+  } else if (data?.result) {
+    brandsData = data.result;
+  } else if (data?.brands !== undefined) {
+    brandsData = data;
+  } else if (typeof data === 'object' && data !== null) {
+    brandsData = data;
+  }
+
+  if (!brandsData || typeof brandsData !== 'object') {
+    console.warn('[extractBrandsFromResponse] Could not extract brands data from response:', response);
+    return {
+      brands: [],
+      total: 0,
+      totalPages: 0,
+    };
+  }
+
+  const brands = Array.isArray(brandsData.brands) ? brandsData.brands : [];
+  const total = typeof brandsData.total === 'number' ? brandsData.total : 0;
+  const totalPages = typeof brandsData.totalPages === 'number' ? brandsData.totalPages : 0;
+  
+  console.log('[extractBrandsFromResponse] Extracted brands:', {
+    brandCount: brands.length,
+    total,
+    totalPages,
+  });
 
   return {
-    brands: brandsData.brands || [],
-    total: brandsData.total || 0,
-    totalPages: brandsData.totalPages || 0,
+    brands,
+    total,
+    totalPages,
   };
 }
 
@@ -115,12 +192,39 @@ export function useBrands({
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
+  const isMountedRef = useRef(true);
 
   const fetchBrands = useCallback(async (attemptNumber = 1) => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    let controller: AbortController | null = null;
+    
     try {
-      setIsLoading(true);
-      setError(null);
+      const cacheKey = getCacheKey({ page, limit, search, sortBy });
+      
+      // Check cache first
+      const cachedData = getCachedBrands(cacheKey);
+      if (cachedData) {
+        if (isMountedRef.current) {
+          setBrands(cachedData.brands);
+          setTotal(cachedData.total);
+          setTotalPages(cachedData.totalPages);
+          setIsLoading(false);
+          setError(null);
+        }
+        return cachedData;
+      }
+      
+      // Check for duplicate request
+      const duplicateRequest = getDuplicateRequest(cacheKey);
+      if (duplicateRequest) {
+        console.log('[useBrands] Reusing in-flight request (deduplication)');
+        return duplicateRequest;
+      }
+      
+      if (isMountedRef.current) {
+        setIsLoading(true);
+        setError(null);
+      }
 
       const queryParams = new URLSearchParams();
       queryParams.set('input', JSON.stringify({
@@ -132,72 +236,61 @@ export function useBrands({
 
       console.log('[useBrands] Fetching brands...', { page, limit, search, sortBy, attemptNumber, maxRetries: MAX_RETRIES });
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const fetchPromise = (async () => {
+        controller = new AbortController();
+        timeoutId = setTimeout(() => controller!.abort(), REQUEST_TIMEOUT);
       
-      const response = await fetch(
-        `/api/trpc/brands.getAllBrands?${queryParams.toString()}`,
-        {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-        }
-      );
-      
-      clearTimeout(timeoutId);
-
-      console.log('[useBrands] Response received', { status: response.status, statusText: response.statusText });
-
-      let result: any;
-      let responseText = '';
-      try {
-        responseText = await response.clone().text();
-        console.log('[useBrands] Raw response:', responseText.substring(0, 500));
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        const err = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
-        throw new Error(
-          `Failed to parse response: ${err}. Raw response: ${responseText.substring(0, 200)}`
+        const response = await fetch(
+          `/api/trpc/brands.getAllBrands?${queryParams.toString()}`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+          }
         );
-      }
+        
+        if (timeoutId) clearTimeout(timeoutId);
 
-      if ((Array.isArray(result) && result[0]?.error) || result.error) {
-        const errorMsg = extractErrorFromResponse(result, response.status);
-        const isRetryable = response.status >= 500 || response.status === 408; // Server error or timeout
-        if (isRetryable && attemptNumber < MAX_RETRIES) {
-          console.warn(`[useBrands] Retryable error, attempt ${attemptNumber}/${MAX_RETRIES}:`, errorMsg);
-          setRetryCount(attemptNumber);
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000 * attemptNumber));
-          return fetchBrands(attemptNumber + 1);
+        console.log('[useBrands] Response received', { status: response.status, statusText: response.statusText });
+
+        let result: any;
+        let responseText = '';
+        try {
+          responseText = await response.clone().text();
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          const err = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
+          throw new Error(`Failed to parse response: ${err}`);
         }
-        throw new Error(`Server error: ${errorMsg}`);
-      }
 
-      if (!response.ok) {
-        const errorMsg = extractErrorFromResponse(result, response.status);
-        const isRetryable = response.status >= 500 || response.status === 408;
-        if (isRetryable && attemptNumber < MAX_RETRIES) {
-          console.warn(`[useBrands] Retryable HTTP error, attempt ${attemptNumber}/${MAX_RETRIES}: ${response.status}`);
-          setRetryCount(attemptNumber);
-          await new Promise(resolve => setTimeout(resolve, 1000 * attemptNumber));
-          return fetchBrands(attemptNumber + 1);
+        if ((Array.isArray(result) && result[0]?.error) || result.error) {
+          const errorMsg = extractErrorFromResponse(result, response.status);
+          const isRetryable = response.status >= 500 || response.status === 408;
+          if (isRetryable && attemptNumber < MAX_RETRIES) {
+            console.warn(`[useBrands] Retryable error, attempt ${attemptNumber}/${MAX_RETRIES}`);
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attemptNumber));
+            return fetchBrands(attemptNumber + 1);
+          }
+          throw new Error(`Server error: ${errorMsg}`);
         }
-        throw new Error(`HTTP ${response.status}: ${errorMsg}`);
-      }
 
-      const { brands: brandsData, total: totalCount, totalPages: totalPageCount } =
-        extractBrandsFromResponse(result);
+        if (!response.ok) {
+          const errorMsg = extractErrorFromResponse(result, response.status);
+          const isRetryable = response.status >= 500 || response.status === 408;
+          if (isRetryable && attemptNumber < MAX_RETRIES) {
+            console.warn(`[useBrands] Retryable HTTP error, attempt ${attemptNumber}/${MAX_RETRIES}: ${response.status}`);
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attemptNumber));
+            return fetchBrands(attemptNumber + 1);
+          }
+          throw new Error(`HTTP ${response.status}: ${errorMsg}`);
+        }
 
-      console.log('Brands fetched successfully:', {
-        count: brandsData.length,
-        total: totalCount,
-        totalPages: totalPageCount,
-        brands: brandsData,
-      });
+        const { brands: brandsData, total: totalCount, totalPages: totalPageCount } =
+          extractBrandsFromResponse(result);
 
-      // Transform response with real follower counts
-      const transformedBrands: Brand[] = brandsData.map((brand: any) => {
+        // Transform response with real follower counts
+        const transformedBrands: Brand[] = brandsData.map((brand: any) => {
         const displayName = brand.brandName || brand.name || 'Store';
 
         const transformed = {
@@ -238,10 +331,34 @@ export function useBrands({
         return transformed;
       });
 
-      setBrands(transformedBrands);
-      setTotal(totalCount);
-      setTotalPages(totalPageCount);
+      // Cache the result
+      const responseData = {
+        brands: transformedBrands,
+        total: totalCount,
+        totalPages: totalPageCount,
+      };
+      setCachedBrands(cacheKey, responseData);
+      
+      if (isMountedRef.current) {
+        setBrands(transformedBrands);
+        setTotal(totalCount);
+        setTotalPages(totalPageCount);
+        setIsLoading(false);
+        setError(null);
+        setRetryCount(0);
+      }
+      
+      return responseData;
+      })();
+      
+      // Set up request deduplication
+      setDuplicateRequest(cacheKey, fetchPromise);
+      
+      return await fetchPromise;
     } catch (err: any) {
+      // Clean up timeout on error
+      if (timeoutId) clearTimeout(timeoutId);
+      
       let errorMessage = 'Failed to fetch brands';
       let isAbortError = false;
 
@@ -251,13 +368,10 @@ export function useBrands({
         if (attemptNumber < MAX_RETRIES) {
           console.warn(`[useBrands] Request timeout, attempt ${attemptNumber}/${MAX_RETRIES}`);
           setRetryCount(attemptNumber);
-          // Retry on timeout
-          setIsLoading(true);
-          return new Promise(resolve => {
-            setTimeout(() => {
-              fetchBrands(attemptNumber + 1).then(resolve);
-            }, 1000 * attemptNumber);
-          });
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * attemptNumber));
+          // Recursive retry
+          return fetchBrands(attemptNumber + 1);
         }
       } else if (err instanceof Error) {
         errorMessage = err.message;
@@ -284,9 +398,11 @@ export function useBrands({
       
       if (attemptNumber >= MAX_RETRIES) {
         setBrands([]);
+        setIsLoading(false);
       }
     } finally {
-      if (attemptNumber >= MAX_RETRIES || (isLoading && brands.length === 0)) {
+      // Only clear loading state on final attempt or if not retrying
+      if (attemptNumber >= MAX_RETRIES) {
         setIsLoading(false);
       }
     }

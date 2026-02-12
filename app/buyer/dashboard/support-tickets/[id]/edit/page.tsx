@@ -64,14 +64,14 @@ export default function EditTicketPage() {
   const queryClient = useQueryClient();
   const updateMutation = trpc.support.updateTicket.useMutation({
     onSuccess: () => {
-      // Invalidate the ticket query to force a refetch
+      
       queryClient.invalidateQueries({
         queryKey: [['support', 'getTicket'], { input: { ticketId } }],
       });
     },
   });
 
-  // Fetch ticket details
+  
   const ticketQuery = trpc.support.getTicket.useQuery(
     { ticketId },
     {
@@ -121,8 +121,8 @@ export default function EditTicketPage() {
     );
   }
 
-  // Check if ticket can be edited (only if status is open or in_progress)
-  // Backend already validated ownership via getTicket, so we only check status here
+  
+  
   const canEdit =
     ticket.status === "open" || ticket.status === "in_progress";
 
@@ -177,7 +177,7 @@ export default function EditTicketPage() {
         description: formData.description,
       });
       toast.success("Ticket updated successfully");
-      // Navigate back to detail view after successful update
+      
       setTimeout(() => {
         router.push(`/buyer/dashboard/support-tickets/${ticketId}`);
       }, 500);
@@ -192,7 +192,7 @@ export default function EditTicketPage() {
   return (
     <div className="min-h-screen bg-[#0E0E0E] p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex items-center gap-4 mb-8">
           <Button
             variant="ghost"
@@ -205,10 +205,10 @@ export default function EditTicketPage() {
           <h1 className="text-3xl font-bold text-white">Edit Ticket</h1>
         </div>
 
-        {/* Edit Form */}
+        {}
         <div className="bg-[#141414] border border-[#2B2B2B] rounded-lg p-6">
           <div className="space-y-6">
-            {/* Subject */}
+            {}
             <div>
               <label className="block text-sm font-medium text-[#DCDCDC] mb-2">
                 Subject
@@ -224,7 +224,7 @@ export default function EditTicketPage() {
               <p className="text-xs text-[#808080] mt-1">Min 5 characters</p>
             </div>
 
-            {/* Category */}
+            {}
             <div>
               <label className="block text-sm font-medium text-[#DCDCDC] mb-2">
                 Category
@@ -248,7 +248,7 @@ export default function EditTicketPage() {
               </Select>
             </div>
 
-            {/* Priority */}
+            {}
             <div>
               <label className="block text-sm font-medium text-[#DCDCDC] mb-2">
                 Priority
@@ -275,7 +275,7 @@ export default function EditTicketPage() {
               </Select>
             </div>
 
-            {/* Description */}
+            {}
             <div>
               <label className="block text-sm font-medium text-[#DCDCDC] mb-2">
                 Description
@@ -291,7 +291,7 @@ export default function EditTicketPage() {
               <p className="text-xs text-[#808080] mt-1">Min 10 characters</p>
             </div>
 
-            {/* Action Buttons */}
+            {}
             <div className="border-t border-[#2B2B2B] pt-6 flex gap-3 justify-end">
               <Button
                 variant="outline"

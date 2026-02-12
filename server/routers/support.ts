@@ -344,7 +344,7 @@ export const supportRouter = createTRPCRouter({
         .where(whereClause)
         .orderBy(desc(supportTickets.createdAt));
 
-      return tickets.map((t) => ({
+      return tickets.map((t: typeof tickets[number]) => ({
         id: t.id,
         buyerId: t.buyerId,
         sellerId: t.sellerId ?? null,
@@ -1054,7 +1054,7 @@ export const supportRouter = createTRPCRouter({
         .where(eq(supportTicketReplies.ticketId, input.ticketId))
         .orderBy(desc(supportTicketReplies.createdAt));
 
-      return replies.map((r) => ({
+      return replies.map((r: typeof replies[number]) => ({
         id: r.id,
         ticketId: r.ticketId,
         senderId: r.senderId,
@@ -1147,11 +1147,11 @@ export const supportRouter = createTRPCRouter({
 
       return {
         total: allTickets.length,
-        open: allTickets.filter((t) => t.status === 'open').length,
-        inProgress: allTickets.filter((t) => t.status === 'in_progress').length,
-        resolved: allTickets.filter((t) => t.status === 'resolved').length,
-        closed: allTickets.filter((t) => t.status === 'closed').length,
-        urgent: allTickets.filter((t) => t.priority === 'urgent').length,
+        open: allTickets.filter((t: typeof allTickets[number]) => t.status === 'open').length,
+        inProgress: allTickets.filter((t: typeof allTickets[number]) => t.status === 'in_progress').length,
+        resolved: allTickets.filter((t: typeof allTickets[number]) => t.status === 'resolved').length,
+        closed: allTickets.filter((t: typeof allTickets[number]) => t.status === 'closed').length,
+        urgent: allTickets.filter((t: typeof allTickets[number]) => t.priority === 'urgent').length,
       };
     }),
 });

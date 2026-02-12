@@ -88,14 +88,14 @@ export const adminNotificationsRealtimeRouter = createTRPCRouter({
       );
 
       const total = notifications.length;
-      const unreadCount = notifications.filter((n) => !n.isRead).length;
-      const criticalCount = notifications.filter((n) => n.severity === 'critical')
+      const unreadCount = notifications.filter((n: any) => !n.isRead).length;
+      const criticalCount = notifications.filter((n: any) => n.severity === 'critical')
         .length;
 
       const paginated = notifications.slice(input.offset, input.offset + input.limit);
 
       return {
-        notifications: paginated.map((n) => ({
+        notifications: paginated.map((n: any) => ({
           id: n.id,
           type: n.type,
           title: n.title,

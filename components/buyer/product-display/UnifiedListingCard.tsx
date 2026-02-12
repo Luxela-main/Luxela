@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { toastSvc } from '@/services/toast';
 import { useRouter } from 'next/navigation';
 import { useListings } from '@/context/ListingsContext';
+import { formatCurrency } from '@/lib/utils';
 import { ApprovalBadge } from '../ApprovalBadge';
 import HorizontalImageScroller from '@/components/HorizontalImageScroller';
 import {
@@ -132,9 +133,10 @@ export default function UnifiedListingCard({
       setAdded(true);
       toastSvc.success(`${listing.title} added to cart`);
       setTimeout(() => setAdded(false), 2000);
-    } catch (err) {
-      console.error('Failed to add to cart:', err);
-      toastSvc.error('Failed to add to cart. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err?.data?.message || err?.message || 'Failed to add to cart. Please try again.';
+      console.error('Failed to add to cart:', { message: errorMessage, error: err });
+      toastSvc.error(errorMessage);
     } finally {
       setIsAdding(false);
     }
@@ -527,8 +529,7 @@ export default function UnifiedListingCard({
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <span className="text-[#8451E1] font-bold text-sm">
-                      {listing.currency}{' '}
-                      {((listing.price_cents || 0) / 100).toLocaleString()}
+                      {formatCurrency((listing.price_cents || 0) / 100, listing.currency || 'NGN')}
                     </span>
                   </div>
 
@@ -646,8 +647,7 @@ export default function UnifiedListingCard({
               <div>
                 <p className="text-sm text-[#acacac] mb-2">Price</p>
                 <p className="text-2xl font-bold text-[#8451E1]">
-                  {listing.currency}{' '}
-                  {((listing.price_cents || 0) / 100).toLocaleString()}
+                  {formatCurrency((listing.price_cents || 0) / 100, listing.currency || 'NGN')}
                 </p>
               </div>
 

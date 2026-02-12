@@ -200,10 +200,16 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
       return transformed;
     } catch (err: any) {
       const errorMessage = err?.message || 'Failed to fetch listing details';
-      console.error('[ListingsContext.fetchListingDetailsById] Error:', {
+      const errorData = {
         id,
         message: errorMessage,
-      });
+        errorType: err?.constructor?.name || typeof err,
+        fullError: err,
+        ...(err?.data && { data: err.data }),
+        ...(err?.code && { code: err.code }),
+      };
+      console.error('[ListingsContext.fetchListingDetailsById] Error:', errorData);
+      console.error('[ListingsContext.fetchListingDetailsById] Full stack:', err?.stack || 'No stack trace');
       return undefined;
     }
   };

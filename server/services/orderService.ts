@@ -51,7 +51,7 @@ export async function validateAndUpdateOrderStatus(
     });
   }
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx
       .update(orders)
       .set({

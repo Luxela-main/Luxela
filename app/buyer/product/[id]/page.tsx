@@ -30,7 +30,7 @@ function ProductDetailPage({
   const [isApproved, setIsApproved] = useState(false);
   const [brandProducts, setBrandProducts] = useState<any[]>([]);
 
-  // Fetch complete listing details on mount
+  
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -108,7 +108,7 @@ function ProductDetailPage({
     );
   }
 
-  // brandProducts are now set in useEffect above
+  
 
   const productSchema = product ? generateProductSchema({
     id: product.id,
@@ -137,14 +137,14 @@ function ProductDetailPage({
       {breadcrumbSchema && <JsonLdScript data={breadcrumbSchema} id="breadcrumb-schema" />}
       <div className="bg-black min-h-screen text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12 sm:py-16">
-          {/* Breadcrumb */}
+          {}
           <div className="mb-12">
             <Breadcrumb product={product as any} business={business} />
           </div>
 
-          {/* Product Main Section - Premium Layout */}
+          {}
           <div className="grid lg:grid-cols-12 gap-12 mb-20">
-            {/* Image Gallery - 5 cols */}
+            {}
             <div className="lg:col-span-6 flex flex-col">
               <ProductImageCarousel
                 images={(() => {
@@ -167,22 +167,22 @@ function ProductDetailPage({
               />
             </div>
 
-            {/* Product Info - 7 cols for asymmetric luxury feel */}
+            {}
             <div className="lg:col-span-6 flex flex-col justify-start">
               <ProductInfo product={product} business={business} />
             </div>
           </div>
 
-          {/* Content Section - Improved spacing and typography */}
+          {}
           <div className="space-y-20 mb-20">
-            {/* Product Description - Full Width */}
+            {}
             <section>
               <ProductDescription product={product} />
             </section>
 
-            {/* Two Column: Vendor + Reviews */}
+            {}
             <section className="grid lg:grid-cols-3 gap-12">
-              {/* Main Content - 2 columns */}
+              {}
               <div className="lg:col-span-2">
                 <VendorDetails
                   business={business}
@@ -190,14 +190,14 @@ function ProductDetailPage({
                 />
               </div>
 
-              {/* Reviews Sidebar */}
+              {}
               <div>
                 <ProductReviews productId={product.id} />
               </div>
             </section>
           </div>
 
-          {/* Related Products - Full Width */}
+          {}
           {brandProducts.length > 0 && (
             <section className="border-t border-[#1a1a1a] pt-20">
               <RelatedProducts

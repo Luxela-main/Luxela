@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
     // Query orders created yesterday
     const yesterdayOrders = await db.query.orders.findMany();
     const ordersCreatedYesterday = yesterdayOrders.filter(
-      (o) => o.orderDate >= startOfYesterday && o.orderDate <= endOfYesterday
+      (o: any) => o.orderDate >= startOfYesterday && o.orderDate <= endOfYesterday
     );
 
     const ordersDeliveredYesterday = yesterdayOrders.filter(
-      (o) =>
+      (o: any) =>
         o.deliveredDate &&
         o.deliveredDate >= startOfYesterday &&
         o.deliveredDate <= endOfYesterday
@@ -39,11 +39,11 @@ export async function GET(request: NextRequest) {
     // Query support tickets
     const allTickets = await db.query.supportTickets.findMany();
     const ticketsCreatedYesterday = allTickets.filter(
-      (t) => t.createdAt >= startOfYesterday && t.createdAt <= endOfYesterday
+      (t: any) => t.createdAt >= startOfYesterday && t.createdAt <= endOfYesterday
     );
 
     const ticketsResolvedYesterday = allTickets.filter(
-      (t) =>
+      (t: any) =>
         t.resolvedAt &&
         t.resolvedAt >= startOfYesterday &&
         t.resolvedAt <= endOfYesterday
@@ -52,18 +52,18 @@ export async function GET(request: NextRequest) {
     // Query refunds
     const allRefunds = await db.query.refunds.findMany();
     const refundsYesterday = allRefunds.filter(
-      (r) => r.refundedAt && r.refundedAt >= startOfYesterday && r.refundedAt <= endOfYesterday
+      (r: any) => r.refundedAt && r.refundedAt >= startOfYesterday && r.refundedAt <= endOfYesterday
     );
 
     // Calculate metrics
-    const totalTicketsOpen = allTickets.filter((t) => t.status === 'open').length;
+    const totalTicketsOpen = allTickets.filter((t: any) => t.status === 'open').length;
 
     // Average response time (mock calculation)
     const avgResponseTime = ticketsCreatedYesterday.length > 0 ? 120 : 0;
     const avgResolutionTime = ticketsResolvedYesterday.length > 0 ? 720 : 0;
 
     // SLA breach count (tickets that exceeded 48hr response)
-    const slaBreachCount = ticketsCreatedYesterday.filter((t) => {
+    const slaBreachCount = ticketsCreatedYesterday.filter((t: any) => {
       if (!t.updatedAt) return false;
       const responsetime = (t.updatedAt.getTime() - t.createdAt.getTime()) / (1000 * 60);
       return responsetime > 120;

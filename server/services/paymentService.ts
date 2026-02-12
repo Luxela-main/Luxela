@@ -47,7 +47,7 @@ export async function recordSale(
   const now = new Date();
   const releasesAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     // Create ledger entry for the sale
     const ledgerId = uuidv4();
     await tx.insert(financialLedger).values({
@@ -120,7 +120,7 @@ export async function recordRefund(
 
   const now = new Date();
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx.insert(refunds).values({
       orderId,
       paymentId: payment.id,
@@ -226,7 +226,7 @@ export async function releasePaymentHold(holdId: string): Promise<void> {
     });
   }
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     // Update hold status
     await tx.update(paymentHolds)
       .set({
@@ -314,7 +314,7 @@ export async function getSellerLedger(
     .limit(limit)
     .offset(offset);
 
-  return entries.map(entry => ({
+  return entries.map((entry: any) => ({
     id: entry.id,
     sellerId: entry.sellerId,
     orderId: entry.orderId || null,

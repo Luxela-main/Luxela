@@ -1,0 +1,1 @@
+CREATE INDEX "idx_listings_seller_id" ON "listings" USING btree ("seller_id");

@@ -33,10 +33,10 @@ const ProfilePage = () => {
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
-  // Redirect to create profile if no profile exists (but wait for proper initialization)
+  
   useEffect(() => {
-    // Only redirect after we've confirmed the profile doesn't exist
-    // AND we're not currently loading
+    
+    
     if (isInitialized && !profileLoading && !profile) {
       router.push("/buyer/profile/create");
     }
@@ -96,12 +96,12 @@ const ProfilePage = () => {
 
   const utils = trpc.useUtils();
 
-  // const { data: orderStats, isLoading: statsLoading } =
-  //   trpc.buyer.getOrderStats.useQuery(undefined, {
-  //     enabled: !!user && !!profile,
-  //   });
+  
+  
+  
+  
 
-  // Fetch real loyalty NFT data - must be called unconditionally
+  
   const { data: loyaltyData, isLoading: loyaltyLoading } = trpc.buyer.getLoyaltyNFTs.useQuery(undefined, {
     enabled: !!user && activeTab === "loyalty",
   });
@@ -165,7 +165,7 @@ const ProfilePage = () => {
     }
   };
 
-  // Show loading state while initializing
+  
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -177,7 +177,7 @@ const ProfilePage = () => {
     );
   }
 
-  // Show loading state while fetching profile
+  
   if (profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -203,7 +203,7 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen text-white px-6 py-10">
-      {/* Header */}
+      {}
       <header className="flex flex-col gap-10 md:flex-row items-start justify-between px-2 border-b-2 border-[#E5E7EB] pb-6">
         <motion.div
           className="flex items-center gap-4"
@@ -276,7 +276,7 @@ const ProfilePage = () => {
         </motion.div>
       </header>
 
-      {/* Tabs */}
+      {}
       <div className="px-2 mt-8">
         <div className="flex justify-between md:gap-8 md:justify-start">
           <motion.button
@@ -327,7 +327,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* NFT Grid */}
+      {}
       <motion.div
         className="px-2 mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         initial={{ opacity: 0 }}

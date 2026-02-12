@@ -222,7 +222,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
         .orderBy(desc(countFn()))
         .limit(input.limit);
 
-      return topListings.map((item) => ({
+      return topListings.map((item: any) => ({
         id: item.id,
         title: item.title,
         sales: Number(item.sales || 0),
@@ -271,7 +271,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
         .groupBy(orders.orderDate)
         .orderBy(orders.orderDate);
 
-      return dailyRevenue.map((item) => ({
+      return dailyRevenue.map((item: any) => ({
         date: new Date(item.date).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -338,7 +338,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
       // Combine data by date
       const dateMap = new Map<string, { buyers: number; sellers: number }>();
 
-      buyerAcquisition.forEach((item) => {
+      buyerAcquisition.forEach((item: any) => {
         const date = new Date(item.date).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -349,7 +349,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
         dateMap.get(date)!.buyers = Number(item.count || 0);
       });
 
-      sellerAcquisition.forEach((item) => {
+      sellerAcquisition.forEach((item: any) => {
         const date = new Date(item.date).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -555,7 +555,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
         .groupBy(sellers.id, sellerBusiness.brandName)
         .limit(limit);
 
-      return sellerMetrics.map((metric) => {
+      return sellerMetrics.map((metric: any) => {
         const completionRate =
           metric.totalOrders && metric.totalOrders > 0
             ? (Number(metric.completedOrders || 0) / metric.totalOrders) * 100
@@ -628,7 +628,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
         .groupBy(sql`DATE(${orders.createdAt})`)
         .orderBy(sql`DATE(${orders.createdAt})`);
 
-      return dailyData.map((day) => ({
+      return dailyData.map((day: any) => ({
         date: day.date || new Date().toISOString().split('T')[0],
         conversions: day.completedOrders || 0,
         revenue: (Number(day.totalRevenue || 0)) / 100,
@@ -694,7 +694,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
         .orderBy(desc(sum(orders.amountCents)))
         .limit(limit);
 
-      return productPerf.map((product) => ({
+      return productPerf.map((product: any) => ({
         listingId: product.listingId,
         title: product.title,
         category: product.category || 'others',
@@ -762,11 +762,11 @@ export const adminAnalyticsRouter = createTRPCRouter({
 
       return {
         highRefundRate: refundMetrics
-          .filter(m => {
+          .filter((m: any) => {
             const rate = m.totalOrders > 0 ? (Number(m.refundedOrders || 0) / m.totalOrders) * 100 : 0;
             return rate > 10;
           })
-          .map(m => ({
+          .map((m: any) => ({
             sellerId: m.sellerId,
             sellerName: m.sellerName || 'Unknown',
             refundRate: m.totalOrders > 0 
@@ -774,11 +774,11 @@ export const adminAnalyticsRouter = createTRPCRouter({
               : '0',
           })),
         highDisputeRate: disputeMetrics
-          .filter(m => {
+          .filter((m: any) => {
             const rate = m.totalOrders > 0 ? (Number(m.disputes || 0) / m.totalOrders) * 100 : 0;
             return rate > 5;
           })
-          .map(m => ({
+          .map((m: any) => ({
             sellerId: m.sellerId,
             sellerName: m.sellerName || 'Unknown',
             disputeRate: m.totalOrders > 0 

@@ -302,31 +302,6 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
           </select>
         </div>
 
-        {/* Release Duration Time */}
-        <div>
-          <label className="block text-sm mb-2">Release duration</label>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="00 Days"
-              value={formData.releaseDurationDays}
-              onChange={(e) =>
-                handleInputChange("releaseDurationDays", e.target.value)
-              }
-              className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
-            />
-            <input
-              type="text"
-              placeholder="00 Minutes"
-              value={formData.releaseDurationMinutes}
-              onChange={(e) =>
-                handleInputChange("releaseDurationMinutes", e.target.value)
-              }
-              className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-purple-600 text-white"
-            />
-          </div>
-        </div>
-
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-6">
           <Button

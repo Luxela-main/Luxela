@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useBrands, type Brand } from '@/modules/buyer/queries/useBrands';
 import { useRealtimeListings } from '@/hooks/useRealtimeListings';
@@ -9,21 +10,32 @@ import {
   ProductDisplayGrid,
 } from '@/components/buyer/product-display';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, Search, X, Loader2, TrendingUp, Star, Users } from 'lucide-react';
 import Image from 'next/image';
+
+// Dynamically import Select components to prevent hydration mismatch with Radix UI useId()
+const Select = dynamic(() => import('@/components/ui/select').then(mod => ({ default: mod.Select })), {
+  ssr: false,
+  loading: () => <div className="w-full h-10 bg-[#0f0f0f] rounded-lg animate-pulse" />
+});
+const SelectContent = dynamic(() => import('@/components/ui/select').then(mod => ({ default: mod.SelectContent })), {
+  ssr: false,
+});
+const SelectItem = dynamic(() => import('@/components/ui/select').then(mod => ({ default: mod.SelectItem })), {
+  ssr: false,
+});
+const SelectTrigger = dynamic(() => import('@/components/ui/select').then(mod => ({ default: mod.SelectTrigger })), {
+  ssr: false,
+});
+const SelectValue = dynamic(() => import('@/components/ui/select').then(mod => ({ default: mod.SelectValue })), {
+  ssr: false,
+});
 
 export default function BrandsPage() {
   const router = useRouter();
   useRealtimeListings(); // Enable realtime product syncing
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit] = useState(12);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'followers' | 'products' | 'name' | 'rating'>(
     'followers'

@@ -410,7 +410,7 @@ export const adminMembersRouter = createTRPCRouter({
 
       if (input.role === 'buyer' || input.role === 'all') {
         members = members.concat(
-          buyerMembers.map((m) => ({
+          buyerMembers.map((m: any) => ({
             id: m.id,
             email: m.email,
             name: m.name,
@@ -426,7 +426,7 @@ export const adminMembersRouter = createTRPCRouter({
 
       if (input.role === 'seller' || input.role === 'all') {
         members = members.concat(
-          sellerMembers.map((m) => ({
+          sellerMembers.map((m: any) => ({
             id: m.id,
             email: m.email || '',
             name: m.name || 'Unknown Seller',
@@ -442,11 +442,11 @@ export const adminMembersRouter = createTRPCRouter({
 
       // Sort by the specified order
       if (input.sortBy === 'newest') {
-        members.sort((a, b) => b.joinDate.getTime() - a.joinDate.getTime());
+        members.sort((a: any, b: any) => b.joinDate.getTime() - a.joinDate.getTime());
       } else if (input.sortBy === 'oldest') {
-        members.sort((a, b) => a.joinDate.getTime() - b.joinDate.getTime());
+        members.sort((a: any, b: any) => a.joinDate.getTime() - b.joinDate.getTime());
       } else if (input.sortBy === 'name') {
-        members.sort((a, b) => a.name.localeCompare(b.name));
+        members.sort((a: any, b: any) => a.name.localeCompare(b.name));
       }
 
       // Apply pagination

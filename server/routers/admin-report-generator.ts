@@ -450,7 +450,7 @@ async function generateSalesSummary(
       )
     );
 
-  const totalRevenue = orders_data.reduce((sum, o) => sum + (o.total || 0), 0) / 100;
+  const totalRevenue = orders_data.reduce((sum: any, o: any) => sum + (o.total || 0), 0) / 100;
   const avgOrderValue = orders_data.length > 0 ? totalRevenue / orders_data.length : 0;
 
   return {
@@ -485,7 +485,7 @@ async function generateSellerPerformance(
     .orderBy(desc(sum(orders.amountCents)));
 
   const avgRating = sellerData.length > 0
-    ? sellerData.reduce((sum, s) => sum + Number(s.avgRating || 0), 0) / sellerData.length
+    ? sellerData.reduce((sum: any, s: any) => sum + Number(s.avgRating || 0), 0) / sellerData.length
     : 0;
 
   return {
@@ -510,10 +510,10 @@ async function generatePaymentSummary(
     );
 
   const totalProcessed = transactions
-    .filter((t) => t.orderStatus === 'delivered')
-    .reduce((sum, t) => sum + (t.amountCents || 0), 0) / 100;
+    .filter((t: any) => t.orderStatus === 'delivered')
+    .reduce((sum: any, t: any) => sum + (t.amountCents || 0), 0) / 100;
 
-  const failedCount = transactions.filter((t) => t.orderStatus === 'canceled').length;
+  const failedCount = transactions.filter((t: any) => t.orderStatus === 'canceled').length;
 
   return {
     transactions,
@@ -536,7 +536,7 @@ async function generateDisputeSummary(
       )
     );
 
-  const resolvedCount = disputeData.filter((d) => d.status === 'resolved').length;
+  const resolvedCount = disputeData.filter((d: any) => d.status === 'resolved').length;
   const resolutionRate = disputeData.length > 0 
     ? (resolvedCount / disputeData.length) * 100 
     : 0;
@@ -585,7 +585,7 @@ async function generateInventoryReport(
 ): Promise<any> {
   const listingsData = await db.select().from(listings);
 
-  const activeCount = listingsData.filter((l) => l.status === 'approved').length;
+  const activeCount = listingsData.filter((l: any) => l.status === 'approved').length;
   const lowStockCount = 0; // Would need inventory tracking
 
   return {

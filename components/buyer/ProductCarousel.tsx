@@ -127,14 +127,14 @@ export default function ProductCarousel({
         {/* Products Container */}
         <div
           ref={scrollContainerRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide"
+          className="flex gap-3 sm:gap-4 md:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide"
           style={{ scrollBehavior: 'smooth' }}
         >
           {products.filter(p => p && p.id).map((product) => (
             <Link
               key={product.id}
               href={`/buyer/product/${product.id}`}
-              className="flex-shrink-0 group/item w-40 sm:w-48 md:w-56"
+              className="flex-shrink-0 group/item w-40 sm:w-48 md:w-64 lg:w-72"
             >
               <div className={`bg-[#0f0f0f] border border-[#222] rounded-lg overflow-hidden hover:border-[#8451E1]/50 transition-all duration-300 h-full flex flex-col hover:shadow-lg hover:shadow-[#8451E1]/10 ${
                 isFeatured ? 'md:w-72 md:h-96' : ''
@@ -184,7 +184,7 @@ export default function ProductCarousel({
                 </div>
 
                 {/* Content */}
-                <div className="p-3 sm:p-4 flex-grow flex flex-col justify-between">
+                <div className="p-3 sm:p-4 md:p-5 flex-grow flex flex-col justify-between">
                   {/* Brand */}
                   {product.sellers?.seller_business?.[0]?.brand_name && (
                     <p className="text-xs text-[#666] uppercase tracking-widest font-medium mb-1 sm:mb-2 line-clamp-1">

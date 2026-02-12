@@ -1,6 +1,6 @@
 {
-  "id": "3fcc3af7-14cd-4b65-9f0a-e369d8ef3f2a",
-  "prevId": "bf4c4367-80f3-4c4e-8b5d-978fb712cd55",
+  "id": "2f133654-98dd-47ec-be75-74e7602d2595",
+  "prevId": "3fcc3af7-14cd-4b65-9f0a-e369d8ef3f2a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2746,7 +2746,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_listings_seller_id": {
+          "name": "idx_listings_seller_id",
+          "columns": [
+            {
+              "expression": "seller_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "listings_collection_id_collections_id_fk": {
           "name": "listings_collection_id_collections_id_fk",

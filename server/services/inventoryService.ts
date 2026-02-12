@@ -12,7 +12,7 @@ export async function reserveInventory(
 ): Promise<string> {
   const reservationId = uuidv4();
 
-  return await db.transaction(async (tx) => {
+  return await db.transaction(async (tx: any) => {
     await tx.insert(inventoryReservations).values({
       id: reservationId,
       inventoryId,
@@ -29,7 +29,7 @@ export async function reserveInventory(
 export async function confirmReservation(
   reservationId: string
 ): Promise<void> {
-  return await db.transaction(async (tx) => {
+  return await db.transaction(async (tx: any) => {
     const [reservation] = await tx
       .select()
       .from(inventoryReservations)

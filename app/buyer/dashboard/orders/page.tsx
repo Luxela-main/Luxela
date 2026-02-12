@@ -49,32 +49,37 @@ export default function OrdersPage() {
     }
   };
 
-  // Query with proper error handling
+  
   const { data: ordersData, isLoading: isDataLoading, error: queryError, refetch } = trpc.buyer.getPurchaseHistory.useQuery(
     { page: currentPage, limit: itemsPerPage },
     {
-      retry: 2,
-      retryDelay: 1000,
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 10000,
+      gcTime: 60000,
     }
   );
 
   const confirmDeliveryMutation = trpc.checkout.confirmDelivery.useMutation();
   const { toast } = useToast();
 
-  // Initialize real-time order syncing with polling
-  const { refreshOrders: refreshOrdersFromHook, isPolling, startPolling } = useRealtimeOrders({
+  
+  const { refreshOrders: refreshOrdersFromHook, isPolling, startPolling, currentInterval } = useRealtimeOrders({
     enabled: true,
-    refetchInterval: 30000, // Poll every 30 seconds
-    refetchOnWindowFocus: true, // Refresh when user returns to tab
-    refetchOnInteraction: true, // Refresh on user interactions
+    refetchInterval: 30000, 
+    staleTime: 10000, 
+    refetchOnWindowFocus: true, 
+    refetchOnInteraction: true, 
+    adaptiveRefresh: true, 
+    maxRetries: 5, 
   });
 
-  // Start polling when component mounts
+  
   useEffect(() => {
     startPolling();
   }, [startPolling]);
 
-  // Map API response to Order types
+  
   useEffect(() => {
     if (ordersData?.data) {
       const mappedOrders: Order[] = ordersData.data.map((item: any) => ({
@@ -112,7 +117,7 @@ export default function OrdersPage() {
     }
   }, [ordersData, isDataLoading, queryError]);
 
-  // Filter orders based on selected filter
+  
   useEffect(() => {
     let filtered = orders;
 
@@ -246,7 +251,7 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Error State */}
+        {}
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6 flex items-center gap-3">
             <AlertCircle className="text-red-500" size={20} />
@@ -256,14 +261,14 @@ export default function OrdersPage() {
             </div>
             <button
               onClick={() => refetch()}
-              className="ml-auto px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition"
+              className="ml-auto px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition cursor-pointer"
             >
               Retry
             </button>
           </div>
         )}
 
-        {/* Loading State */}
+        {}
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin">
@@ -346,7 +351,7 @@ export default function OrdersPage() {
               ))}
             </div>
 
-            {/* Pagination */}
+            {}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <button
@@ -387,7 +392,7 @@ export default function OrdersPage() {
           </>
         )}
 
-        {/* Order Details Modal */}
+        {}
         {selectedOrder && selectedOrderData && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-[#1a1a1a] rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -407,7 +412,7 @@ export default function OrdersPage() {
               </div>
 
               <div className="p-4 sm:p-6 space-y-6">
-                {/* Status Section */}
+                {}
                 <div className={`${getStatusBgColor(selectedOrderData.orderStatus)} border border-[#333] rounded-lg p-4`}>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-white font-semibold">Order Status</h3>
@@ -427,7 +432,7 @@ export default function OrdersPage() {
                   </p>
                 </div>
 
-                {/* Tracking Timeline */}
+                {}
                 <div>
                   <h3 className="text-white font-semibold mb-4">Tracking</h3>
                   <div className="space-y-3">
@@ -466,7 +471,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* Order Summary */}
+                {}
                 <div className="border border-[#333] rounded-lg p-4">
                   <h3 className="text-white font-semibold mb-4">Order Summary</h3>
                   <div className="space-y-2">
@@ -493,7 +498,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* Payment Info */}
+                {}
                 <div className="border border-[#333] rounded-lg p-4">
                   <h3 className="text-white font-semibold mb-4">Payment Information</h3>
                   <div className="space-y-2">
@@ -515,7 +520,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* Shipping Address */}
+                {}
                 <div className="border border-[#333] rounded-lg p-4">
                   <h3 className="text-white font-semibold mb-3">Shipping Address</h3>
                   <p className="text-gray-300 text-sm">
@@ -523,7 +528,7 @@ export default function OrdersPage() {
                   </p>
                 </div>
 
-                {/* Tracking Number */}
+                {}
                 {selectedOrderData.trackingNumber && (
                   <div className="border border-[#333] rounded-lg p-4">
                     <h3 className="text-white font-semibold mb-3">Tracking Number</h3>
@@ -531,13 +536,13 @@ export default function OrdersPage() {
                   </div>
                 )}
 
-                {/* Actions */}
+                {}
                 <div className="flex gap-3 flex-wrap">
                   {selectedOrderData.orderStatus === 'shipped' && (
                     <button
                       onClick={handleConfirmDelivery}
                       disabled={isConfirmingDelivery}
-                      className="flex-1 sm:flex-none bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex-1 sm:flex-none bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {isConfirmingDelivery ? (
                         <>

@@ -6,13 +6,12 @@ import Image from "next/image";
 interface CartItemProps {
   item: {
     id: string;
-    listingId: string; // This allows us know what to update
+    listingId: string;
     name: string;
     price: number;
     quantity: number;
     image?: string;
   };
-  // These to accept the listingId and quantity
   increment: (listingId: string, currentQty: number) => void;
   decrement: (listingId: string, currentQty: number) => void;
   removeItem: (listingId: string) => void;

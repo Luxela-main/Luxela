@@ -99,13 +99,13 @@ export const adminAuditLogsRouter = createTRPCRouter({
 
       // Fetch user details for performed_by
       const userIds = logs
-        .map((log) => log.performedBy)
-        .filter((id): id is string => id !== null && typeof id === 'string');
+        .map((log: any) => log.performedBy)
+        .filter((id: any): id is string => id !== null && typeof id === 'string');
       
       const userMap = new Map<string, string>();
       
       if (userIds.length > 0) {
-        const uniqueUserIds = [...new Set(userIds)];
+        const uniqueUserIds = [...new Set(userIds)] as string[];
         const usersData = await db
           .select({ id: users.id, email: users.email })
           .from(users)
@@ -117,7 +117,7 @@ export const adminAuditLogsRouter = createTRPCRouter({
       }
 
       return {
-        logs: logs.map((log) => {
+        logs: logs.map((log: any) => {
           let details = null;
           if (log.details) {
             try {
@@ -210,7 +210,7 @@ export const adminAuditLogsRouter = createTRPCRouter({
         .groupBy(listingActivityLog.actionType);
 
       const actionsByType: Record<string, number> = {};
-      actionsByTypeResult.forEach((item) => {
+      actionsByTypeResult.forEach((item: any) => {
         actionsByType[item.actionType] = Number(item.count || 0);
       });
 
@@ -230,7 +230,7 @@ export const adminAuditLogsRouter = createTRPCRouter({
         .groupBy(listingActivityLog.performedByRole);
 
       const actionsByRole: Record<string, number> = {};
-      actionsByRoleResult.forEach((item) => {
+      actionsByRoleResult.forEach((item: any) => {
         if (item.role) {
           actionsByRole[item.role] = Number(item.count || 0);
         }
@@ -257,12 +257,12 @@ export const adminAuditLogsRouter = createTRPCRouter({
 
       // Fetch user emails
       const adminIds = topAdminsResult
-        .map((admin) => admin.performedBy)
-        .filter((id): id is string => id !== null && typeof id === 'string');
+        .map((admin: any) => admin.performedBy)
+        .filter((id: any): id is string => id !== null && typeof id === 'string');
       const adminMap = new Map<string, string>();
       
       if (adminIds.length > 0) {
-        const uniqueAdminIds = [...new Set(adminIds)];
+        const uniqueAdminIds = [...new Set(adminIds)] as string[];
         const adminUsers = await db
           .select({ id: users.id, email: users.email })
           .from(users)
@@ -273,7 +273,7 @@ export const adminAuditLogsRouter = createTRPCRouter({
         });
       }
 
-      const topAdmins = topAdminsResult.map((admin) => ({
+      const topAdmins = topAdminsResult.map((admin: any) => ({
         userId: (admin.performedBy ?? null) as string | null,
         email: (adminMap.get(admin.performedBy as string) ?? 'Unknown') as string,
         actionCount: Number(admin.count || 0),
@@ -416,7 +416,7 @@ export const adminAuditLogsRouter = createTRPCRouter({
           'Role',
           'Created At',
         ];
-        const rows = logs.map((log) => [
+        const rows = logs.map((log: any) => [
           log.id,
           log.listingId || '',
           log.action,
@@ -430,9 +430,9 @@ export const adminAuditLogsRouter = createTRPCRouter({
           headers.join(',') +
           '\n' +
           rows
-            .map((row) =>
+            .map((row: any) =>
               row
-                .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+                .map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`)
                 .join(',')
             )
             .join('\n');

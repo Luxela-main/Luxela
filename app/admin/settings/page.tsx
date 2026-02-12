@@ -48,7 +48,7 @@ export default function AdminSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // General Settings
+  
   const [generalSettings, setGeneralSettings] = useState({
     siteName: "",
     siteUrl: "",
@@ -58,15 +58,15 @@ export default function AdminSettingsPage() {
     language: "",
   });
 
-  // Notification Settings
+  
   const [notifications, setNotifications] = useState<NotificationSetting[]>([]);
 
-  // Security Settings
+  
   const [securitySettings, setSecuritySettings] = useState<SecuritySetting[]>(
     []
   );
 
-  // System Settings
+  
   const [systemSettings, setSystemSettings] = useState({
     maxUploadSize: "",
     maxImageDimensions: "",
@@ -76,7 +76,7 @@ export default function AdminSettingsPage() {
     apiRateLimit: "",
   });
 
-  // Email Settings
+  
   const [emailSettings, setEmailSettings] = useState({
     smtpServer: "",
     smtpPort: "",
@@ -86,7 +86,7 @@ export default function AdminSettingsPage() {
     enableSSL: true,
   });
 
-  // Store original values to detect changes
+  
   const [originalValues, setOriginalValues] = useState({
     generalSettings,
     notifications,
@@ -95,57 +95,105 @@ export default function AdminSettingsPage() {
     emailSettings,
   });
 
-  // Fetch settings from API
+  
   const { data: settingsData, isLoading: isQueryLoading } = trpc.adminSettings.getAllSettings.useQuery();
 
-  // Sync fetched data with component state
+  
   useEffect(() => {
     if (settingsData && !isQueryLoading) {
-      // Set general settings with fallback to defaults
-      if (settingsData.general) {
-        setGeneralSettings({
-          siteName: (settingsData.general as any).siteName || '',
-          siteUrl: (settingsData.general as any).siteUrl || '',
-          supportEmail: (settingsData.general as any).supportEmail || '',
-          adminEmail: (settingsData.general as any).adminEmail || '',
-          timezone: (settingsData.general as any).timezone || '',
-          language: (settingsData.general as any).language || '',
-        });
-      }
-      // Set notification settings with fallback to empty array
-      setNotifications((Array.isArray(settingsData.notifications) ? settingsData.notifications : []) as NotificationSetting[]);
-      // Set security settings with fallback to empty array
-      setSecuritySettings((Array.isArray(settingsData.security) ? settingsData.security : []) as SecuritySetting[]);
-      // Set system settings with fallback to defaults
-      if (settingsData.system) {
-        setSystemSettings({
-          maxUploadSize: (settingsData.system as any).maxUploadSize || '',
-          maxImageDimensions: (settingsData.system as any).maxImageDimensions || '',
-          cacheTTL: (settingsData.system as any).cacheTTL || '',
-          backupFrequency: (settingsData.system as any).backupFrequency || '',
-          maintenanceMode: (settingsData.system as any).maintenanceMode || false,
-          apiRateLimit: (settingsData.system as any).apiRateLimit || '',
-        });
-      }
-      // Extract SMTP settings from email object
-      if (settingsData.email?.smtp) {
-        const extractedEmailSettings = {
-          smtpServer: settingsData.email.smtp.server || '',
-          smtpPort: String(settingsData.email.smtp.port || ''),
-          fromEmail: settingsData.email.smtp.fromEmail || '',
-          fromName: settingsData.email.smtp.fromName || '',
-          replyTo: settingsData.email.smtp.replyTo || '',
-          enableSSL: settingsData.email.smtp.enableTLS ?? true,
-        };
-        setEmailSettings(extractedEmailSettings);
-      }
+      const generalData = (settingsData as any).general || {};
+      setGeneralSettings({
+        siteName: generalData.siteName || 'Luxela',
+        siteUrl: generalData.siteUrl || 'https://luxela.com',
+        supportEmail: generalData.supportEmail || 'support@luxela.com',
+        adminEmail: generalData.adminEmail || 'admin@luxela.com',
+        timezone: generalData.timezone || 'UTC',
+        language: generalData.language || 'en',
+      });
+
+      const notificationsData = (settingsData as any).notifications || {};
+      setNotifications([
+        {
+          id: 'order-updates',
+          label: 'Order Updates',
+          description: 'Receive notifications about new orders and order changes',
+          enabled: notificationsData['order-updates'] !== false,
+        },
+        {
+          id: 'customer-inquiries',
+          label: 'Customer Inquiries',
+          description: 'Get notified when customers send messages or inquiries',
+          enabled: notificationsData['customer-inquiries'] !== false,
+        },
+        {
+          id: 'system-alerts',
+          label: 'System Alerts',
+          description: 'Receive critical system and security alerts',
+          enabled: notificationsData['system-alerts'] !== false,
+        },
+        {
+          id: 'payment-notifications',
+          label: 'Payment Notifications',
+          description: 'Get notified about payment and payout events',
+          enabled: notificationsData['payment-notifications'] !== false,
+        },
+      ]);
+
+      const securityData = (settingsData as any).security || {};
+      setSecuritySettings([
+        {
+          id: 'two-factor-auth',
+          label: 'Two-Factor Authentication',
+          description: 'Require 2FA for admin account access',
+          value: securityData['two-factor-auth'] ?? false,
+        },
+        {
+          id: 'ip-whitelist',
+          label: 'IP Whitelist',
+          description: 'Restrict admin access to specific IP addresses',
+          value: securityData['ip-whitelist'] ?? false,
+        },
+        {
+          id: 'session-timeout',
+          label: 'Session Timeout',
+          description: 'Minutes before admin session expires (0 = disabled)',
+          value: securityData['session-timeout'] ?? '30',
+        },
+        {
+          id: 'activity-logging',
+          label: 'Activity Logging',
+          description: 'Log all admin actions for audit purposes',
+          value: securityData['activity-logging'] ?? true,
+        },
+      ]);
+
+      const systemData = (settingsData as any).system || {};
+      setSystemSettings({
+        maxUploadSize: systemData.maxUploadSize || '50MB',
+        maxImageDimensions: systemData.maxImageDimensions || '4000x4000',
+        cacheTTL: systemData.cacheTTL || '3600',
+        backupFrequency: systemData.backupFrequency || 'Daily',
+        maintenanceMode: systemData.maintenanceMode || false,
+        apiRateLimit: systemData.apiRateLimit || '1000',
+      });
+
+      const emailData = (settingsData as any).email || {};
+      setEmailSettings({
+        smtpServer: emailData.smtpServer || 'smtp.gmail.com',
+        smtpPort: emailData.smtpPort || '587',
+        fromEmail: emailData.fromEmail || 'noreply@luxela.com',
+        fromName: emailData.fromName || 'Luxela',
+        replyTo: emailData.replyTo || 'support@luxela.com',
+        enableSSL: emailData.enableSSL !== false,
+      });
+
       setIsLoading(false);
     } else if (isQueryLoading) {
       setIsLoading(true);
     }
   }, [settingsData, isQueryLoading]);
 
-  // Mutations for saving settings
+  
   const updateGeneralMutation =
     trpc.adminSettings.updateGeneralSettings.useMutation();
   const updateSettingsMutation =
@@ -167,7 +215,7 @@ export default function AdminSettingsPage() {
 
   const handleEditToggle = () => {
     if (isEditMode) {
-      // Cancel edit mode and revert changes
+      
       setGeneralSettings(originalValues.generalSettings);
       setNotifications(originalValues.notifications);
       setSecuritySettings(originalValues.securitySettings);
@@ -180,13 +228,13 @@ export default function AdminSettingsPage() {
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      // Save based on active section
+      
       switch (activeSection) {
         case "general":
           await updateGeneralMutation.mutateAsync(generalSettings);
           break;
         case "notifications": {
-          // Convert notifications array to settings update format
+          
           const updates = notifications.map((n) => ({
             settingKey: `notifications:${n.id}`,
             settingValue: n.enabled,
@@ -196,7 +244,7 @@ export default function AdminSettingsPage() {
           break;
         }
         case "security": {
-          // Convert security settings array to settings update format
+          
           const updates = securitySettings.map((s) => ({
             settingKey: `security:${s.id}`,
             settingValue: s.value,
@@ -206,7 +254,7 @@ export default function AdminSettingsPage() {
           break;
         }
         case "system": {
-          // Convert system settings object to settings update format
+          
           const updates = Object.entries(systemSettings).map(([key, value]) => ({
             settingKey: `system:${key}`,
             settingValue: value,
@@ -274,7 +322,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0e0e0e] via-[#1a1a1a] to-[#0e0e0e] p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-3">
@@ -306,17 +354,17 @@ export default function AdminSettingsPage() {
           </p>
         </div>
 
-        {/* Toast notifications handled by react-hot-toast */}
+        {}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Sidebar Navigation */}
+          {}
           <div className="lg:col-span-1">
             <div className="sticky top-20 space-y-2">
               {settingSections.map((section) => (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all cursor-pointer ${
                     activeSection === section.id
                       ? "bg-purple-600 text-white shadow-lg shadow-purple-500/30"
                       : "text-gray-400 hover:bg-slate-700/50 hover:text-white"
@@ -329,9 +377,9 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* Main Content */}
+          {}
           <div className="lg:col-span-4">
-            {/* General Settings */}
+            {}
             {activeSection === "general" && (
               <div className="space-y-6">
                 <div className="bg-slate-800 rounded-xl border border-[#2B2B2B] p-6">
@@ -498,7 +546,7 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* Notifications */}
+            {}
             {activeSection === "notifications" && (
               <div className="space-y-6">
                 <div className="bg-slate-800 rounded-xl border border-[#2B2B2B] p-6">
@@ -524,7 +572,7 @@ export default function AdminSettingsPage() {
                         {isEditMode ? (
                           <button
                             onClick={() => toggleNotification(notif.id)}
-                            className="ml-4 flex-shrink-0"
+                            className="ml-4 flex-shrink-0 cursor-pointer"
                           >
                             {notif.enabled ? (
                               <ToggleRight className="w-6 h-6 text-green-500" />
@@ -548,7 +596,7 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* Security */}
+            {}
             {activeSection === "security" && (
               <div className="space-y-6">
                 <div className="bg-slate-800 rounded-xl border border-[#2B2B2B] p-6">
@@ -577,7 +625,7 @@ export default function AdminSettingsPage() {
                             isEditMode ? (
                               <button
                                 onClick={() => toggleSecurity(setting.id)}
-                                className="ml-4 flex-shrink-0"
+                                className="ml-4 flex-shrink-0 cursor-pointer"
                               >
                                 {setting.value ? (
                                   <ToggleRight className="w-6 h-6 text-green-500" />
@@ -620,7 +668,7 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* System */}
+            {}
             {activeSection === "system" && (
               <div className="space-y-6">
                 <div className="bg-slate-800 rounded-xl border border-[#2B2B2B] p-6">
@@ -783,7 +831,7 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* Email */}
+            {}
             {activeSection === "email" && (
               <div className="space-y-6">
                 <div className="bg-slate-800 rounded-xl border border-[#2B2B2B] p-6">
@@ -942,7 +990,7 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* Save Button - Only show in edit mode */}
+            {}
             {isEditMode && (
               <div className="sticky bottom-0 mt-8 pt-6 border-t border-[#2B2B2B] bg-gradient-to-t from-[#0e0e0e] to-transparent">
                 <div className="flex justify-end gap-3">

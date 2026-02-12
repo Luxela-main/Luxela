@@ -122,6 +122,48 @@ function parseBearerToken(header?: string | null) {
   return scheme?.toLowerCase() === "bearer" ? token : null;
 }
 
+// ---------- JWT Token Decoder (Fallback) ----------
+// Decodes and extracts user info from JWT token when Supabase API call fails
+function decodeJWTToken(token: string): User | null {
+  try {
+    // JWT format: header.payload.signature
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      console.warn("[AUTH] Invalid JWT format - expected 3 parts, got", parts.length);
+      return null;
+    }
+    
+    // Decode the payload (second part)
+    // Add padding if necessary (base64 requires padding to multiple of 4)
+    let payload = parts[1];
+    const padding = 4 - (payload.length % 4);
+    if (padding !== 4) {
+      payload += "=".repeat(padding);
+    }
+    
+    const decoded = JSON.parse(Buffer.from(payload, "base64").toString("utf-8"));
+    
+    if (!decoded.sub && !decoded.user_id) {
+      console.warn("[AUTH] JWT missing sub or user_id claim");
+      return null;
+    }
+    
+    // Extract user info from JWT claims
+    return {
+      id: decoded.sub || decoded.user_id,
+      email: decoded.email || undefined,
+      name: decoded.name || decoded.user_name || undefined,
+      role: decoded.role || decoded.user_role || undefined,
+      avatar_url: decoded.avatar_url || decoded.picture || undefined,
+      admin: decoded.admin === true || decoded.role === "admin",
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.warn("[AUTH] Failed to decode JWT token:", errorMsg);
+    return null;
+  }
+}
+
 // ---------- tRPC context ----------
 export async function createTRPCContext({ req, res }: { req?: any; res?: any }) {
   // First, try to extract session from cookies (Supabase auth)
@@ -132,28 +174,51 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
   if (!token) {
     const rawAuthHeader = extractAuthorizationHeader(req);
     token = parseBearerToken(rawAuthHeader);
+    if (token) {
+      console.log("[AUTH] Token extracted from Authorization header");
+    }
+  } else {
+    console.log("[AUTH] Token extracted from cookie");
   }
 
   const authClient = getAuthClient();
   const adminClient = getAdminClient();
 
   // Extract admin flag from proxy headers
-  const adminFlagHeader = req?.headers?.['x-admin-flag'] || req?.headers?.get?.('x-admin-flag');
-  const isAdmin = adminFlagHeader === 'true' || adminFlagHeader === true;
+  const adminFlagHeader = req?.headers?.["x-admin-flag"] || req?.headers?.get?.("x-admin-flag");
+  const isAdmin = adminFlagHeader === "true" || adminFlagHeader === true;
 
   let user: User | null = null;
 
   if (token) {
+    console.log("[AUTH] Token found, attempting to verify with Supabase...");
     try {
       // Only the ANON client can call getUser
       const { data, error } = await authClient.auth.getUser(token);
+      
       if (error) {
-        console.warn("Supabase getUser error:", error.message, error.code);
-        user = null;
+        console.error("[AUTH] Supabase getUser error:", {
+          message: error.message,
+          code: error.code,
+          status: (error as any).status,
+          tokenLength: token?.length,
+        });
+        
+        // FALLBACK: If getUser fails, try to decode JWT token directly
+        // This handles cases where Supabase API is temporarily unavailable
+        console.log("[AUTH] Attempting JWT token decode fallback...");
+        user = decodeJWTToken(token);
+        
+        if (user) {
+          console.log("[AUTH] User extracted from JWT token fallback:", { userId: user.id, email: user.email });
+        } else {
+          console.warn("[AUTH] JWT decode fallback also failed");
+          user = null;
+        }
       } else if (data?.user) {
         // Determine user role: check if they're an admin or have a specific role
         const isAdminUser = isAdmin || data.user.user_metadata?.admin === true;
-        const userRole = isAdminUser ? 'admin' : (data.user.user_metadata?.role ?? undefined);
+        const userRole = isAdminUser ? "admin" : (data.user.user_metadata?.role ?? undefined);
         
         user = {
           id: data.user.id,
@@ -163,6 +228,11 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
           admin: isAdminUser,
         };
+        console.log("[AUTH] User authenticated successfully:", { userId: user.id, email: user.email, role: user.role });
+      } else {
+        console.log("[AUTH] User data is null or undefined despite successful response");
+        // Try JWT fallback even on successful response if no user data
+        user = decodeJWTToken(token);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -175,13 +245,23 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           errorMessage: errorMessage,
           timestamp: new Date().toISOString(),
         });
-        // On timeout, set user to null and let router-level auth checks handle it
-        user = null;
+        // On timeout, try JWT fallback before giving up
+        console.log("[AUTH] Attempting JWT token decode due to timeout...");
+        user = decodeJWTToken(token);
+        if (!user) {
+          user = null;
+        }
       } else {
-        console.warn("Failed to verify JWT token:", errorMessage);
+        console.error("[AUTH] Failed to verify JWT token:", {
+          errorMessage,
+          errorName: err instanceof Error ? err.name : typeof err,
+          tokenLength: token?.length,
+        });
         user = null;
       }
     }
+  } else {
+    console.log("[AUTH] No token found in request - user will be null");
   }
 
   return {

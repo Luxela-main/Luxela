@@ -97,7 +97,7 @@ export async function getListingReviews(listingId: string, limit: number = 10) {
         },
       },
       limit,
-      orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
+      orderBy: (reviews: any, { desc }: any) => [desc(reviews.createdAt)],
     });
 
     console.log('[getListingReviews] Found reviews:', { count: listingReviews.length })
@@ -144,7 +144,7 @@ export async function getListingStats(listingId: string) {
 
     // Calculate statistics
     const totalReviews = listingReviews.length;
-    const totalRating = listingReviews.reduce((sum, r) => sum + r.rating, 0);
+    const totalRating = listingReviews.reduce((sum: any, r: any) => sum + r.rating, 0);
     const averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
 
     // Create rating distribution
@@ -156,7 +156,7 @@ export async function getListingStats(listingId: string) {
       1: 0,
     };
 
-    listingReviews.forEach((review) => {
+    listingReviews.forEach((review: any) => {
       ratingCounts[review.rating as keyof typeof ratingCounts]++;
     });
 

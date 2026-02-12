@@ -79,7 +79,7 @@ export default function TicketDetailPage() {
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState("");
 
-  // Fetch ticket details
+  
   const ticketQuery = trpc.support.getTicket.useQuery(
     { ticketId },
     {
@@ -87,12 +87,12 @@ export default function TicketDetailPage() {
     }
   );
 
-  // Fetch ticket replies
+  
   const repliesQuery = trpc.support.getTicketReplies.useQuery(
     { ticketId },
     {
       enabled: !!user?.id && !!ticketId,
-      refetchInterval: 15000, // Refetch every 15 seconds
+      refetchInterval: 15000, 
     }
   );
 
@@ -138,7 +138,7 @@ export default function TicketDetailPage() {
     }
   }, [ticketQuery.error, repliesQuery.error, toast]);
 
-  // Handle reply submission
+  
   const replyMutation = trpc.support.replyToTicket.useMutation();
 
   const handleReplySubmit = async () => {
@@ -155,14 +155,14 @@ export default function TicketDetailPage() {
 
       setReplyMessage("");
       toast.success("Reply sent successfully");
-      // Refetch replies
+      
       repliesQuery.refetch();
     } catch (error) {
       toast.error("Failed to send reply");
     }
   };
 
-  // Handle close ticket
+  
   const closeTicketMutation = trpc.support.closeTicket.useMutation();
 
   const handleCloseTicket = async () => {
@@ -170,21 +170,21 @@ export default function TicketDetailPage() {
       await closeTicketMutation.mutateAsync({ ticketId });
       toast.success("Ticket closed successfully");
       setCloseDialogOpen(false);
-      // Refetch ticket
+      
       ticketQuery.refetch();
     } catch (error) {
       toast.error("Failed to close ticket");
     }
   };
 
-  // Handle delete reply
+  
   const deleteReplyMutation = trpc.support.deleteReply.useMutation();
 
   const handleDeleteReply = async (replyId: string) => {
     try {
       await deleteReplyMutation.mutateAsync({ replyId });
       toast.success("Reply deleted successfully");
-      // Refetch replies
+      
       repliesQuery.refetch();
     } catch (error) {
       toast.error("Failed to delete reply");
@@ -221,7 +221,7 @@ export default function TicketDetailPage() {
   return (
     <div className="min-h-screen bg-[#0E0E0E] p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex items-center gap-4 mb-8">
           <Button
             variant="ghost"
@@ -239,7 +239,7 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* Ticket Info Card */}
+        {}
         <div className="bg-[#141414] border border-[#2B2B2B] rounded-lg p-6 mb-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div>
@@ -295,13 +295,13 @@ export default function TicketDetailPage() {
           )}
         </div>
 
-        {/* Replies Section */}
+        {}
         <div className="bg-[#141414] border border-[#2B2B2B] rounded-lg p-6 mb-6">
           <h3 className="text-white font-semibold mb-4">
             Replies ({replies.length})
           </h3>
 
-          {/* Replies List */}
+          {}
           <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
             {replies.length === 0 ? (
               <p className="text-[#808080] text-sm">
@@ -341,7 +341,7 @@ export default function TicketDetailPage() {
             )}
           </div>
 
-          {/* Reply Input */}
+          {}
           {ticket.status !== "closed" && (
             <div className="border-t border-[#2B2B2B] pt-6">
               <div className="space-y-3">
@@ -366,7 +366,7 @@ export default function TicketDetailPage() {
           )}
         </div>
 
-        {/* Close Ticket Confirmation Dialog */}
+        {}
         <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
           <AlertDialogContent className="bg-[#141414] border-[#2B2B2B]">
             <AlertDialogHeader>

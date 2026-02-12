@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, LogOut, Trash2, Eye, EyeOff, Check, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/context/AuthContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,8 +29,10 @@ const getRequirementColor = (met: boolean) => met ? 'text-[#9CA3AF]' : 'text-gra
 
 export default function SellerSecuritySettings() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState<string>('');
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -58,7 +61,7 @@ export default function SellerSecuritySettings() {
   }, []);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
-  // tRPC mutations
+  
   const updatePasswordMutation = trpc.seller.updatePassword.useMutation();
   const deleteAccountMutation = trpc.seller.deleteAccount.useMutation();
 
@@ -146,6 +149,17 @@ export default function SellerSecuritySettings() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      setShowLogoutDialog(false);
+      await logout();
+      router.push('/signin');
+    } catch (error: any) {
+      console.error('Logout failed:', error);
+      setShowLogoutDialog(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
@@ -189,8 +203,8 @@ export default function SellerSecuritySettings() {
               </div>
             </div>
             <button
-              onClick={() => router.push('/signin')}
-              className="w-full mt-4 px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded-md text-sm transition-colors flex items-center justify-center gap-2 border border-red-700/30"
+              onClick={() => setShowLogoutDialog(true)}
+              className="w-full mt-4 px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded-md text-sm transition-colors flex items-center justify-center gap-2 border border-red-700/30 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -367,6 +381,27 @@ export default function SellerSecuritySettings() {
               </button>
             </div>
           </form>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Logout Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent className="bg-[#1a1a1a] border-[#333]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Confirm Logout</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to log out of your account?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3">
+            <AlertDialogCancel disabled={false} className="bg-[#242424] border-[#333] text-gray-200 hover:bg-[#333]">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Log Out
+            </AlertDialogAction>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
 

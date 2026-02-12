@@ -101,7 +101,7 @@ const PreviewForm: React.FC<PreviewFormProps> = ({
           <div className="border-b border-[#333] pb-4">
             <label className="block text-sm text-gray-400 mb-1">Release duration</label>
             <p className="text-white">
-              {formData.releaseDurationDays || ''} Days, {formData.releaseDurationMinutes || ''} Hours
+              {formData.releaseDuration || 'N/A'}
             </p>
           </div>
 

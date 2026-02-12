@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -16,8 +16,14 @@ import {
   Trash2,
   ChevronDown,
   SquarePen,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 import EnhancedListingCard from "./EnhancedListingCard";
+import { trpc } from "@/lib/trpc";
+import { toastSvc } from "@/services/toast";
+import RestockModal from "./NewListing/RestockModal";
 
 interface Listing {
   id: string;
@@ -32,6 +38,8 @@ interface Listing {
   type: "single" | "collection";
   itemsJson?: any;
   imagesJson?: string;
+  listingStatus?: string;
+  status?: "pending" | "approved" | "rejected" | "revision_requested";
 }
 
 interface EnhancedListingGridProps {
@@ -41,6 +49,10 @@ interface EnhancedListingGridProps {
   onEdit: (listing: Listing) => void;
   onDelete: (listing: Listing) => void;
   type?: "single" | "collection";
+  refetch?: () => void;
+  showStatus?: boolean;
+  showFilterButton?: boolean;
+  onFilterToggle?: () => void;
 }
 
 type SortType =
@@ -60,6 +72,10 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
   onEdit,
   onDelete,
   type,
+  refetch,
+  showStatus = false,
+  showFilterButton = false,
+  onFilterToggle,
 }) => {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortType>("recent");
@@ -67,6 +83,124 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
   const [viewType, setViewType] = useState<ViewType>("grid");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [filterCategory, setFilterCategory] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [listingStatuses, setListingStatuses] = useState<Record<string, string>>({});
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [isRestocking, setIsRestocking] = useState(false);
+
+  // Restock mutation
+  const restockMutation = (trpc.listing as any).restockListing.useMutation({
+    onSuccess: () => {
+      toastSvc.success("Stock updated successfully!");
+      setShowRestockModal(false);
+      setSelectedListing(null);
+      setIsRestocking(false);
+    },
+    onError: (error: any) => {
+      toastSvc.error(error.message || "Failed to update stock");
+      setIsRestocking(false);
+    },
+  });
+
+  // Handle scroll position
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  // Scroll functions
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 400;
+      const newScrollLeft = scrollContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  // Set up polling for real-time status updates
+  useEffect(() => {
+    if (!listings || listings.length === 0) return;
+
+    // Set initial statuses
+    const initialStatuses: Record<string, string> = {};
+    listings.forEach((listing: any) => {
+      initialStatuses[listing.id] = listing.status || "pending_review";
+    });
+    setListingStatuses(initialStatuses);
+
+    // Set up polling interval for status updates - refetch fresh data every 5 seconds
+    const pollingInterval = setInterval(() => {
+      if (refetch) {
+        refetch();
+      }
+    }, 5000);
+
+    return () => clearInterval(pollingInterval);
+  }, [listings, refetch])
+
+  // Update status display when listing data changes
+  useEffect(() => {
+    if (listings && listings.length > 0) {
+      setListingStatuses((prev) => {
+        const updated = { ...prev };
+        listings.forEach((listing: any) => {
+          if (listing.status) {
+            updated[listing.id] = listing.status;
+          }
+        });
+        return updated;
+      });
+    }
+  }, [listings]);
+
+  // Helper function to get status badge styling
+  const getStatusBadge = (listing: Listing) => {
+    let displayStatus = listingStatuses[listing.id] || listing.status || "pending";
+
+    const statusMapping: Record<string, string> = {
+      pending_review: "pending",
+      approved: "approved",
+      rejected: "rejected",
+      draft: "pending",
+      archived: "rejected",
+    };
+
+    displayStatus = statusMapping[displayStatus] || "pending";
+
+    const statusConfig: Record<string, any> = {
+      pending: {
+        label: "Pending",
+        color: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+        dotColor: "bg-amber-400",
+      },
+      approved: {
+        label: "Listed",
+        color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+        dotColor: "bg-emerald-400",
+      },
+      rejected: {
+        label: "Rejected",
+        color: "bg-red-500/20 text-red-300 border-red-500/30",
+        dotColor: "bg-red-400",
+      },
+      revision_requested: {
+        label: "Revision",
+        color: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+        dotColor: "bg-orange-400",
+      },
+    };
+
+    return statusConfig[displayStatus] || statusConfig.pending;
+  };
 
   // Get image from listing
   const getImage = (listing: Listing): string | undefined => {
@@ -220,6 +354,22 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
         .length,
     };
   }, [sortedListings]);
+
+  // Restock handlers
+  const handleRestock = (listing: Listing) => {
+    setSelectedListing(listing);
+    setShowRestockModal(true);
+  };
+
+  const handleRestockUpdate = (newQuantity: number) => {
+    if (!selectedListing) return;
+
+    setIsRestocking(true);
+    restockMutation.mutate({
+      id: selectedListing.id,
+      quantityAvailable: newQuantity,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -463,29 +613,59 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
           </p>
         </div>
       ) : viewType === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-max">
-          {sortedListings.map((listing) => (
-            <EnhancedListingCard
-              key={listing.id}
-              id={listing.id}
-              title={listing.title}
-              category={getCategory(listing)}
-              image={getImage(listing)}
-              price={listing.priceCents}
-              quantity={listing.quantityAvailable}
-              views={listing.views}
-              conversions={listing.conversions}
-              createdAt={listing.createdAt}
-              type={listing.type}
-              itemCount={getItemCount(listing)}
-              onView={() => onView(listing)}
-              onEdit={() => onEdit(listing)}
-              onDelete={() => onDelete(listing)}
-            />
-          ))}
+        <div className="relative">
+          {/* Scroll Buttons */}
+          {canScrollLeft && (
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-[#8451E1]/90 hover:bg-[#8451E1] rounded-full shadow-lg transition-all duration-300 cursor-pointer -ml-4"
+              title="Scroll left"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+          )}
+          {canScrollRight && (
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-[#8451E1]/90 hover:bg-[#8451E1] rounded-full shadow-lg transition-all duration-300 cursor-pointer -mr-4"
+              title="Scroll right"
+            >
+              <ChevronRight className="w-5 h-5 text-white" />
+            </button>
+          )}
+          <div 
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory"
+          >
+            {sortedListings.map((listing) => (
+              <div key={listing.id} className="flex-shrink-0 w-80 snap-start">
+              <EnhancedListingCard
+                id={listing.id}
+                title={listing.title}
+                category={getCategory(listing)}
+                image={getImage(listing)}
+                price={listing.priceCents}
+                quantity={listing.quantityAvailable}
+                views={listing.views}
+                conversions={listing.conversions}
+                createdAt={listing.createdAt}
+                type={listing.type}
+                itemCount={getItemCount(listing)}
+                status={listingStatuses[listing.id] || listing.status}
+                onView={() => onView(listing)}
+                onEdit={() => onEdit(listing)}
+                onDelete={() => onDelete(listing)}
+                onRestock={() => handleRestock(listing)}
+              />
+            </div>
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] rounded-2xl overflow-hidden border border-gray-800/50 backdrop-blur-md shadow-xl">
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] rounded-2xl overflow-hidden border border-gray-800/50 backdrop-blur-md shadow-xl">
           {/* Table Header */}
           <div className="grid grid-cols-6 gap-4 p-5 border-b border-gray-800/50 bg-gray-900/30 sticky top-0 text-xs font-semibold text-gray-400 uppercase tracking-widest">
             <div>Product</div>
@@ -529,14 +709,15 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                   {listing.quantityAvailable}
                 </div>
                 <div>
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-[#8451E1]/20 to-[#6D3FCF]/20 border border-[#8451E1]/30 text-[#8451E1]">
-                    <span className="w-2 h-2 rounded-full bg-[#8451E1] animate-pulse" />
-                    {listing.quantityAvailable > 10
-                      ? "In Stock"
-                      : listing.quantityAvailable > 0
-                      ? "Low Stock"
-                      : "Sold Out"}
-                  </span>
+                  {(() => {
+                    const config = getStatusBadge(listing);
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm transition-all border ${config.color}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${config.dotColor}`}></span>
+                        {config.label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center justify-end gap-2">
                   <button
@@ -554,6 +735,13 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                     <Edit className="w-4 h-4 text-gray-400 group-hover:text-[#8451E1]" />
                   </button>
                   <button
+                    onClick={() => handleRestock(listing)}
+                    className="p-2 hover:bg-blue-600/20 rounded-lg transition-colors duration-300 cursor-pointer"
+                    title="Restock"
+                  >
+                    <RotateCcw className="w-4 h-4 text-gray-400 group-hover:text-blue-400" />
+                  </button>
+                  <button
                     onClick={() => onDelete(listing)}
                     className="p-2 hover:bg-red-600/20 rounded-lg transition-colors duration-300 cursor-pointer"
                     title="Delete"
@@ -563,9 +751,120 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                 </div>
               </div>
             ))}
+            </div>
           </div>
-        </div>
+
+          {/* Mobile Card Layout */}
+          <div className="md:hidden space-y-4">
+            {sortedListings.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <Package className="h-10 w-10 opacity-20 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-400">No listings found</p>
+              </div>
+            ) : (
+              sortedListings.map((listing) => (
+                <div
+                  key={listing.id}
+                  className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-gray-800/30 rounded-lg overflow-hidden hover:bg-gradient-to-b hover:from-[#252525] hover:to-[#151515] transition-all duration-300"
+                >
+                  {/* Product Image */}
+                  {getImage(listing) && (
+                    <div className="w-full h-32 flex items-center justify-center bg-gray-900">
+                      <img
+                        src={getImage(listing)}
+                        alt={listing.title}
+                        className="w-full h-full object-contain p-2"
+                      />
+                    </div>
+                  )}
+
+                  {/* Card Content */}
+                  <div className="p-4">
+                    <div className="mb-4">
+                      <p className="text-white font-medium text-sm mb-1 truncate">{listing.title}</p>
+                      <p className="text-xs text-gray-500">{getCategory(listing).replace(/_/g, " ")}</p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 mb-4 text-xs p-3 bg-gray-950/50 rounded">
+                      <div>
+                        <p className="text-gray-500 mb-1 text-xs">Price</p>
+                        <p className="text-white font-semibold">
+                          {listing.type === "single" && listing.priceCents
+                            ? `₦${(listing.priceCents / 100).toLocaleString()}`
+                            : listing.type === "collection"
+                            ? `₦${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 mb-1 text-xs">Stock</p>
+                        <p className="text-gray-300 font-semibold">
+                          {listing.quantityAvailable}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 mb-1 text-xs">Status</p>
+                        {(() => {
+                          const config = getStatusBadge(listing);
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold backdrop-blur-sm ${config.color}`}>
+                              <span className={`h-1 w-1 rounded-full animate-pulse ${config.dotColor}`}></span>
+                              {config.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => onView(listing)}
+                        className="flex-1 px-3 py-2.5 bg-[#8451E1]/20 text-[#8451E1] hover:bg-[#8451E1]/40 rounded-lg text-sm font-medium transition-all cursor-pointer border border-[#8451E1]/30 hover:border-[#8451E1]/50"
+                        title="View listing"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => onEdit(listing)}
+                        className="flex-1 px-3 py-2.5 bg-purple-600/20 text-purple-300 hover:bg-purple-600/40 rounded-lg text-sm font-medium transition-all cursor-pointer border border-purple-500/20 hover:border-purple-500/40"
+                        title="Edit listing"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleRestock(listing)}
+                        className="flex-1 px-3 py-2.5 bg-blue-600/20 text-blue-300 hover:bg-blue-600/40 rounded-lg text-sm font-medium transition-all cursor-pointer border border-blue-500/20 hover:border-blue-500/40"
+                        title="Restock inventory"
+                      >
+                        Restock
+                      </button>
+                      <button
+                        onClick={() => onDelete(listing)}
+                        className="flex-1 px-3 py-2.5 bg-red-600/20 text-red-400 hover:bg-red-600/40 rounded-lg text-sm font-medium transition-all cursor-pointer border border-red-500/20 hover:border-red-500/40"
+                        title="Delete listing"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
+
+      {/* Restock Modal */}
+      <RestockModal
+        isOpen={showRestockModal}
+        listing={selectedListing}
+        onClose={() => {
+          setShowRestockModal(false);
+          setSelectedListing(null);
+        }}
+        onUpdate={handleRestockUpdate}
+        isLoading={isRestocking}
+      />
 
       {/* Results Counter */}
       <div className="text-xs text-gray-500 text-center pt-4 border-t border-gray-800/30">

@@ -40,6 +40,27 @@ export interface ItemsJSON {
 }
 
 /**
+ * Listing data structure from database
+ */
+interface ListingDataRecord {
+  id: string;
+  title: string;
+  description: string | null;
+  slug: string;
+  image: string | null;
+  images_json: string | null;
+  price_cents: number;
+  currency: string;
+  items_json: string | null;
+  collection_id: string | null;
+  seller_id: string | null;
+  shipping_option: string | null;
+  refund_policy: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Complete product with all related data
  */
 export interface CollectionProduct {
@@ -167,7 +188,7 @@ export function useCollectionProducts(
 
       // First, determine if the provided ID is a listing ID or collection ID
       // Try collection_id first (most common case from collection cards)
-      let listingData = null;
+      let listingData: ListingDataRecord | null = null;
       let resolvedCollectionId = collectionId;
       let actualListingId = null;
       
@@ -203,7 +224,7 @@ export function useCollectionProducts(
         console.warn(`[useCollectionProducts] Collection ID fetch error:`, collectionError);
       } else if (collectionListing) {
         console.log(`[useCollectionProducts] ✓ Found collection by collection ID: ${collectionListing.collection_id}`);
-        listingData = collectionListing;
+        listingData = collectionListing as ListingDataRecord;
         resolvedCollectionId = collectionId;
         actualListingId = collectionListing.id;
       } else {
@@ -239,7 +260,7 @@ export function useCollectionProducts(
           console.warn(`[useCollectionProducts] Direct listing fetch error:`, directError);
         } else if (directListing) {
           console.log(`[useCollectionProducts] ✓ Found collection by listing ID: ${directListing.id}`);
-          listingData = directListing;
+          listingData = directListing as ListingDataRecord;
           resolvedCollectionId = directListing.collection_id || collectionId;
           actualListingId = directListing.id;
         }
@@ -277,7 +298,7 @@ export function useCollectionProducts(
             refund_policy: null,
             created_at: collectionFromTable.created_at,
             updated_at: collectionFromTable.updated_at,
-          };
+          } as ListingDataRecord;
           resolvedCollectionId = collectionFromTable.id;
         } else {
           console.warn(`[useCollectionProducts] Collection not found in either listings or collections table`);
@@ -285,6 +306,12 @@ export function useCollectionProducts(
           setIsLoading(false);
           return;
         }
+      }
+
+      if (!listingData) {
+        setError('Failed to fetch collection data');
+        setIsLoading(false);
+        return;
       }
 
       console.log(`[useCollectionProducts] ✓ Found collection listing: "${listingData.title}"`);
@@ -456,7 +483,7 @@ export function useCollectionProducts(
 
       // Build collection display data from listing and collection metadata
       let collectionDisplayData: CollectionDisplayData | null = null;
-      if (listingData) {
+      if (listingData && listingData.id) {
         collectionDisplayData = {
           id: resolvedCollectionId,
           name: collectionData?.name || listingData.title || 'Collection',
@@ -539,24 +566,29 @@ export function useCollectionProducts(
           const listing = listingsDataMap[collectionItem.product_id];
           const productImgs = allProductImages.filter((img: any) => img.product_id === collectionItem.product_id);
           
+          if (!product) {
+            return null;
+          }
+          
           return {
             id: listing?.id || collectionItem.id,
             productId: collectionItem.product_id,
-            product: product || ({} as CollectionProduct),
-            listingTitle: listing?.title || product?.name || 'Product',
-            listingDescription: listing?.description || product?.description || null,
-            category: listing?.category || product?.category || null,
-            image: listing?.image || (product?.images[0]?.imageUrl || productImgs[0]?.imageUrl || null),
+            product: product,
+            listingTitle: listing?.title || product.name || 'Product',
+            listingDescription: listing?.description || product.description || null,
+            category: listing?.category || product.category || null,
+            image: listing?.image || (product.images[0]?.imageUrl || productImgs[0]?.imageUrl || null),
             priceCents: listing?.price_cents || 0,
-            currency: listing?.currency || product?.currency || 'NGN',
+            currency: listing?.currency || product.currency || 'NGN',
             sizesJson: listing?.sizes_json ? JSON.parse(listing.sizes_json) : null,
             itemsJson: listing?.items_json ? JSON.parse(listing.items_json) : null,
             shippingOption: listing?.shipping_option || null,
             refundPolicy: listing?.refund_policy || null,
-            createdAt: listing?.created_at || product?.createdAt || new Date().toISOString(),
-            updatedAt: listing?.updated_at || product?.updatedAt || new Date().toISOString(),
+            createdAt: listing?.created_at || product.createdAt || new Date().toISOString(),
+            updatedAt: listing?.updated_at || product.updatedAt || new Date().toISOString(),
           };
-        });
+        })
+        .filter((listing: any): listing is CollectionListing => listing !== null);
 
       console.log(`[useCollectionProducts] Final: ${transformedProducts.length} products, ${transformedListings.length} listings`);
       

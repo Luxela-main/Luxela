@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { PlusCircle, Bell } from "lucide-react";
+import { PlusCircle, Bell, Filter } from "lucide-react";
 import { useMyListings, useMyCollections } from "@/modules/sellers";
 import { LoadingState } from "@/components/sellers/LoadingState";
 import { ErrorState } from "@/components/sellers/ErrorState";
@@ -24,7 +24,6 @@ import { ListingReviewStatusBadge } from "@/components/sellers/ListingReviewStat
 
 type TabType = "single" | "collection";
 
-// Helper function to parse collection items (handles both string and array formats)
 const parseCollectionItems = (itemsJson: any) => {
   if (!itemsJson) return [];
   try {
@@ -46,12 +45,16 @@ export default function MyListings() {
   const [collectionToPreview, setCollectionToPreview] = useState<any>(null);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [liveListing, setLiveListing] = useState<any>(null);
+  const [showAddProductDropdown, setShowAddProductDropdown] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const realtimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch both single listings and collections separately for better control
+  // Fetch listings and collections
   const { data: listings, isLoading: listingsLoading, error: listingsError, refetch: refetchListings } = useMyListings();
   const { data: collections, isLoading: collectionsLoading, error: collectionsError, refetch: refetchCollections } = useMyCollections();
 
-  // Determine loading and error states based on active tab
+  // Determine which data to use based on active tab
   const isLoading = activeTab === "single" ? listingsLoading : collectionsLoading;
   const error = activeTab === "single" ? listingsError : collectionsError;
   const refetch = activeTab === "single" ? refetchListings : refetchCollections;
@@ -67,13 +70,55 @@ export default function MyListings() {
       toastSvc.error(error.message || "Failed to delete listing");
     },
     onSettled: () => {
-      // Ensure refetch happens after mutation completes
       refetch();
     },
   });
 
+  // Real-time status polling for the details modal
+  useEffect(() => {
+    if (!isDetailsModalOpen || !selectedListing) {
+      // Clear interval when modal closes
+      if (realtimeIntervalRef.current) {
+        clearInterval(realtimeIntervalRef.current);
+        realtimeIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Function to fetch fresh listing status
+    const fetchListingStatus = async () => {
+      try {
+        const currentListings = listings?.find((l: any) => l.id === selectedListing.id);
+        if (currentListings) {
+          setLiveListing(currentListings);
+        }
+      } catch (error) {
+        console.error("Error fetching live listing status:", error);
+      }
+    };
+
+    // Initial fetch
+    fetchListingStatus();
+
+    // Set up interval for real-time updates (every 2 seconds)
+    realtimeIntervalRef.current = setInterval(fetchListingStatus, 2000);
+
+    return () => {
+      if (realtimeIntervalRef.current) {
+        clearInterval(realtimeIntervalRef.current);
+        realtimeIntervalRef.current = null;
+      }
+    };
+  }, [isDetailsModalOpen, selectedListing, listings]);
+
   const handleViewDetails = (listing: any) => {
-    // For collections, open collection preview modal instead
+    // Check if listing needs review
+    if (listing.status === "pending" || listing.status === "revision_requested") {
+      // For pending/revision listings, show a message
+      toastSvc.info("This listing is under review and cannot be viewed in details yet");
+      return;
+    }
+    // Open collection or single listing details
     if (listing.type === "collection") {
       setCollectionToPreview(listing);
       setIsCollectionModalOpen(true);
@@ -111,17 +156,17 @@ export default function MyListings() {
     );
   }
 
-  // Get listings for active tab - use separate sources for single vs collections
+  // Filter listings based on active tab
   const tabListings = activeTab === "single" 
     ? (listings?.filter((l: any) => l.type === "single") || [])
     : (collections || []);
 
-  // Parse collection items safely
+  // Parse collection items for preview modal
   const collectionItems = collectionToPreview ? parseCollectionItems(collectionToPreview.itemsJson) : [];
 
   return (
     <div className="px-4 lg:px-6 mt-4 md:mt-0 pb-10">
-      {/* Premium Header */}
+      {/* Header Section */}
       <div className="mb-12">
         <div className="flex items-center gap-3 mb-3">
           <div className="h-1 w-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
@@ -140,6 +185,15 @@ export default function MyListings() {
           </div>
           <div className="flex gap-3">
             <Button
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+              variant="outline"
+              className="flex items-center justify-center gap-2"
+              title="Advanced filters"
+            >
+              <Filter className="w-5 h-5" />
+              <span>Filter</span>
+            </Button>
+            <Button
               onClick={() => setIsNotificationPanelOpen(true)}
               variant="outline"
               className="flex items-center justify-center gap-2"
@@ -147,13 +201,76 @@ export default function MyListings() {
               <Bell className="w-5 h-5" />
               <span>Notifications</span>
             </Button>
-            <Button
-              onClick={() => router.push("/sellers/new-listing")}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-[#8451E1] hover:bg-[#7340D0] text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-[#8451E1]/50 h-auto cursor-pointer"
-            >
-              <PlusCircle className="w-5 h-5" />
-              <span>New Listing</span>
-            </Button>
+            <div className="relative group">
+              <Button
+                onClick={() => setShowAddProductDropdown(!showAddProductDropdown)}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-[#8451E1] hover:bg-[#7340D0] text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-[#8451E1]/50 h-auto cursor-pointer"
+              >
+                <PlusCircle className="w-5 h-5" />
+                <span>Add Product</span>
+              </Button>
+
+              {showAddProductDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-gray-800 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-2 py-2">
+                    <button
+                      onClick={() => {
+                        router.push("/sellers/create-product?type=single");
+                        setShowAddProductDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-600/20 rounded-lg transition-all duration-200 text-gray-300 hover:text-white cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-600/20 group-hover:bg-purple-600/40 flex items-center justify-center transition-colors">
+                        <svg
+                          className="w-4 h-4 text-purple-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Single Item</p>
+                        <p className="text-xs text-gray-500 group-hover:text-gray-400">Create a new product listing</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        router.push("/sellers/create-product?type=collection");
+                        setShowAddProductDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-pink-600/20 rounded-lg transition-all duration-200 text-gray-300 hover:text-white cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-pink-600/20 group-hover:bg-pink-600/40 flex items-center justify-center transition-colors">
+                        <svg
+                          className="w-4 h-4 text-pink-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Collection</p>
+                        <p className="text-xs text-gray-500 group-hover:text-gray-400">Group items into a collection</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -181,7 +298,7 @@ export default function MyListings() {
         ))}
       </div>
 
-      {/* Enhanced Listing Grid */}
+      {/* Listings Grid */}
       <EnhancedListingGrid
         listings={tabListings}
         isLoading={false}
@@ -189,23 +306,30 @@ export default function MyListings() {
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
         type={activeTab}
+        refetch={refetch}
+        showStatus={true}
+        showFilterButton={showFilterPanel}
+        onFilterToggle={() => setShowFilterPanel(!showFilterPanel)}
       />
 
-      {/* Modals */}
+      {/* Notification Panel */}
       <SellerListingNotificationPanel
         isOpen={isNotificationPanelOpen}
         onClose={() => setIsNotificationPanelOpen(false)}
       />
 
+      {/* Listing Details Modal with Real-time Updates */}
       <ListingDetailsModal
-        listing={selectedListing}
+        listing={liveListing || selectedListing}
         isOpen={isDetailsModalOpen}
         onClose={() => {
           setIsDetailsModalOpen(false);
           setSelectedListing(null);
+          setLiveListing(null);
         }}
       />
 
+      {/* Collection Preview Modal */}
       {collectionToPreview && (
         <CollectionPreviewModal
           collectionTitle={collectionToPreview.title || "Collection"}
@@ -230,7 +354,7 @@ export default function MyListings() {
         />
       )}
 
-      {/* Delete Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] border border-gray-800 text-white shadow-2xl shadow-black/50 rounded-2xl">
           <DialogHeader>

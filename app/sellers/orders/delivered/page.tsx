@@ -26,7 +26,7 @@ export default function DeliveredOrdersPage() {
 
   const { data: allOrders = [], isLoading, error } = useSellerOrders({ limit: 50, offset: 0 })
 
-  // Filter for delivered orders only
+  
   const deliveredOrders = useMemo(
     () => allOrders.filter((order: Sale) => order.orderStatus === "delivered"),
     [allOrders]

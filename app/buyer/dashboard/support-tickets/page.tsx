@@ -107,25 +107,25 @@ export default function BuyerSupportTicketsPage() {
     priority: "medium",
   });
 
-  // Form validation
+  
   const isFormValid =
     formData.title.trim().length >= 5 &&
     formData.description.trim().length >= 10 &&
     formData.category &&
     formData.priority;
 
-  // Fetch tickets using tRPC
+  
   const ticketsQuery = trpc.support.getTickets.useQuery(
     { status: undefined },
     {
-      refetchInterval: 30000, // Refetch every 30 seconds
+      refetchInterval: 30000, 
       enabled: !!user?.id,
     }
   );
 
   useEffect(() => {
     if (ticketsQuery.data) {
-      // Convert string dates to Date objects and ensure proper typing
+      
       const convertedTickets = ticketsQuery.data.map(ticket => ({
         ...ticket,
         priority: ticket.priority as "low" | "medium" | "high" | "urgent",
@@ -148,11 +148,11 @@ export default function BuyerSupportTicketsPage() {
     }
   }, [ticketsQuery.error, toast]);
 
-  // Filter tickets
+  
   useEffect(() => {
     let filtered = tickets;
 
-    // Search filter
+    
     if (searchTerm) {
       filtered = filtered.filter(
         (ticket) =>
@@ -161,14 +161,14 @@ export default function BuyerSupportTicketsPage() {
       );
     }
 
-    // Status filter
+    
     if (selectedStatus !== "ALL") {
       filtered = filtered.filter(
         (ticket) => ticket.status === selectedStatus.toLowerCase()
       );
     }
 
-    // Priority filter
+    
     if (selectedPriority !== "ALL") {
       filtered = filtered.filter(
         (ticket) => ticket.priority === selectedPriority.toLowerCase()
@@ -178,7 +178,7 @@ export default function BuyerSupportTicketsPage() {
     setFilteredTickets(filtered);
   }, [tickets, searchTerm, selectedStatus, selectedPriority]);
 
-  // Handle create ticket
+  
   const createTicketMutation = trpc.support.createTicket.useMutation();
 
   const handleCreateTicket = async () => {
@@ -198,14 +198,14 @@ export default function BuyerSupportTicketsPage() {
       });
       setOpenDialog(false);
       toast.success("Support ticket created successfully");
-      // Refetch tickets
+      
       ticketsQuery.refetch();
     } catch (error) {
       toast.error("Failed to create support ticket");
     }
   };
 
-  // Handle reply to ticket
+  
   const replyMutation = trpc.support.replyToTicket.useMutation();
 
   const handleReplyToTicket = async (ticketId: string, reply: string) => {
@@ -216,7 +216,7 @@ export default function BuyerSupportTicketsPage() {
       });
 
       toast.success("Reply sent successfully");
-      // Refetch tickets to get updated replies
+      
       ticketsQuery.refetch();
     } catch (error) {
       toast.error("Failed to send reply");
@@ -277,7 +277,7 @@ export default function BuyerSupportTicketsPage() {
   return (
     <div className="min-h-screen bg-[#0E0E0E] p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-4 border-b-2 border-[#D1D5DB]">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">

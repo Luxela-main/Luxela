@@ -87,7 +87,7 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 1. Check for urgent open tickets
+    // Check for urgent open tickets
     const urgentTickets = await db
       .select()
       .from(supportTickets)
@@ -128,10 +128,10 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 2. Check for SLA breaches
+    // Check for SLA breaches
     const slaTrackingData = await db.select().from(slaTracking);
     const slaBreaches = slaTrackingData.filter(
-      (tracking) => tracking.responseBreached || tracking.resolutionBreached
+      (tracking: any) => tracking.responseBreached || tracking.resolutionBreached
     );
 
     for (const breach of slaBreaches) {
@@ -202,7 +202,7 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 3. Check for team member capacity alerts
+    // Check for team member capacity alerts
     const teamMembers = await db.select().from(supportTeamMembers);
     for (const member of teamMembers) {
       const utilizationPercent = (member.currentLoadCount / member.maxCapacity) * 100;
@@ -272,7 +272,7 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 4. Check for escalated tickets waiting too long
+    // Check for escalated tickets waiting too long
     const escalatedTickets = await db
       .select()
       .from(supportTickets)
@@ -314,7 +314,7 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 5. Check for rejected listings (admin should review why they were rejected)
+    // Check for rejected listings (admin should review why they were rejected)
     const rejectedListings = await db
       .select()
       .from(listingReviews)
@@ -362,7 +362,7 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 6. Check for revision-requested listings (seller needs to make changes)
+    // Check for revision-requested listings (seller needs to make changes)
     const revisionListings = await db
       .select()
       .from(listingReviews)
@@ -408,7 +408,7 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
       }
     }
 
-    // 7. Check for unresponded tickets
+    // Check for unresponded tickets
     const allTickets = await db.select().from(supportTickets);
     for (const ticket of allTickets) {
       if (ticket.status === 'open') {
@@ -417,7 +417,7 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .from(supportTicketReplies)
           .where(eq(supportTicketReplies.ticketId, ticket.id));
 
-        const adminReplies = replies.filter((r) => r.senderRole === 'admin');
+        const adminReplies = replies.filter((r: any) => r.senderRole === 'admin');
         if (adminReplies.length === 0) {
           const ticketAge = now.getTime() - new Date(ticket.createdAt).getTime();
           const minutesOld = ticketAge / (1000 * 60);
@@ -536,7 +536,7 @@ export const adminNotificationsRouter = createTRPCRouter({
         .offset(input.offset);
 
       return {
-        notifications: notifs.map(n => ({
+        notifications: notifs.map((n: any) => ({
           id: n.id,
           category: n.type,
           severity: n.severity,
@@ -607,7 +607,7 @@ export const adminNotificationsRouter = createTRPCRouter({
 
       const grouped: Record<string, any[]> = {};
 
-      notifs.forEach((notif) => {
+      notifs.forEach((notif: any) => {
         if (!grouped[notif.type]) {
           grouped[notif.type] = [];
         }

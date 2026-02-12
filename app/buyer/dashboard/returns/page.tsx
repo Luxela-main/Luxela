@@ -6,36 +6,36 @@ import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 
-// Helper function to safely extract error messages from TRPC errors and other sources
+
 function extractErrorMessage(error: any): string {
-  // Handle string errors
+  
   if (typeof error === 'string') {
     return error;
   }
 
-  // Handle Zod validation errors
+  
   if (error?.data?.zodError) {
     return Object.entries(error.data.zodError)
       .map(([field, msgs]: any) => `${field}: ${msgs.join(', ')}`)
       .join('; ');
   }
 
-  // Handle standard Error objects
+  
   if (error instanceof Error) {
     return error.message;
   }
 
-  // Handle TRPC error response with message
+  
   if (error?.message) {
     return error.message;
   }
 
-  // Handle generic objects
+  
   if (typeof error === 'object' && error !== null) {
     return String(error);
   }
 
-  // Default fallback
+  
   return 'Failed to initiate return';
 }
 
@@ -115,14 +115,14 @@ export default function ReturnsPage() {
     }
 
     try {
-      // Call real API to create return request
+      
       await createReturnMutation.mutateAsync({
         orderId: formData.orderId,
         reason: formData.reason as 'damaged' | 'defective' | 'not_as_described' | 'wrong_item' | 'changed_mind' | 'no_longer_needed',
         description: formData.description,
       });
 
-      // Reset and refresh
+      
       setFormData({ reason: '', description: '', orderId: '' });
       setShowInitiateModal(false);
       await utils.refund.getMyReturns.invalidate();

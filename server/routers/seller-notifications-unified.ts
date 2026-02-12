@@ -133,7 +133,7 @@ async function generateAndStoreSellerNotifications(
       if (existing.length === 0) {
         await db.insert(sellerNotifications).values({
           sellerId,
-          type: 'dispute_alert' as any,
+          type: 'dispute_open' as any,
           title: 'New Dispute',
           message: `Dispute case #${dispute.id.slice(0, 8)} - "${
             dispute.subject
@@ -330,7 +330,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
         .offset(input.offset);
 
       return {
-        notifications: notifs.map((n) => ({
+        notifications: notifs.map((n: typeof notifs[number]) => ({
           id: n.id,
           type: n.type,
           title: n.title,
@@ -453,7 +453,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
 
       const grouped: Record<string, any[]> = {};
 
-      notifs.forEach((notif) => {
+      notifs.forEach((notif: typeof notifs[number]) => {
         if (!grouped[notif.type]) {
           grouped[notif.type] = [];
         }

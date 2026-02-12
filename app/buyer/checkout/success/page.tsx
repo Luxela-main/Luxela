@@ -43,7 +43,7 @@ export default function CheckoutSuccessPage() {
         });
       } catch (err) {
         console.error('Confirmation error:', err);
-        // Error is handled by mutation onError
+        
       }
     };
 
@@ -94,13 +94,13 @@ export default function CheckoutSuccessPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => router.push('/buyer/checkout')}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
               >
                 Try Again
               </button>
               <button
                 onClick={() => router.push('/buyer/orders')}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition cursor-pointer"
               >
                 View Orders
               </button>

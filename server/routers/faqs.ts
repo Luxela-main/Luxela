@@ -6,7 +6,7 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/trpc';
 import { db } from '../db';
 import { faqs } from '../db/schema';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { v4 as uuidv4 } from 'uuid';
@@ -82,7 +82,7 @@ export const faqsRouter = createTRPCRouter({
 
       if (input.search) {
         return results
-          .filter(faq =>
+          .filter((faq: any) =>
             faq.question.toLowerCase().includes(input.search!.toLowerCase()) ||
             faq.answer.toLowerCase().includes(input.search!.toLowerCase())
           )
@@ -113,8 +113,8 @@ export const faqsRouter = createTRPCRouter({
           eq(faqs.userRole, input.userRole)
         ));
 
-      const grouped = results.reduce((acc, item) => {
-        const existing = acc.find(g => g.category === item.category);
+      const grouped = results.reduce((acc: any, item: any) => {
+        const existing = acc.find((g: any) => g.category === item.category);
         if (existing) {
           existing.count++;
         } else {
@@ -123,7 +123,7 @@ export const faqsRouter = createTRPCRouter({
         return acc;
       }, [] as Array<{ category: string; count: number }>);
 
-      return grouped.sort((a, b) => b.count - a.count);
+      return grouped.sort((a: any, b: any) => b.count - a.count);
     }),
 
   /**
@@ -206,7 +206,7 @@ export const faqsRouter = createTRPCRouter({
         });
       }
 
-      const conditions = [];
+      const conditions: SQL<unknown>[] = [];
       if (input.userRole) {
         conditions.push(eq(faqs.userRole, input.userRole));
       }
@@ -220,7 +220,7 @@ export const faqsRouter = createTRPCRouter({
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(asc(faqs.order), asc(faqs.userRole));
 
-      return results.map(faq => ({
+      return results.map((faq: any) => ({
         id: faq.id,
         question: faq.question,
         answer: faq.answer,
@@ -394,7 +394,7 @@ export const faqsRouter = createTRPCRouter({
       }
 
       await Promise.all(
-        input.map(item =>
+        input.map((item: any) =>
           db
             .update(faqs)
             .set({ order: item.order, updatedBy: userId, updatedAt: new Date() })

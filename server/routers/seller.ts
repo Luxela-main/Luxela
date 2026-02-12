@@ -166,17 +166,17 @@ export const sellerRouter = createTRPCRouter({
                 .select()
                 .from(sellerBusiness)
                 .where(eq(sellerBusiness.sellerId, seller.id))
-                .then((r) => r[0] || null),
+                .then((r: any[]) => r[0] || null),
               db
                 .select()
                 .from(sellerShipping)
                 .where(eq(sellerShipping.sellerId, seller.id))
-                .then((r) => r[0] || null),
+                .then((r: any[]) => r[0] || null),
               db
                 .select()
                 .from(sellerPaymentConfig)
                 .where(eq(sellerPaymentConfig.sellerId, seller.id))
-                .then((r) => r[0] || null),
+                .then((r: any[]) => r[0] || null),
               db
                 .select()
                 .from(sellerPayoutMethods)
@@ -189,7 +189,7 @@ export const sellerRouter = createTRPCRouter({
                 .select()
                 .from(sellerAdditional)
                 .where(eq(sellerAdditional.sellerId, seller.id))
-                .then((r) => r[0] || null),
+                .then((r: any[]) => r[0] || null),
             ]);
 
             return {
@@ -1014,7 +1014,7 @@ export const sellerRouter = createTRPCRouter({
         const seller = await getSeller(userId);
 
         // Delete all seller-related data in transaction
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
           // Delete messaging & communications
           const sellerConversations = await tx
             .select()

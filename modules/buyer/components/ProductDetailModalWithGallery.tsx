@@ -98,8 +98,9 @@ export function ProductDetailModalWithGallery({
       }
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
+    } catch (error: any) {
+      const errorMessage = error?.data?.message || error?.message || 'Failed to add to cart';
+      console.error('Failed to add to cart:', { message: errorMessage, error });
     } finally {
       setIsAddingToCart(false);
     }

@@ -46,7 +46,7 @@ interface SupportTicket {
   sellerId?: string;
 }
 
-// Skeleton Loading Component
+
 const MetricSkeleton = () => (
   <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-6 animate-pulse">
     <div className="h-4 bg-[#2B2B2B] rounded w-1/2 mb-4"></div>
@@ -111,7 +111,7 @@ export default function SupportAdminDashboard() {
     setWsConnected(!pollingMetrics.isCircuitBroken && pollingMetrics.failureCount < 2);
   }, [pollingMetrics.isCircuitBroken, pollingMetrics.failureCount]);
 
-  // Filter and sort tickets
+  
   const filteredTickets = useMemo(() => {
     if (!ticketsData) return [];
 
@@ -122,7 +122,7 @@ export default function SupportAdminDashboard() {
       resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt) : null,
     })) as SupportTicket[];
 
-    // Search filter
+    
     if (searchTerm) {
       filtered = filtered.filter(
         (t) =>
@@ -131,17 +131,17 @@ export default function SupportAdminDashboard() {
       );
     }
 
-    // Status filter
+    
     if (filterStatus !== 'all') {
       filtered = filtered.filter((t) => t.status === filterStatus);
     }
 
-    // Priority filter
+    
     if (filterPriority !== 'all') {
       filtered = filtered.filter((t) => t.priority === filterPriority);
     }
 
-    // Sort
+    
     if (sortBy === 'recent') {
       filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } else if (sortBy === 'priority') {
@@ -261,10 +261,10 @@ export default function SupportAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white">
-      {/* Metrics Section */}
+      {}
       <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
+          {}
           <div className="mb-6 sm:mb-8">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
               <div>
@@ -293,9 +293,9 @@ export default function SupportAdminDashboard() {
             </div>
           </div>
 
-          {/* Key Metrics Cards */}
+          {}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-            {/* Total Tickets */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 sm:p-6 hover:border-[#8451E1] transition-colors">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -307,7 +307,7 @@ export default function SupportAdminDashboard() {
               <p className="text-xs text-[#808080]">All-time total</p>
             </div>
 
-            {/* Open Tickets */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 sm:p-6 hover:border-blue-500 transition-colors">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -319,7 +319,7 @@ export default function SupportAdminDashboard() {
               <p className="text-xs text-[#808080]">Awaiting response</p>
             </div>
 
-            {/* In Progress */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 sm:p-6 hover:border-yellow-500 transition-colors">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -331,7 +331,7 @@ export default function SupportAdminDashboard() {
               <p className="text-xs text-[#808080]">Being worked on</p>
             </div>
 
-            {/* SLA Breaches */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 sm:p-6 hover:border-red-500 transition-colors">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -354,7 +354,7 @@ export default function SupportAdminDashboard() {
             </div>
           </div>
 
-          {/* Performance Metrics */}
+          {}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 sm:p-6">
               <p className="text-[#808080] text-xs sm:text-sm mb-4">Avg Response Time</p>
@@ -401,9 +401,9 @@ export default function SupportAdminDashboard() {
             </div>
           </div>
 
-          {/* Categories and Urgent Tickets */}
+          {}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
-            {/* Top Categories */}
+            {}
             <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 sm:p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <TrendingUp size={20} className="text-[#8451E1]" />
@@ -427,7 +427,7 @@ export default function SupportAdminDashboard() {
               </div>
             </div>
 
-            {/* Urgent Tickets */}
+            {}
             <div className="lg:col-span-2 bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 sm:p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <AlertTriangle size={20} className="text-red-500" />
@@ -470,15 +470,15 @@ export default function SupportAdminDashboard() {
         </div>
       </div>
 
-      {/* Tickets List Section */}
+      {}
       <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 border-t border-[#2B2B2B]">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-xl sm:text-2xl font-bold mb-6">All Support Tickets</h2>
 
-          {/* Search and Filters */}
+          {}
           <div className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg p-4 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {/* Search */}
+              {}
               <div className="relative sm:col-span-2 lg:col-span-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#808080]" />
                 <input
@@ -490,7 +490,7 @@ export default function SupportAdminDashboard() {
                 />
               </div>
 
-              {/* Status Filter */}
+              {}
               <div className="relative">
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#808080] pointer-events-none" />
                 <select
@@ -507,7 +507,7 @@ export default function SupportAdminDashboard() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#808080] pointer-events-none" />
               </div>
 
-              {/* Priority Filter */}
+              {}
               <div className="relative">
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#808080] pointer-events-none" />
                 <select
@@ -524,7 +524,7 @@ export default function SupportAdminDashboard() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#808080] pointer-events-none" />
               </div>
 
-              {/* Sort */}
+              {}
               <div className="relative">
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#808080] pointer-events-none" />
                 <select
@@ -540,13 +540,13 @@ export default function SupportAdminDashboard() {
               </div>
             </div>
 
-            {/* Results Count */}
+            {}
             <div className="mt-4 text-xs sm:text-sm text-[#808080]">
               Showing {filteredTickets.length} of {ticketsData?.length || 0} tickets
             </div>
           </div>
 
-          {/* Tickets Table - Desktop */}
+          {}
           <div className="hidden md:block bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs sm:text-sm">
@@ -620,14 +620,14 @@ export default function SupportAdminDashboard() {
             </div>
           </div>
 
-          {/* Tickets List - Mobile */}
+          {}
           <div className="md:hidden space-y-3">
             {filteredTickets.length > 0 ? (
               filteredTickets.map((ticket) => (
                 <div key={ticket.id} className="bg-[#1a1a1a] border border-[#2B2B2B] rounded-lg overflow-hidden">
                   <button
                     onClick={() => setExpandedTicket(expandedTicket === ticket.id ? null : ticket.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#0E0E0E] transition-colors text-left"
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#0E0E0E] transition-colors text-left cursor-pointer"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[#DCDCDC] truncate">{ticket.subject}</p>

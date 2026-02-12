@@ -182,8 +182,8 @@ export async function getBuyerFavorites() {
 
     // Transform the data to match the expected frontend structure
     const transformedFavorites = favoritesList
-      .filter((fav): fav is typeof fav & { listing: NonNullable<typeof fav.listing> } => fav.listing !== null)
-      .map((fav) => ({
+      .filter((fav: any): fav is typeof fav & { listing: NonNullable<typeof fav.listing> } => fav.listing !== null)
+      .map((fav: any) => ({
         id: fav.id,
         listing: {
           id: fav.listing.id,

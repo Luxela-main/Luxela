@@ -19,7 +19,6 @@ import { toastSvc } from "@/services/toast"
 import { useSaleById } from "@/modules/sellers/queries/useSales"
 import { useSellerOrderDetailPolling } from "@/modules/sellers/hooks/useSellerOrderPolling"
 import { trpc } from "@/lib/trpc"
-import type { Sale } from "@/modules/sellers/model/sales"
 
 function getStatusColor(status: string): string {
   switch (status?.toLowerCase()) {
@@ -175,7 +174,7 @@ export default function SellerOrderDetailPage() {
 
   return (
     <div className="px-4 md:px-6 mt-4 md:mt-0">
-      {/* Back Button */}
+      {}
       <Link href="/sellers/orders">
         <Button variant="ghost" className="mb-6 cursor-pointer">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -183,7 +182,7 @@ export default function SellerOrderDetailPage() {
         </Button>
       </Link>
 
-      {/* Header */}
+      {}
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -205,7 +204,7 @@ export default function SellerOrderDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
+        {}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
             <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">

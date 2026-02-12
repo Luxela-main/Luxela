@@ -432,7 +432,7 @@ export const buyerRouter = createTRPCRouter({
               .select()
               .from(buyerAccountDetails)
               .where(eq(buyerAccountDetails.buyerId, buyer.id))
-              .then((r) => r[0] || null),
+              .then((r: any) => r[0] || null),
             db
               .select()
               .from(buyerBillingAddress)
@@ -442,7 +442,7 @@ export const buyerRouter = createTRPCRouter({
                   eq(buyerBillingAddress.isDefault, true)
                 )
               )
-              .then((r) => r[0] || null),
+              .then((r: any) => r[0] || null),
           ]);
         } catch (dbError: any) {
           // If connection pool is exhausted, fetch only accountDetails
@@ -451,7 +451,7 @@ export const buyerRouter = createTRPCRouter({
             .select()
             .from(buyerAccountDetails)
             .where(eq(buyerAccountDetails.buyerId, buyer.id))
-            .then((r) => r[0] || null);
+            .then((r: any) => r[0] || null);
           billingAddress = null;
         }
 
@@ -716,7 +716,7 @@ const rawCount = ((totalResult as any)?.rows?.[0]?.count ?? 0);
 const total = Number(rawCount);
 
 return {
-  data: (addresses || []).map((a) => ({
+  data: (addresses || []).map((a: any) => ({
     id: a.id,
     houseAddress: a.houseAddress,
     city: a.city,
@@ -780,7 +780,7 @@ return {
         const buyer = await getBuyer(userId);
         const addressId = uuidv4();
 
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
           if (input.isDefault) {
             await tx
               .update(buyerBillingAddress)
@@ -870,7 +870,7 @@ return {
           });
         }
 
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
           if (input.isDefault) {
             await tx
               .update(buyerBillingAddress)
@@ -1255,7 +1255,7 @@ return {
               eq(buyerFavorites.listingId, input.listingId)
             )
           )
-          .then((r) => r[0] || null);
+          .then((r: any) => r[0] || null);
 
         return {
           isFavorited: !!favorite,
@@ -1411,7 +1411,7 @@ return {
         const total = Number(rawCount);
 
         return {
-          data: results.map((o) => ({
+          data: results.map((o: any) => ({
             orderId: o.id,
             buyerId: o.buyerId,
             sellerId: o.sellerId,
@@ -1634,7 +1634,7 @@ return {
         const total = Number(rawCount);
 
         return {
-          data: results.map((o) => ({
+          data: results.map((o: any) => ({
             orderId: o.id,
             buyerId: o.buyerId,
             sellerId: o.sellerId,
@@ -1750,7 +1750,7 @@ return {
         const total = Number(rawCount);
 
         return {
-          data: notifs.map((n) => ({
+          data: notifs.map((n: any) => ({
             id: n.id,
             title: n.message.split("|")[0] || "Notification",
             message: n.message,
@@ -1945,7 +1945,7 @@ return {
 
         // Delete all buyer-related data in transaction
         // Note: Cascading deletes will handle orders, payments, refunds, etc.
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
           // Delete messaging & communications
           // First delete messages, then conversations
           const buyerConversations = await tx
@@ -2140,18 +2140,17 @@ return {
 
         // Calculate stats in application
         const totalOrders = allOrders.length;
-        const totalSpentCents = allOrders.reduce(
-          (sum, o) => sum + (o.amountCents || 0),
+        const totalSpentCents = allOrders.reduce((sum: any, o: any) => sum + (o.amountCents || 0),
           0
         );
         const pendingOrders = allOrders.filter(
-          (o) => o.deliveryStatus === "in_transit"
+          (o: any) => o.deliveryStatus === "in_transit"
         ).length;
         const deliveredOrders = allOrders.filter(
-          (o) => o.deliveryStatus === "delivered"
+          (o: any) => o.deliveryStatus === "delivered"
         ).length;
         const canceledOrders = allOrders.filter(
-          (o) => o.orderStatus === "canceled"
+          (o: any) => o.orderStatus === "canceled"
         ).length;
 
         return {
@@ -2456,7 +2455,7 @@ return {
         .from(buyerBrandFollows)
         .where(eq(buyerBrandFollows.buyerId, buyerResult[0].id));
 
-      return followed.map((f) => f.brandId);
+      return followed.map((f: any) => f.brandId);
     } catch (error) {
       return [];
     }

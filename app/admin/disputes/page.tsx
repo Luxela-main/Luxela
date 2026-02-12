@@ -69,13 +69,13 @@ export default function DisputesManagement() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectedDispute, setSelectedDispute] = useState<string | null>(null);
 
-  // Fetch support tickets (which include disputes/returns)
+  
   const { data: ticketsData, isLoading: ticketsLoading } =
     trpc.supportAdmin.getAllTickets.useQuery();
 
   const isLoading = ticketsLoading;
 
-  // Calculate stats
+  
   const stats = useMemo(() => {
     const tickets = ticketsData || [];
     const returnRequests = tickets.filter(
@@ -88,7 +88,7 @@ export default function DisputesManagement() {
     ).length;
     const resolved = returnRequests.filter((t) => t.status === 'resolved').length;
 
-    // Calculate avg resolution time (mock calculation)
+    
     const resolvedTickets = returnRequests.filter(
       (t) => t.resolvedAt && t.createdAt
     );
@@ -100,7 +100,7 @@ export default function DisputesManagement() {
             return sum + (resolved - created);
           }, 0) /
           resolvedTickets.length /
-          (1000 * 60 * 60) // Convert to hours
+          (1000 * 60 * 60) 
         : 0;
 
     return {
@@ -116,7 +116,7 @@ export default function DisputesManagement() {
     };
   }, [ticketsData]);
 
-  // Filter disputes
+  
   const filteredDisputes = useMemo(() => {
     let filtered = (ticketsData || []).filter(
       (t) => t.category === 'refund_request' || t.category === 'return_request'
@@ -141,14 +141,14 @@ export default function DisputesManagement() {
     return filtered;
   }, [ticketsData, searchTerm, statusFilter, priorityFilter]);
 
-  // Chart data - disputes by status
+  
   const statusChartData = [
     { name: 'Open', value: stats.openDisputes },
     { name: 'In Review', value: stats.underReviewDisputes },
     { name: 'Resolved', value: stats.resolvedDisputes },
   ].filter((item) => item.value > 0);
 
-  // Chart data - resolution timeline
+  
   const resolutionTimelineData = [
     { day: 'Mon', disputes: 12 },
     { day: 'Tue', disputes: 19 },
@@ -198,7 +198,7 @@ export default function DisputesManagement() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Header */}
+      {}
       <div className="mb-4 sm:mb-6 flex flex-col gap-2">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">Disputes & Returns</h1>
         <p className="text-sm sm:text-base text-[#9CA3AF]">
@@ -206,7 +206,7 @@ export default function DisputesManagement() {
         </p>
       </div>
 
-      {/* Key Metrics */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={AlertTriangle}
@@ -238,9 +238,9 @@ export default function DisputesManagement() {
         />
       </div>
 
-      {/* Performance Charts */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Disputes by Status */}
+        {}
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
@@ -277,7 +277,7 @@ export default function DisputesManagement() {
           </CardContent>
         </Card>
 
-        {/* Weekly Disputes Trend */}
+        {}
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
@@ -315,7 +315,7 @@ export default function DisputesManagement() {
         </Card>
       </div>
 
-      {/* Key Metrics Cards */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
@@ -358,7 +358,7 @@ export default function DisputesManagement() {
         </Card>
       </div>
 
-      {/* Active Disputes List */}
+      {}
       <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -371,7 +371,7 @@ export default function DisputesManagement() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Filters */}
+          {}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
@@ -425,7 +425,7 @@ export default function DisputesManagement() {
             </Select>
           </div>
 
-          {/* Disputes Table */}
+          {}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

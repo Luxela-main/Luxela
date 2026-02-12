@@ -249,7 +249,15 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
   // Helper to get available actions based on listing status
   const getAvailableActions = (listing: any) => {
     const status = listingStatuses[listing.id] || "pending";
-    const actions = [];
+    const actions: Array<{
+      id: string;
+      label: string;
+      icon: string;
+      color: string;
+      bgColor: string;
+      action: () => void;
+      hasBorder?: boolean;
+    }> = [];
 
     // Restock is always available (primary action)
     actions.push({

@@ -59,12 +59,12 @@ export class PredictiveAnalyticsService {
       });
 
       const deliveryTimes: number[] = sellerOrders
-        .filter((o) => o.deliveredDate && o.orderDate)
-        .map((o) => differenceInDays(o.deliveredDate!, o.orderDate));
+        .filter((o: any) => o.deliveredDate && o.orderDate)
+        .map((o: any) => differenceInDays(o.deliveredDate!, o.orderDate));
 
       const avgDeliveryDays =
         deliveryTimes.length > 0
-          ? deliveryTimes.reduce((a, b) => a + b) / deliveryTimes.length
+          ? deliveryTimes.reduce((a: any, b: any) => a + b) / deliveryTimes.length
           : 5;
 
       // Get shipping zone factor
@@ -101,18 +101,17 @@ export class PredictiveAnalyticsService {
       });
 
       const totalOrders = buyerOrders.length;
-      const totalSpent = buyerOrders.reduce((sum, o) => sum + o.amountCents, 0);
+      const totalSpent = buyerOrders.reduce((sum: any, o: any) => sum + o.amountCents, 0);
       const averageOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
 
       // Calculate purchase frequency
-      const sortedOrders = buyerOrders.sort(
-        (a, b) => b.orderDate.getTime() - a.orderDate.getTime()
+      const sortedOrders = buyerOrders.sort((a: any, b: any) => b.orderDate.getTime() - a.orderDate.getTime()
       );
       const purchaseFrequency = this.calculateFrequency(sortedOrders);
 
       // Get preferred categories
       const categories: Record<string, number> = {};
-      buyerOrders.forEach((order) => {
+      buyerOrders.forEach((order: any) => {
         if (order.productCategory) {
           categories[order.productCategory] =
             (categories[order.productCategory] || 0) + 1;
@@ -184,7 +183,7 @@ export class PredictiveAnalyticsService {
 
       // Factor 4: Support tickets (0-10 points)
       const supportTicketsList = await db.query.supportTickets.findMany({
-        where: (supportTickets) => or(eq(supportTickets.buyerId, buyerId), eq(supportTickets.sellerId, buyerId)),
+        where: (supportTickets: any) => or(eq(supportTickets.buyerId, buyerId), eq(supportTickets.sellerId, buyerId)),
       });
       const supportTickets = supportTicketsList;
       if (supportTickets.length > 3) {
@@ -229,7 +228,7 @@ export class PredictiveAnalyticsService {
       });
 
       const purchasedListingIds = new Set(
-        buyerOrders.map((o) => o.listingId)
+        buyerOrders.map((o: any) => o.listingId)
       );
 
       // Get similar products based on preferred categories
@@ -281,15 +280,15 @@ export class PredictiveAnalyticsService {
       });
 
       const ordersLast30 = recentOrders.filter(
-        (o) => o.orderDate >= thirtyDaysAgo
+        (o: any) => o.orderDate >= thirtyDaysAgo
       );
       const ordersLast90 = recentOrders.filter(
-        (o) => o.orderDate >= ninetyDaysAgo
+        (o: any) => o.orderDate >= ninetyDaysAgo
       );
 
       // Revenue metrics
-      const revenue30 = ordersLast30.reduce((sum, o) => sum + o.amountCents, 0);
-      const revenue90 = ordersLast90.reduce((sum, o) => sum + o.amountCents, 0);
+      const revenue30 = ordersLast30.reduce((sum: any, o: any) => sum + o.amountCents, 0);
+      const revenue90 = ordersLast90.reduce((sum: any, o: any) => sum + o.amountCents, 0);
 
       // Refund rate
       const refunds30 = await db.query.refunds.findMany({
@@ -311,7 +310,7 @@ export class PredictiveAnalyticsService {
       // Customer satisfaction (estimated from reviews)
       const reviews30 = await db.query.reviews.findMany();
       const avgRating = reviews30.length > 0
-        ? reviews30.reduce((sum: number, r) => sum + (r.rating as number || 0), 0) / reviews30.length
+        ? reviews30.reduce((sum: number, r: any) => sum + (r.rating as number || 0), 0) / reviews30.length
         : 0;
 
       return {
@@ -378,7 +377,7 @@ export class PredictiveAnalyticsService {
     score += Math.min(40, orders.length * 4);
 
     // Monetary (0-30 points)
-    const totalSpent = orders.reduce((sum, o) => sum + o.amountCents, 0);
+    const totalSpent = orders.reduce((sum: any, o: any) => sum + o.amountCents, 0);
     score += Math.min(30, (totalSpent / 1000000) * 30);
 
     return Math.min(100, score);
@@ -397,12 +396,12 @@ export class PredictiveAnalyticsService {
       recommendations.push('Ask for feedback on past purchases');
     }
 
-    if (reasons.some((r) => r.includes('return'))) {
+    if (reasons.some((r: any) => r.includes('return'))) {
       recommendations.push('Review return/exchange process');
       recommendations.push('Follow up on product quality concerns');
     }
 
-    if (reasons.some((r) => r.includes('support'))) {
+    if (reasons.some((r: any) => r.includes('support'))) {
       recommendations.push('Improve customer support response time');
       recommendations.push('Offer dedicated account support');
     }
@@ -414,4 +413,4 @@ export class PredictiveAnalyticsService {
 
     return recommendations.slice(0, 4);
   }
-}
+}

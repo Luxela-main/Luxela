@@ -41,7 +41,7 @@ type DateRange = 'week' | 'month' | 'quarter' | 'year';
 export default function AnalyticsDashboard() {
   const [dateRange, setDateRange] = useState<DateRange>('month');
 
-  // Determine days based on date range
+  
   const daysMap: Record<DateRange, number> = {
     week: 7,
     month: 30,
@@ -51,7 +51,7 @@ export default function AnalyticsDashboard() {
 
   const days = daysMap[dateRange];
 
-  // Fetch real analytics data
+  
   const { data: metricsData, isLoading: metricsLoading } =
     trpc.adminAnalytics.getMetrics.useQuery({ days });
 
@@ -152,7 +152,7 @@ export default function AnalyticsDashboard() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Header */}
+      {}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
@@ -181,7 +181,7 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
 
-      {/* Key Metrics */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <MetricCard
           icon={DollarSign}
@@ -218,9 +218,9 @@ export default function AnalyticsDashboard() {
         />
       </div>
 
-      {/* Charts */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Revenue Trend */}
+        {}
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
             <CardTitle className="text-white">Revenue Trend</CardTitle>
@@ -261,7 +261,7 @@ export default function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        {/* User Acquisition */}
+        {}
         <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
           <CardHeader>
             <CardTitle className="text-white">User Acquisition</CardTitle>
@@ -298,7 +298,7 @@ export default function AnalyticsDashboard() {
         </Card>
       </div>
 
-      {/* Top Products */}
+      {}
       <Card className="border-[#2B2B2B] bg-gradient-to-br from-[#1a1a1a] to-[#0e0e0e]">
         <CardHeader>
           <CardTitle className="text-white">Top Performing Listings</CardTitle>
@@ -361,7 +361,7 @@ export default function AnalyticsDashboard() {
         </CardContent>
       </Card>
 
-      {/* Export Button */}
+      {}
       <div className="flex justify-end">
         <Button className="bg-[#8451e1] hover:bg-[#6d3fb8] text-white gap-2">
           <Download className="w-4 h-4" />

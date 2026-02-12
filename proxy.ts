@@ -1,14 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
 
-// Decode JWT token from cookie without making API call (instant, no network delay)
 function getUserFromToken(token: string | undefined) {
   if (!token) return null;
   
   try {
     const decoded = jwtDecode(token) as any;
     
-    // Extract user metadata from different possible locations in JWT
     const userMetadata = decoded.user_metadata || decoded.metadata || {};
     const appMetadata = decoded.app_metadata || {};
     
@@ -23,7 +21,7 @@ function getUserFromToken(token: string | undefined) {
       email: decoded.email,
       user_metadata: {
         ...userMetadata,
-        admin: isAdmin, // Ensure admin flag is set if found anywhere
+        admin: isAdmin, 
       },
       app_metadata: appMetadata,
     };
@@ -34,23 +32,14 @@ function getUserFromToken(token: string | undefined) {
 }
 
 export async function proxy(request: NextRequest) {
-  // Create a mutable request headers object
-  const requestHeaders = new Headers(request.headers);
-
-  // Get JWT token from cookies - Supabase stores it with dynamic name or as 'access_token'
+  let response = NextResponse.next({ request });
   const authToken =
     request.cookies.get("sb-auth-token")?.value ||
     request.cookies.get("access_token")?.value ||
-    // Try to find Supabase session token with dynamic project reference
     Array.from(request.cookies.getAll())
       .find((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"))?.value;
 
-  // Decode user from JWT without making API call (instant, no Supabase API delay)
   const user = getUserFromToken(authToken);
-
-  // Extract admin status and add to response headers so tRPC context can read it
-  const isAdmin = user?.user_metadata?.admin === true;
-  requestHeaders.set('x-admin-flag', isAdmin ? 'true' : 'false');
 
   const pathname = request.nextUrl.pathname;
 
@@ -58,6 +47,10 @@ export async function proxy(request: NextRequest) {
   const publicRoutes = [
     "/",
     "/signup",
+    "/buyer",
+    "/buyer/collections",
+    "/buyer/browse",
+    "/buyer/brands",
     "/signin",
     "/privacy-policy",
     "/verify-email",
@@ -76,6 +69,8 @@ export async function proxy(request: NextRequest) {
 
   const role =
     user?.user_metadata?.role || user?.app_metadata?.role;
+
+  const isAdmin = user?.user_metadata?.admin === true;
 
   // Admin routes that require admin role
   const adminRoutes = ["/admin/support", "/admin"];
@@ -131,15 +126,20 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Protect admin routes - only admins can access
+  if (isAdminRoute && !isPublicAdminRoute) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/admin/signin", request.url));
+    }
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL("/admin/signin", request.url));
+    }
+  }
+
   // Not logged in? Block all private routes
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 
-  // Return response with modified request headers
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-}
+  return response;
+}

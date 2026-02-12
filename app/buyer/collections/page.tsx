@@ -24,7 +24,7 @@ interface ProductFilters {
 }
 
 
-// Add CSS animations for this page
+
 const bgAnimations = `
   @keyframes blobFloat {
     0%, 100% {
@@ -62,7 +62,7 @@ export default function CollectionsPage() {
   const { data: allCollections = [], isLoading } = useCollections();
   const { searchQuery } = useSearch();
   
-  // Debug logging
+  
   console.log('[CollectionsPage] allCollections:', allCollections.length, allCollections.map((c: any) => ({ id: c.id, title: c.title, itemsCount: c.items?.length || 0 })));
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [layoutMode, setLayoutMode] = useState<'grid' | 'carousel'>('grid');
@@ -109,7 +109,7 @@ export default function CollectionsPage() {
     }
   };
 
-  // Collections from the hook are already filtered to approved status
+  
   const approvedCollections = useMemo(() => {
     return allCollections;
   }, [allCollections]);
@@ -117,7 +117,7 @@ export default function CollectionsPage() {
   const filteredCollections = useMemo(() => {
     let result = [...approvedCollections];
 
-    // Use local search input or context search query
+    
     const query = (searchInput || searchQuery).toLowerCase();
     if (query.trim()) {
       result = result.filter((collection: any) =>
@@ -126,7 +126,7 @@ export default function CollectionsPage() {
       );
     }
 
-    // Filter by categories if selected
+    
     if (filters.categories.length > 0) {
       result = result.filter((collection: any) => {
         if (!collection.categories || !Array.isArray(collection.categories)) {
@@ -193,12 +193,12 @@ export default function CollectionsPage() {
         break;
       case 'rating':
         sorted.sort((a: any, b: any) => {
-          // Future: implement actual rating
+          
           return 0;
         });
         break;
       case 'sales':
-        // For now, sort by items count as a proxy for sales
+        
         sorted.sort((a: any, b: any) => {
           const aCount = a.collectionItemCount || a.items?.length || 0;
           const bCount = b.collectionItemCount || b.items?.length || 0;
@@ -228,17 +228,17 @@ export default function CollectionsPage() {
 
   return (
     <main className="bg-black min-h-screen relative overflow-hidden">
-      {/* Animated Background */}
+      {}
       <style>{bgAnimations}</style>
       
-      {/* Floating Background Blobs */}
+      {}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-purple-900/30 to-transparent rounded-full blur-3xl blob-float" style={{ animationDelay: '0s' }} />
         <div className="absolute top-1/3 right-0 w-80 h-80 bg-gradient-to-bl from-pink-900/20 to-transparent rounded-full blur-3xl blob-float" style={{ animationDelay: '2s' }} />
         <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-gradient-to-t from-purple-900/20 to-transparent rounded-full blur-3xl blob-float" style={{ animationDelay: '4s' }} />
       </div>
 
-      {/* Hero Section */}
+      {}
       <div className="relative z-10">
         <ProductDisplayHero
           title="Curated Collections"
@@ -248,10 +248,10 @@ export default function CollectionsPage() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16 relative z-20">
-        {/* Search and Filters Bar */}
+        {}
         <div className="mb-6 sm:mb-8 md:mb-10 sticky top-0 z-40 bg-black/98 backdrop-blur-lg py-3 sm:py-4 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-purple-900/20 shadow-lg shadow-purple-900/10">
           <div className="container mx-auto px-0 sm:px-0">
-            {/* Search Input */}
+            {}
             <div className="mb-4 sm:mb-6">
               <div className="relative">
                 <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-[#666]" />
@@ -274,7 +274,7 @@ export default function CollectionsPage() {
               </div>
             </div>
 
-            {/* Sort Controls */}
+            {}
             <div className="flex items-center gap-3 mt-4">
               <label className="text-sm text-purple-300 flex-shrink-0">Sort by:</label>
               <div className="relative flex items-center gap-2 flex-1 md:flex-none">
@@ -319,7 +319,7 @@ export default function CollectionsPage() {
 
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto mt-4">
 
-                {/* Layout Toggle */}
+                {}
                 <div className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-[#0f0f0f] to-[#1a1a1a] rounded-lg p-1 border border-purple-900/40 flex-shrink-0 shadow-lg shadow-black/50">
                   <button
                     onClick={() => setLayoutMode('grid')}
@@ -348,7 +348,7 @@ export default function CollectionsPage() {
                 </div>
             </div>
 
-            {/* Active Filters Display */}
+            {}
             {(searchInput || filters.categories.length > 0) && (
               <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 fade-in">
                 <span className="text-xs sm:text-sm text-purple-400/70">Active filters:</span>
@@ -383,7 +383,7 @@ export default function CollectionsPage() {
           </div>
         </div>
 
-        {/* Collections Display */}
+        {}
         <div className="fade-in">
         {sortedCollections.length > 0 ? (
           layoutMode === 'grid' ? (

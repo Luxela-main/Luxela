@@ -455,3 +455,33 @@ export async function getPaymentFlowStatus(orderId: string): Promise<{
     ledgerEntries,
   };
 }
+
+export async function createBuyerNotification(
+  buyerId: string,
+  type: string,
+  title: string,
+  message: string,
+  orderId?: string,
+  actionUrl?: string,
+  metadata?: any
+): Promise<void> {
+  try {
+    const { buyerNotifications } = await import('../db/schema');
+    await db
+      .insert(buyerNotifications)
+      .values({
+        buyerId,
+        type: type as any,
+        title,
+        message,
+        isRead: false,
+        isStarred: false,
+        relatedEntityId: orderId,
+        relatedEntityType: 'order',
+        actionUrl,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      });
+  } catch (err: any) {
+    console.error(`Failed to create buyer notification for buyer ${buyerId}:`, err);
+  }
+}

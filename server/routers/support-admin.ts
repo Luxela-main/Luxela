@@ -84,7 +84,7 @@ export const supportAdminRouter = createTRPCRouter({
 
         const allTickets = await db.select().from(supportTickets).orderBy(desc(supportTickets.createdAt));
         
-        return allTickets.map(t => ({
+        return allTickets.map((t: any) => ({
           id: t.id,
           buyerId: t.buyerId ?? null,
           sellerId: t.sellerId ?? null,
@@ -218,38 +218,37 @@ export const supportAdminRouter = createTRPCRouter({
       
       // Get SLA tracking data
       const slaTrackingData = await db.select().from(slaTracking);
-      const breachedCount = slaTrackingData.filter(
-        m => m.responseBreached || m.resolutionBreached
+      const breachedCount = slaTrackingData.filter((m: any) => m.responseBreached || m.resolutionBreached
       ).length;
 
       // Get team metrics
       const teamMembers = await db.select().from(supportTeamMembers);
-      const activeMembers = teamMembers.filter(m => m.status === 'active').length;
-      const totalCapacity = teamMembers.reduce((sum, m) => sum + m.maxCapacity, 0);
-      const usedCapacity = teamMembers.reduce((sum, m) => sum + m.currentLoadCount, 0);
+      const activeMembers = teamMembers.filter((m: any) => m.status === 'active').length;
+      const totalCapacity = teamMembers.reduce((sum: any, m: any) => sum + m.maxCapacity, 0);
+      const usedCapacity = teamMembers.reduce((sum: any, m: any) => sum + m.currentLoadCount, 0);
       const teamUtilization = totalCapacity > 0 ? (usedCapacity / totalCapacity) * 100 : 0;
 
       // Calculate average times
       const resolutionTimes = slaTrackingData
-        .filter(m => m.actualResolutionTime)
-        .map(m => m.actualResolutionTime || 0);
+        .filter((m: any) => m.actualResolutionTime)
+        .map((m: any) => m.actualResolutionTime || 0);
       const averageResolutionTime = resolutionTimes.length > 0 
-        ? Math.round(resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length)
+        ? Math.round(resolutionTimes.reduce((a: any, b: any) => a + b, 0) / resolutionTimes.length)
         : 0;
 
       const responseTimes = slaTrackingData
-        .filter(m => m.actualResponseTime)
-        .map(m => m.actualResponseTime || 0);
+        .filter((m: any) => m.actualResponseTime)
+        .map((m: any) => m.actualResponseTime || 0);
       const averageResponseTime = responseTimes.length > 0
-        ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+        ? Math.round(responseTimes.reduce((a: any, b: any) => a + b, 0) / responseTimes.length)
         : 0;
 
       // Get urgent tickets
       const urgentTickets = allTickets
-        .filter(t => t.priority === 'urgent' && (t.status === 'open' || t.status === 'in_progress'))
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .filter((t: any) => t.priority === 'urgent' && (t.status === 'open' || t.status === 'in_progress'))
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 5)
-        .map(t => ({
+        .map((t: any) => ({
           id: t.id,
           subject: t.subject,
           priority: t.priority,
@@ -258,19 +257,19 @@ export const supportAdminRouter = createTRPCRouter({
 
       // Get top categories
       const categoryCounts: Record<string, number> = {};
-      allTickets.forEach(t => {
+      allTickets.forEach((t: any) => {
         categoryCounts[t.category] = (categoryCounts[t.category] || 0) + 1;
       });
       const topCategories = Object.entries(categoryCounts)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a: any, b: any) => b[1] - a[1])
         .slice(0, 5)
         .map(([category, count]) => ({ category, count }));
 
       return {
         totalTickets: allTickets.length,
-        openTickets: allTickets.filter(t => t.status === 'open').length,
-        inProgressTickets: allTickets.filter(t => t.status === 'in_progress').length,
-        resolvedTickets: allTickets.filter(t => t.status === 'resolved').length,
+        openTickets: allTickets.filter((t: any) => t.status === 'open').length,
+        inProgressTickets: allTickets.filter((t: any) => t.status === 'in_progress').length,
+        resolvedTickets: allTickets.filter((t: any) => t.status === 'resolved').length,
         slaBreachCount: breachedCount,
         averageResolutionTime,
         averageResponseTime,
@@ -467,7 +466,7 @@ export const supportAdminRouter = createTRPCRouter({
       await ensureAdmin(userId, ctx.user?.role);
 
       const policies = await db.select().from(slaMetrics);
-      return policies.map(p => ({
+      return policies.map((p: any) => ({
         id: p.id,
         policyName: p.policyName,
         priority: p.priority,
@@ -532,7 +531,7 @@ export const supportAdminRouter = createTRPCRouter({
       await ensureAdmin(userId, ctx.user?.role);
 
       const rules = await db.select().from(escalationRules);
-      return rules.map(r => ({
+      return rules.map((r: any) => ({
         id: r.id,
         name: r.name,
         trigger: r.trigger,
@@ -614,7 +613,7 @@ export const supportAdminRouter = createTRPCRouter({
       await ensureAdmin(userId, ctx.user?.role);
 
       const members = await db.select().from(supportTeamMembers);
-      return members.map(m => ({
+      return members.map((m: any) => ({
         id: m.id,
         userId: m.userId,
         name: m.name,
@@ -663,7 +662,7 @@ export const supportAdminRouter = createTRPCRouter({
 
       const logs = await query.orderBy(desc(supportAuditLogs.createdAt));
 
-      return logs.map(l => ({
+      return logs.map((l: any) => ({
         id: l.id,
         actionType: l.actionType,
         oldValue: l.oldValue,
