@@ -198,7 +198,7 @@ export default function ProductDisplayGrid({
               )}
 
               {/* Standard Grid View (when not enough items or scroll disabled) */}
-              {!enableHorizontalScroll || products.length <= (columns.desktop || 4) && (
+              {(!enableHorizontalScroll || products.length <= (columns.desktop || 4)) && (
                 <div className={gridClass}>
                   {products && products.length > 0 && products.map((product) => (
                     <UnifiedListingCard
