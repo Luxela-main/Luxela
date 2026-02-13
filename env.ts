@@ -6,9 +6,9 @@ export const env = {
   
   // URLs
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://theluxela.com',
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
-  API_URL: process.env.API_URL || 'http://localhost:3000',
-  APP_URL: process.env.APP_URL || 'http://localhost:3000',
+  CLIENT_URL: process.env.CLIENT_URL || 'https://theluxela.com',
+  API_URL: process.env.API_URL || 'https://theluxela.com/api',
+  APP_URL: process.env.APP_URL || 'https://theluxela.com',
   
   // Email Configuration (Resend)
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',

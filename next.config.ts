@@ -41,8 +41,6 @@ const nextConfig: NextConfig = {
             { key: "X-Content-Type-Options", value: "nosniff" },
             { key: "X-Frame-Options", value: "SAMEORIGIN" },
             { key: "X-XSS-Protection", value: "1; mode=block" },
-            // Performance: Enable compression
-            { key: "Content-Encoding", value: "gzip" },
           ],
         },
         // Cache static assets aggressively (1 year)
