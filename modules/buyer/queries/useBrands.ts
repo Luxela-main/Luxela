@@ -10,10 +10,10 @@ interface CacheEntry<T> {
 }
 
 const BRANDS_CACHE = new Map<string, CacheEntry<any>>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const REQUEST_TIMEOUT = 15000; // 15 seconds per request
-const MAX_RETRIES = 2; // Reduced from 3
-const RETRY_DELAY = 500; // ms between retries
+const CACHE_TTL = 5 * 60 * 1000; 
+const REQUEST_TIMEOUT = 60000; 
+const MAX_RETRIES = 2; 
+const RETRY_DELAY = 500; 
 
 // Request deduplication
 const pendingRequests = new Map<string, Promise<any>>();
@@ -238,7 +238,13 @@ export function useBrands({
       
       const fetchPromise = (async () => {
         controller = new AbortController();
-        timeoutId = setTimeout(() => controller!.abort(), REQUEST_TIMEOUT);
+        // Set timeout to abort the request if it takes too long
+        // The controller must be created BEFORE setting the timeout callback
+        timeoutId = setTimeout(() => {
+          if (controller) {
+            controller.abort();
+          }
+        }, REQUEST_TIMEOUT);
       
         const response = await fetch(
           `/api/trpc/brands.getAllBrands?${queryParams.toString()}`,
@@ -249,7 +255,11 @@ export function useBrands({
           }
         );
         
-        if (timeoutId) clearTimeout(timeoutId);
+        // Clear timeout immediately after fetch completes (success or failure)
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
 
         console.log('[useBrands] Response received', { status: response.status, statusText: response.statusText });
 

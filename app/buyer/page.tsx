@@ -4,8 +4,7 @@ import { useSearch } from '@/context/SearchContext';
 import { useListings } from '@/context/ListingsContext';
 import { useMemo, useEffect, useState } from 'react';
 import { logListingsDebug } from '@/lib/debug/listings-debug';
-import { useBrands, type Brand } from '@/modules/buyer/queries/useBrands';
-import { useCollections } from '@/modules/buyer/queries/useCollections';
+import { useBrands, type Brand, useCollections } from '@/modules/buyer/queries';
 import {
   BrandShowcase,
   CollectionShowcase,
@@ -258,4 +257,4 @@ const Homepage = () => {
 
 export default Homepage;
 
-
+

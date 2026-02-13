@@ -2,6 +2,7 @@ export const env = {
   // Environment
   DATABASE_URL: process.env.DATABASE_URL || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
+  ADMIN_SECRET_KEY: process.env.ADMIN_SECRET_KEY || '',
   
   // URLs
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://theluxela.com',

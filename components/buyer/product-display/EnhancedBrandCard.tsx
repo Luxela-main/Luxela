@@ -8,7 +8,7 @@ import { Button } from '../../ui/button';
 import { toastSvc } from '@/services/toast';
 import BrandContactModal from '../modals/BrandContactModal';
 import { trpc } from '@/lib/trpc';
-import { useBrandFollowersCount, useOptimisticFollowerUpdate } from '@/modules/buyer/queries/useBrands';
+import { useBrandFollowersCount, useOptimisticFollowerUpdate } from '@/modules/buyer/queries';
 
 interface EnhancedBrandCardProps {
   brand: any;

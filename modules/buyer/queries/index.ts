@@ -33,11 +33,22 @@ export {
   useReturnOrder,
 } from "./useOrders";
 
+// Brands Hooks
+export {
+  useBrands,
+  type Brand,
+  useBrandDetails,
+  useIsFollowingBrand,
+  useBrandFollowersCount,
+  useOptimisticFollowerUpdate,
+  type UseBrandsOptions,
+  type UseBrandsResult,
+} from "./useBrands";
+
 // Product Browse Hooks
 export {
   useSearchListings,
   useListingById,
-  useBrands,
   useBrandById,
   useBrandListings,
   useCollectionById,

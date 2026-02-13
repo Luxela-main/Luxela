@@ -3,7 +3,7 @@
 import { useState, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { useBrands, type Brand } from '@/modules/buyer/queries/useBrands';
+import { useBrands, type Brand } from '@/modules/buyer/queries';
 import { useRealtimeListings } from '@/hooks/useRealtimeListings';
 import {
   BrandShowcase,
