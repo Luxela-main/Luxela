@@ -122,8 +122,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Script
               id="gtag-config"
               strategy="afterInteractive"
-              src="/scripts/gtag-init.js"
-              data-ga-id={GA_ID}
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag() {
+                    dataLayer.push(arguments);
+                  }
+                  gtag('js', new Date());
+                  gtag('config', '${GA_ID}', {
+                    'page_path': window.location.pathname,
+                    'allow_google_signals': true,
+                    'allow_ad_personalization_signals': true,
+                  });
+                `,
+              }}
             />
           </>
         )}
