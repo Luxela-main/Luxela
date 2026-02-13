@@ -26,8 +26,13 @@ function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
-        retry: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes - reduce unnecessary refetches
+        gcTime: 10 * 60 * 1000, // 10 minutes - keep data longer in cache
+        retry: 1,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      },
+      mutations: {
+        retry: 1,
       },
     },
   });

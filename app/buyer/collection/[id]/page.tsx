@@ -187,7 +187,28 @@ export default function CollectionDetailPage({
   const collection = collectionProductsData || detailedCollectionData;
   const products = collectionProductsData?.items || detailedCollectionData?.items || [];
 
-  
+  // Log the raw data structure to verify all fields are present
+  useEffect(() => {
+    if (collectionProductsData?.items && collectionProductsData.items.length > 0) {
+      const firstItem = collectionProductsData.items[0];
+      console.log('[Collection] First item from backend (raw):', {
+        material: firstItem.material,
+        careInstructions: firstItem.careInstructions,
+        videoUrl: firstItem.videoUrl,
+        etaDomestic: firstItem.etaDomestic,
+        etaInternational: firstItem.etaInternational,
+        shippingOption: firstItem.shippingOption,
+        refundPolicy: firstItem.refundPolicy,
+        sku: firstItem.sku,
+        barcode: firstItem.barcode,
+        colorsAvailable: firstItem.colorsAvailable,
+        sizesJson: firstItem.sizesJson,
+        metaDescription: firstItem.metaDescription,
+        allKeys: Object.keys(firstItem).sort(),
+      });
+    }
+  }, [collectionProductsData?.items]);
+
   const items = useMemo(() => {
     const sourceItems = collectionProductsData?.items || detailedCollectionData?.items || [];
     
@@ -300,13 +321,22 @@ export default function CollectionDetailPage({
         rating: 4.5,
         reviewCount: 12,
       };
-      
-      console.log(`[Collection items] Final mapped item ${idx}:`, {
-        id: mappedItem.id,
-        listingId: mappedItem.listingId,
-        title: mappedItem.title,
-        priceCents: mappedItem.priceCents,
-      });
+      if (idx === 0) {
+        console.log(`[Collection] ✅ First item FINAL mapped fields:`, {
+          title: mappedItem.title,
+          material_composition: mappedItem.material_composition,
+          careInstructions: mappedItem.careInstructions,
+          videoUrl: mappedItem.videoUrl,
+          etaDomestic: mappedItem.etaDomestic,
+          etaInternational: mappedItem.etaInternational,
+          shippingOption: mappedItem.shippingOption,
+          refundPolicy: mappedItem.refundPolicy,
+          sku: mappedItem.sku,
+          barcode: mappedItem.barcode,
+          colors: mappedItem.colors?.length || 0,
+          sizes: mappedItem.sizes?.length || 0,
+        });
+      }
       
       return mappedItem;
     });
@@ -959,7 +989,36 @@ function CollectionItemCard({
                   <span className="text-[#8451E1] font-semibold">Return:</span> {formatRefundPolicy(item.refundPolicy)}
                 </p>
               )}
+              {(item.etaDomestic || item.etaInternational) && (
+                <p className="text-[#999] line-clamp-1">
+                  <span className="text-[#8451E1] font-semibold">Ship:</span> 
+                  {item.etaDomestic ? formatShippingEta(item.etaDomestic) : ''}
+                  {item.etaDomestic && item.etaInternational ? '/' : ''}
+                  {item.etaInternational ? formatShippingEta(item.etaInternational) : ''}
+                </p>
+              )}
+              {item.sku && (
+                <p className="text-[#999] line-clamp-1">
+                  <span className="text-[#8451E1] font-semibold">SKU:</span> {item.sku}
+                </p>
+              )}
             </div>
+
+            {(item.videoUrl || item.metaDescription) && (
+              <div className="flex gap-2 mb-3 flex-wrap items-center">
+                {item.videoUrl && (
+                  <div className="px-2 py-1 rounded bg-cyan-500/20 border border-cyan-500/40 flex items-center gap-1">
+                    <Film className="w-3 h-3 text-cyan-400" />
+                    <span className="text-[7px] text-cyan-400 font-semibold uppercase">Video</span>
+                  </div>
+                )}
+                {item.metaDescription && (
+                  <div className="text-[7px] text-[#666] italic line-clamp-1 flex-grow">
+                    {item.metaDescription}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#8451E1]/20">
               <div className="flex items-center gap-1">

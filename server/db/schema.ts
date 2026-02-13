@@ -26,7 +26,7 @@ export const supplyCapacityEnum = pgEnum('supply_capacity', ['no_max', 'limited'
 export const limitedEditionBadgeEnum = pgEnum('limited_badge', ['show_badge', 'do_not_show']);
 export const shippingOptionEnum = pgEnum('shipping_option', ['local', 'international', 'both']);
 export const orderStatusEnum = pgEnum('order_status', ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'canceled', 'returned']);
-export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid']);
+export const payoutStatusEnum = pgEnum('payout_status', ['in_escrow', 'processing', 'paid', 'refunded']);
 export const ticketStatusEnum = pgEnum('ticket_status', ['open', 'in_progress', 'resolved', 'closed']);
 export const ticketPriorityEnum = pgEnum('ticket_priority', ['low', 'medium', 'high', 'urgent']);
 export const ticketCategoryEnum = pgEnum('ticket_category', ['general_inquiry', 'technical_issue', 'payment_problem', 'order_issue', 'refund_request', 'account_issue', 'listing_help', 'other']);
@@ -75,7 +75,9 @@ export const listingReviewStatusEnum = pgEnum('listing_review_status', ['pending
 export const buyers = pgTable('buyers', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   // FK to Supabase Auth user
-  userId: uuid('user_id').notNull().unique(), 
+  userId: uuid('user_id').notNull().unique(),
+  // Payment provider customer IDs
+  tsaraCustomerId: varchar('tsara_customer_id', { length: 255 }).unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

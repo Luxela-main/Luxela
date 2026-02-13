@@ -135,6 +135,8 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
     setAddingToCart(true);
     try {
       await addToCart(product.id, qty);
+      const priceInNGN = product.price_cents ? (product.price_cents / 100).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' }) : 'Price unavailable';
+      toast.success(`✓ ${product.title} added to cart • ${priceInNGN}`);
       return true;
     } catch (error: any) {
       // 2. TRPC Unauthorized Catch
@@ -147,7 +149,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       } else {
         const errorMessage = error?.data?.message || error?.message || "Failed to add item to cart. Please try again.";
         console.error("Failed to add to cart:", { message: errorMessage, error });
-        toast.warning(errorMessage);
+        toast.error(errorMessage);
       }
       return false;
     } finally {
@@ -241,7 +243,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
               </p>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-light text-white">
-                  {formatCurrency(product.price_cents / 100, product.currency || 'NGN')}
+                  {formatCurrency(product.price_cents / 100, { currency: product.currency || 'NGN', truncate: true })}
                 </span>
               </div>
             </div>
@@ -632,4 +634,4 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       </Dialog>
     </div>
   );
-}
+}

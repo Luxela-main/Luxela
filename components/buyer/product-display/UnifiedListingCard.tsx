@@ -131,7 +131,8 @@ export default function UnifiedListingCard({
     try {
       await addToCart(listing.id, 1);
       setAdded(true);
-      toastSvc.success(`${listing.title} added to cart`);
+      const priceInNGN = listing.price_cents ? (listing.price_cents / 100).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' }) : 'Price unavailable';
+      toastSvc.success(`✓ ${listing.title} added to cart • ${priceInNGN}`);
       setTimeout(() => setAdded(false), 2000);
     } catch (err: any) {
       const errorMessage = err?.data?.message || err?.message || 'Failed to add to cart. Please try again.';
@@ -529,7 +530,7 @@ export default function UnifiedListingCard({
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <span className="text-[#8451E1] font-bold text-sm">
-                      {formatCurrency((listing.price_cents || 0) / 100, listing.currency || 'NGN')}
+                      {formatCurrency((listing.price_cents || 0) / 100, { currency: listing.currency || 'NGN', truncate: true })}
                     </span>
                   </div>
 
@@ -647,7 +648,7 @@ export default function UnifiedListingCard({
               <div>
                 <p className="text-sm text-[#acacac] mb-2">Price</p>
                 <p className="text-2xl font-bold text-[#8451E1]">
-                  {formatCurrency((listing.price_cents || 0) / 100, listing.currency || 'NGN')}
+                  {formatCurrency((listing.price_cents || 0) / 100, { currency: listing.currency || 'NGN', truncate: true })}
                 </p>
               </div>
 
@@ -732,4 +733,4 @@ export default function UnifiedListingCard({
       </Dialog>
     </>
   );
-}
+}

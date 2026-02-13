@@ -479,7 +479,7 @@ SMTP_HOST=smtp.resend.com
 SMTP_PORT=465
 SMTP_USER=resend
 SMTP_PASS=your_resend_api_key
-ADMIN_EMAIL=support@luxela.com
+ADMIN_EMAIL=support@theluxela.com
 
 # API
 NEXT_PUBLIC_API_URL=http://localhost:3000

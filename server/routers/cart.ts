@@ -595,12 +595,71 @@ export const cartRouter = createTRPCRouter({
 
         if (items.length === 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cart is empty' });
 
-        // Get buyer account details and billing address
-        const accountDetails = await db
+        // Get buyer account details - auto-create if missing
+        let accountDetails = await db
           .select()
           .from(buyerAccountDetails)
           .where(eq(buyerAccountDetails.buyerId, buyer.id))
           .then((r: any) => r[0]);
+
+        if (!accountDetails) {
+          // Auto-create minimal account details from auth user
+          const buyerIdShort = buyer.id.substring(0, 8);
+          const userEmail = ctx.user?.email || `buyer-${buyerIdShort}@luxela.local`;
+          const fullName = ctx.user?.name || ctx.user?.email?.split('@')[0] || 'Buyer';
+          
+          // Generate unique username with collision handling
+          let username: string;
+          let usernameAttempt = 0;
+          const maxAttempts = 5;
+          
+          while (usernameAttempt < maxAttempts) {
+            username = usernameAttempt === 0 
+              ? `buyer_${buyerIdShort}`
+              : `buyer_${buyerIdShort}_${Math.random().toString(36).substring(7)}`;
+            
+            try {
+              const [created] = await db
+                .insert(buyerAccountDetails)
+                .values({
+                  id: uuidv4(),
+                  buyerId: buyer.id,
+                  username: username,
+                  fullName: fullName,
+                  email: userEmail,
+                  country: 'Nigeria',
+                  state: 'Lagos',
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                })
+                .returning();
+              accountDetails = created;
+              break; // Success - exit loop
+            } catch (err: any) {
+              usernameAttempt++;
+              // If this is the last attempt, or if it's a different error type, throw
+              if (usernameAttempt >= maxAttempts || !err?.message?.includes('unique')) {
+                // Try to fetch existing account (race condition)
+                const existing = await db
+                  .select()
+                  .from(buyerAccountDetails)
+                  .where(eq(buyerAccountDetails.buyerId, buyer.id))
+                  .then((r: any) => r[0]);
+                
+                if (existing) {
+                  accountDetails = existing;
+                  break; // Found existing, use it
+                } else {
+                  throw new TRPCError({
+                    code: 'BAD_REQUEST',
+                    message: 'Failed to create buyer account details. Please try again.',
+                  });
+                }
+              }
+              // Otherwise, continue loop to retry with different username
+            }
+          }
+        }
 
         const billingAddress = await db
           .select()
@@ -613,8 +672,7 @@ export const cartRouter = createTRPCRouter({
           )
           .then((r: any) => r[0]);
 
-        if (!accountDetails) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Account details required for checkout' });
-        if (!billingAddress) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Billing address required for checkout' });
+        if (!billingAddress) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Billing address required for checkout. Please add a delivery address.' });
 
         // Build complete shipping address
         const shippingAddress = `${billingAddress.houseAddress}, ${billingAddress.city}, ${accountDetails.state}, ${accountDetails.country} ${billingAddress.postalCode}`;

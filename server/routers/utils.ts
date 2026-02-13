@@ -50,6 +50,7 @@ export async function getBuyer(userId: string): Promise<typeof buyers.$inferSele
     const newBuyer = {
       id: uuidv4(),
       userId,
+      tsaraCustomerId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

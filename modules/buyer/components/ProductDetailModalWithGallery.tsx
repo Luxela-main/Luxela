@@ -16,6 +16,7 @@ import {
   Loader2,
   Check,
 } from 'lucide-react';
+import { toastSvc } from '@/services/toast';
 
 interface ProductImage {
   id: string;
@@ -97,10 +98,13 @@ export function ProductDetailModalWithGallery({
         await onAddToCart(product.id);
       }
       setAdded(true);
+      const priceInNGN = product.price ? (product.price / 100).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' }) : 'Price unavailable';
+      toastSvc.success(`✓ ${product.title} added to cart • ${priceInNGN}`);
       setTimeout(() => setAdded(false), 2000);
     } catch (error: any) {
       const errorMessage = error?.data?.message || error?.message || 'Failed to add to cart';
       console.error('Failed to add to cart:', { message: errorMessage, error });
+      toastSvc.error(errorMessage);
     } finally {
       setIsAddingToCart(false);
     }

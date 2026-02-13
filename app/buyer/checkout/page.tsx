@@ -30,6 +30,33 @@ interface PaymentStatus {
   retryCount: number;
 }
 
+/**
+ * Sanitize error messages to prevent corruption and ensure clarity
+ * Removes control characters, extra whitespace, and ensures proper message display
+ */
+function sanitizeErrorMessage(message: string | unknown): string {
+  if (!message) return 'Payment processing failed. Please try again.';
+  
+  const str = String(message).trim();
+  
+  if (!str || str.length === 0) {
+    return 'Payment processing failed. Please try again.';
+  }
+  
+  // Remove control characters, extra spaces, and ensure proper encoding
+  const sanitized = str
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+  
+  // Cap the message length to prevent excessively long error messages
+  if (sanitized.length > 500) {
+    return sanitized.substring(0, 497) + '...';
+  }
+  
+  return sanitized || 'Payment processing failed. Please try again.';
+}
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9+\-\s()]{7,}$/;
 const POSTAL_CODE_REGEX = /^[a-zA-Z0-9\s\-]{3,}$/;
@@ -85,9 +112,12 @@ export default function CheckoutPage() {
       }
     },
     onError: (error) => {
+      const errorMessage = sanitizeErrorMessage(
+        (error?.data as any)?.message || error?.message || 'Payment initialization failed'
+      );
       setPaymentStatus({
         state: 'error',
-        message: error.message || 'Payment initialization failed',
+        message: errorMessage,
         retryCount: paymentStatus.retryCount + 1,
       });
     },
@@ -242,7 +272,8 @@ export default function CheckoutPage() {
         cancelUrl,
       });
     } catch (err: any) {
-      const errorMessage = err?.message || 'Payment initialization failed. Please try again.';
+      const rawMessage = err?.message || err?.data?.message || 'Payment initialization failed. Please try again.';
+      const errorMessage = sanitizeErrorMessage(rawMessage);
       setPaymentStatus({
         state: 'error',
         message: errorMessage,
@@ -552,10 +583,10 @@ export default function CheckoutPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-medium">
-                        ₦{(item.totalPriceCents / 100).toLocaleString()}
+                        ₦{(item.totalPriceCents / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <p className="text-sm text-gray-600">
-                        ₦{(item.unitPriceCents / 100).toLocaleString()} each
+                        ₦{(item.unitPriceCents / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} each
                       </p>
                     </div>
                   </div>
@@ -566,29 +597,26 @@ export default function CheckoutPage() {
               <div className="border-t pt-6 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>₦{((summary?.subtotalCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span>₦{((summary?.subtotalCents || 0) / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="bg-gray-50 -mx-6 px-6 py-3 my-2">
                   <div className="text-sm text-gray-600 mb-2">
-                    <p className="font-medium mb-1">Shipping Breakdown:</p>
-                    {(summary?.subtotalCents || 0) > 5000000 ? (
-                      <p className="text-green-600">✓ Free shipping (order over ₦50,000)</p>
+                    <p className="font-medium mb-1">Shipping Information:</p>
+                    {(summary?.shippingCents || 0) === 0 ? (
+                      <p className="text-green-600">✓ Free Shipping Included ₦50,000)</p>
                     ) : (
-                      <>
-                        <p>Base fee: ₦200.00</p>
-                        <p>Per item ({checkoutData?.items?.length || 0} items): ₦{((checkoutData?.items?.length || 0) * 50).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                      </>
+                      <p>Flat rate shipping applies</p>
                     )}
                   </div>
                 </div>
                 <div className="flex justify-between text-base">
-                  <span className="text-gray-600">Shipping Fee</span>
-                  <span>₦{((summary?.shippingCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-gray-600">Shipping</span>
+                  <span>₦{((summary?.shippingCents || 0) / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t pt-2 mt-4">
-                  <span>Total</span>
+                  <span>Total Amount</span>
                   <span className="text-blue-600">
-                    ₦{((summary?.totalCents || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₦{((summary?.totalCents || 0) / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -615,7 +643,7 @@ export default function CheckoutPage() {
                   <CreditCard className="w-6 h-6 ml-3 text-blue-600 flex-shrink-0" />
                   <span className="ml-3 flex-1">
                     <span className="font-medium">Credit/Debit Card</span>
-                    <p className="text-sm text-gray-600">Visa, Mastercard, American Express</p>
+                    <p className="text-sm text-gray-600">Visa, Mastercard, VERVE (instant processing)</p>
                   </span>
                   {checkoutForm.paymentMethod === 'card' && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
                 </label>
@@ -636,7 +664,7 @@ export default function CheckoutPage() {
                   <Landmark className="w-6 h-6 ml-3 text-green-600 flex-shrink-0" />
                   <span className="ml-3 flex-1">
                     <span className="font-medium">Bank Transfer</span>
-                    <p className="text-sm text-gray-600">Direct bank transfer (NGN)</p>
+                    <p className="text-sm text-gray-600">All Nigerian banks (USSD, mobile, online)</p>
                   </span>
                   {checkoutForm.paymentMethod === 'bank_transfer' && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
                 </label>
@@ -657,7 +685,7 @@ export default function CheckoutPage() {
                   <Bitcoin className="w-6 h-6 ml-3 text-orange-600 flex-shrink-0" />
                   <span className="ml-3 flex-1">
                     <span className="font-medium">Cryptocurrency</span>
-                    <p className="text-sm text-gray-600">USDC on Solana blockchain</p>
+                    <p className="text-sm text-gray-600">USDC stablecoin on Solana network</p>
                   </span>
                   {checkoutForm.paymentMethod === 'crypto' && <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />}
                 </label>

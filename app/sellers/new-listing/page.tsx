@@ -87,6 +87,7 @@ const NewListing: React.FC = () => {
     };
   };
 
+  const isEditing = !!editId;
   const [view, setView] = useState<ViewType>(editId ? "single" : "empty");
   const [activeTab, setActiveTab] = useState<TabType>("product-info");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -182,7 +183,21 @@ const NewListing: React.FC = () => {
             domesticMinutes: "",
             internationalDays: response.etaInternational || "",
             internationalMinutes: "",
-            images: (response.imagesJson ? JSON.parse(response.imagesJson) : (response.image ? [response.image] : [])) as (File | string)[],
+            images: (() => {
+              if (!response.imagesJson) {
+                return response.image ? [response.image] : [];
+              }
+              try {
+                const parsed = JSON.parse(response.imagesJson);
+                // Handle both plain URLs and objects with 'url' property
+                if (Array.isArray(parsed)) {
+                  return parsed.map((item: any) => typeof item === 'string' ? item : (item?.url || ''));
+                }
+                return [];
+              } catch (e) {
+                return response.image ? [response.image] : [];
+              }
+            })() as (File | string)[],
             collectionTitle: response.title || "",
             collectionDescription: response.description || "",
             collectionSku: response.sku || "",
@@ -293,7 +308,7 @@ const handleAddProduct = (type: ListingType): void => {
 };
 
 const handleBackToListings = () => {
-  setShowListings(true);
+  router.push('/sellers/my-listings');
 };
 
   const handleFormChange = (data: Partial<FormData>): void => {
@@ -885,7 +900,7 @@ const handleSubmitCollection = async () => {
         onClick={handleBackToListings}
         className="hover:text-white transition-colors cursor-pointer"
       >
-        <span>New Listing</span>
+        <span>My Listings</span>
       </button>
       <span>›</span>
       <span className="text-white">
@@ -895,12 +910,12 @@ const handleSubmitCollection = async () => {
 
      <div className="mb-8 pb-4 border-b-2 border-[#E5E7EB]">
   <h1 className="text-xl font-semibold mb-2 text-white">
-    {formData.type === "collection" ? "Add Collection" : "New Listing"}
+    {isEditing ? (formData.type === "collection" ? "Edit Collection" : "Edit Listing") : (formData.type === "collection" ? "Add Collection" : "Add Listing")}
   </h1>
   <p className="text-[#6B7280]">
     {formData.type === "collection" 
-      ? "Create a collection and add items to it"
-      : "List product and fill in your listing details"
+      ? "Create or update a collection and add items to it"
+      : "List or update your product and fill in the details"
     }
   </p>
 </div>

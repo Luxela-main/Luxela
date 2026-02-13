@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'support@luxela.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'support@theluxela.com';
 
 function getTransporter() {
   return nodemailer.createTransport({
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const transporter = getTransporter();
-    const fromEmail = process.env.SMTP_FROM || 'noreply@luxela.com';
+    const fromEmail = process.env.SMTP_FROM || 'noreply@theluxela.com';
 
     // Send email to admin
     try {

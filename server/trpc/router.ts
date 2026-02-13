@@ -9,11 +9,14 @@ import { adminSettingsRouter } from '../routers/admin-settings';
 import { brandsRouter } from '../routers/brands';
 import { buyerListingsCatalogRouter } from '../routers/buyer-listings-catalog';
 import { buyerNotificationsRouter } from '../routers/buyer-notifications-unified';
+import { buyerOrderActionsRouter } from '../routers/buyerOrderActions';
 import { buyerRouter } from '../routers/buyer';
 import { cartRouter } from '../routers/cart';
 import { checkoutRouter } from '../routers/checkout';
 import { collectionRouter } from '../routers/collection';
+import { cronRouter } from '../routers/cron';
 import { emailNotificationRouter } from '../routers/emailNotification';
+import { escrowRouter } from '../routers/escrow';
 import { faqsRouter } from '../routers/faqs';
 import { financeRouter } from '../routers/finance';
 import { inventoryRouter } from '../routers/inventory';
@@ -53,11 +56,14 @@ export const appRouter = createTRPCRouter({
   brands: brandsRouter,
   buyerListingsCatalog: buyerListingsCatalogRouter,
   buyerNotifications: buyerNotificationsRouter,
+  buyerOrderActions: buyerOrderActionsRouter,
   buyer: buyerRouter,
   cart: cartRouter,
   checkout: checkoutRouter,
   collection: collectionRouter,
+  cron: cronRouter,
   emailNotification: emailNotificationRouter,
+  escrow: escrowRouter,
   faqs: faqsRouter,
   finance: financeRouter,
   inventory: inventoryRouter,

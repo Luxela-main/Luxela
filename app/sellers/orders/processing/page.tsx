@@ -127,7 +127,7 @@ export default function ProcessingOrdersPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase">Amount</p>
-                      <p className="text-sm font-bold text-white mt-1">{formatCurrency(order.amountCents, order.currency)}</p>
+                      <p className="text-sm font-bold text-white mt-1">{formatCurrency(order.amountCents, { currency: order.currency, truncate: true })}</p>
                     </div>
                   </div>
 

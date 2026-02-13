@@ -15,6 +15,7 @@ import {
   disablePaymentLink,
   type PaymentLink
 } from "../services/tsara";
+import { getOrCreateTsaraCustomer } from "../services/paymentCustomerHelper";
 
 
 export const paymentRouter = createTRPCRouter({
@@ -40,6 +41,28 @@ export const paymentRouter = createTRPCRouter({
     )
     .mutation(async ({ input }) => {
       try {
+        // Get or create Tsara customer ID from the database
+        // This ensures we always have a valid customer_id before making payment requests
+        let customerId: string;
+        
+        try {
+          customerId = await getOrCreateTsaraCustomer(input.buyerId);
+        } catch (error: any) {
+          console.error('[Tsara] Failed to get/create customer:', error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to initialize payment. Please try again or contact support.",
+            cause: error,
+          });
+        }
+        
+        if (!customerId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Customer ID is required for payment processing",
+          });
+        }
+
         let response;
 
         // Create appropriate payment link based on type
@@ -84,7 +107,7 @@ export const paymentRouter = createTRPCRouter({
               amount: Math.round(input.amount * 100), 
               currency: input.currency,
               reference: `order_${input.orderId || uuidv4()}`,
-              customer_id: input.customer_id,
+              customer_id: customerId,
               success_url: input.success_url,
               cancel_url: input.cancel_url,
               metadata: input.metadata,
@@ -95,7 +118,7 @@ export const paymentRouter = createTRPCRouter({
               amount: Math.round(input.amount * 100), // Convert to cents for fiat
               currency: input.currency,
               description: input.description,
-              customer_id: input.customer_id,
+              customer_id: customerId,
               metadata: input.metadata,
               redirect_url: input.redirect_url,
             });

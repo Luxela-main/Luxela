@@ -104,9 +104,9 @@ export default function AdminSettingsPage() {
       const generalData = (settingsData as any).general || {};
       setGeneralSettings({
         siteName: generalData.siteName || 'Luxela',
-        siteUrl: generalData.siteUrl || 'https://luxela.com',
-        supportEmail: generalData.supportEmail || 'support@luxela.com',
-        adminEmail: generalData.adminEmail || 'admin@luxela.com',
+        siteUrl: generalData.siteUrl || 'https://theluxela.com',
+        supportEmail: generalData.supportEmail || 'support@theluxela.com',
+        adminEmail: generalData.adminEmail || 'admin@theluxela.com',
         timezone: generalData.timezone || 'UTC',
         language: generalData.language || 'en',
       });
@@ -181,9 +181,9 @@ export default function AdminSettingsPage() {
       setEmailSettings({
         smtpServer: emailData.smtpServer || 'smtp.gmail.com',
         smtpPort: emailData.smtpPort || '587',
-        fromEmail: emailData.fromEmail || 'noreply@luxela.com',
+        fromEmail: emailData.fromEmail || 'noreply@theluxela.com',
         fromName: emailData.fromName || 'Luxela',
-        replyTo: emailData.replyTo || 'support@luxela.com',
+        replyTo: emailData.replyTo || 'support@theluxela.com',
         enableSSL: emailData.enableSSL !== false,
       });
 

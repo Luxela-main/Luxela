@@ -126,10 +126,10 @@ export default function ContactPage() {
               Send us an email anytime
             </p>
             <a
-              href="mailto:support@luxela.com"
+              href="mailto:support@theluxela.com"
               className="text-[#6B7280] hover:text-[#E5E7EB] font-medium transition-colors"
             >
-              support@luxela.com
+              support@theluxela.com
             </a>
           </div>
 

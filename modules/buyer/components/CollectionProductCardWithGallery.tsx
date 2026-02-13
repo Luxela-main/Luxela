@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, ShoppingCart, Check, Loader2, Images } from 'lucide-react';
+import { toastSvc } from '@/services/toast';
 
 interface ProductImage {
   id: string;
@@ -81,10 +82,13 @@ export function CollectionProductCardWithGallery({
     try {
       await onAddToCart(productId);
       setAdded(true);
+      const priceInNGN = price ? (price / 100).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' }) : 'Price unavailable';
+      toastSvc.success(`✓ ${title} added to cart • ${priceInNGN}`);
       setTimeout(() => setAdded(false), 2000);
     } catch (err: any) {
       const errorMessage = err?.data?.message || err?.message || 'Failed to add to cart';
       console.error('Failed to add to cart:', { message: errorMessage, error: err });
+      toastSvc.error(errorMessage);
     } finally {
       setIsAdding(false);
     }

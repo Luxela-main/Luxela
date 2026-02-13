@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
 import { db } from "../db";
-import { collections, collectionItems, products, productImages, listings, sellers } from "../db/schema";
+import { collections, collectionItems, products, productImages, listings, sellers, reviews, buyers, users } from "../db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -333,6 +333,271 @@ export const collectionRouter = createTRPCRouter({
       }
     }),
 
+  // NEW: Get complete collection details with full product information and real reviews
+  getBuyerCollectionDetailsComplete: publicProcedure
+    .input(z.object({ collectionId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      try {
+        const collection = await db
+          .select()
+          .from(collections)
+          .where(eq(collections.id, input.collectionId))
+          .limit(1);
+
+        if (collection.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Collection not found",
+          });
+        }
+
+        // Get the collection listing for pricing info
+        const listing = await db
+          .select()
+          .from(listings)
+          .where(and(
+            eq(listings.collectionId, input.collectionId),
+            inArray(listings.status, ["approved", "pending_review"])
+          ))
+          .limit(1);
+
+        if (listing.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Collection listing not found",
+          });
+        }
+
+        // Fetch collection items
+        const items = await db
+          .select()
+          .from(collectionItems)
+          .where(eq(collectionItems.collectionId, input.collectionId))
+          .orderBy(collectionItems.position);
+
+        if (items.length === 0) {
+          return {
+            ...collection[0],
+            listing: listing[0],
+            items: [],
+            collectionTotalPrice: 0,
+            isApproved: true,
+          };
+        }
+
+        const productIds = items.map((item: any) => item.productId);
+
+        // Fetch all products
+        const productsData = await db
+          .select()
+          .from(products)
+          .where(
+            productIds.length === 1
+              ? eq(products.id, productIds[0])
+              : inArray(products.id, productIds)
+          );
+
+        // Fetch all product listings for specs (colors, sizes, care instructions)
+        const productListings = await db
+          .select()
+          .from(listings)
+          .where(
+            productIds.length === 1
+              ? and(
+                  eq(listings.productId, productIds[0]),
+                  eq(listings.type, "single"),
+                  inArray(listings.status, ["approved", "pending_review"])
+                )
+              : and(
+                  inArray(listings.productId, productIds),
+                  eq(listings.type, "single"),
+                  inArray(listings.status, ["approved", "pending_review"])
+                )
+          );
+
+        // Fetch all images for all products
+        const allImages = await db
+          .select()
+          .from(productImages)
+          .where(
+            productIds.length === 1
+              ? eq(productImages.productId, productIds[0])
+              : inArray(productImages.productId, productIds)
+          )
+          .orderBy(productImages.position);
+
+        // Fetch all reviews with buyer details for all products
+        const allProductListingIds = productListings.map((pl: any) => pl.id);
+        const allReviews =
+          allProductListingIds.length > 0
+            ? await db
+                .select({
+                  id: reviews.id,
+                  listingId: reviews.listingId,
+                  buyerId: reviews.buyerId,
+                  rating: reviews.rating,
+                  comment: reviews.comment,
+                  createdAt: reviews.createdAt,
+                  buyerName: users.name,
+                  buyerEmail: users.email,
+                })
+                .from(reviews)
+                .innerJoin(buyers, eq(reviews.buyerId, buyers.id))
+                .innerJoin(users, eq(buyers.userId, users.id))
+                .where(
+                  allProductListingIds.length === 1
+                    ? eq(reviews.listingId, allProductListingIds[0])
+                    : inArray(reviews.listingId, allProductListingIds)
+                )
+            : [];
+
+        // Build maps for efficient lookup
+        const imagesByProductId: Record<string, string[]> = {};
+        const specsByProductId: Record<string, any> = {};
+        const reviewsByListingId: Record<string, any[]> = {};
+
+        allImages.forEach((img: any) => {
+          if (!imagesByProductId[img.productId]) {
+            imagesByProductId[img.productId] = [];
+          }
+          imagesByProductId[img.productId].push(img.imageUrl);
+        });
+
+        // Extract specs from product listings
+        productListings.forEach((pl: any) => {
+          if (pl.productId) {
+            let colors = null;
+            let sizes = null;
+
+            if (pl.colorsAvailable) {
+              try {
+                colors = JSON.parse(pl.colorsAvailable);
+              } catch (e) {
+                colors = null;
+              }
+            }
+
+            if (pl.sizesJson) {
+              try {
+                sizes = JSON.parse(pl.sizesJson);
+              } catch (e) {
+                sizes = null;
+              }
+            }
+
+            specsByProductId[pl.productId] = {
+              careInstructions: pl.careInstructions || null,
+              materialComposition: pl.materialComposition || null,
+              colors,
+              sizes,
+              shippingOption: pl.shippingOption,
+              etaDomestic: pl.etaDomestic,
+              etaInternational: pl.etaInternational,
+              refundPolicy: pl.refundPolicy,
+            };
+          }
+        });
+
+        // Group reviews by listing ID
+        allReviews.forEach((review: any) => {
+          if (!reviewsByListingId[review.listingId]) {
+            reviewsByListingId[review.listingId] = [];
+          }
+          reviewsByListingId[review.listingId].push({
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment,
+            createdAt: review.createdAt,
+            reviewerName: review.buyerName || "Anonymous Buyer",
+            reviewerEmail: review.buyerEmail,
+          });
+        });
+
+        let collectionTotalPrice = 0;
+
+        // Build items with complete details
+        const itemsWithCompleteDetails = items
+          .map((item: any) => {
+            const product = productsData.find((p: any) => p.id === item.productId);
+            if (!product) return null;
+
+            const productImages = imagesByProductId[product.id] || [];
+            const specs = specsByProductId[product.id] || {};
+            
+            // Find the listing for this product to get its reviews
+            const productListing = productListings.find((pl: any) => pl.productId === product.id);
+            const productReviews = productListing ? reviewsByListingId[productListing.id] || [] : [];
+
+            // Fallback to product primary image if no images found
+            const finalImages = productImages.length > 0
+              ? productImages
+              : product.image
+              ? [product.image]
+              : [];
+
+            const imagesJson = finalImages.length > 0
+              ? JSON.stringify(finalImages.map((url: string) => ({ url })))
+              : null;
+
+            collectionTotalPrice += (product.priceCents || 0) / 100;
+
+            // Determine stock status
+            const qty = product.quantityAvailable || 0;
+            let status: "in_stock" | "low_stock" | "sold_out" = "in_stock";
+            if (qty === 0) {
+              status = "sold_out";
+            } else if (qty <= 5) {
+              status = "low_stock";
+            }
+
+            return {
+              id: item.id,
+              itemId: item.id,
+              productId: product.id,
+              position: item.position,
+              title: product.name,
+              description: product.description,
+              priceCents: product.priceCents,
+              price: product.priceCents ? product.priceCents / 100 : 0,
+              currency: product.currency || "NGN",
+              category: product.category,
+              sku: product.sku,
+              images: finalImages,
+              imagesJson: imagesJson,
+              careInstructions: specs.careInstructions,
+              materialComposition: specs.materialComposition,
+              colors: specs.colors,
+              sizes: specs.sizes,
+              shippingOption: specs.shippingOption,
+              etaDomestic: specs.etaDomestic,
+              etaInternational: specs.etaInternational,
+              refundPolicy: specs.refundPolicy,
+              quantityAvailable: qty,
+              status: status,
+              reviews: productReviews,
+            };
+          })
+          .filter((item: any) => item !== null);
+
+        return {
+          id: collection[0].id,
+          name: collection[0].name,
+          description: collection[0].description,
+          items: itemsWithCompleteDetails,
+          listing: listing[0],
+          collectionTotalPrice: collectionTotalPrice,
+          itemCount: itemsWithCompleteDetails.length,
+          isApproved: true,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch collection details",
+        });
+      }
+    }),
+
   getBuyerCollectionWithProducts: publicProcedure
     .input(z.object({ collectionId: z.string().uuid() }))
     .query(async ({ input }) => {
@@ -427,6 +692,47 @@ export const collectionRouter = createTRPCRouter({
                 .orderBy(productImages.position)
             : [];
 
+        // Fetch reviews with buyer details for all product listings
+        const allListingIds = productListings.map((pl: any) => pl.id).filter(Boolean);
+        const allReviews =
+          allListingIds.length > 0
+            ? await db
+                .select({
+                  id: reviews.id,
+                  listingId: reviews.listingId,
+                  buyerId: reviews.buyerId,
+                  rating: reviews.rating,
+                  comment: reviews.comment,
+                  createdAt: reviews.createdAt,
+                  buyerName: users.name,
+                  buyerEmail: users.email,
+                })
+                .from(reviews)
+                .innerJoin(buyers, eq(reviews.buyerId, buyers.id))
+                .innerJoin(users, eq(buyers.userId, users.id))
+                .where(
+                  allListingIds.length === 1
+                    ? eq(reviews.listingId, allListingIds[0])
+                    : inArray(reviews.listingId, allListingIds)
+                )
+            : [];
+
+        // Group reviews by listing ID
+        const reviewsByListingId: Record<string, any[]> = {};
+        allReviews.forEach((review: any) => {
+          if (!reviewsByListingId[review.listingId]) {
+            reviewsByListingId[review.listingId] = [];
+          }
+          reviewsByListingId[review.listingId].push({
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment,
+            createdAt: review.createdAt,
+            reviewerName: review.buyerName || "Anonymous Buyer",
+            reviewerEmail: review.buyerEmail,
+          });
+        });
+
         const itemsWithProducts = items.map((item: any) => {
           // Find the listing for this specific product
           const productListing = productListings.find(
@@ -434,6 +740,7 @@ export const collectionRouter = createTRPCRouter({
           );
           
           const selectedListing = productListing || listing[0];
+          const productReviews = productListing ? reviewsByListingId[productListing.id] || [] : [];
           
           // Extract colors and sizes from the listing
           let colors: any[] = [];
@@ -475,9 +782,10 @@ export const collectionRouter = createTRPCRouter({
             colors: colors,
             sizes: sizes,
             colorsAvailable: colors,
-            sizesJson: sizes
+            sizesJson: sizes,
+            reviews: productReviews,
           };
-        })
+        });
 
         return {
           ...collection[0],
@@ -586,6 +894,18 @@ export const collectionRouter = createTRPCRouter({
                 listingQuantityAvailable: listings.quantityAvailable,
                 listingImage: listings.image,
                 listingImagesJson: listings.imagesJson,
+                listingColorsAvailable: listings.colorsAvailable,
+                listingSizesJson: listings.sizesJson,
+                listingMaterial: listings.materialComposition,
+                listingCareInstructions: listings.careInstructions,
+                listingVideoUrl: listings.videoUrl,
+                listingEtaDomestic: listings.etaDomestic,
+                listingEtaInternational: listings.etaInternational,
+                listingShippingOption: listings.shippingOption,
+                listingSku: listings.sku,
+                listingBarcode: listings.barcode,
+                listingMetaDescription: listings.metaDescription,
+                listingRefundPolicy: listings.refundPolicy,
               })
               .from(collectionItems)
               .innerJoin(products, eq(collectionItems.productId, products.id))
@@ -654,6 +974,18 @@ export const collectionRouter = createTRPCRouter({
                 listingImage: row.listingImage,
                 listingImagesJson: row.listingImagesJson,
                 listingId: row.listingId,
+                colorsAvailable: row.listingColorsAvailable,
+                sizesJson: row.listingSizesJson,
+                material: row.listingMaterial,
+                careInstructions: row.listingCareInstructions,
+                videoUrl: row.listingVideoUrl,
+                etaDomestic: row.listingEtaDomestic,
+                etaInternational: row.listingEtaInternational,
+                shippingOption: row.listingShippingOption,
+                sku: row.listingSku,
+                barcode: row.listingBarcode,
+                metaDescription: row.listingMetaDescription,
+                refundPolicy: row.listingRefundPolicy,
               });
             }
             if (row.productImage) {

@@ -151,7 +151,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
                 <div>
                   <p className="text-xs text-gray-500">Amount</p>
                   <p className="text-lg font-bold text-white mt-1">
-                    {formatCurrency(order.amountCents, order.currency)}
+                    {formatCurrency(order.amountCents, { currency: order.currency })}
                   </p>
                 </div>
               </div>
@@ -270,6 +270,8 @@ export default function PendingOrders() {
   const cancelMutation = useCancelOrder()
 
   const handleConfirmOrder = (orderId: string) => {
+    // Prevent multiple clicks during mutation
+    if (confirmMutation.isPending) return
     confirmMutation.mutate({ orderId })
   }
 
@@ -278,9 +280,23 @@ export default function PendingOrders() {
       toastSvc.error("Please provide a cancellation reason")
       return
     }
+    // Prevent multiple clicks during mutation
+    if (cancelMutation.isPending) return
+    
     cancelMutation.mutate({ orderId: selectedOrderId, reason: cancelReason })
-    setFilters({...filters, cancelReason: ''})
   }
+
+  // Close dialog when cancel mutation succeeds
+  React.useEffect(() => {
+    if (cancelMutation.isSuccess && showCancelDialog) {
+      setTimeout(() => {
+        setShowCancelDialog(false)
+        setSelectedOrderId(null)
+        setSelectedOrder(null)
+        setFilters(prev => ({...prev, cancelReason: ''}))
+      }, 500)
+    }
+  }, [cancelMutation.isSuccess, showCancelDialog])
 
   const handleBulkSelectAll = () => {
     if (selectedBulkOrders.size === filteredOrders.length) {
@@ -305,13 +321,29 @@ export default function PendingOrders() {
       toastSvc.error("Please select at least one order")
       return
     }
+    
+    // Prevent multiple clicks
+    if (confirmMutation.isPending) return
+
+    // Confirm before bulk action
+    const orderCount = selectedBulkOrders.size
+    if (!window.confirm(`Confirm ${orderCount} order${orderCount !== 1 ? 's' : ''}?`)) {
+      return
+    }
+
+    let confirmedCount = 0
     selectedBulkOrders.forEach((orderId) => {
       const order = filteredOrders.find((o: Sale) => o.id === orderId)
       if (order) {
         confirmMutation.mutate({ orderId: order.orderId })
+        confirmedCount++
       }
     })
-    setSelectedBulkOrders(new Set())
+    
+    if (confirmedCount > 0) {
+      setSelectedBulkOrders(new Set())
+      toastSvc.success(`Processing ${confirmedCount} order${confirmedCount !== 1 ? 's' : ''}...`)
+    }
   }
 
   const handleBulkCancel = () => {
@@ -323,14 +355,30 @@ export default function PendingOrders() {
       toastSvc.error("Please provide a cancellation reason")
       return
     }
+    
+    // Prevent multiple clicks
+    if (cancelMutation.isPending) return
+
+    // Confirm before bulk action
+    const orderCount = selectedBulkOrders.size
+    if (!window.confirm(`Cancel ${orderCount} order${orderCount !== 1 ? 's' : ''}?`)) {
+      return
+    }
+
+    let canceledCount = 0
     selectedBulkOrders.forEach((orderId) => {
       const order = filteredOrders.find((o: Sale) => o.id === orderId)
       if (order) {
         cancelMutation.mutate({ orderId: order.orderId, reason: cancelReason })
+        canceledCount++
       }
     })
-    setSelectedBulkOrders(new Set())
-    setFilters({...filters, cancelReason: ''})
+    
+    if (canceledCount > 0) {
+      setSelectedBulkOrders(new Set())
+      setFilters(prev => ({...prev, cancelReason: ''}))
+      toastSvc.success(`Processing ${canceledCount} cancellation${canceledCount !== 1 ? 's' : ''}...`)
+    }
   }
 
   const toggleSortOrder = () => {
@@ -502,14 +550,8 @@ export default function PendingOrders() {
               size="sm"
               variant="outline"
               className="border-red-600 text-red-400 hover:bg-red-900/20 cursor-pointer disabled:cursor-not-allowed"
-              onClick={() => {
-                if (!cancelReason.trim()) {
-                  toastSvc.error("Please select a cancellation reason first")
-                  return
-                }
-                handleBulkCancel()
-              }}
-              disabled={cancelMutation.isPending}
+              onClick={handleBulkCancel}
+              disabled={cancelMutation.isPending || !cancelReason.trim()}
             >
               {cancelMutation.isPending && <Loader className="h-3 w-3 mr-1 animate-spin" />}
               Cancel All ({selectedBulkOrders.size})
@@ -627,7 +669,7 @@ export default function PendingOrders() {
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Amount</p>
                     <p className="text-lg font-bold text-white">
-                      {formatCurrency(order.amountCents, order.currency)}
+                      {formatCurrency(order.amountCents, { currency: order.currency })}
                     </p>
                   </div>
                   <div>
@@ -732,7 +774,7 @@ export default function PendingOrders() {
             <Button
               className="bg-red-600 hover:bg-red-700 text-white cursor-pointer disabled:cursor-not-allowed transition"
               onClick={handleCancelOrder}
-              disabled={cancelMutation.isPending || !filters.cancelReason}
+              disabled={cancelMutation.isPending || !filters.cancelReason || !selectedOrderId}
             >
               {cancelMutation.isPending ? (
                 <>

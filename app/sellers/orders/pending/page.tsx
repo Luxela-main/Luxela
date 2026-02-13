@@ -358,7 +358,7 @@ export default function PendingOrdersPage() {
                 <div className="md:col-span-2 space-y-2">
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Amount</p>
-                    <p className="text-lg font-bold text-white">{formatCurrency(order.amountCents, order.currency)}</p>
+                    <p className="text-lg font-bold text-white">{formatCurrency(order.amountCents, { currency: order.currency, truncate: true })}</p>
                   </div>
                   <Badge className={`${getStatusColor(order.orderStatus)} border inline-flex items-center gap-1`}>
                     <Clock className="h-3 w-3" />

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lock, LogOut, Trash2, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Lock, LogOut, Trash2, Eye, EyeOff, Check, X, Truck, HelpCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/context/AuthContext';
+import ShippingSettings from './components/ShippingSettings';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,11 +26,12 @@ interface PasswordRequirements {
   hasSpecialChar: boolean;
 }
 
-const getRequirementColor = (met: boolean) => met ? 'text-[#9CA3AF]' : 'text-gray-500';
+type SettingTab = 'security' | 'shipping' | 'help';
 
-export default function SellerSecuritySettings() {
+export default function SellerSettings() {
   const router = useRouter();
   const { logout } = useAuth();
+  const [activeTab, setActiveTab] = useState<SettingTab>('security');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -61,7 +63,6 @@ export default function SellerSecuritySettings() {
   }, []);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
-  
   const updatePasswordMutation = trpc.seller.updatePassword.useMutation();
   const deleteAccountMutation = trpc.seller.deleteAccount.useMutation();
 
@@ -164,70 +165,130 @@ export default function SellerSecuritySettings() {
     <div className="min-h-screen bg-[#0f0f0f] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Security Settings</h1>
-          <p className="text-gray-400 mt-2">Manage your account security and access</p>
+          <h1 className="text-3xl font-bold text-white">Settings</h1>
+          <p className="text-gray-400 mt-2">Manage your account, shipping, and more</p>
         </div>
 
-        <div className="space-y-6">
-          {/* Change Password */}
-          <div className="bg-[#1a1a1a] rounded-lg border border-[#333] p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Lock className="w-5 h-5 text-purple-500" />
-              <h2 className="text-lg font-semibold text-white">Change Password</h2>
-            </div>
-            <p className="text-gray-400 text-sm mb-4">
-              Update your password to keep your account secure
-            </p>
-            <button
-              onClick={() => setShowPasswordDialog(true)}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm transition-colors"
-            >
-              Change Password
-            </button>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex gap-4 mb-8 border-b border-[#333]">
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+              activeTab === 'security'
+                ? 'border-purple-500 text-white'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+          >
+            <Lock size={18} />
+            Security
+          </button>
+          <button
+            onClick={() => setActiveTab('shipping')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+              activeTab === 'shipping'
+                ? 'border-purple-500 text-white'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+          >
+            <Truck size={18} />
+            Shipping
+          </button>
+          <button
+            onClick={() => setActiveTab('help')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+              activeTab === 'help'
+                ? 'border-purple-500 text-white'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+          >
+            <HelpCircle size={18} />
+            Help
+          </button>
+        </div>
 
-          {/* Active Sessions */}
-          <div className="bg-[#1a1a1a] rounded-lg border border-[#333] p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Active Sessions</h2>
-            <div className="bg-[#242424] p-4 rounded-lg border border-[#333]">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium text-white">Current Session</p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {currentDateTime || 'Loading...'}
-                  </p>
+        {/* Tab Content */}
+        {activeTab === 'security' && (
+          <div className="space-y-6">
+            {/* Change Password */}
+            <div className="bg-[#1a1a1a] rounded-lg border border-[#333] p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Lock className="w-5 h-5 text-purple-500" />
+                <h2 className="text-lg font-semibold text-white">Change Password</h2>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                Update your password to keep your account secure
+              </p>
+              <button
+                onClick={() => setShowPasswordDialog(true)}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm transition-colors"
+              >
+                Change Password
+              </button>
+            </div>
+
+            {/* Active Sessions */}
+            <div className="bg-[#1a1a1a] rounded-lg border border-[#333] p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Active Sessions</h2>
+              <div className="bg-[#242424] p-4 rounded-lg border border-[#333]">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-medium text-white">Current Session</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      {currentDateTime || 'Loading...'}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 bg-green-900/30 text-green-400 text-xs font-medium rounded-full border border-green-700/30">
+                    Active
+                  </span>
                 </div>
-                <span className="px-3 py-1 bg-green-900/30 text-green-400 text-xs font-medium rounded-full border border-green-700/30">
-                  Active
-                </span>
+              </div>
+              <button
+                onClick={() => setShowLogoutDialog(true)}
+                className="w-full mt-4 px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded-md text-sm transition-colors flex items-center justify-center gap-2 border border-red-700/30 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            </div>
+
+            {/* Delete Account */}
+            <div className="bg-red-900/20 border border-red-700/30 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Trash2 className="w-5 h-5 text-red-400" />
+                <h2 className="text-lg font-semibold text-red-300">Danger Zone</h2>
+              </div>
+              <p className="text-sm text-red-300/80 mb-4">
+                Permanently delete your account and all associated data
+              </p>
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Shipping Tab */}
+        {activeTab === 'shipping' && (
+          <ShippingSettings />
+        )}
+
+        {/* Help Tab */}
+        {activeTab === 'help' && (
+          <div className="space-y-6">
+            <div className="bg-[#1a1a1a] rounded-lg border border-[#333] p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Help & Support</h2>
+              <div className="space-y-4 text-gray-400">
+                <div>
+                  <h3 className="text-white font-medium mb-2">Need Assistance?</h3>
+                  <p>Contact our support team at support@theluxela.com or visit our help center.</p>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowLogoutDialog(true)}
-              className="w-full mt-4 px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded-md text-sm transition-colors flex items-center justify-center gap-2 border border-red-700/30 cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
           </div>
-
-          {/* Delete Account */}
-          <div className="bg-red-900/20 border border-red-700/30 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Trash2 className="w-5 h-5 text-red-400" />
-              <h2 className="text-lg font-semibold text-red-300">Danger Zone</h2>
-            </div>
-            <p className="text-sm text-red-300/80 mb-4">
-              Permanently delete your account and all associated data
-            </p>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
-            >
-              Delete Account
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Change Password Dialog */}

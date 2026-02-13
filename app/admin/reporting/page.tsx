@@ -212,7 +212,7 @@ export default function ReportingPage() {
                 <Label htmlFor="recipients">Recipients (comma-separated emails)</Label>
                 <Input
                   id="recipients"
-                  placeholder="admin@luxela.com, finance@luxela.com"
+                  placeholder="admin@theluxela.com, finance@theluxela.com"
                   className="bg-gray-800 border-gray-700"
                 />
               </div>

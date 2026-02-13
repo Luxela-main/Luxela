@@ -21,7 +21,7 @@ const supplyCapacityEnum = z.enum(['no_max', 'limited']);
 const limitedEditionBadgeEnum = z.enum(['show_badge', 'do_not_show']);
 const shippingOptionEnum = z.enum(['local', 'international', 'both']);
 const orderStatusEnum = z.enum(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'canceled', 'returned']);
-const payoutStatusEnum = z.enum(['in_escrow', 'processing', 'paid']);
+const payoutStatusEnum = z.enum(['in_escrow', 'processing', 'paid', 'refunded']);
 const ticketStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'closed']);
 const ticketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
 const ticketCategoryEnum = z.enum(['general_inquiry', 'technical_issue', 'payment_problem', 'order_issue', 'refund_request', 'account_issue', 'listing_help', 'other']);
@@ -81,6 +81,7 @@ export const userSchema = z.object({
 export const buyerSchema = z.object({
   id: z.string().uuid().optional(),
   userId: z.string().uuid(),
+  tsaraCustomerId: z.string().nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

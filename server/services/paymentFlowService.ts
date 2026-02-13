@@ -479,7 +479,7 @@ export async function createBuyerNotification(
         relatedEntityId: orderId,
         relatedEntityType: 'order',
         actionUrl,
-        metadata: metadata ? JSON.stringify(metadata) : null,
+        metadata: metadata || null,
       });
   } catch (err: any) {
     console.error(`Failed to create buyer notification for buyer ${buyerId}:`, err);

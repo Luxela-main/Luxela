@@ -330,13 +330,20 @@ export default function CartPaymentPage() {
             <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">
               Delivery Address
             </p>
-            <p className="text-xs text-gray-300 leading-relaxed">
-              {billingLoading
-                ? "Fetching address..."
-                : activeAddress
-                ? `${activeAddress.houseAddress}, ${activeAddress.city}`
-                : "No address found."}
-            </p>
+            {billingLoading ? (
+              <p className="text-xs text-gray-300">Fetching address...</p>
+            ) : activeAddress ? (
+              <p className="text-xs text-gray-300 leading-relaxed">
+                {activeAddress.houseAddress}, {activeAddress.city}
+              </p>
+            ) : (
+              <button
+                onClick={() => router.push('/buyer/profile')}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                Add delivery address
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -346,12 +353,13 @@ export default function CartPaymentPage() {
         <TsaraPaymentModal
           isOpen={showTsaraModal}
           onClose={() => setShowTsaraModal(false)}
-          totalAmount={checkoutResult.total / 100}
+          totalAmount={checkoutResult.total}
           orderId={checkoutResult.orders[0]?.id || ""}
           buyerId={profile?.id || ""}
           listingId={checkoutResult.orders[0]?.listingId || ""}
+          paymentMethod={paymentMethod}
         />
       )}
     </div>
   );
-}
+}

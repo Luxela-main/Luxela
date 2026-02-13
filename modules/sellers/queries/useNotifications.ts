@@ -17,9 +17,9 @@ export const useMarkNotificationAsRead = () => {
 
   return trpc.sellerNotifications.markAsRead.useMutation({
     onSuccess: async () => {
+      // Invalidate the cache - refetch happens automatically
       await utils.sellerNotifications.getNotifications.invalidate();
       await utils.sellerNotifications.getUnreadCount.invalidate();
-      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
@@ -31,7 +31,6 @@ export const useMarkAllNotificationsAsRead = () => {
     onSuccess: async () => {
       await utils.sellerNotifications.getNotifications.invalidate();
       await utils.sellerNotifications.getUnreadCount.invalidate();
-      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
@@ -43,7 +42,6 @@ export const useToggleNotificationStar = () => {
     onSuccess: async () => {
       await utils.sellerNotifications.getNotifications.invalidate();
       await utils.sellerNotifications.getUnreadCount.invalidate();
-      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
@@ -65,7 +63,6 @@ export const useDeleteNotification = () => {
     onSuccess: async () => {
       await utils.sellerNotifications.getNotifications.invalidate();
       await utils.sellerNotifications.getUnreadCount.invalidate();
-      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };
@@ -77,7 +74,6 @@ export const useDeleteAllNotifications = () => {
     onSuccess: async () => {
       await utils.sellerNotifications.getNotifications.invalidate();
       await utils.sellerNotifications.getUnreadCount.invalidate();
-      await utils.sellerNotifications.getNotifications.refetch();
     },
   });
 };

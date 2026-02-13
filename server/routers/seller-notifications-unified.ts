@@ -12,6 +12,21 @@ import { and, eq, gt, lt, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
+// Cache to prevent excessive notification generation
+const notificationGenerationCache = new Map<string, number>();
+const GENERATION_COOLDOWN_MS = 30000; // 30 seconds
+
+function shouldGenerateNotifications(sellerId: string): boolean {
+  const lastGeneration = notificationGenerationCache.get(sellerId);
+  const now = Date.now();
+  
+  if (!lastGeneration || now - lastGeneration > GENERATION_COOLDOWN_MS) {
+    notificationGenerationCache.set(sellerId, now);
+    return true;
+  }
+  return false;
+}
+
 /**
  * Generate fresh seller notifications from system data and persist to database
  * Runs non-blocking to avoid slowing down queries
@@ -286,9 +301,12 @@ export const sellerNotificationsRouter = createTRPCRouter({
 
       // Generate fresh notifications (non-blocking background task)
       // Fire-and-forget: don't await to prevent blocking the response
-      void generateAndStoreSellerNotifications(seller.id).catch((err) =>
-        console.error('Error generating notifications:', err)
-      );
+      // Only generate if not recently generated (cooldown: 30 seconds)
+      if (shouldGenerateNotifications(seller.id)) {
+        void generateAndStoreSellerNotifications(seller.id).catch((err) =>
+          console.error('Error generating notifications:', err)
+        );
+      }
 
       // Build query conditions
       const conditions = [eq(sellerNotifications.sellerId, seller.id)];

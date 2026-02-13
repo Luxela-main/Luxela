@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import {
   Eye,
@@ -52,30 +52,53 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  // Debug status
-  React.useEffect(() => {
-    if (status) {
-      console.log(`Card ${id}: status = ${status}`);
-    }
-  }, [status, id]);
+  // Memoize hover handlers
+  const handleMouseEnter = useCallback(() => setIsHovered(true), []);
+  const handleMouseLeave = useCallback(() => setIsHovered(false), []);
+  
+  // Memoize callback handlers to prevent re-renders
+  const handleView = useCallback(() => onView(), [onView]);
+  const handleEdit = useCallback(() => onEdit(), [onEdit]);
+  const handleDelete = useCallback(() => onDelete(), [onDelete]);
+  const handleRestock = useCallback(() => onRestock(), [onRestock]);
 
   // Determine stock status
-  const getStockStatus = () => {
+  const getStockStatus = useCallback(() => {
     if (quantity === 0) return { status: "out-of-stock", color: "from-red-500 to-red-600", label: "Sold Out", textColor: "text-red-300" };
     if (quantity < 10) return { status: "low-stock", color: "from-amber-500 to-amber-600", label: "Low Stock", textColor: "text-amber-300" };
     return { status: "in-stock", color: "from-emerald-500 to-emerald-600", label: "In Stock", textColor: "text-emerald-300" };
-  };
-
-  const stockStatus = getStockStatus();
-  const createdAtDate = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
-  const isNew = new Date().getTime() - createdAtDate.getTime() < 7 * 24 * 60 * 60 * 1000;
-  const conversionRate = views > 0 ? ((conversions / views) * 100).toFixed(1) : "0";
+  }, [quantity]);
+  
+  const stockStatus = useMemo(() => getStockStatus(), [getStockStatus]);
+  
+  const createdAtDate = useMemo(
+    () => typeof createdAt === 'string' ? new Date(createdAt) : createdAt,
+    [createdAt]
+  );
+  
+  const isNew = useMemo(
+    () => new Date().getTime() - createdAtDate.getTime() < 7 * 24 * 60 * 60 * 1000,
+    [createdAtDate]
+  );
+  
+  const conversionRate = useMemo(
+    () => views > 0 ? ((conversions / views) * 100).toFixed(1) : "0",
+    [views, conversions]
+  );
+  
+  const formattedDate = useMemo(
+    () => new Date(createdAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    [createdAt]
+  );
 
   return (
     <div
       className="group relative h-full"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Main Card Container */}
       <div className="h-full bg-gradient-to-b from-[#1a1a1a] via-[#141414] to-[#0f0f0f] rounded-2xl overflow-hidden border border-gray-800/60 hover:border-gray-700/80 transition-all duration-500 backdrop-blur-md shadow-xl hover:shadow-2xl hover:shadow-[#8451E1]/20">
@@ -161,28 +184,28 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
             }`}
           >
             <button
-              onClick={onView}
+              onClick={handleView}
               className="p-3 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
               title="View details"
             >
               <Eye className="w-5 h-5" />
             </button>
             <button
-              onClick={onEdit}
+              onClick={handleEdit}
               className="p-3 rounded-full bg-[#8451E1]/30 backdrop-blur-md border border-[#8451E1]/40 text-[#8451E1] hover:bg-[#8451E1]/50 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
               title="Edit listing"
             >
               <SquarePen className="w-5 h-5" />
             </button>
             <button
-              onClick={onRestock}
+              onClick={handleRestock}
               className="p-3 rounded-full bg-blue-600/30 backdrop-blur-md border border-blue-400/30 text-blue-300 hover:bg-blue-600/50 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
               title="Restock"
             >
               <RotateCcw className="w-5 h-5" />
             </button>
             <button
-              onClick={onDelete}
+              onClick={handleDelete}
               className="p-3 rounded-full bg-red-600/30 backdrop-blur-md border border-red-400/30 text-red-300 hover:bg-red-600/50 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
               title="Delete listing"
             >
@@ -248,10 +271,7 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
               </div>
               <div className="text-right text-xs text-gray-500">
                 <span className="block font-semibold text-white">
-                  {new Date(createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  {formattedDate}
                 </span>
                 <span>created</span>
               </div>
@@ -283,4 +303,7 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
   );
 };
 
-export default EnhancedListingCard;
+// Memoize component to prevent unnecessary re-renders
+const MemoizedEnhancedListingCard = React.memo(EnhancedListingCard);
+
+export default MemoizedEnhancedListingCard;

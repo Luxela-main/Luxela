@@ -16,13 +16,7 @@ import { TRPCError } from '@trpc/server';
 import { recordSale, recordRefund } from './paymentService';
 import { verifyPayment as verifyTsaraPayment } from './tsara';
 
-// Valid product category enum values
 const VALID_PRODUCT_CATEGORIES = ['men_clothing', 'women_clothing', 'men_shoes', 'women_shoes', 'accessories', 'merch', 'others'] as const;
-
-/**
- * Escrow Service - Manages the complete payment lifecycle with Tsara
- * Ensures funds are held safely during order processing and released upon completion
- */
 
 export interface EscrowOrder {
   id: string;
@@ -52,10 +46,6 @@ export interface EscrowHold {
   updatedAt: Date;
 }
 
-/**
- * Create an order from cart items - initiates escrow process
- * Step 1 in buyer flow: Cart → Order Creation
- */
 export async function createOrderFromCart(
   buyerId: string,
   sellerId: string,
@@ -76,7 +66,6 @@ export async function createOrderFromCart(
   let currency = '';
 
   const result = await db.transaction(async (tx: any) => {
-    // Verify all items, validate seller, and collect product data
     let primaryListing: any = null;
     let productTitle = '';
     let productImage = '';
@@ -95,7 +84,6 @@ export async function createOrderFromCart(
         });
       }
 
-      // Validate seller matches the listing owner
       if (listing.sellerId !== sellerId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -110,13 +98,11 @@ export async function createOrderFromCart(
         });
       }
 
-      // Capture primary listing details
       if (!primaryListing) {
         primaryListing = listing;
         productTitle = listing.title || 'Product';
         productImage = listing.image || '';
         
-        // Validate and set product category - ensure it's a valid enum value
         let category = listing.category || 'accessories';
         if (!VALID_PRODUCT_CATEGORIES.includes(category as any)) {
           console.warn(`Invalid product category '${category}' for listing ${item.listingId}, defaulting to 'accessories'`);
@@ -129,7 +115,6 @@ export async function createOrderFromCart(
       currency = item.currency;
     }
 
-    // Create order in escrow state
     const finalOrderId = orderId || uuidv4();
     const now = new Date();
 
@@ -137,7 +122,7 @@ export async function createOrderFromCart(
       id: finalOrderId,
       buyerId,
       sellerId,
-      listingId: cartItems_[0].listingId, // Primary listing
+      listingId: cartItems_[0].listingId,
       productTitle: productTitle,
       productImage: productImage,
       productCategory: productCategory,
@@ -157,10 +142,6 @@ export async function createOrderFromCart(
   return result;
 }
 
-/**
- * Create payment hold for an order
- * Step 2 in escrow flow: Lock funds on successful payment
- */
 export async function createPaymentHold(
   paymentId: string,
   orderId: string,
@@ -185,7 +166,6 @@ export async function createPaymentHold(
     })
     .returning();
 
-  // Record in financial ledger
   await db.insert(financialLedger).values({
     sellerId,
     orderId,
@@ -212,10 +192,6 @@ export async function createPaymentHold(
   };
 }
 
-/**
- * Confirm payment and transition order to processing
- * Step 3: Payment confirmation from Tsara webhook
- */
 export async function confirmPayment(
   paymentId: string,
   orderId: string,
@@ -229,59 +205,157 @@ export async function confirmPayment(
   if (!payment) {
     throw new TRPCError({
       code: 'NOT_FOUND',
-      message: 'Payment not found',
+      message: 'Payment record not found in database',
     });
   }
 
-  // Verify with Tsara
-  const verification = await verifyTsaraPayment(transactionRef);
+  if (payment.status === 'completed') {
+    console.warn('confirmPayment: Payment already completed', { paymentId, transactionRef });
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (order) {
+      return {
+        id: order.id,
+        buyerId: order.buyerId,
+        sellerId: order.sellerId,
+        listingId: order.listingId,
+        amountCents: order.amountCents,
+        currency: order.currency,
+        paymentStatus: 'completed',
+        deliveryStatus: order.deliveryStatus as 'not_shipped' | 'in_transit' | 'delivered',
+        payoutStatus: order.payoutStatus as 'in_escrow' | 'processing' | 'paid',
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      };
+    }
+  }
 
-  if (!verification.success || verification.data.status !== 'success') {
+  let verification;
+  try {
+    verification = await verifyTsaraPayment(transactionRef);
+  } catch (error) {
+    console.error('CRITICAL: confirmPayment - Tsara verification failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      transactionRef,
+      paymentId,
+      paymentStatus: payment.status,
+    });
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Failed to verify payment with provider. Please contact support.',
+    });
+  }
+
+  if (!verification || !verification.success) {
+    console.error('CRITICAL: confirmPayment - Tsara returned non-success response', {
+      verification,
+      paymentId,
+      transactionRef,
+      paymentDbStatus: payment.status,
+      hasData: !!verification?.data,
+      dataKeys: verification?.data ? Object.keys(verification.data) : [],
+    });
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
-      message: 'Payment verification failed with Tsara',
+      message: 'Payment verification returned invalid response. Please contact support.',
     });
   }
 
-  // Update payment status
-  const [updatedPayment] = await db
-    .update(payments)
-    .set({
-      status: 'completed',
-      updatedAt: new Date(),
-    })
-    .where(eq(payments.id, paymentId))
-    .returning();
+  if (!verification.data) {
+    console.error('CRITICAL: confirmPayment - Tsara data object missing', {
+      verification,
+      paymentId,
+      transactionRef,
+    });
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Payment verification data missing. Please contact support.',
+    });
+  }
 
-  // Update order status
-  const [order] = await db
-    .update(orders)
-    .set({
+  if (verification.data.status !== 'success') {
+    console.error('CRITICAL: confirmPayment - Tsara payment status not success', {
+      transactionRef,
+      paymentId,
+      expectedStatus: 'success',
+      actualStatus: verification.data?.status,
+      paymentDbStatus: payment.status,
+    });
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `Payment verification failed - Status: ${verification.data?.status || 'unknown'}`,
+    });
+  }
+
+  if (verification.data?.reference !== transactionRef) {
+    console.error('CRITICAL: confirmPayment - Transaction reference mismatch', {
+      expectedRef: transactionRef,
+      tsaraRef: verification.data?.reference,
+      paymentId,
+    });
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Payment reference mismatch. Possible fraud attempt detected.',
+    });
+  }
+
+  try {
+    const [updatedPayment] = await db
+      .update(payments)
+      .set({
+        status: 'completed',
+        gatewayResponse: JSON.stringify(verification),
+        updatedAt: new Date(),
+      })
+      .where(eq(payments.id, paymentId))
+      .returning();
+
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId));
+
+    if (!order) {
+      console.error('confirmPayment: Order not found after payment update', { paymentId, orderId });
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Order not found',
+      });
+    }
+
+    console.info('confirmPayment: Successfully confirmed payment', {
+      paymentId,
+      orderId,
+      transactionRef,
+      amount: updatedPayment.amountCents,
+      currency: updatedPayment.currency,
+    });
+
+    return {
+      id: order.id,
+      buyerId: order.buyerId,
+      sellerId: order.sellerId,
+      listingId: order.listingId,
+      amountCents: order.amountCents,
+      currency: order.currency,
+      paymentStatus: 'completed',
+      deliveryStatus: order.deliveryStatus as 'not_shipped' | 'in_transit' | 'delivered',
       payoutStatus: 'in_escrow',
-      updatedAt: new Date(),
-    })
-    .where(eq(orders.id, orderId))
-    .returning();
-
-  return {
-    id: order.id,
-    buyerId: order.buyerId,
-    sellerId: order.sellerId,
-    listingId: order.listingId,
-    amountCents: order.amountCents,
-    currency: order.currency,
-    paymentStatus: 'completed',
-    deliveryStatus: order.deliveryStatus as 'not_shipped' | 'in_transit' | 'delivered',
-    payoutStatus: 'in_escrow',
-    createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
-  };
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+  } catch (error) {
+    console.error('confirmPayment: Database transaction failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      paymentId,
+      orderId,
+    });
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Failed to complete payment confirmation. Please contact support.',
+    });
+  }
 }
 
-/**
- * Mark order as shipped - seller action
- * Moves order toward completion
- */
 export async function markOrderShipped(
   orderId: string,
   sellerId: string,
@@ -323,10 +397,6 @@ export async function markOrderShipped(
   };
 }
 
-/**
- * Confirm delivery - buyer action (or automatic after timeout)
- * Triggers payout process
- */
 export async function confirmDelivery(
   orderId: string,
   buyerId: string,
@@ -345,7 +415,6 @@ export async function confirmDelivery(
   }
 
   return await db.transaction(async (tx: any) => {
-    // Mark as delivered
     const [updated] = await tx
       .update(orders)
       .set({
@@ -356,7 +425,6 @@ export async function confirmDelivery(
       .where(eq(orders.id, orderId))
       .returning();
 
-    // Release payment hold
     const [hold] = await tx
       .select()
       .from(paymentHolds)
@@ -388,10 +456,6 @@ export async function confirmDelivery(
   });
 }
 
-/**
- * Process refund - handles both buyer-initiated and seller-approved refunds
- * Returns funds to buyer, releases hold
- */
 export async function processRefund(
   orderId: string,
   amountCents: number,
@@ -416,10 +480,8 @@ export async function processRefund(
   }
 
   await db.transaction(async (tx: any) => {
-    // Record refund
     await recordRefund(orderId, amountCents, currency, reason);
 
-    // Update hold status
     const [hold] = await tx
       .select()
       .from(paymentHolds)
@@ -446,12 +508,11 @@ export async function processRefund(
       }
     }
 
-    // Update order status if full refund
     if (refundType === 'full') {
       await tx
         .update(orders)
         .set({
-          payoutStatus: 'in_escrow', // Reset to escrow since funds are returned
+          payoutStatus: 'in_escrow',
           updatedAt: new Date(),
         })
         .where(eq(orders.id, orderId));
@@ -459,9 +520,6 @@ export async function processRefund(
   });
 }
 
-/**
- * Get escrow order details
- */
 export async function getEscrowOrder(orderId: string): Promise<EscrowOrder | null> {
   const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
 
@@ -482,9 +540,6 @@ export async function getEscrowOrder(orderId: string): Promise<EscrowOrder | nul
   };
 }
 
-/**
- * Get payment hold information
- */
 export async function getPaymentHold(holdId: string): Promise<EscrowHold | null> {
   const [hold] = await db.select().from(paymentHolds).where(eq(paymentHolds.id, holdId));
 
@@ -505,9 +560,6 @@ export async function getPaymentHold(holdId: string): Promise<EscrowHold | null>
   };
 }
 
-/**
- * Get active holds for a seller (escrow amounts)
- */
 export async function getSellerActiveHolds(
   sellerId: string,
   currency: string
@@ -556,9 +608,6 @@ export async function getSellerActiveHolds(
   });
 }
 
-/**
- * Get seller's escrow balance (funds in holds)
- */
 export async function getSellerEscrowBalance(
   sellerId: string,
   currency: string
@@ -577,9 +626,6 @@ export async function getSellerEscrowBalance(
   return Number(result[0]?.total) || 0;
 }
 
-/**
- * Get buyer's active orders in escrow
- */
 export async function getBuyerActiveOrders(buyerId: string): Promise<EscrowOrder[]> {
   const activeOrders = await db
     .select()
@@ -606,10 +652,67 @@ export async function getBuyerActiveOrders(buyerId: string): Promise<EscrowOrder
   }));
 }
 
-/**
- * Auto-release holds after expiration period (buyer protection)
- * Can be called by a cron job for automatic dispute resolution
- */
+export async function completePayout(
+  orderId: string,
+  sellerId: string
+): Promise<void> {
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.sellerId, sellerId)));
+
+  if (!order) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Order not found',
+    });
+  }
+
+  await db.transaction(async (tx: any) => {
+    await tx
+      .update(orders)
+      .set({
+        payoutStatus: 'paid',
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId));
+
+    const [hold] = await tx
+      .select()
+      .from(paymentHolds)
+      .where(eq(paymentHolds.orderId, orderId));
+
+    if (hold && hold.holdStatus === 'active') {
+      await tx
+        .update(paymentHolds)
+        .set({
+          holdStatus: 'released',
+          releasedAt: new Date(),
+        })
+        .where(eq(paymentHolds.id, hold.id));
+    }
+  });
+}
+
+export async function sendAutoReleaseReminders(): Promise<number> {
+  const now = new Date();
+  const reminderDays = 25;
+  const reminderDate = new Date(now.getTime() - reminderDays * 24 * 60 * 60 * 1000);
+
+  const holds = await db
+    .select()
+    .from(paymentHolds)
+    .where(
+      and(
+        eq(paymentHolds.holdStatus, 'active'),
+        gte(paymentHolds.createdAt, reminderDate),
+        lte(paymentHolds.createdAt, now)
+      )
+    );
+
+  return holds.length;
+}
+
 export async function autoReleaseExpiredHolds(holdDurationDays: number = 30): Promise<number> {
   const now = new Date();
 
@@ -638,4 +741,4 @@ export async function autoReleaseExpiredHolds(holdDurationDays: number = 30): Pr
   );
 
   return expiredHolds.length;
-}
+}

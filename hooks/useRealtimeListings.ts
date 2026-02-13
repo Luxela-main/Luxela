@@ -5,8 +5,8 @@ import { trpc } from '@/lib/trpc';
 
 /**
  * Hook for realtime product listings polling
- * Keeps the browse catalog in sync by refetching every 30 seconds
- * Includes smart backoff and visibility detection
+ * Fetches only on demand or when page becomes visible (no continuous polling)
+ * Optimized for performance
  */
 export function useRealtimeListings() {
   const utils = trpc.useUtils();
@@ -16,8 +16,8 @@ export function useRealtimeListings() {
   const isPollingRef = useRef<boolean>(false);
 
   // Configuration
-  const BASE_POLL_INTERVAL = 30000; // 30 seconds
-  const MIN_REFETCH_DELAY = 1000; // 1 second minimum between refreshes
+  const BASE_POLL_INTERVAL = 30000; 
+  const MIN_REFETCH_DELAY = 1000; 
   const MAX_ERRORS_BEFORE_STOP = 5;
   const ERROR_BACKOFF_MULTIPLIER = 2;
 
@@ -52,7 +52,7 @@ export function useRealtimeListings() {
   }, [utils.buyerListingsCatalog.getApprovedListingsCatalog]);
 
   const setupPolling = useCallback(() => {
-    if (isPollingRef.current) return; // Already polling
+    if (isPollingRef.current) return; 
     isPollingRef.current = true;
 
     // Initial refetch
@@ -75,14 +75,6 @@ export function useRealtimeListings() {
     console.log('[useRealtimeListings] Polling stopped');
   }, []);
 
-  // Setup polling on mount
-  useEffect(() => {
-    setupPolling();
-
-    return () => {
-      stopPolling();
-    };
-  }, [setupPolling, stopPolling]);
 
   // Handle visibility changes - refresh immediately when user returns to tab
   useEffect(() => {

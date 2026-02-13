@@ -37,6 +37,7 @@ export default function NotificationsPage() {
   const [filterType, setFilterType] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortType>("newest");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [optimisticNotifications, setOptimisticNotifications] = useState<{[key: string]: any}>({});
 
   const {
     data: notifications = [],
@@ -162,6 +163,12 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = (notificationId: string, isRead: boolean) => {
     if (!isRead) {
+      // Optimistic update - update UI immediately
+      setOptimisticNotifications((prev) => ({
+        ...prev,
+        [notificationId]: { isRead: true },
+      }));
+      // Then send to server
       markAsReadMutation.mutate({ notificationId });
     }
   };
@@ -338,11 +345,15 @@ export default function NotificationsPage() {
         {}
         {filteredNotifications.length > 0 ? (
           <div className="space-y-3">
-            {filteredNotifications.map((notification: any) => (
+            {filteredNotifications.filter((n: any) => !optimisticNotifications[n.id]?.deleted).map((notification: any) => (
               <div
                 key={notification.id}
                 className={`p-4 rounded-lg border transition-all ${
-                  notification.isRead
+                  optimisticNotifications[notification.id]?.isRead !== undefined
+                    ? optimisticNotifications[notification.id].isRead
+                      ? "bg-[#1a1a1a] border-[#333]"
+                      : "bg-[#1a1a1a] border-purple-500/30 shadow-lg shadow-purple-500/10"
+                    : notification.isRead
                     ? "bg-[#1a1a1a] border-[#333]"
                     : "bg-[#1a1a1a] border-purple-500/30 shadow-lg shadow-purple-500/10"
                 }`}
@@ -366,7 +377,9 @@ export default function NotificationsPage() {
                       </div>
 
                       {}
-                      {!notification.isRead && (
+                      {(optimisticNotifications[notification.id]?.isRead !== undefined
+                        ? !optimisticNotifications[notification.id].isRead
+                        : !notification.isRead) && (
                         <div className="flex-shrink-0 w-2 h-2 bg-purple-500 rounded-full mt-2 sm:mt-1" />
                       )}
                     </div>
@@ -411,12 +424,18 @@ export default function NotificationsPage() {
                     </button>
 
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        // Optimistic update
+                        setOptimisticNotifications((prev) => ({
+                          ...prev,
+                          [notification.id]: { isStarred: !notification.isStarred },
+                        }));
+                        // Then send to server
                         toggleStarMutation.mutate({
                           notificationId: notification.id,
                           starred: !notification.isStarred,
-                        })
-                      }
+                        });
+                      }}
                       className="p-2 hover:bg-[#222] rounded-lg transition-colors cursor-pointer"
                       title={
                         notification.isStarred ? "Unstar" : "Star"
@@ -424,7 +443,11 @@ export default function NotificationsPage() {
                     >
                       <Star
                         className={`w-5 h-5 ${
-                          notification.isStarred
+                          optimisticNotifications[notification.id]?.isStarred !== undefined
+                            ? optimisticNotifications[notification.id].isStarred
+                              ? "fill-yellow-500 text-yellow-500"
+                              : "text-gray-400 hover:text-yellow-500"
+                            : notification.isStarred
                             ? "fill-yellow-500 text-yellow-500"
                             : "text-gray-400 hover:text-yellow-500"
                         }`}
@@ -432,11 +455,17 @@ export default function NotificationsPage() {
                     </button>
 
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        // Optimistic update - remove from view immediately
+                        setOptimisticNotifications((prev) => ({
+                          ...prev,
+                          [notification.id]: { deleted: true },
+                        }));
+                        // Then send to server
                         deleteNotificationMutation.mutate({
                           notificationId: notification.id,
-                        })
-                      }
+                        });
+                      }}
                       disabled={deleteNotificationMutation.isPending}
                       className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-gray-400 hover:text-red-500 cursor-pointer"
                       title="Delete"

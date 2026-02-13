@@ -176,14 +176,14 @@ export default function Reports() {
         </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Total Revenue</p>
-          <p className="text-3xl font-bold">{formatCurrency(metrics.totalRevenue, "NGN")}</p>
+          <p className="text-3xl font-bold">{formatCurrency(metrics.totalRevenue, { currency: "NGN", truncate: true })}</p>
           <p className={`text-xs mt-2 ${metrics.revenueGrowth && metrics.revenueGrowth > 0 ? 'text-green-400' : 'text-red-400'}`}>
             {metrics.revenueGrowth !== undefined ? `${metrics.revenueGrowth > 0 ? '+' : ''}${metrics.revenueGrowth}% from last month` : 'No previous data'}
           </p>
         </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Avg Order Value</p>
-          <p className="text-3xl font-bold">{formatCurrency(metrics.averageOrderValue, "NGN")}</p>
+          <p className="text-3xl font-bold">{formatCurrency(metrics.averageOrderValue, { currency: "NGN", truncate: true })}</p>
           <p className="text-xs text-gray-400 mt-2">Based on real data</p>
         </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4">
@@ -212,7 +212,7 @@ export default function Reports() {
                   <div key={idx}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-300">{item.date}</span>
-                      <span className="font-medium">{formatCurrency(item.amount, "NGN")}</span>
+                      <span className="font-medium">{formatCurrency(item.amount, { currency: "NGN", truncate: true })}</span>
                     </div>
                     <div className="w-full bg-[#242424] rounded-full h-2">
                       <div
@@ -244,7 +244,7 @@ export default function Reports() {
                       <p className="font-medium text-gray-200">{idx + 1}. {product.title}</p>
                       <p className="text-sm text-gray-400">{product.count} orders</p>
                     </div>
-                    <p className="font-semibold">{formatCurrency(product.revenue, "NGN")}</p>
+                    <p className="font-semibold">{formatCurrency(product.revenue, { currency: "NGN", truncate: true })}</p>
                   </div>
                 </div>
               ))}

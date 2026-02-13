@@ -5,6 +5,7 @@ import React, {
   useContext,
   ReactNode,
   useCallback,
+  useMemo,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { trpc } from "@/lib/trpc";
@@ -61,15 +62,19 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (user) refetch();
   }, [refetch, user]);
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo<ProfileContextType>(
+    () => ({
+      profile: data ?? null,
+      loading: isLoading,
+      isInitialized: isFetched || !user,
+      refreshProfile,
+    }),
+    [data, isLoading, isFetched, user, refreshProfile]
+  );
+
   return (
-    <ProfileContext.Provider
-      value={{
-        profile: data ?? null,
-        loading: isLoading,
-        isInitialized: isFetched || !user,
-        refreshProfile,
-      }}
-    >
+    <ProfileContext.Provider value={contextValue}>
       {children}
     </ProfileContext.Provider>
   );

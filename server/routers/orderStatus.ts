@@ -317,38 +317,8 @@ export const orderStatusRouter = createTRPCRouter({
     }),
 
   // Confirm order
-  confirmOrder: protectedProcedure
-    .input(z.object({ orderId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const { data: order } = await ctx.supabase
-          .from('orders')
-          .select('*')
-          .eq('id', input.orderId)
-          .eq('seller_id', ctx.user?.id)
-          .single();
-
-        if (!order || order.order_status !== 'pending') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Cannot confirm order',
-          });
-        }
-
-        const { data: updated } = await ctx.supabase
-          .from('orders')
-          .update({ order_status: 'confirmed', updated_at: new Date().toISOString() })
-          .eq('id', input.orderId)
-          .select()
-          .single();
-
-        return updated;
-      } catch (error) {
-        throw error instanceof TRPCError
-          ? error
-          : new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to confirm order' });
-      }
-    }),
+  // DEPRECATED: Use orderConfirmationService.sellerConfirmOrder() instead
+  // This endpoint is kept for backward compatibility but new code should use the service directly
 
   // Cancel order
   cancelOrder: protectedProcedure
@@ -409,6 +379,65 @@ export const orderStatusRouter = createTRPCRouter({
         throw error instanceof TRPCError
           ? error
           : new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update order status' });
+      }
+    }),
+
+  // Confirm delivery (buyer confirms receipt of order)
+  confirmDelivery: protectedProcedure
+    .input(z.object({ orderId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Get the order
+        const { data: order, error } = await ctx.supabase
+          .from('orders')
+          .select('*')
+          .eq('id', input.orderId)
+          .single();
+
+        if (error || !order) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Order not found' });
+        }
+
+        // Verify the user is the buyer
+        if (order.buyer_id !== ctx.user?.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only the buyer can confirm delivery',
+          });
+        }
+
+        // Order must be in 'shipped' status
+        if (order.order_status !== 'shipped') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Only shipped orders can be marked as delivered',
+          });
+        }
+
+        // Update order status to 'delivered'
+        const { data: updated } = await ctx.supabase
+          .from('orders')
+          .update({
+            order_status: 'delivered',
+            delivered_date: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', input.orderId)
+          .select()
+          .single();
+
+        return {
+          success: true,
+          message: 'Order marked as delivered. You can now leave a review.',
+          order: updated,
+        };
+      } catch (error) {
+        throw error instanceof TRPCError
+          ? error
+          : new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Failed to confirm delivery',
+            });
       }
     }),
 

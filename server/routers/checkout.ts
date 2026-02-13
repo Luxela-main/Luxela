@@ -2,8 +2,8 @@ import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { db } from '../db';
-import { carts, cartItems, orders, payments, listings, buyers, buyerNotifications } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { carts, cartItems, orders, payments, listings, buyers, buyerNotifications, shippingRates } from '../db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {
   createOrderFromCart,
@@ -12,6 +12,7 @@ import {
   getBuyerActiveOrders,
 } from '../services/escrowService';
 import { notifyDeliveryConfirmed } from '../services/notificationService';
+import { buyerConfirmDelivery } from '../services/orderConfirmationService';
 import {
   createFiatPaymentLink,
   createStablecoinPaymentLink,
@@ -193,9 +194,35 @@ export const checkoutRouter = createTRPCRouter({
           })
         );
 
-        // Calculate totals
+        // Calculate subtotal
         const subtotalCents = itemsWithDetails.reduce((sum: any, item: any) => sum + item.totalPriceCents, 0);
-        const shippingCents = 50000; // ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¦500 flat rate (in cents)
+        
+        // Calculate shipping cost dynamically from seller settings
+        let shippingCents = 0;
+        
+        try {
+          // Get seller ID from first listing (validated to be same for all items in cart)
+          const sellerId = itemsWithDetails[0]?.sellerId;
+          if (sellerId) {
+            // Fetch active shipping rates for this seller
+            const sellerShippingRates = await db
+              .select()
+              .from(shippingRates)
+              .where(and(eq(shippingRates.sellerId, sellerId), eq(shippingRates.active, true)))
+              .limit(1);
+            
+            if (sellerShippingRates.length > 0) {
+              const rate = sellerShippingRates[0];
+              shippingCents = rate.rateCents || 0;
+            }
+            // If no shipping rates configured, default to free shipping
+          }
+        } catch (shippingErr) {
+          console.warn('Failed to fetch shipping rates:', shippingErr);
+          // Default to free shipping on error
+          shippingCents = 0;
+        }
+        
         const totalCents = subtotalCents + shippingCents;
 
         // Get unique sellers
@@ -313,12 +340,32 @@ export const checkoutRouter = createTRPCRouter({
           });
         }
 
-        // Calculate total
-        const totalCents = items.reduce((sum: any, item: any) => sum + item.unitPriceCents * item.quantity, 0);
-        const totalAmount = totalCents / 100; // Convert to currency units
-
+        // Calculate subtotal and shipping
+        const subtotalCents = items.reduce((sum: any, item: any) => sum + item.unitPriceCents * item.quantity, 0);
+        
         // Get seller ID from the primary listing (already validated to be same for all items)
         const sellerId = itemsWithListings[0].listing!.sellerId;
+        
+        // Calculate shipping cost dynamically from seller settings
+        let shippingCents = 0;
+        try {
+          const sellerShippingRates = await db
+            .select()
+            .from(shippingRates)
+            .where(and(eq(shippingRates.sellerId, sellerId), eq(shippingRates.active, true)))
+            .limit(1);
+          
+          if (sellerShippingRates.length > 0) {
+            const rate = sellerShippingRates[0];
+            shippingCents = rate.rateCents || 0;
+          }
+        } catch (shippingErr) {
+          console.warn('Failed to fetch shipping rates for payment:', shippingErr);
+          shippingCents = 0;
+        }
+        
+        const totalCents = subtotalCents + shippingCents;
+        const totalAmount = totalCents / 100; // Convert to currency units
 
         // Generate IDs before payment initialization (but don't create order yet)
         const paymentId = uuidv4();
@@ -464,10 +511,49 @@ export const checkoutRouter = createTRPCRouter({
           transactionRef,
         };
       } catch (err: any) {
-        console.error('Payment initialization error:', err);
+        console.error('Payment initialization error:', {
+          message: err?.message,
+          code: err?.code,
+          status: err?.status,
+          response: err?.response?.data,
+          tsaraError: (err as any).tsaraError,
+        });
+        
+        // Extract error message from various sources, prioritizing user-friendly messages
+        let errorMessage = 'Payment initialization failed. Please try again.';
+        let errorCode = 'BAD_REQUEST';
+        
+        try {
+          // Try to get message from custom error properties (set by tsara.ts)
+          if (err?.message && typeof err.message === 'string' && err.message.length > 0) {
+            errorMessage = err.message;
+            errorCode = err.code || 'BAD_REQUEST';
+          }
+          // Try Axios error response structure
+          else if (err?.response?.data?.error?.message) {
+            errorMessage = err.response.data.error.message;
+            errorCode = err.response.data.error.code || 'BAD_REQUEST';
+          }
+          // Try generic Tsara response
+          else if (err?.response?.data?.message) {
+            errorMessage = err.response.data.message;
+          }
+        } catch (msgErr) {
+          console.error('Error extracting error message from exception:', msgErr);
+        }
+        
+        // Ensure message is never empty or corrupted
+        if (!errorMessage || (typeof errorMessage === 'string' && errorMessage.trim().length === 0)) {
+          errorMessage = 'Payment service error. Please try again or contact support.';
+        }
+        
+        // Validate and map error code to valid tRPC codes
+        const validTRPCCodes = ['BAD_REQUEST', 'INTERNAL_SERVER_ERROR', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'TIMEOUT', 'CONFLICT', 'PRECONDITION_FAILED', 'UNPROCESSABLE_CONTENT', 'TOO_MANY_REQUESTS', 'CLIENT_CLOSED_REQUEST'] as const;
+        const mappedCode: typeof validTRPCCodes[number] = (typeof errorCode === 'string' && (validTRPCCodes as readonly string[]).includes(errorCode)) ? (errorCode as typeof validTRPCCodes[number]) : 'INTERNAL_SERVER_ERROR';
+        
         throw new TRPCError({
-          code: err?.code || 'BAD_REQUEST',
-          message: err?.message || 'Payment initialization failed. Please try again.',
+          code: mappedCode,
+          message: errorMessage,
           cause: err,
         });
       }
@@ -501,13 +587,32 @@ export const checkoutRouter = createTRPCRouter({
         // Get or create buyer profile
         const buyer = await getBuyer(userId);
 
-        // Verify payment with Tsara
-        const verification = await verifyTsaraPayment(input.transactionRef);
+        // Verify payment with Tsara - CRITICAL CHECK
+        let verification: any;
+        try {
+          verification = await verifyTsaraPayment(input.transactionRef);
+        } catch (verifyErr: any) {
+          console.error('Critical: Payment verification error', verifyErr);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Unable to verify payment with provider. Please contact support.',
+          });
+        }
 
-        if (!verification.success || verification.data.status !== 'success') {
+        // Verify payment was actually successful
+        if (!verification || !verification.success) {
+          console.error('Payment verification failed: invalid response structure', verification);
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',
-            message: 'Payment verification failed',
+            message: 'Payment verification returned invalid response',
+          });
+        }
+
+        if (verification.data?.status !== 'success') {
+          console.error('Payment not successful. Status:', verification.data?.status);
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: `Payment verification failed - Status: ${verification.data?.status || 'unknown'}`,
           });
         }
 
@@ -531,8 +636,18 @@ export const checkoutRouter = createTRPCRouter({
           });
         }
 
-        // Confirm payment status
-        await confirmPayment(input.paymentId, payment.orderId, input.transactionRef);
+        // Confirm payment status - MUST succeed before notification
+        let confirmResult;
+        try {
+          confirmResult = await confirmPayment(input.paymentId, payment.orderId, input.transactionRef);
+        } catch (confirmErr: any) {
+          console.error('Payment confirmation failed:', confirmErr);
+          // If confirmation fails, order cannot proceed
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Payment confirmation failed. Please try again or contact support.',
+          });
+        }
 
         // Create payment hold (escrow)
         const [order] = await db
@@ -557,24 +672,60 @@ export const checkoutRouter = createTRPCRouter({
           30 // 30-day hold
         );
 
-        // Create notification for buyer
+        // CRITICAL: Verify payment was actually completed before sending notification
+        const [finalPaymentCheck] = await db
+          .select()
+          .from(payments)
+          .where(eq(payments.id, input.paymentId));
+
+        if (!finalPaymentCheck || finalPaymentCheck.status !== 'completed') {
+          console.error('CRITICAL: Payment status mismatch at notification stage', {
+            paymentId: input.paymentId,
+            orderId: order.id,
+            expectedStatus: 'completed',
+            actualStatus: finalPaymentCheck?.status,
+            paymentExists: !!finalPaymentCheck,
+          });
+          
+          // Rollback order status to indicate payment pending
+          await db
+            .update(orders)
+            .set({
+              orderStatus: 'pending',
+              updatedAt: new Date(),
+            })
+            .where(eq(orders.id, order.id));
+          
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Payment verification failed: Payment status not confirmed in system. Please try again.',
+          });
+        }
+
+        // Create notification for buyer - ONLY after payment is verified in DB
         try {
           await db.insert(buyerNotifications).values({
             id: uuidv4(),
             buyerId: buyer.id,
             type: 'order_placed' as any,
             title: 'Order Placed Successfully',
-            message: `Your order #${order.id.slice(0, 8)} for ${order.currency} ${order.amountCents / 100} has been placed successfully!`,
+            message: `Your order #${order.id.slice(0, 8)} for ${order.currency} ${order.amountCents / 100} has been placed successfully! Payment confirmed.`,
             relatedEntityId: order.id,
             relatedEntityType: 'order',
             actionUrl: `/buyer/orders/${order.id}`,
             isRead: false,
+            isStarred: false,
             metadata: {
               notificationType: 'order_placed',
               orderId: order.id,
               amount: order.amountCents / 100,
               currency: order.currency,
               sellerId: order.sellerId,
+              paymentVerified: true,
+              paymentStatus: finalPaymentCheck.status,
+              paymentId: input.paymentId,
+              verificationTimestamp: new Date().toISOString(),
+              tsaraTransactionRef: input.transactionRef,
             },
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -710,33 +861,8 @@ export const checkoutRouter = createTRPCRouter({
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
       try {
-        const [order] = await db
-          .select()
-          .from(orders)
-          .where(and(eq(orders.id, input.orderId), eq(orders.buyerId, userId)));
-
-        if (!order) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Order not found',
-          });
-        }
-
-        // Update order status and release hold
-        const [updated] = await db
-          .update(orders)
-          .set({
-            deliveryStatus: 'delivered',
-            payoutStatus: 'processing',
-            updatedAt: new Date(),
-          })
-          .where(eq(orders.id, input.orderId))
-          .returning();
-
-        // Notify seller that delivery is confirmed
-        if (updated.sellerId && updated.buyerId) {
-          await notifyDeliveryConfirmed(updated.sellerId, updated.buyerId, updated.id);
-        }
+        // Use orderConfirmationService which handles hold verification and release
+        const updated = await buyerConfirmDelivery(userId, input.orderId);
 
         return {
           id: updated.id,
@@ -745,8 +871,8 @@ export const checkoutRouter = createTRPCRouter({
           listingId: updated.listingId,
           amountCents: updated.amountCents,
           currency: updated.currency,
-          deliveryStatus: 'delivered',
-          payoutStatus: 'processing',
+          deliveryStatus: updated.deliveryStatus,
+          payoutStatus: updated.payoutStatus,
           createdAt: updated.createdAt,
           updatedAt: updated.updatedAt,
           productTitle: updated.productTitle,

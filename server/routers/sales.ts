@@ -6,6 +6,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { notifyOrderConfirmed } from "../services/notificationService";
 
+import { sellerConfirmOrder, sellerConfirmDelivery } from "../services/orderConfirmationService";
+
 const OrderFilterEnum = z.enum([
   "all",
   "pending",
@@ -120,7 +122,24 @@ export const salesRouter = createTRPCRouter({
   getSaleById: protectedProcedure
     .meta({ openapi: { method: "GET", path: "/sales/{orderId}" } })
     .input(z.object({ orderId: z.string().uuid() }))
-    .output(z.any())
+    .output(
+      z.object({
+        id: z.string(),
+        orderId: z.string(),
+        product: z.string(),
+        customer: z.string(),
+        customerEmail: z.string().optional(),
+        orderDate: z.date(),
+        paymentMethod: z.string(),
+        amountCents: z.number(),
+        currency: z.string(),
+        quantity: z.number().optional(),
+        shippingAddress: z.string().optional(),
+        payoutStatus: z.string(),
+        deliveryStatus: z.string(),
+        orderStatus: z.string(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -152,7 +171,22 @@ export const salesRouter = createTRPCRouter({
             code: "NOT_FOUND",
             message: "Order not found",
           });
-        return order;
+        return {
+          id: order.id,
+          orderId: order.id,
+          product: order.productTitle,
+          customer: order.customerName,
+          customerEmail: order.customerEmail,
+          orderDate: order.orderDate,
+          paymentMethod: order.paymentMethod,
+          amountCents: order.amountCents,
+          currency: order.currency,
+          quantity: order.quantity,
+          shippingAddress: order.shippingAddress,
+          payoutStatus: order.payoutStatus,
+          deliveryStatus: order.deliveryStatus,
+          orderStatus: order.orderStatus,
+        };
       } catch (err: any) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -694,46 +728,8 @@ export const salesRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
       try {
-        let seller = getCachedSeller(userId);
-        if (!seller) {
-          const sellerRow = await db
-            .select()
-            .from(sellers)
-            .where(eq(sellers.userId, userId));
-          seller = sellerRow[0];
-          if (!seller)
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Seller not found",
-            });
-          setCachedSeller(userId, seller);
-        }
-
-        const rows = await db
-          .select()
-          .from(orders)
-          .where(
-            and(eq(orders.id, input.orderId), eq(orders.sellerId, seller.id))
-          );
-        if (!rows[0])
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Order not found",
-          });
-
-        const [updated] = await db
-          .update(orders)
-          .set({
-            orderStatus: "confirmed",
-            deliveryStatus: "not_shipped",
-          })
-          .where(eq(orders.id, input.orderId))
-          .returning();
-
-        // Notify buyer that order is confirmed
-        if (updated.buyerId) {
-          await notifyOrderConfirmed(updated.sellerId, updated.buyerId, updated.id);
-        }
+        // Use orderConfirmationService which handles payment hold verification
+        const updated = await sellerConfirmOrder(userId, input.orderId);
 
         return {
           orderId: updated.id,

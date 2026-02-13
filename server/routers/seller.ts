@@ -16,8 +16,9 @@ import {
   supportTickets,
   supportTicketReplies,
   profiles,
+  shippingRates,
 } from "../db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -1192,6 +1193,188 @@ export const sellerRouter = createTRPCRouter({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: err?.message || "Failed to upload profile picture",
+        });
+      }
+    }),
+
+  getShippingRates: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const seller = await getSeller(userId);
+        const rates = await db
+          .select()
+          .from(shippingRates)
+          .where(eq(shippingRates.sellerId, seller.id))
+          .orderBy(desc(shippingRates.createdAt));
+
+        return rates;
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err?.message || "Failed to fetch shipping rates",
+        });
+      }
+    }),
+
+  createShippingRate: protectedProcedure
+    .input(
+      z.object({
+        shippingZone: z.string().min(1, "Zone is required"),
+        minWeight: z.number().positive(),
+        maxWeight: z.number().positive(),
+        rateCents: z.number().nonnegative(),
+        currency: z.string().default("USD"),
+        estimatedDays: z.number().int().positive(),
+        shippingType: z.enum(["same_day", "next_day", "express", "standard", "domestic", "international", "both"]),
+        active: z.boolean().default(true),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const seller = await getSeller(userId);
+        const rate = await db
+          .insert(shippingRates)
+          .values({
+            sellerId: seller.id,
+            shippingZone: input.shippingZone,
+            minWeight: input.minWeight.toString(),
+            maxWeight: input.maxWeight.toString(),
+            rateCents: input.rateCents,
+            currency: input.currency,
+            estimatedDays: input.estimatedDays,
+            shippingType: input.shippingType,
+            active: input.active,
+          })
+          .returning();
+
+        return rate[0];
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: err?.message || "Failed to create shipping rate",
+        });
+      }
+    }),
+
+  updateShippingRate: protectedProcedure
+    .input(
+      z.object({
+        rateId: z.string().uuid(),
+        shippingZone: z.string().optional(),
+        minWeight: z.number().positive().optional(),
+        maxWeight: z.number().positive().optional(),
+        rateCents: z.number().nonnegative().optional(),
+        estimatedDays: z.number().int().positive().optional(),
+        active: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const seller = await getSeller(userId);
+        const existingRate = await db
+          .select()
+          .from(shippingRates)
+          .where(
+            and(
+              eq(shippingRates.id, input.rateId),
+              eq(shippingRates.sellerId, seller.id)
+            )
+          );
+
+        if (!existingRate.length) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Shipping rate not found",
+          });
+        }
+
+        const updateData: any = {};
+        if (input.shippingZone) updateData.shippingZone = input.shippingZone;
+        if (input.minWeight) updateData.minWeight = input.minWeight.toString();
+        if (input.maxWeight) updateData.maxWeight = input.maxWeight.toString();
+        if (input.rateCents !== undefined) updateData.rateCents = input.rateCents;
+        if (input.estimatedDays) updateData.estimatedDays = input.estimatedDays;
+        if (input.active !== undefined) updateData.active = input.active;
+        updateData.updatedAt = new Date();
+
+        const rate = await db
+          .update(shippingRates)
+          .set(updateData)
+          .where(eq(shippingRates.id, input.rateId))
+          .returning();
+
+        return rate[0];
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: err?.message || "Failed to update shipping rate",
+        });
+      }
+    }),
+
+  deleteShippingRate: protectedProcedure
+    .input(z.object({ rateId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
+
+      try {
+        const seller = await getSeller(userId);
+        const existingRate = await db
+          .select()
+          .from(shippingRates)
+          .where(
+            and(
+              eq(shippingRates.id, input.rateId),
+              eq(shippingRates.sellerId, seller.id)
+            )
+          );
+
+        if (!existingRate.length) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Shipping rate not found",
+          });
+        }
+
+        await db
+          .delete(shippingRates)
+          .where(eq(shippingRates.id, input.rateId));
+
+        return { success: true };
+      } catch (err: any) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: err?.message || "Failed to delete shipping rate",
         });
       }
     }),

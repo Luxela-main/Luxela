@@ -80,6 +80,7 @@ async function generateAndStoreBuyerNotifications(
             relatedEntityType: 'order',
           actionUrl: `/buyer/orders/${order.id}`,
           isRead: false,
+          isStarred: false,
           metadata: {
             notificationType: notifType,
             orderId: order.id,
@@ -90,7 +91,13 @@ async function generateAndStoreBuyerNotifications(
           },
           });
         } catch (notifError: any) {
-          console.error(`Failed to create order notification for buyer ${buyerId}:`, notifError.message);
+          console.error(`Failed to create order notification for buyer ${buyerId}:`, {
+            message: notifError.message,
+            code: notifError.code,
+            detail: notifError.detail,
+            orderId: order.id,
+            type: notifType,
+          });
           if (notifError.message?.includes('invalid input value for enum')) {
             console.error('ENUM ERROR: notification_category enum value might not be in database yet');
           }
@@ -136,6 +143,7 @@ async function generateAndStoreBuyerNotifications(
             relatedEntityType: 'review',
             actionUrl: `/buyer/listings/${review.listingId}`,
             isRead: false,
+            isStarred: false,
             metadata: {
               notificationType: 'review_posted',
               reviewId: review.id,
@@ -145,7 +153,14 @@ async function generateAndStoreBuyerNotifications(
             },
           });
         } catch (notifError: any) {
-          console.error(`Failed to create review notification for buyer ${buyerId}:`, notifError.message);
+          console.error(`Failed to create review notification for buyer ${buyerId}:`, {
+            message: notifError.message,
+            code: notifError.code,
+            detail: notifError.detail,
+            buyerId: buyerId,
+            reviewId: review.id,
+            type: 'new_review',
+          });
           // Log enum error details for debugging
           if (notifError.message?.includes('invalid input value for enum')) {
             console.error('ENUM ERROR: notification_category enum value might not be in database yet');
@@ -199,6 +214,7 @@ async function generateAndStoreBuyerNotifications(
             relatedEntityType: 'listing',
             actionUrl: `/buyer/listings/${favorite.listingId}`,
             isRead: false,
+            isStarred: false,
             metadata: {
               notificationType: 'price_drop',
               listingId: favorite.listingId,
@@ -266,6 +282,7 @@ async function generateAndStoreBuyerNotifications(
             relatedEntityType: 'dispute',
             actionUrl: `/buyer/disputes/${dispute.id}`,
             isRead: false,
+            isStarred: false,
             metadata: {
               notificationType: `dispute_${dispute.status}`,
               disputeId: dispute.id,

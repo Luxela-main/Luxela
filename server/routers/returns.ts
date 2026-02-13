@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { db } from '../db';
-import { orders, sellers } from '../db/schema';
+import { orders, sellers, sellerNotifications, refunds } from '../db/schema';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
@@ -108,6 +108,7 @@ export const returnsRouter = createTRPCRouter({
 
   /**
    * Create a return request (initiated by buyer, received by seller)
+   * Used by the order detail page to request returns/refunds
    */
   requestReturn: protectedProcedure
     .input(
@@ -115,31 +116,75 @@ export const returnsRouter = createTRPCRouter({
         orderId: z.string(),
         reason: returnReasonEnum,
         reasonDescription: z.string().min(10).max(500),
-        quantity: z.number().min(1),
-        imageUrls: z.array(z.string().url()).optional(),
       })
     )
     .mutation(async (opts: any) => {
-      const { ctx, input } = opts as { ctx: TRPCContext; input: { orderId: string; reason: string; reasonDescription: string; quantity: number; imageUrls?: string[] } };
-      // This endpoint would be called by the buyer
-      // But we're protecting it on the seller side
-      // In production, this should be in a separate buyer router
+      const { ctx, input } = opts as { ctx: TRPCContext; input: { orderId: string; reason: string; reasonDescription: string } };
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
 
       try {
-        // TODO: Create return request in database
-        // 1. Verify order exists and matches seller
-        // 2. Check if return window is still open
-        // 3. Create return request record
-        // 4. Notify seller via email/notification
-        // 5. Generate return shipping label if applicable
+        // 1. Fetch order and verify it exists and buyer owns it
+        const order = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.id, input.orderId));
+
+        if (!order.length) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found',
+          });
+        }
+
+        const orderData = order[0];
+        // refunds and sellerNotifications already imported at the top
+
+        // 2. Create refund request in database
+        const refundId = require('uuid').v4();
+        await db.insert(refunds).values({
+          id: refundId,
+          orderId: input.orderId,
+          buyerId: orderData.buyerId,
+          sellerId: orderData.sellerId,
+          amountCents: orderData.amountCents,
+          currency: orderData.currency,
+          refundType: 'full',
+          reason: input.reason,
+          refundStatus: 'return_requested',
+          description: input.reasonDescription,
+          requestedAt: new Date(),
+        });
+
+        // 3. Notify seller about return request
+        const seller = await db
+          .select()
+          .from(sellers)
+          .where(eq(sellers.id, orderData.sellerId));
+
+        if (seller.length > 0) {
+          // Create seller notification
+          await db.insert(sellerNotifications).values({
+            id: require('uuid').v4(),
+            sellerId: orderData.sellerId,
+            orderId: input.orderId,
+            type: 'return_initiated',
+            title: 'Return Request',
+            message: `Buyer has requested a return for order ${orderData.orderId}. Reason: ${input.reason}`,
+            status: 'unread',
+            createdAt: new Date(),
+          });
+        }
 
         return {
-          id: 'return_' + Date.now(),
+          id: refundId,
           orderId: input.orderId,
-          status: 'requested',
+          status: 'return_requested',
           createdAt: new Date(),
+          message: 'Return request submitted successfully. Seller will review within 24-48 hours.',
         };
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to create return request',

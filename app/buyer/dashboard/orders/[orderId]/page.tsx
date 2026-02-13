@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
+import { useOrderActions } from '../useOrderActions';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 import type { Order, TrackingStep, ProductCategory, PaymentMethod, PayoutStatus, DeliveryStatus, OrderStatus } from '@/types/buyer';
 import {
@@ -17,9 +18,12 @@ import {
   Download,
   RefreshCw,
   XCircle,
+  Star,
+  RotateCw,
+  X,
+  Send,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -30,17 +34,30 @@ export default function OrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnDescription, setReturnDescription] = useState('');
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactType, setContactType] = useState<'seller' | 'support'>('seller');
+  const [messageText, setMessageText] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const { toast } = useToast();
 
-  
   const { data: ordersData, isLoading: isDataLoading, error: queryError, refetch } = trpc.buyer.getPurchaseHistory.useQuery(
     { page: 1, limit: 100 },
     { retry: 2, retryDelay: 1000 }
   );
 
-  const confirmDeliveryMutation = trpc.checkout.confirmDelivery.useMutation();
+  const confirmDeliveryMutation = (trpc as any).buyerOrderActions.confirmDelivery.useMutation();
+  const sendMessageMutation = (trpc as any).buyerOrderActions.sendMessage.useMutation();
+  const returnOrderMutation = (trpc as any).returns.requestReturn.useMutation();
+  const createSupportTicketMutation = (trpc as any).support.createTicket.useMutation();
 
-  
+
   const { startPolling } = useRealtimeOrders({
     enabled: true,
     refetchInterval: 30000, 
@@ -51,12 +68,10 @@ export default function OrderDetailPage() {
     maxRetries: 5, 
   });
 
-  
   useEffect(() => {
     startPolling();
   }, [startPolling]);
 
-  
   useEffect(() => {
     if (ordersData?.data) {
       const foundOrder = ordersData.data.find((item: any) => item.orderId === orderId);
@@ -120,6 +135,92 @@ export default function OrderDetailPage() {
       setIsConfirmingDelivery(false);
     }
   }, [orderId, confirmDeliveryMutation, toast, refetch]);
+
+  const handleReturnOrder = useCallback(async () => {
+    if (!returnReason.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please select a reason for return',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmittingReturn(true);
+    try {
+      if (returnOrderMutation) {
+        await returnOrderMutation.mutateAsync({
+          orderId,
+          reason: returnReason,
+          description: returnDescription,
+        });
+        toast({
+          title: 'Success',
+          description: 'Return request submitted. The seller will review your request within 2-3 business days.',
+        });
+        setShowReturnModal(false);
+        setReturnReason('');
+        setReturnDescription('');
+        await refetch();
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to submit return request',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReturn(false);
+    }
+  }, [orderId, returnReason, returnDescription, returnOrderMutation, toast, refetch]);
+
+  const handleContactSeller = useCallback(() => {
+    setContactType('seller');
+    setMessageText('');
+    setShowContactModal(true);
+  }, []);
+
+  const handleContactSupport = useCallback(() => {
+    setContactType('support');
+    setMessageText('');
+    setShowContactModal(true);
+  }, []);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!messageText.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please type a message',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSendingMessage(true);
+    try {
+      if (sendMessageMutation) {
+        await sendMessageMutation.mutateAsync({
+          orderId,
+          recipientType: contactType,
+          message: messageText,
+        });
+        toast({
+          title: 'Success',
+          description: `Message sent to ${contactType === 'seller' ? 'seller' : 'support team'}`,
+        });
+        setMessageText('');
+        setShowContactModal(false);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send message',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingMessage(false);
+    }
+  }, [orderId, messageText, contactType, sendMessageMutation, toast]);
 
   const getStatusIcon = (status: string) => {
     if (status === 'delivered') return <CheckCircle className="text-green-500" size={20} />;
@@ -210,7 +311,6 @@ export default function OrderDetailPage() {
     );
   }
 
-  // Type narrowing for TypeScript
   const typedOrder = order as Order;
 
   return (
@@ -220,6 +320,7 @@ export default function OrderDetailPage() {
           items={[
             { label: 'Dashboard', href: '/buyer/dashboard' },
             { label: 'Orders', href: '/buyer/dashboard/orders' },
+            ...(typedOrder.orderStatus === 'delivered' ? [{ label: 'Delivered', href: '/buyer/dashboard/orders/delivered' }] : typedOrder.orderStatus === 'shipped' ? [{ label: 'Shipped', href: '/buyer/dashboard/orders/shipped' }] : ['processing', 'pending', 'confirmed'].includes(typedOrder.orderStatus) ? [{ label: 'Processing', href: '/buyer/dashboard/orders/processing' }] : ['canceled', 'returned'].includes(typedOrder.orderStatus) ? [{ label: 'Returned/Canceled', href: '/buyer/dashboard/orders/returned' }] : []),
             { label: `Order ${typedOrder.orderId.slice(0, 8)}` },
           ]}
         />
@@ -233,9 +334,7 @@ export default function OrderDetailPage() {
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {}
           <div className="lg:col-span-2 space-y-6">
-            {}
             <div className={`${getStatusBgColor(typedOrder.orderStatus)} border border-[#333] rounded-lg p-6`}>
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -262,16 +361,15 @@ export default function OrderDetailPage() {
 
               <p className="text-gray-300">
                 {typedOrder.orderStatus === 'delivered'
-                  ? `Your order was delivered on ${typedOrder.deliveredDate?.toLocaleDateString()}`
+                  ? `Your order was delivered on ${typedOrder.deliveredDate?.toLocaleDateString()}. Thank you for your purchase!`
                   : typedOrder.orderStatus === 'shipped'
-                    ? 'Your order is on its way to you'
+                    ? `Your package is on its way! Expected delivery: ${typedOrder.estimatedArrival ? typedOrder.estimatedArrival.toLocaleDateString() : 'Soon'}`
                     : typedOrder.orderStatus === 'canceled' || typedOrder.orderStatus === 'returned'
-                      ? 'This order has been canceled or returned'
-                      : 'We are preparing your order for shipment'}
+                      ? (typedOrder.orderStatus === 'canceled' ? 'This order has been canceled.' : 'This order has been returned. A refund will be processed within 5-7 business days.')
+                      : 'Your order is being prepared for shipment. The seller will send you a tracking number as soon as it ships.'}
               </p>
             </div>
 
-            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Product Information</h3>
 
@@ -296,7 +394,6 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-6">Tracking Timeline</h3>
               <div className="space-y-4">
@@ -339,7 +436,6 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
                 <h3 className="text-white font-bold text-lg mb-4">Shipping Address</h3>
@@ -355,20 +451,103 @@ export default function OrderDetailPage() {
               {typedOrder.trackingNumber && (
                 <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
                   <h3 className="text-white font-bold text-lg mb-4">Tracking Number</h3>
-                  <div className="bg-[#0e0e0e] rounded p-3 border border-[#2a2a2a]">
+                  <div className="bg-[#0e0e0e] rounded p-3 border border-[#2a2a2a] mb-3">
                     <p className="text-gray-300 font-mono text-sm break-all">{typedOrder.trackingNumber}</p>
                   </div>
-                  <p className="text-gray-400 text-xs mt-3">
+                  <p className="text-gray-400 text-xs">
                     Use this number to track your shipment with the carrier
                   </p>
                 </div>
               )}
             </div>
+
+            {typedOrder.orderStatus === 'delivered' && !showReviewForm && (
+              <button
+                onClick={() => setShowReviewForm(true)}
+                className="w-full bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Star size={16} />
+                Leave a Review
+              </button>
+            )}
+
+            {typedOrder.orderStatus === 'delivered' && showReviewForm && (
+              <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
+                <h3 className="text-white font-bold text-lg mb-4">Rate Your Order</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-gray-400 text-sm mb-2 block">Rating</label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setReviewRating(star)}
+                          className={`text-2xl transition cursor-pointer ${
+                            star <= reviewRating ? 'text-yellow-400' : 'text-gray-600'
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-gray-400 text-sm mb-2 block">Your Review</label>
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="Share your experience with this product..."
+                      className="w-full bg-[#0e0e0e] border border-[#2a2a2a] text-white rounded-lg p-3 focus:outline-none focus:border-[#8451e1] text-sm"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button className="flex-1 bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-2 rounded-lg font-semibold transition cursor-pointer">
+                      Submit Review
+                    </button>
+                    <button
+                      onClick={() => setShowReviewForm(false)}
+                      className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-semibold transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {['canceled', 'returned'].includes(typedOrder.orderStatus) && (
+              <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
+                <h3 className="text-white font-bold text-lg mb-4">Return Details</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Return Status</span>
+                    <span className="text-red-400 font-medium">
+                      {typedOrder.orderStatus === 'canceled' ? 'Canceled' : 'Returned'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Refund Status</span>
+                    <span className="text-yellow-400 font-medium">Processing</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Expected Refund</span>
+                    <span className="text-white font-medium">
+                      ${(typedOrder.amountCents / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Processing Time</span>
+                    <span className="text-gray-300 text-sm">5-7 business days</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {}
           <div className="space-y-6">
-            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Order Summary</h3>
               <div className="space-y-3">
@@ -395,7 +574,6 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Payment Details</h3>
               <div className="space-y-3">
@@ -419,7 +597,6 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {}
             <div className="space-y-3">
               {typedOrder.orderStatus === 'shipped' && (
                 <button
@@ -441,15 +618,33 @@ export default function OrderDetailPage() {
                 </button>
               )}
 
-              <Link
-                href={`/seller/dashboard/orders/${typedOrder.orderId}`}
-                className="block"
+              <button
+                onClick={handleContactSeller}
+                className="w-full bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2"
               >
-                <button className="w-full bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+                <MessageCircle size={16} />
+                Contact Seller
+              </button>
+
+              {['canceled', 'returned'].includes(typedOrder.orderStatus) && (
+                <button
+                  onClick={handleContactSupport}
+                  className="w-full bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                >
                   <MessageCircle size={16} />
-                  Contact Seller
+                  Contact Support
                 </button>
-              </Link>
+              )}
+
+              {typedOrder.orderStatus === 'delivered' && (
+                <button
+                  onClick={() => setShowReturnModal(true)}
+                  className="w-full bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                >
+                  <RotateCw size={16} />
+                  Return / Refund
+                </button>
+              )}
 
               <button className="w-full bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2">
                 <Download size={16} />
@@ -457,11 +652,9 @@ export default function OrderDetailPage() {
               </button>
             </div>
 
-            {}
             <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
               <h3 className="text-white font-bold text-lg mb-4">Escrow & Payout Status</h3>
               
-              {}
               <div className="mb-4">
                 <div className={`rounded p-4 border ${
                   typedOrder.payoutStatus === 'released'
@@ -484,7 +677,6 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {}
               <div className="mb-4 p-3 bg-[#0e0e0e] rounded border border-[#2a2a2a]">
                 <p className="text-gray-300 text-sm leading-relaxed">
                   {typedOrder.payoutStatus === 'in_escrow' && (
@@ -502,7 +694,6 @@ export default function OrderDetailPage() {
                 </p>
               </div>
 
-              {/* Escrow Timeline */}
               <div>
                 <p className="text-gray-400 text-xs font-semibold mb-3 uppercase tracking-wide">Escrow Timeline</p>
                 <div className="space-y-3">
@@ -540,7 +731,6 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {/* Info Box */}
               <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded">
                 <p className="text-blue-300 text-xs leading-relaxed">
                   <strong>ℹ️ Escrow Protection:</strong> Your payment is held in escrow for buyer protection. Once you confirm delivery, the seller receives payment and your order is complete.
@@ -550,6 +740,143 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Return Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">Return / Refund Request</h2>
+              <button
+                onClick={() => setShowReturnModal(false)}
+                className="text-gray-400 hover:text-white transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Reason for Return</label>
+                <select
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  className="w-full bg-[#0e0e0e] border border-[#2a2a2a] text-white rounded-lg p-3 focus:outline-none focus:border-[#8451e1] text-sm"
+                >
+                  <option value="">Select a reason...</option>
+                  <option value="defective">Product is defective/damaged</option>
+                  <option value="not_as_described">Not as described</option>
+                  <option value="wrong_item">Wrong item received</option>
+                  <option value="missing_items">Missing items</option>
+                  <option value="quality_issue">Quality issue</option>
+                  <option value="changed_mind">Changed my mind</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Details (Optional)</label>
+                <textarea
+                  value={returnDescription}
+                  onChange={(e) => setReturnDescription(e.target.value)}
+                  placeholder="Provide more details about the return reason..."
+                  className="w-full bg-[#0e0e0e] border border-[#2a2a2a] text-white rounded-lg p-3 focus:outline-none focus:border-[#8451e1] text-sm"
+                  rows={3}
+                />
+              </div>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3">
+                <p className="text-yellow-300 text-xs">
+                  <strong>ℹ️ Note:</strong> The seller will review your return request within 2-3 business days. Once approved, you'll receive return shipping instructions.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleReturnOrder}
+                  disabled={isSubmittingReturn || !returnReason}
+                  className="flex-1 bg-[#8451e1] hover:bg-[#7043d8] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition"
+                >
+                  {isSubmittingReturn ? 'Submitting...' : 'Submit Request'}
+                </button>
+                <button
+                  onClick={() => setShowReturnModal(false)}
+                  className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">
+                {contactType === 'seller' ? 'Contact Seller' : 'Contact Support'}
+              </h2>
+              <button
+                onClick={() => setShowContactModal(false)}
+                className="text-gray-400 hover:text-white transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-[#0e0e0e] border border-[#2a2a2a] rounded p-3 mb-4">
+                <p className="text-gray-400 text-sm">
+                  <strong>Order ID:</strong> {order?.orderId.slice(0, 8)}
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  <strong>{contactType === 'seller' ? 'Seller' : 'Support Team'}</strong>
+                </p>
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Your Message</label>
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Type your message here..."
+                  className="w-full bg-[#0e0e0e] border border-[#2a2a2a] text-white rounded-lg p-3 focus:outline-none focus:border-[#8451e1] text-sm"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isSendingMessage || !messageText.trim()}
+                  className="flex-1 bg-[#8451e1] hover:bg-[#7043d8] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                >
+                  {isSendingMessage ? (
+                    <>
+                      <RefreshCw className="animate-spin" size={16} />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Send Message
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowContactModal(false)}
+                  className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

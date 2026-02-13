@@ -28,7 +28,7 @@ export function HelpSettings() {
           <h3 className="font-medium text-white mb-2">Email Support</h3>
           <p className="text-sm text-gray-400 mb-4">Send us an email and we'll get back to you.</p>
           <Button variant="link" className="text-purple-400 hover:text-purple-300 p-0 h-auto">
-            support@luxela.com &rarr;
+            support@theluxela.com &rarr;
           </Button>
         </div>
 
@@ -73,4 +73,4 @@ export function HelpSettings() {
       </div>
     </div>
   );
-}
+}

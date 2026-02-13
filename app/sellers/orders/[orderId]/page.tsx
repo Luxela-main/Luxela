@@ -233,7 +233,7 @@ export default function SellerOrderDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase font-medium mb-2">Amount</p>
-                <p className="text-lg font-bold text-white">{order ? formatCurrency(order.amountCents, order.currency) : "N/A"}</p>
+                <p className="text-lg font-bold text-white">{order ? formatCurrency(order.amountCents, { currency: order.currency, truncate: true }) : "N/A"}</p>
               </div>
             </div>
           </div>

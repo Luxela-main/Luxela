@@ -125,7 +125,8 @@ export default function EnhancedProductCard({
     try {
       await addToCart(product.id, 1);
       setAdded(true);
-      toastSvc.success(`${product.title} added to cart`);
+      const priceInNGN = product.price_cents ? (product.price_cents / 100).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' }) : 'Price unavailable';
+      toastSvc.success(`✓ ${product.title} added to cart • ${priceInNGN}`);
       setTimeout(() => setAdded(false), 2000);
     } catch (err: any) {
       const errorMessage = err?.data?.message || err?.message || 'Failed to add to cart. Please try again.';

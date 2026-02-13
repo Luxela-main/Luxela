@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   Search,
   Filter,
@@ -86,7 +86,6 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const [listingStatuses, setListingStatuses] = useState<Record<string, string>>({});
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [isRestocking, setIsRestocking] = useState(false);
@@ -126,45 +125,12 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
     }
   };
 
-  // Set up polling for real-time status updates
-  useEffect(() => {
-    if (!listings || listings.length === 0) return;
-
-    // Set initial statuses
-    const initialStatuses: Record<string, string> = {};
-    listings.forEach((listing: any) => {
-      initialStatuses[listing.id] = listing.status || "pending_review";
-    });
-    setListingStatuses(initialStatuses);
-
-    // Set up polling interval for status updates - refetch fresh data every 5 seconds
-    const pollingInterval = setInterval(() => {
-      if (refetch) {
-        refetch();
-      }
-    }, 5000);
-
-    return () => clearInterval(pollingInterval);
-  }, [listings, refetch])
-
-  // Update status display when listing data changes
-  useEffect(() => {
-    if (listings && listings.length > 0) {
-      setListingStatuses((prev) => {
-        const updated = { ...prev };
-        listings.forEach((listing: any) => {
-          if (listing.status) {
-            updated[listing.id] = listing.status;
-          }
-        });
-        return updated;
-      });
-    }
-  }, [listings]);
+  // Note: Removed automatic polling - use manual refetch only when needed
+  // This significantly improves performance by reducing unnecessary API calls
 
   // Helper function to get status badge styling
   const getStatusBadge = (listing: Listing) => {
-    let displayStatus = listingStatuses[listing.id] || listing.status || "pending";
+    let displayStatus = (listing.status as string) || "pending";
 
     const statusMapping: Record<string, string> = {
       pending_review: "pending",
@@ -174,7 +140,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
       archived: "rejected",
     };
 
-    displayStatus = statusMapping[displayStatus] || "pending";
+    displayStatus = (statusMapping[displayStatus] as string) || "pending";
 
     const statusConfig: Record<string, any> = {
       pending: {
@@ -199,7 +165,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
       },
     };
 
-    return statusConfig[displayStatus] || statusConfig.pending;
+    return statusConfig[displayStatus as keyof typeof statusConfig] || statusConfig.pending;
   };
 
   // Get image from listing
@@ -652,7 +618,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                 createdAt={listing.createdAt}
                 type={listing.type}
                 itemCount={getItemCount(listing)}
-                status={listingStatuses[listing.id] || listing.status}
+                status={listing.status}
                 onView={() => onView(listing)}
                 onEdit={() => onEdit(listing)}
                 onDelete={() => onDelete(listing)}

@@ -11,6 +11,8 @@ import {
   TrendingUp, AlertCircle
 } from 'lucide-react';
 import { getDashboardMetrics, type DashboardMetrics } from './actions';
+import { trpc as api } from '@/lib/_trpc/client';
+import { formatCurrency } from '@/lib/utils';
 
 const COLORS = ['#fbbf24', '#f97316', '#ef4444', '#ec4899', '#a855f7'];
 const RATING_COLORS = COLORS;
@@ -120,7 +122,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8"
           >
             {/* Revenue Card */}
             <motion.div
@@ -131,7 +133,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[#c084fc] text-sm font-medium mb-2">Total Revenue</p>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-[#8451E1] to-[#a855f7] bg-clip-text text-transparent">₦{metrics?.totalRevenue.toLocaleString()}</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-[#8451E1] to-[#a855f7] bg-clip-text text-transparent">{formatCurrency(metrics?.totalRevenue || 0, { truncate: true })}</p>
                 </div>
                 <div className="bg-gradient-to-br from-[#8451E1]/30 to-[#733AD4]/10 p-3 rounded-xl group-hover:from-[#8451E1]/40 transition-all">
                   <DollarSign className="w-8 h-8 text-[#8451E1]" />
@@ -173,7 +175,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-amber-300 text-sm font-medium mb-2">Avg Order Value</p>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent">₦{metrics?.averageOrderValue.toFixed(2)}</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent">{formatCurrency(metrics?.averageOrderValue || 0, { truncate: true })}</p>
                 </div>
                 <div className="bg-gradient-to-br from-amber-500/30 to-amber-600/10 p-3 rounded-xl group-hover:from-amber-500/40 transition-all">
                   <BarChart3 className="w-8 h-8 text-amber-300" />
@@ -199,6 +201,9 @@ export default function DashboardPage() {
               </div>
               <div className="mt-4 text-emerald-300/80 text-xs font-medium">Based on {metrics?.customerReviews.length || 0} reviews</div>
             </motion.div>
+
+            {/* Funds in Escrow Card */}
+            <EscrowBalanceCard />
           </motion.div>
 
           {/* Charts */}
@@ -344,5 +349,104 @@ export default function DashboardPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+/**
+ * Escrow Balance Card Component
+ * Displays funds currently held in escrow and active holds
+ */
+function EscrowBalanceCard() {
+  const { data: escrowData, isLoading } = api.escrow.getSellerEscrowBalance.useQuery(
+    { currency: 'NGN' },
+    { enabled: true }
+  );
+
+  const { data: activeHolds } = api.escrow.getSellerActiveHolds.useQuery(
+    { currency: 'NGN' },
+    { enabled: true }
+  );
+
+  const escrowBalance = (escrowData?.balanceCents || 0) / 100;
+
+  if (isLoading) {
+    return (
+      <motion.div
+        whileHover={{ y: -8 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="group backdrop-blur-xl bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer"
+      >
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-amber-500/20 rounded w-1/2"></div>
+          <div className="h-8 bg-amber-500/20 rounded w-3/4"></div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      whileHover={{ y: -8 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="group backdrop-blur-xl bg-gradient-to-br from-amber-600/20 to-orange-900/10 border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer relative overflow-hidden"
+    >
+      {/* Background accent */}
+      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full blur-2xl"></div>
+      
+      <div className="relative z-10 flex items-center justify-between">
+        <div>
+          <p className="text-amber-300 text-sm font-medium mb-2">💰 Funds in Escrow</p>
+          <p className="text-4xl font-bold bg-gradient-to-r from-amber-200 to-orange-200 bg-clip-text text-transparent">
+            {formatCurrency(escrowBalance * 100, { truncate: true })}
+          </p>
+        </div>
+        <div className="bg-gradient-to-br from-amber-500/30 to-orange-600/10 p-3 rounded-xl group-hover:from-amber-500/40 transition-all">
+          <DollarSign className="w-8 h-8 text-amber-300" />
+        </div>
+      </div>
+
+      {/* Active holds info */}
+      <div className="mt-6 pt-4 border-t border-amber-500/20">
+        <div className="space-y-2 max-h-32 overflow-y-auto">
+          {(!activeHolds || activeHolds.length === 0) ? (
+            <p className="text-xs text-amber-300/70">✓ No active escrow holds</p>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-amber-300 mb-2">
+                {activeHolds.length} Active Hold{activeHolds.length !== 1 ? 's' : ''}
+              </p>
+              {activeHolds.slice(0, 3).map((hold) => (
+                <div key={hold.holdId} className="text-xs bg-amber-500/10 p-2 rounded border border-amber-500/20">
+                  <div className="flex justify-between items-center">
+                    <span className="text-amber-200 font-medium">
+                      Order {hold.orderId.slice(0, 8)}
+                    </span>
+                    <span className="text-amber-300 font-semibold">
+                      {formatCurrency(hold.amountCents, { truncate: true })}
+                    </span>
+                  </div>
+                  <p className="text-amber-300/70 mt-1">
+                    Releases in {hold.daysRemaining} days
+                  </p>
+                </div>
+              ))}
+              {activeHolds.length > 3 && (
+                <p className="text-xs text-amber-300/70 pt-2 italic">
+                  +{activeHolds.length - 3} more hold{activeHolds.length - 3 !== 1 ? 's' : ''}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Info tooltip */}
+      <div className="mt-4 pt-4 border-t border-amber-500/20">
+        <p className="text-xs text-amber-300/70 flex items-start gap-2">
+          <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+          <span>Auto-releases to your account after 30 days</span>
+        </p>
+      </div>
+    </motion.div>
   );
 }

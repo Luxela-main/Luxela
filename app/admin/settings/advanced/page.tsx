@@ -385,7 +385,7 @@ export default function AdvancedSettingsPage() {
                 <Input
                   id="terms-url"
                   type="url"
-                  defaultValue="https://luxela.com/terms"
+                  defaultValue="https://theluxela.com/terms"
                   className="bg-gray-800 border-gray-700"
                 />
               </div>
@@ -394,7 +394,7 @@ export default function AdvancedSettingsPage() {
                 <Input
                   id="privacy-url"
                   type="url"
-                  defaultValue="https://luxela.com/privacy"
+                  defaultValue="https://theluxela.com/privacy"
                   className="bg-gray-800 border-gray-700"
                 />
               </div>

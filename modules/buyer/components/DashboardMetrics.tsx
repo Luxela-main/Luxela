@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Package, AlertCircle, RotateCcw, Bell, TrendingUp, DollarSign, ShoppingCart, TrendingDown } from 'lucide-react';
 import { useBuyerNotificationsCount } from '@/modules/buyer/queries/useBuyerNotificationsCount';
 import { trpc } from '@/lib/trpc';
+import { formatCurrency } from '@/lib/utils';
 
 interface MetricCard {
   label: string;
@@ -97,7 +98,7 @@ export const DashboardMetrics: React.FC = () => {
     return [
       {
         label: 'Total Spent',
-        count: `${currencySymbol}${totalSpent}`,
+        count: formatCurrency(totalSpentCents, { truncate: true }),
         icon: <DollarSign className="w-6 h-6" />,
         href: '/buyer/dashboard/orders',
         color: 'primary',
@@ -106,7 +107,7 @@ export const DashboardMetrics: React.FC = () => {
       },
       {
         label: 'This Month',
-        count: `${currencySymbol}${thisMonthSpent}`,
+        count: formatCurrency(thisMonthSpentCents, { truncate: true }),
         icon: <TrendingUp className="w-6 h-6" />,
         href: '/buyer/dashboard/orders',
         color: 'secondary',
@@ -115,7 +116,7 @@ export const DashboardMetrics: React.FC = () => {
       },
       {
         label: 'Avg Order Value',
-        count: `${currencySymbol}${avgOrderValue}`,
+        count: formatCurrency((totalSpentCents / Math.max(allOrders.length, 1)), { truncate: true }),
         icon: <ShoppingCart className="w-6 h-6" />,
         href: '/buyer/dashboard/orders',
         color: 'accent',

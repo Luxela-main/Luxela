@@ -14,14 +14,14 @@ export default function CheckoutSuccessPage() {
   const confirmCheckout = trpc.checkout.confirmCheckout.useMutation({
     onSuccess: (data) => {
       setStatus('success');
-      setMessage(`Order ${data.orderId.slice(0, 8)} confirmed! Your order will be processed shortly.`);
+      setMessage(`Order #${data.orderId.slice(0, 8)} confirmed! Your payment is secure in escrow! Your order will be processed shortly.`);
       setTimeout(() => {
-        router.push(`/buyer/orders/${data.orderId}`);
-      }, 3000);
+        router.push(`/buyer/dashboard/orders`);
+      }, 4000);
     },
     onError: (error) => {
       setStatus('error');
-      setMessage(error.message || 'Failed to confirm your payment. Please contact support.');
+      setMessage(error.message || 'Failed to verify payment. Please check your orders page.');
     },
   });
 
@@ -32,7 +32,7 @@ export default function CheckoutSuccessPage() {
 
       if (!paymentId || !transactionRef) {
         setStatus('error');
-        setMessage('Missing payment information. Please contact support.');
+        setMessage('Missing payment details from provider. Please check your email or contact support.');
         return;
       }
 
@@ -99,7 +99,7 @@ export default function CheckoutSuccessPage() {
                 Try Again
               </button>
               <button
-                onClick={() => router.push('/buyer/orders')}
+                onClick={() => router.push('/buyer/dashboard/orders')}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition cursor-pointer"
               >
                 View Orders

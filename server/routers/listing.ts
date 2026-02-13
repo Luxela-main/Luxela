@@ -40,6 +40,23 @@ const mapShippingEta = (value: string): "same_day" | "next_day" | "48hrs" | "72h
   return value as "same_day" | "next_day" | "48hrs" | "72hrs" | "5_working_days" | "1_2_weeks" | "2_3_weeks" | "custom";
 };
 
+// Helper to map database status values to frontend enum values
+const mapStatusToFrontend = (dbStatus: string | null): "pending" | "approved" | "rejected" | "revision_requested" => {
+  switch (dbStatus) {
+    case 'pending_review':
+    case 'draft':
+      return 'pending';
+    case 'approved':
+      return 'approved';
+    case 'rejected':
+      return 'rejected';
+    case 'archived':
+      return 'rejected';
+    default:
+      return 'pending';
+  }
+};
+
 // ---------- OUTPUT SCHEMAS ----------
 const ListingOutput = z.object({
   id: z.string().uuid(),
@@ -145,6 +162,8 @@ const CollectionItemInput = z.object({
   description: z.string().optional(),
   category: CategoryEnum.optional(),
   images: z.array(z.string()).optional(),
+  sizes: z.array(z.string()).optional(),
+  colors: z.array(z.string()).optional(),
   colorsAvailable: z.array(z.object({
     colorName: z.string(),
     colorHex: z.string(),
@@ -640,76 +659,9 @@ export const listingRouter = createTRPCRouter({
       await db.insert(collectionItems).values(collectionItemsToInsert);
     }
 
-    // Create individual listings for each product so they're cartable
-    const listingsToInsert: any[] = [];
-    for (const [index, item] of input.items.entries()) {
-      const productId = productIds[index];
-      
-      // Generate listing slug
-      const listingSlug = item.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-
-      // Fetch the first product image if available
-      let productImage: string | null = null;
-      try {
-        const productImageRows = await db
-          .select()
-          .from(productImages)
-          .where(eq(productImages.productId, productId))
-          .orderBy(productImages.position)
-          .limit(1);
-        
-        if (productImageRows.length > 0) {
-          productImage = productImageRows[0].imageUrl;
-        }
-      } catch (imgError) {
-        console.error(`[Collection] ✗ Error fetching image for "${item.title}":`, imgError);
-      }
-
-      // Get images JSON if multiple images exist
-      let imagesJson: string | null = null;
-      try {
-        if (item.images && item.images.length > 0) {
-          imagesJson = JSON.stringify(item.images);
-          if (!productImage && item.images[0]) {
-            productImage = item.images[0];
-          }
-        }
-      } catch (imgJsonError) {
-        console.warn(`Error creating images JSON for collection item "${item.title}":`, imgJsonError);
-      }
-
-      console.log(`[Collection Item] Creating listing for \"${item.title}\" - image: ${productImage ? 'YES' : 'NO'}`);
-      listingsToInsert.push({
-        id: uuidv4(),
-        productId: productId,
-        collectionId: collectionId,
-        sellerId: seller.id,
-        type: "single",
-        title: item.title,
-        description: item.description ?? null,
-        category: item.category ?? null,
-        image: productImage,
-        imagesJson: imagesJson,
-        priceCents: item.priceCents,
-        currency: item.currency ?? "SOL",
-        supplyCapacity: input.supplyCapacity ?? "no_max",
-        quantityAvailable: 1,
-        shippingOption: input.shippingOption ?? "both",
-        etaDomestic: input.etaDomestic ?? null,
-        etaInternational: input.etaInternational ?? null,
-        refundPolicy: input.refundPolicy ?? null,
-        colorsAvailable: item.colorsAvailable ? JSON.stringify(item.colorsAvailable) : null,
-        slug: listingSlug,
-        status: "pending_review",
-      });
-    }
-
-    if (listingsToInsert.length > 0) {
-      await db.insert(listings).values(listingsToInsert);
-    }
+    // Note: Collection items are managed through the collectionItems junction table
+    // and the products table - no individual listings are created for collection items
+    // This keeps them separate from single items in the seller's listings view
 
     // Get the first product's image for the collection thumbnail
     let collectionMainImage: string | null = null;
@@ -923,23 +875,6 @@ export const listingRouter = createTRPCRouter({
         }
       }
       
-      // Map database status values to frontend enum values
-      const mapStatusToFrontend = (dbStatus: string | null): "pending" | "approved" | "rejected" | "revision_requested" => {
-        switch (dbStatus) {
-          case 'pending_review':
-          case 'draft':
-            return 'pending';
-          case 'approved':
-            return 'approved';
-          case 'rejected':
-            return 'rejected';
-          case 'archived':
-            return 'rejected';
-          default:
-            return 'pending';
-        }
-      };
-
       return Promise.all(myListings.map(async (l: any) => {
         try {
           const result: any = {
@@ -991,10 +926,8 @@ export const listingRouter = createTRPCRouter({
                 .orderBy(productImages.position);
               
               if (productImagesList.length > 0) {
-                // Build imagesJson array from product images
-                result.imagesJson = JSON.stringify(productImagesList.map((img: any) => ({
-                  url: img.imageUrl,
-                })));
+                // Build imagesJson array from product images - return plain URLs for form compatibility
+                result.imagesJson = JSON.stringify(productImagesList.map((img: any) => img.imageUrl));
                 
                 // If no main image, use the first product image
                 if (!result.image) {
@@ -1039,11 +972,13 @@ export const listingRouter = createTRPCRouter({
                     currency: product?.currency || l.currency || 'NGN',
                     image: productImageList[0]?.imageUrl || null,
                     images: productImageList.map((img: any) => img.imageUrl),
-                    imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img: any) => ({ url: img.imageUrl }))) : null,
+                    imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img: any) => img.imageUrl)) : null,
                     quantityAvailable: product?.inStock ? 1 : 0,
                     sku: product?.sku || null,
                     description: product?.description || null,
                     category: product?.category || null,
+                    sizes: product?.sizes ? JSON.parse(product.sizes) : [],
+                    colors: product?.colors ? JSON.parse(product.colors) : [],
                   };
                 });
                 
@@ -1123,6 +1058,9 @@ export const listingRouter = createTRPCRouter({
             etaInternational: l.etaInternational as any,
             refundPolicy: l.refundPolicy,
             localPricing: l.localPricing,
+            status: mapStatusToFrontend(l.status),
+            views: l.views || 0,
+            conversions: l.conversions || 0,
             itemsJson: null,
             productId: l.productId ?? undefined,
             createdAt: new Date(l.createdAt),
@@ -1171,7 +1109,7 @@ export const listingRouter = createTRPCRouter({
                     currency: product?.currency || l.currency || 'NGN',
                     image: productImageList[0]?.imageUrl || null,
                     images: productImageList.map((img: any) => img.imageUrl),
-                    imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img: any) => ({ url: img.imageUrl }))) : null,
+                    imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img: any) => img.imageUrl)) : null,
                     quantityAvailable: product?.inStock ? 1 : 0,
                     sku: product?.sku || null,
                     description: product?.description || null,
@@ -1289,11 +1227,13 @@ export const listingRouter = createTRPCRouter({
                       currency: product?.currency || l.currency || 'NGN',
                       image: productImageList[0]?.imageUrl || null,
                       images: productImageList.map((img: any) => img.imageUrl),
-                      imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img: any) => ({ url: img.imageUrl }))) : null,
+                      imagesJson: productImageList.length > 0 ? JSON.stringify(productImageList.map((img: any) => img.imageUrl)) : null,
                       quantityAvailable: product?.inStock ? 1 : 0,
                       sku: product?.sku || null,
                       description: product?.description || null,
                       category: product?.category || null,
+                      sizes: product?.sizes ? JSON.parse(product.sizes) : [],
+                      colors: product?.colors ? JSON.parse(product.colors) : [],
                     };
                   });
                 } else {
@@ -1457,6 +1397,13 @@ export const listingRouter = createTRPCRouter({
       shippingOption: ShippingOptionEnum.nullable().optional(),
       etaDomestic: ShippingEtaEnum.nullable().optional(),
       etaInternational: ShippingEtaEnum.nullable().optional(),
+      refundPolicy: z.enum(['no_refunds', '48hrs', '72hrs', '5_working_days', '1week', '14days', '30days', '60days', 'store_credit']).nullable().optional(),
+      sku: z.string().optional().transform(val => val === '' ? undefined : val),
+      slug: z.string().optional(),
+      metaDescription: z.string().optional().transform(val => val === '' ? undefined : val),
+      barcode: z.string().optional().transform(val => val === '' ? undefined : val),
+      videoUrl: z.string().optional().transform(val => val === '' ? undefined : val),
+      careInstructions: z.string().optional().transform(val => val === '' ? undefined : val),
     }))
     .output(ListingOutput)
     .mutation(async ({ ctx, input }) => {
@@ -1497,6 +1444,13 @@ export const listingRouter = createTRPCRouter({
       if (input.shippingOption !== undefined) updateData.shippingOption = input.shippingOption;
       if (input.etaDomestic !== undefined) updateData.etaDomestic = input.etaDomestic ? mapShippingEta(input.etaDomestic) : null;
       if (input.etaInternational !== undefined) updateData.etaInternational = input.etaInternational ? mapShippingEta(input.etaInternational) : null;
+      if (input.refundPolicy !== undefined) updateData.refundPolicy = input.refundPolicy;
+      if (input.sku !== undefined) updateData.sku = input.sku;
+      if (input.slug !== undefined) updateData.slug = input.slug;
+      if (input.metaDescription !== undefined) updateData.metaDescription = input.metaDescription;
+      if (input.barcode !== undefined) updateData.barcode = input.barcode;
+      if (input.videoUrl !== undefined) updateData.videoUrl = input.videoUrl;
+      if (input.careInstructions !== undefined) updateData.careInstructions = input.careInstructions;
       
       await db.update(listings).set(updateData).where(eq(listings.id, input.id));
       
@@ -1551,7 +1505,7 @@ export const listingRouter = createTRPCRouter({
       // Fetch updated listing
       const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
       
-      return {
+      const result: any = {
         id: updated.id,
         sellerId: updated.sellerId,
         type: updated.type,
@@ -1577,15 +1531,19 @@ export const listingRouter = createTRPCRouter({
         localPricing: updated.localPricing ?? null,
         itemsJson: updated.itemsJson ? JSON.parse(updated.itemsJson) : null,
         productId: updated.productId ?? undefined,
-        sku: updated.sku || undefined,
-        slug: updated.slug || undefined,
-        metaDescription: updated.metaDescription || undefined,
-        barcode: updated.barcode || undefined,
-        videoUrl: updated.videoUrl || undefined,
-        careInstructions: updated.careInstructions || undefined,
         createdAt: new Date(updated.createdAt),
         updatedAt: new Date(updated.updatedAt),
       };
+      
+      // Only include optional enterprise fields if they exist
+      if (updated.sku) result.sku = updated.sku;
+      if (updated.slug) result.slug = updated.slug;
+      if (updated.metaDescription) result.metaDescription = updated.metaDescription;
+      if (updated.barcode) result.barcode = updated.barcode;
+      if (updated.videoUrl) result.videoUrl = updated.videoUrl;
+      if (updated.careInstructions) result.careInstructions = updated.careInstructions;
+      
+      return result;
     }),
 
   updateCollection: protectedProcedure
@@ -1749,6 +1707,8 @@ export const listingRouter = createTRPCRouter({
               currency: item.currency ?? "SOL",
               sku: uniqueSku,
               inStock: true,
+              sizes: item.sizes && item.sizes.length > 0 ? JSON.stringify(item.sizes) : null,
+              colors: item.colors && item.colors.length > 0 ? JSON.stringify(item.colors) : null,
             });
 
             // Add to collection items
@@ -1780,6 +1740,57 @@ export const listingRouter = createTRPCRouter({
         // Fetch updated listing
         const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
 
+        // Build itemsJson with collection items data
+        let itemsJson: string | null = null;
+        if (input.items && input.items.length > 0) {
+          try {
+            const collectionItemsData = await db
+              .select({
+                id: collectionItems.productId,
+                productId: collectionItems.productId,
+                position: collectionItems.position,
+              })
+              .from(collectionItems)
+              .where(eq(collectionItems.collectionId, listing.collectionId!));
+
+            const itemsWithDetails = await Promise.all(
+              collectionItemsData.map(async (item: { id: string; productId: string; position: number }) => {
+                const product = await db
+                  .select()
+                  .from(products)
+                  .where(eq(products.id, item.id));
+
+                if (product.length === 0) return null;
+
+                const p = product[0];
+                const images = await db
+                  .select({ imageUrl: productImages.imageUrl })
+                  .from(productImages)
+                  .where(eq(productImages.productId, p.id))
+                  .orderBy(productImages.position);
+
+                return {
+                  id: p.id,
+                  productId: p.id,
+                  title: p.name,
+                  description: p.description,
+                  category: p.category,
+                  priceCents: p.priceCents,
+                  currency: p.currency,
+                  sizes: p.sizes ? JSON.parse(p.sizes) : [],
+                  colors: p.colors ? JSON.parse(p.colors) : [],
+                  images: images.map((img: { imageUrl: string }) => img.imageUrl),
+                  sku: p.sku,
+                };
+              })
+            );
+
+            itemsJson = JSON.stringify(itemsWithDetails.filter((item) => item !== null));
+          } catch (err) {
+            console.error('Error building itemsJson:', err);
+          }
+        }
+
         return {
           id: updated.id,
           sellerId: updated.sellerId,
@@ -1804,7 +1815,7 @@ export const listingRouter = createTRPCRouter({
           etaInternational: updated.etaInternational as any,
           refundPolicy: updated.refundPolicy ?? null,
           localPricing: updated.localPricing ?? null,
-          itemsJson: updated.itemsJson ? JSON.parse(updated.itemsJson) : null,
+          itemsJson: itemsJson ? JSON.parse(itemsJson) : null,
           productId: updated.productId ?? undefined,
           sku: updated.sku || undefined,
           slug: updated.slug || undefined,

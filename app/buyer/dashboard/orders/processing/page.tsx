@@ -157,7 +157,7 @@ export default function ProcessingOrdersPage() {
         <>
           <div className="space-y-4">
             {paginatedOrders.map((order) => (
-              <Link key={order.orderId} href={`/buyer/dashboard/orders/processing/${order.orderId}`}>
+              <Link key={order.orderId} href={`/buyer/dashboard/orders/${order.orderId}`}>
                 <div className="bg-[#1a1a1a] rounded-lg p-6 border border-[#212121] hover:border-[#8451e1] transition cursor-pointer">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2 text-[#d4af37] text-sm">

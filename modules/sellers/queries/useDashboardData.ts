@@ -39,30 +39,19 @@ export const useDashboardData = () => {
         topSellingProducts,
       } as DashboardData;
     },
-    staleTime: 5 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: 5 * 1000,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: "always",
+    staleTime: 60 * 1000, // 60 seconds - reasonable cache
+    gcTime: 15 * 60 * 1000, // 15 minutes garbage collection
+    refetchInterval: undefined, // Disabled - no automatic polling
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false, 
     refetchOnReconnect: true,
-    refetchOnMount: true,
-    retry: 3,
+    refetchOnMount: false,
+    retry: 2,
     retryDelay: (attemptIndex: number) =>
-      Math.min(1000 * 2 ** attemptIndex, 15000),
+      Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
-  useEffect(() => {
-    if (!query.data) return;
-
-    const refreshInterval = setInterval(() => {
-      queryClient.invalidateQueries({
-        queryKey: sellersKeys.dashboard(),
-      });
-    }, 5000);
-
-    return () => clearInterval(refreshInterval);
-  }, [query.data, queryClient]);
-
+  // Refetch only when page becomes visible (user focus)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {

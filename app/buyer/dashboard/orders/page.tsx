@@ -326,7 +326,7 @@ export default function OrdersPage() {
                     <div>
                       <p className="text-gray-400 text-xs uppercase tracking-widest">Amount</p>
                       <p className="text-[#8451e1] font-bold text-sm sm:text-lg mt-1">
-                        ${(order.amountCents / 100).toFixed(2)}
+                        ₦{(order.amountCents / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                     <div>
@@ -485,13 +485,13 @@ export default function OrdersPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Price</span>
-                      <span className="text-white">${(selectedOrderData.amountCents / 100).toFixed(2)}</span>
+                      <span className="text-white">₦{(selectedOrderData.amountCents / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <div className="pt-2 border-t border-[#2a2a2a]">
                       <div className="flex justify-between">
                         <span className="text-white font-semibold">Total</span>
                         <span className="text-[#8451e1] font-bold">
-                          ${(selectedOrderData.amountCents / 100).toFixed(2)}
+                          ₦{(selectedOrderData.amountCents / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>

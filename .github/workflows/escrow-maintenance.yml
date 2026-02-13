@@ -1,0 +1,45 @@
+name: Daily Escrow Maintenance
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+
+jobs:
+  escrow-maintenance:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run escrow daily maintenance
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "🕐 Running daily escrow maintenance..."
+          
+          # Call the daily maintenance endpoint
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${API_URL}/api/trpc/cron.dailyMaintenance" \
+            -d '{}' \
+            -w "\nHTTP Status: %{http_code}\n"
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Escrow maintenance job failed. Check the workflow logs.'
+            })

@@ -116,12 +116,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {GA_ID && (
           <>
             <Script
-              strategy="afterInteractive"
+              strategy="lazyOnload"
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
             />
             <Script
               id="gtag-config"
-              strategy="afterInteractive"
+              strategy="lazyOnload"
               dangerouslySetInnerHTML={{
                 __html: `
                   window.dataLayer = window.dataLayer || [];

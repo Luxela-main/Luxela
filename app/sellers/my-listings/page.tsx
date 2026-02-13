@@ -48,7 +48,7 @@ export default function MyListings() {
   const [liveListing, setLiveListing] = useState<any>(null);
   const [showAddProductDropdown, setShowAddProductDropdown] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const realtimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
 
   // Fetch listings and collections
   const { data: listings, isLoading: listingsLoading, error: listingsError, refetch: refetchListings } = useMyListings();
@@ -74,41 +74,17 @@ export default function MyListings() {
     },
   });
 
-  // Real-time status polling for the details modal
+  // Real-time updates are now handled automatically via refetchInterval in useMyListings and useMyCollections
+  // No manual polling needed - hooks will auto-refetch every 3 seconds
+
+  // Update live listing when details modal opens and listings data changes (from auto-refetch)
   useEffect(() => {
-    if (!isDetailsModalOpen || !selectedListing) {
-      // Clear interval when modal closes
-      if (realtimeIntervalRef.current) {
-        clearInterval(realtimeIntervalRef.current);
-        realtimeIntervalRef.current = null;
+    if (isDetailsModalOpen && selectedListing && listings) {
+      const currentListing = listings.find((l: any) => l.id === selectedListing.id);
+      if (currentListing) {
+        setLiveListing(currentListing);
       }
-      return;
     }
-
-    // Function to fetch fresh listing status
-    const fetchListingStatus = async () => {
-      try {
-        const currentListings = listings?.find((l: any) => l.id === selectedListing.id);
-        if (currentListings) {
-          setLiveListing(currentListings);
-        }
-      } catch (error) {
-        console.error("Error fetching live listing status:", error);
-      }
-    };
-
-    // Initial fetch
-    fetchListingStatus();
-
-    // Set up interval for real-time updates (every 2 seconds)
-    realtimeIntervalRef.current = setInterval(fetchListingStatus, 2000);
-
-    return () => {
-      if (realtimeIntervalRef.current) {
-        clearInterval(realtimeIntervalRef.current);
-        realtimeIntervalRef.current = null;
-      }
-    };
   }, [isDetailsModalOpen, selectedListing, listings]);
 
   const handleViewDetails = (listing: any) => {
@@ -129,7 +105,7 @@ export default function MyListings() {
   };
 
   const handleEdit = (listing: any) => {
-    router.push(`/sellers/new-listing?edit=${listing.id}`);
+    router.push(`/sellers/my-listings?edit=${listing.id}`);
   };
 
   const handleDeleteClick = (listing: any) => {

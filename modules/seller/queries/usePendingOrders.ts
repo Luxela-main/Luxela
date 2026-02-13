@@ -95,31 +95,20 @@ export function usePendingOrders(
         throw err;
       }
     },
-    enabled: !!sellerId && !isLoadingProfile && !profileError, // Only query when we have sellerId and profile is loaded
-    staleTime: 3 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: 5 * 1000,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: 'always',
+    enabled: !!sellerId && !isLoadingProfile && !profileError,
+    staleTime: 30 * 1000, // 30 seconds cache
+    gcTime: 15 * 60 * 1000, // 15 minute garbage collection
+    refetchInterval: undefined, // No automatic polling
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false, // Only on explicit user action
     refetchOnReconnect: true,
-    refetchOnMount: true,
-    retry: 3,
+    refetchOnMount: false,
+    retry: 2,
     retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
     ...options,
   });
 
-  useEffect(() => {
-    if (!query.data || query.data.length === 0) return;
-
-    const pollInterval = setInterval(() => {
-      queryClient.invalidateQueries({
-        queryKey: sellerQueryKeys.pendingOrders(filters?.limit, filters?.offset),
-      });
-    }, 5 * 1000);
-
-    return () => clearInterval(pollInterval);
-  }, [query.data, filters?.limit, filters?.offset, queryClient]);
-
+  // Only refetch when page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -168,26 +157,14 @@ export function useOrdersByStatus(
       }
     },
     enabled: !!status,
-    staleTime: 3 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: 5 * 1000,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: 'always',
+    staleTime: 30 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchInterval: undefined,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
     retry: 2,
     ...options,
   });
-
-  useEffect(() => {
-    if (!query.data || query.data.length === 0 || !status) return;
-
-    const pollInterval = setInterval(() => {
-      queryClient.invalidateQueries({
-        queryKey: sellerQueryKeys.ordersByStatus(status, filters?.limit, filters?.offset),
-      });
-    }, 5 * 1000);
-
-    return () => clearInterval(pollInterval);
-  }, [query.data, status, filters?.limit, filters?.offset, queryClient]);
 
   return query;
 }
@@ -196,8 +173,6 @@ export function useOrderById(
   orderId: string,
   options?: Omit<UseQueryOptions<PendingOrder, Error>, 'queryKey' | 'queryFn'>
 ) {
-  const queryClient = useQueryClient();
-  
   const query = useQuery({
     queryKey: sellerQueryKeys.orderById(orderId),
     queryFn: async () => {
@@ -210,26 +185,14 @@ export function useOrderById(
       }
     },
     enabled: !!orderId,
-    staleTime: 2 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: 3 * 1000,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
+    staleTime: 10 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchInterval: undefined,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
     retry: 2,
     ...options,
   });
-
-  useEffect(() => {
-    if (!query.data || !orderId) return;
-
-    const pollInterval = setInterval(() => {
-      queryClient.invalidateQueries({
-        queryKey: sellerQueryKeys.orderById(orderId),
-      });
-    }, 3 * 1000);
-
-    return () => clearInterval(pollInterval);
-  }, [query.data, orderId, queryClient]);
 
   return query;
 }
@@ -238,8 +201,6 @@ export function useOrderStats(
   dateRange?: { startDate?: Date; endDate?: Date },
   options?: Omit<UseQueryOptions<any, Error>, 'queryKey' | 'queryFn'>
 ) {
-  const queryClient = useQueryClient();
-  
   const query = useQuery({
     queryKey: sellerQueryKeys.orderStats(dateRange?.startDate, dateRange?.endDate),
     queryFn: async () => {
@@ -253,26 +214,14 @@ export function useOrderStats(
         throw err;
       }
     },
-    staleTime: 10 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: 30 * 1000,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
+    staleTime: 30 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchInterval: undefined,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
     retry: 2,
     ...options,
   });
-
-  useEffect(() => {
-    if (!query.data) return;
-
-    const pollInterval = setInterval(() => {
-      queryClient.invalidateQueries({
-        queryKey: sellerQueryKeys.orderStats(dateRange?.startDate, dateRange?.endDate),
-      });
-    }, 30 * 1000);
-
-    return () => clearInterval(pollInterval);
-  }, [query.data, dateRange?.startDate, dateRange?.endDate, queryClient]);
 
   return query;
 }

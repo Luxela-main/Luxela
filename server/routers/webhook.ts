@@ -6,6 +6,7 @@ import { payments, orders, webhookEvents, notifications } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { createPaymentHold } from '../services/escrowService';
+import { verifyWebhookSignature as verifyTsaraSignature } from '../services/tsara';
 import {
   handlePaymentSuccess,
   handlePaymentFailure,
@@ -60,18 +61,18 @@ const FailedWebhooksQuery = z.object({
 // ============================================================================
 
 /**
- * Verify webhook signature (simple implementation)
- * In production, use HMAC-SHA256 verification with Tsara's secret key
+ * Verify webhook signature using Tsara's HMAC-SHA256
+ * Uses the Tsara service's implementation which supports both Node and Edge runtime
  */
-function verifyWebhookSignature(payload: string, signature: string): boolean {
-  // TODO: Implement proper HMAC verification
-  // const crypto = require('crypto');
-  // const secret = process.env.TSARA_WEBHOOK_SECRET;
-  // const hash = crypto.createHmac('sha256', secret).update(payload).digest('hex');
-  // return hash === signature;
-  
-  // For now, accept all (NOT SECURE - implement proper verification in production)
-  return true;
+async function verifyWebhookSignature(payload: string, signature: string): Promise<boolean> {
+  try {
+    // Use the service's implementation which handles both Node and Edge runtimes
+    return await verifyTsaraSignature(payload, signature);
+  } catch (err) {
+    console.error('Webhook signature verification error:', err);
+    // Fail securely - reject webhook if verification fails
+    return false;
+  }
 }
 
 /**
@@ -106,14 +107,20 @@ export const webhookRouter = createTRPCRouter({
     .input(TsaraWebhookPayload)
     .mutation(async ({ input }) => {
       try {
-        // Verify webhook authenticity
-        if (input.signature) {
-          if (!verifyWebhookSignature(JSON.stringify(input), input.signature)) {
-            throw new TRPCError({
-              code: 'UNAUTHORIZED',
-              message: 'Invalid webhook signature',
-            });
-          }
+        // Verify webhook authenticity - REQUIRED for security
+        if (!input.signature) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'Missing webhook signature',
+          });
+        }
+
+        const isValid = await verifyWebhookSignature(JSON.stringify(input), input.signature);
+        if (!isValid) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'Invalid webhook signature',
+          });
         }
 
         const { event, data } = input;
@@ -133,6 +140,18 @@ export const webhookRouter = createTRPCRouter({
         }
 
         const payment = existingPayments[0];
+
+        // ✅ IDEMPOTENCY CHECK: If already processed, return success (no duplicate processing)
+        if (payment.status === 'completed') {
+          console.log(`✅ Webhook already processed for payment ${payment.id}`);
+          return {
+            success: true,
+            message: 'Payment already processed (idempotent - skipping duplicate)',
+            paymentId: payment.id,
+            newStatus: 'completed',
+            isDuplicate: true,
+          };
+        }
 
         // Map Tsara event to local status
         const newStatus = mapTsaraEventToStatus(event);
