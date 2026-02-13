@@ -129,7 +129,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         )}
 
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={SITE.url} />
         <link
           rel="sitemap"
           type="application/xml"
