@@ -80,7 +80,6 @@ const nextConfig: NextConfig = {
         },
       ];
     },
-    compress: true,
   }),
 
   ...(isLocalEnv && {}),
