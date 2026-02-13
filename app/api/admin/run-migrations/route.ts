@@ -3,14 +3,6 @@ import path from 'path';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { db } from '@/server/db/client';
 
-/**
- * Admin endpoint to manually trigger database migrations
- * This is useful for troubleshooting or running migrations on-demand
- * 
- * Requires: ADMIN_SECRET_KEY environment variable for authentication
- * 
- * POST /api/admin/run-migrations?secret=<ADMIN_SECRET_KEY>
- */
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
