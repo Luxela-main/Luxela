@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Filter,
   MoreVertical,
@@ -11,8 +11,6 @@ import {
   Clock,
   CheckCircle,
   Truck,
-  MessageCircle,
-  RefreshCw,
 } from 'lucide-react';
 import SearchBar from '@/components/search-bar';
 import { Button } from '@/components/ui/button';
@@ -20,22 +18,17 @@ import { useSales, useSaleById } from '@/modules/sellers';
 import { LoadingState } from '@/components/sellers/LoadingState';
 import { ErrorState } from '@/components/sellers/ErrorState';
 import { getStatusFromTab } from '@/constants';
-import { useToast } from '@/hooks/use-toast';
-import { trpc } from '@/lib/trpc';
+import helper from '@/helper';
 
 export default function Sales() {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('All');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const itemsPerPage = 10;
 
   const { data: salesData, isLoading, error, refetch } = useSales(getStatusFromTab(activeTab));
   const { data: selectedOrderData } = useSaleById(selectedOrder || '');
-  const { toast } = useToast();
-
-  const confirmDeliveryMutation = trpc.sellerOrders.confirmDelivery.useMutation();
 
   if (isLoading) {
     return <LoadingState message="Loading sales data..." />;
@@ -61,29 +54,6 @@ export default function Sales() {
   );
 
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
-
-  const handleConfirmDelivery = async () => {
-    if (!selectedOrder) return;
-
-    setIsConfirmingDelivery(true);
-    try {
-      await confirmDeliveryMutation.mutateAsync({ orderId: selectedOrder });
-      toast({
-        title: 'Success',
-        description: 'Delivery confirmed! The buyer has been notified.',
-      });
-      setSelectedOrder(null);
-      refetch();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to confirm delivery',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsConfirmingDelivery(false);
-    }
-  };
 
   const getStatusIcon = (status: string) => {
     const s = status?.toLowerCase();
@@ -123,7 +93,7 @@ export default function Sales() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-6 border-b-2 border-[#E5E7EB]">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white">Sales</h1>
-            <p className="text-[#6B7280] mt-1 text-sm font-medium">Manage and track all your sales</p>
+            <p className="text-[#6B7280] mt-1 text-sm font-medium">Track your sales and revenue (display only)</p>
           </div>
           <div className="w-full sm:w-64 lg:w-80">
             <SearchBar search={search} setSearch={setSearch} />
@@ -137,7 +107,7 @@ export default function Sales() {
               <div>
                 <p className="text-gray-400 text-sm">Total Sales</p>
                 <p className="text-white text-xl sm:text-2xl font-bold mt-2">
-                  ${totalSales.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                  {helper.toCurrency(totalSales, { currency: '₦', abbreviate: true })}
                 </p>
               </div>
               <TrendingUp className="text-[#8451e1]" size={32} />
@@ -223,7 +193,7 @@ export default function Sales() {
             <div className="col-span-1 text-gray-400 text-xs font-semibold uppercase">Status</div>
             <div className="col-span-2 text-gray-400 text-xs font-semibold uppercase">Delivery</div>
             <div className="col-span-2 text-gray-400 text-xs font-semibold uppercase">Date</div>
-            <div className="col-span-1 text-gray-400 text-xs font-semibold uppercase">Action</div>
+            <div className="col-span-2 text-gray-400 text-xs font-semibold uppercase">Info</div>
           </div>
 
           {}
@@ -247,7 +217,7 @@ export default function Sales() {
                 </div>
                 <div className="col-span-2 text-gray-300 text-sm truncate">{order.product}</div>
                 <div className="col-span-1 text-[#8451e1] font-bold">
-                  ${((order.amountCents || 0) / 100).toFixed(2)}
+                  {helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}
                 </div>
                 <div className="col-span-1">
                   <div className="flex items-center gap-1">
@@ -276,16 +246,8 @@ export default function Sales() {
                     day: 'numeric',
                   })}
                 </div>
-                <div className="col-span-1 flex justify-end">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedOrder(order.orderId);
-                    }}
-                    className="text-gray-400 hover:text-white transition"
-                  >
-                    <MoreVertical size={16} />
-                  </button>
+                <div className="col-span-2 text-gray-400 text-xs">
+                  View in Orders page to manage
                 </div>
               </div>
             ))
@@ -313,22 +275,13 @@ export default function Sales() {
                     </h3>
                     <p className="text-gray-400 text-xs mt-1">{order.product}</p>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedOrder(order.orderId);
-                    }}
-                    className="text-gray-400 hover:text-white transition flex-shrink-0"
-                  >
-                    <MoreVertical size={16} />
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <div>
                     <p className="text-gray-400 text-xs">Amount</p>
                     <p className="text-[#8451e1] font-bold">
-                      ${((order.amountCents || 0) / 100).toFixed(2)}
+                      {helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}
                     </p>
                   </div>
                   <div>
@@ -458,7 +411,7 @@ export default function Sales() {
                       <div className="flex justify-between">
                         <span className="text-white font-semibold">Amount</span>
                         <span className="text-[#8451e1] font-bold">
-                          ${((selectedOrderData.amountCents || 0) / 100).toFixed(2)}
+                          {helper.toCurrency((selectedOrderData.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}
                         </span>
                       </div>
                     </div>
@@ -497,36 +450,10 @@ export default function Sales() {
                 </div>
 
                 {}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {selectedOrderData.deliveryStatus !== 'delivered' && (
-                    <button
-                      onClick={handleConfirmDelivery}
-                      disabled={isConfirmingDelivery}
-                      className="flex-1 bg-[#8451e1] hover:bg-[#7043d8] text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isConfirmingDelivery ? (
-                        <>
-                          <RefreshCw className="animate-spin" size={16} />
-                          Confirming...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle size={16} />
-                          Confirm Delivery
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                  <button className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer">
-                    <MessageCircle size={16} />
-                    Message Buyer
-                  </button>
-
-                  <button className="flex-1 bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer">
-                    <Download size={16} />
-                    <span className="hidden sm:inline">Details</span>
-                  </button>
+                <div className="flex gap-2 pt-6 border-t border-[#2a2a2a]">
+                  <p className="text-xs text-gray-400">
+                    💡 To manage this order, go to the Orders page
+                  </p>
                 </div>
               </div>
             </div>
@@ -536,4 +463,3 @@ export default function Sales() {
     </div>
   );
 }
-

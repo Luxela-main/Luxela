@@ -401,6 +401,23 @@ const handleBackToListings = () => {
   };
 
 
+const mapEtaValue = (value: string): string => {
+  // Map release duration or user input to shipping ETA enum
+  const etaMap: { [key: string]: string } = {
+    "same_day": "same_day",
+    "next_day": "next_day",
+    "24hrs": "next_day",
+    "48hrs": "48hrs",
+    "72hrs": "72hrs",
+    "1week": "1_2_weeks",
+    "2weeks": "1_2_weeks",
+    "1month": "2_3_weeks",
+    "5_working_days": "5_working_days",
+    "custom": "custom",
+  };
+  return etaMap[value] || "custom";
+};
+
 const handleSubmitSingle = async () => {
   setIsSubmitting(true);
   try {
@@ -577,8 +594,8 @@ const handleSubmitSingle = async () => {
       colorsAvailable,
       additionalTargetAudience,
       shippingOption,
-      etaDomestic: formData.domesticDays,
-      etaInternational: formData.internationalDays,
+      etaDomestic: mapEtaValue(formData.domesticDays),
+      etaInternational: formData.internationalDays ? mapEtaValue(formData.internationalDays) : undefined,
       refundPolicy: formData.refundPolicy || undefined,
       videoUrl: formData.videoUrl || undefined,
       careInstructions: formData.careInstructions || undefined,
@@ -610,8 +627,8 @@ const handleSubmitSingle = async () => {
       colorsAvailable,
       additionalTargetAudience,
       shippingOption,
-      etaDomestic: formData.domesticDays,
-      etaInternational: formData.internationalDays,
+      etaDomestic: mapEtaValue(formData.domesticDays),
+      etaInternational: formData.internationalDays ? mapEtaValue(formData.internationalDays) : undefined,
       refundPolicy: formData.refundPolicy || undefined,
       videoUrl: formData.videoUrl || undefined,
       careInstructions: formData.careInstructions || undefined,

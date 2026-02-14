@@ -346,6 +346,12 @@ export const orders = pgTable('orders', {
   estimatedArrival: timestamp('estimated_arrival'),
   deliveredDate: timestamp('delivered_date'),
   recipientEmail: varchar('recipient_email', { length: 255 }),
+  // Product variant details - stored at order time for consistency
+  selectedSize: text('selected_size'),
+  selectedColor: text('selected_color'),
+  selectedColorHex: text('selected_color_hex'),
+  // Cart quantity
+  quantity: integer('quantity').default(1).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -545,6 +551,10 @@ export const cartItems = pgTable('cart_items', {
   quantity: integer('quantity').notNull(),
   unitPriceCents: integer('unit_price_cents').notNull(),
   currency: varchar('currency', { length: 16 }).notNull(),
+  // Product variant selections made at time of cart addition
+  selectedSize: text('selected_size'),
+  selectedColor: text('selected_color'),
+  selectedColorHex: text('selected_color_hex'),
 });
 
 // ============================

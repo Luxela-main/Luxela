@@ -1,14 +1,16 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import { CheckCircle, AlertCircle, Loader } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import SearchBar from "@/components/search-bar"
 import EmptyState from "@/components/empty-state"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { formatCurrency } from "@/lib/utils"
+import helper from "@/helper"
+import { toastSvc } from "@/services/toast"
 import { useSellerOrders } from "@/modules/sellers/queries/useSellerOrders"
+import { trpc } from "@/lib/trpc"
 import type { Sale } from "@/modules/sellers/model/sales"
 
 interface Filters {
@@ -24,14 +26,31 @@ export default function ConfirmedOrdersPage() {
     sortBy: "date",
     sortOrder: "desc",
   })
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null)
 
   const { data: allOrders = [], isLoading, error } = useSellerOrders({ limit: 50, offset: 0 })
+  const updateSaleMutation = trpc.sales.updateSale.useMutation()
 
   
   const confirmedOrders = useMemo(
     () => allOrders.filter((order: Sale) => order.orderStatus === "confirmed"),
     [allOrders]
   )
+
+  const handleMarkAsProcessing = async (orderId: string) => {
+    setProcessingOrderId(orderId)
+    try {
+      await updateSaleMutation.mutateAsync({
+        orderId,
+        orderStatus: "processing",
+      })
+      toastSvc.success("Order marked as processing")
+    } catch (error: any) {
+      toastSvc.error(error.message || "Failed to update order")
+    } finally {
+      setProcessingOrderId(null)
+    }
+  }
 
   const filteredOrders = useMemo(() => {
     let result = confirmedOrders.filter((order: Sale) => {
@@ -128,7 +147,7 @@ export default function ConfirmedOrdersPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase">Amount</p>
-                      <p className="text-sm font-bold text-white mt-1">{formatCurrency(order.amountCents, { currency: order.currency, truncate: true })}</p>
+                      <p className="text-sm font-bold text-white mt-1">{helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}</p>
                     </div>
                   </div>
 
@@ -144,9 +163,23 @@ export default function ConfirmedOrdersPage() {
                   </div>
                 </div>
 
-                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
-                  View & Process →
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white cursor-pointer disabled:cursor-not-allowed"
+                    onClick={() => handleMarkAsProcessing(order.orderId)}
+                    disabled={updateSaleMutation.isPending && processingOrderId === order.orderId}
+                  >
+                    {updateSaleMutation.isPending && processingOrderId === order.orderId && <Loader className="h-3 w-3 mr-1 animate-spin" />}
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    Process
+                  </Button>
+                  <Link href={`/sellers/orders/${order.orderId}`} className="flex-1">
+                    <Button size="sm" variant="outline" className="w-full cursor-pointer">
+                      View
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </Link>
           ))}

@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
-import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews, productVariants } from "../db/schema";
+import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews } from "../db/schema";
 import { and, eq, sql, inArray, asc } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -636,29 +636,6 @@ export const listingRouter = createTRPCRouter({
         productId: productId,
         position: index,
       });
-
-      
-      // Create product variants from colors and sizes
-      if (item.colorsAvailable && item.colorsAvailable.length > 0 && item.sizes && item.sizes.length > 0) {
-        const variantsToCreate: any[] = [];
-        for (const color of item.colorsAvailable) {
-          for (const size of item.sizes) {
-            variantsToCreate.push({
-              productId: productId,
-              colorName: color.colorName,
-              colorHex: color.colorHex,
-              size: size,
-            });
-          }
-        }
-        try {
-          if (variantsToCreate.length > 0) {
-            await db.insert(productVariants).values(variantsToCreate);
-          }
-        } catch (variantError) {
-          console.warn(`Error creating variants for product "${item.title}":`, variantError);
-        }
-      }
 
       // Insert product images if provided
       console.log(`[CollectionItem] ${item.title} - images count: ${item.images?.length || 0}`);

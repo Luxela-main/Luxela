@@ -138,6 +138,11 @@ export const salesRouter = createTRPCRouter({
         payoutStatus: z.string(),
         deliveryStatus: z.string(),
         orderStatus: z.string(),
+        selectedSize: z.string().optional(),
+        selectedColor: z.string().optional(),
+        selectedColorHex: z.string().optional(),
+        productImage: z.string().optional(),
+        productCategory: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -186,11 +191,22 @@ export const salesRouter = createTRPCRouter({
           payoutStatus: order.payoutStatus,
           deliveryStatus: order.deliveryStatus,
           orderStatus: order.orderStatus,
+          selectedSize: order.selectedSize,
+          selectedColor: order.selectedColor,
+          selectedColorHex: order.selectedColorHex,
+          productImage: order.productImage,
+          productCategory: order.productCategory,
         };
       } catch (err: any) {
+        console.error("[getSaleById] Error:", err?.message);
+        
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+        
         throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: err?.message || "Failed to fetch order",
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch order: " + (err?.message || "Unknown error"),
         });
       }
     }),

@@ -31,7 +31,7 @@ import {
   useCancelOrder,
 } from "@/modules/sellers"
 import type { Sale } from "@/modules/sellers/model/sales"
-
+import helper from '@/helper'
 
 type OrderWithDetails = Sale & {
   customerEmail?: string
@@ -81,7 +81,6 @@ interface PendingOrdersFilters {
   dateFrom: string
   dateTo: string
 }
-
 
 function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDetails | null, open: boolean, onOpenChange: (open: boolean) => void }) {
   if (!order) return null
@@ -151,7 +150,7 @@ function OrderDetailsModal({ order, open, onOpenChange }: { order: OrderWithDeta
                 <div>
                   <p className="text-xs text-gray-500">Amount</p>
                   <p className="text-lg font-bold text-white mt-1">
-                    {formatCurrency(order.amountCents, { currency: order.currency })}
+                    {helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}
                   </p>
                 </div>
               </div>
@@ -669,7 +668,7 @@ export default function PendingOrders() {
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Amount</p>
                     <p className="text-lg font-bold text-white">
-                      {formatCurrency(order.amountCents, { currency: order.currency })}
+                      {helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}
                     </p>
                   </div>
                   <div>

@@ -7,7 +7,7 @@ import SearchBar from "@/components/search-bar"
 import EmptyState from "@/components/empty-state"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { formatCurrency } from "@/lib/utils"
+import helper from "@/helper"
 import { useSellerOrders } from "@/modules/sellers/queries/useSellerOrders"
 import type { Sale } from "@/modules/sellers/model/sales"
 
@@ -127,7 +127,7 @@ export default function ShippedOrdersPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase">Amount</p>
-                      <p className="text-sm font-bold text-white mt-1">{formatCurrency(order.amountCents, { currency: order.currency, truncate: true })}</p>
+                      <p className="text-sm font-bold text-white mt-1">{helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}</p>
                     </div>
                   </div>
 
@@ -143,9 +143,12 @@ export default function ShippedOrdersPage() {
                   </div>
                 </div>
 
-                <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700 text-white cursor-pointer">
-                  View Tracking →
-                </Button>
+                <Link href={`/sellers/orders/${order.orderId}`} className="w-full">
+                  <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700 text-white cursor-pointer">
+                    <Truck className="h-4 w-4 mr-2" />
+                    View Tracking
+                  </Button>
+                </Link>
               </div>
             </Link>
           ))}

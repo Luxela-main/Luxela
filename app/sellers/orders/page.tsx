@@ -4,6 +4,7 @@ import { useState, useMemo } from "react"
 import { ShoppingBag, TrendingUp, Clock, Truck, CheckCircle, AlertCircle, Loader, RotateCw } from "lucide-react"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/utils"
+import helper from '@/helper'
 import { useSellerOrders } from "@/modules/sellers/queries/useSellerOrders"
 import { useSellerOrderPolling } from "@/modules/sellers/hooks/useSellerOrderPolling"
 import { toastSvc } from "@/services/toast"
@@ -151,7 +152,7 @@ export default function SellerOrdersHub() {
 
         <div className="bg-[#1a1a1a] border border-green-700/30 rounded-lg p-4">
           <p className="text-xs text-gray-500 uppercase mb-3 font-medium">Total Revenue</p>
-          <p className="text-2xl font-bold text-green-200">{formatCurrency(stats.totalRevenue, { currency: "NGN", truncate: true })}</p>
+          <p className="text-2xl font-bold text-green-200">{helper.toCurrency(stats.totalRevenue / 100, { currency: '₦', abbreviate: true })}</p>
           <p className="text-xs text-gray-400 mt-2">From delivered</p>
         </div>
       </div>
@@ -227,7 +228,7 @@ export default function SellerOrdersHub() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase">Amount</p>
-                      <p className="text-sm font-bold text-white mt-1">{formatCurrency(order.amountCents, { currency: order.currency, truncate: true })}</p>
+                      <p className="text-sm font-bold text-white mt-1">{helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true })}</p>
                     </div>
                   </div>
 

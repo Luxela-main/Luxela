@@ -49,7 +49,15 @@ export interface EscrowHold {
 export async function createOrderFromCart(
   buyerId: string,
   sellerId: string,
-  cartItems_: Array<{ listingId: string; quantity: number; unitPriceCents: number; currency: string }>,
+  cartItems_: Array<{
+    listingId: string;
+    quantity: number;
+    unitPriceCents: number;
+    currency: string;
+    selectedSize?: string;
+    selectedColor?: string;
+    selectedColorHex?: string;
+  }>,
   customerName: string,
   customerEmail: string,
   paymentMethod: string,
@@ -138,6 +146,10 @@ export async function createOrderFromCart(
       currency,
       payoutStatus: 'in_escrow',
       deliveryStatus: 'not_shipped',
+      selectedSize: cartItems_[0].selectedSize || null,
+      selectedColor: cartItems_[0].selectedColor || null,
+      selectedColorHex: cartItems_[0].selectedColorHex || null,
+      quantity: cartItems_[0].quantity || 1,
     });
 
     return { orderId: finalOrderId, totalAmountCents, totalCurrency: currency };

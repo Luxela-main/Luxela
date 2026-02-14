@@ -260,7 +260,13 @@ export const cartRouter = createTRPCRouter({
         description: 'Adds a listing to the authenticated user cart or increases quantity if it already exists.',
       },
     })
-    .input(z.object({ listingId: z.string().uuid(), quantity: z.number().int().positive().default(1) }))
+    .input(z.object({ 
+      listingId: z.string().uuid(), 
+      quantity: z.number().int().positive().default(1),
+      selectedSize: z.string().optional(),
+      selectedColor: z.string().optional(),
+      selectedColorHex: z.string().optional(),
+    }))
     .output(
       z.object({
         id: z.string().uuid(),
@@ -300,7 +306,12 @@ export const cartRouter = createTRPCRouter({
           const newQty = existing[0].quantity + input.quantity;
           const [updated] = await db
             .update(cartItems)
-            .set({ quantity: newQty })
+            .set({ 
+              quantity: newQty,
+              selectedSize: input.selectedSize || existing[0].selectedSize,
+              selectedColor: input.selectedColor || existing[0].selectedColor,
+              selectedColorHex: input.selectedColorHex || existing[0].selectedColorHex,
+            })
             .where(eq(cartItems.id, existing[0].id))
             .returning();
           return updated;
@@ -314,6 +325,9 @@ export const cartRouter = createTRPCRouter({
               quantity: input.quantity,
               unitPriceCents: listing.priceCents || 0,
               currency: listing.currency || 'USD',
+              selectedSize: input.selectedSize,
+              selectedColor: input.selectedColor,
+              selectedColorHex: input.selectedColorHex,
             })
             .returning();
           

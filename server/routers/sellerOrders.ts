@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
 import { db } from '../db';
-import { orders } from '../db/schema';
+import { orders, conversations, messages } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
@@ -242,6 +242,118 @@ export const sellerOrdersRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: err?.message || 'Failed to fetch order details',
+        });
+      }
+    }),
+
+  // Send message to buyer
+  sendMessageToBuyer: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'POST',
+        path: '/seller/orders/send-message-to-buyer',
+        tags: ['Seller Orders'],
+        summary: 'Send message to buyer',
+        description: 'Seller sends a message to buyer regarding an order',
+      },
+    })
+    .input(
+      z.object({
+        orderId: z.string().uuid(),
+        buyerId: z.string().uuid(),
+        message: z.string().min(1).max(5000),
+      })
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string(),
+        conversationId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const sellerId = ctx.user?.id;
+      if (!sellerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+
+      try {
+        // Verify seller and order exist
+        const [order] = await db
+          .select()
+          .from(orders)
+          .where(
+            and(
+              eq(orders.id, input.orderId),
+              eq(orders.sellerId, sellerId)
+            )
+          );
+
+        if (!order) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Order not found or does not belong to this seller',
+          });
+        }
+
+        // Verify buyer ID matches order
+        if (order.buyerId !== input.buyerId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid buyer for this order',
+          });
+        }
+
+        // Get or create conversation
+        let [conversation] = await db
+          .select()
+          .from(conversations)
+          .where(
+            and(
+              eq(conversations.buyerId, input.buyerId),
+              eq(conversations.sellerId, sellerId)
+            )
+          );
+
+        if (!conversation) {
+          const [newConv] = await db
+            .insert(conversations)
+            .values({
+              buyerId: input.buyerId,
+              sellerId: sellerId,
+            })
+            .returning();
+          conversation = newConv;
+        }
+
+        // Add message
+        await db
+          .insert(messages)
+          .values({
+            conversationId: conversation.id,
+            senderId: sellerId,
+            senderRole: 'seller',
+            content: input.message,
+          });
+
+        // Update conversation timestamp
+        await db
+          .update(conversations)
+          .set({
+            lastMessageAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(conversations.id, conversation.id));
+
+        return {
+          success: true,
+          message: 'Message sent to buyer',
+          conversationId: conversation.id,
+        };
+      } catch (err: any) {
+        console.error('Error sending message to buyer:', err);
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: err?.message || 'Failed to send message',
         });
       }
     }),

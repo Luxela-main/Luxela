@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { formatCurrency } from "@/lib/utils"
+import helper from '@/helper'
 import { toastSvc } from "@/services/toast"
 import { useSaleById } from "@/modules/sellers/queries/useSales"
 import { useSellerOrderDetailPolling } from "@/modules/sellers/hooks/useSellerOrderPolling"
@@ -217,8 +217,16 @@ export default function SellerOrderDetailPage() {
                 <p className="text-lg font-semibold text-gray-200">{order?.product || "N/A"}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase font-medium mb-2">Quantity</p>
-                <p className="text-lg font-semibold text-gray-200">{order?.quantity || 0}</p>
+                <p className="text-xs text-gray-500 uppercase font-medium mb-2">Category</p>
+                <p className="text-sm text-gray-300 capitalize">{order?.productCategory ? order.productCategory.replace(/_/g, ' ') : "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-medium mb-2">Quantity Selected by Buyer</p>
+                <p className="text-lg font-bold text-blue-400 bg-blue-900/20 w-fit px-3 py-2 rounded">{order?.quantity || 0} {order?.quantity === 1 ? 'item' : 'items'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-medium mb-2">Amount</p>
+                <p className="text-lg font-bold text-white">{order ? helper.toCurrency((order.amountCents || 0) / 100, { currency: '₦', abbreviate: true }) : "N/A"}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase font-medium mb-2">Order Date</p>
@@ -231,10 +239,55 @@ export default function SellerOrderDetailPage() {
                   }) : "N/A"}</p>
                 </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-medium mb-2">Amount</p>
-                <p className="text-lg font-bold text-white">{order ? formatCurrency(order.amountCents, { currency: order.currency, truncate: true }) : "N/A"}</p>
-              </div>
+              {order?.productImage && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium mb-2">Product Image</p>
+                  <img src={order.productImage} alt={order.product} className="h-24 w-24 object-cover rounded border border-[#333]" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Product Variant Details Section */}
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5" />
+              Product Variant Details
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {order?.selectedSize ? (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium mb-2">Size Selected</p>
+                  <p className="text-lg font-semibold text-gray-200 bg-gray-900/50 w-fit px-4 py-2 rounded border border-gray-700">{order.selectedSize}</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium mb-2">Size Selected</p>
+                  <div className="bg-gray-900/30 border border-dashed border-gray-700 rounded p-4 text-center">
+                    <p className="text-sm text-gray-400">Size information not available</p>
+                    <p className="text-xs text-gray-500 mt-1">Variant data coming soon</p>
+                  </div>
+                </div>
+              )}
+              {order?.selectedColor ? (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium mb-2">Color Selected</p>
+                  <div className="flex items-center gap-3">
+                    {order.selectedColorHex && (
+                      <div className="w-8 h-8 rounded border border-gray-600" style={{ backgroundColor: order.selectedColorHex }}></div>
+                    )}
+                    <span className="text-lg font-semibold text-gray-200">{order.selectedColor}</span>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-medium mb-2">Color Selected</p>
+                  <div className="bg-gray-900/30 border border-dashed border-gray-700 rounded p-4 text-center">
+                    <p className="text-sm text-gray-400">Color information not available</p>
+                    <p className="text-xs text-gray-500 mt-1">Variant data coming soon</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -286,7 +339,7 @@ export default function SellerOrderDetailPage() {
                       ? 'bg-yellow-900/30 text-yellow-200 border-yellow-700/30'
                       : 'bg-blue-900/30 text-blue-200 border-blue-700/30'
                   } border text-xs py-1 px-2`}>
-                    {order.payoutStatus?.replace('_', ' ') || "N/A"}
+                    {order.payoutStatus?.replace(/_/g, ' ') || "N/A"}
                   </Badge>
                 )}
               </div>
@@ -309,7 +362,7 @@ export default function SellerOrderDetailPage() {
                       ? 'bg-purple-900/30 text-purple-200 border-purple-700/30'
                       : 'bg-gray-900/30 text-gray-200 border-gray-700/30'
                   } border text-xs py-1 px-2`}>
-                    {order.deliveryStatus?.replace('_', ' ') || "N/A"}
+                    {order.deliveryStatus?.replace(/_/g, ' ') || "N/A"}
                   </Badge>
                 )}
               </div>

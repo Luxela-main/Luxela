@@ -13,4 +13,14 @@ export interface Sale {
   payoutStatus: "in_escrow" | "processing" | "paid";
   deliveryStatus: "not_shipped" | "in_transit" | "delivered";
   orderStatus: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "canceled" | "returned";
+  // Product Variant Details
+  productImage?: string;
+  productCategory?: string;
+  selectedSize?: string;
+  selectedColor?: string;
+  selectedColorHex?: string;
+  // Additional details
+  trackingNumber?: string;
+  estimatedArrival?: Date;
+  deliveredDate?: Date;
 }
