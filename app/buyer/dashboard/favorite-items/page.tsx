@@ -141,7 +141,7 @@ export default function FavoriteItemsPage() {
                 <div className="aspect-square bg-[#0e0e0e] relative overflow-hidden">
                   <img
                     src={item.image || 'https://via.placeholder.com/300'}
-                    alt={item.name}
+                    alt={item.title}
                     className="w-full h-full object-cover"
                   />
                   <button
@@ -153,8 +153,8 @@ export default function FavoriteItemsPage() {
                 </div>
                 <div className="p-4">
                   <p className="text-gray-400 text-xs uppercase tracking-widest">{item.category}</p>
-                  <h3 className="text-white font-semibold mt-2 line-clamp-2">{item.name}</h3>
-                  <p className="text-[#8451e1] text-lg font-bold mt-2">{item.price}</p>
+                  <h3 className="text-white font-semibold mt-2 line-clamp-2">{item.title}</h3>
+                  <p className="text-[#8451e1] text-lg font-bold mt-2">₦{item.priceCents ? (item.priceCents / 100).toFixed(2) : '0.00'}</p>
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleAddToCart(item.listingId)}
@@ -180,13 +180,13 @@ export default function FavoriteItemsPage() {
               <div key={item.favoriteId} className="bg-[#1a1a1a] rounded-lg p-4 flex gap-4 hover:bg-[#252525] transition">
                 <img
                   src={item.image || 'https://via.placeholder.com/100'}
-                  alt={item.name}
+                  alt={item.title}
                   className="w-24 h-24 object-cover rounded"
                 />
                 <div className="flex-1">
                   <p className="text-gray-400 text-xs uppercase tracking-widest">{item.category}</p>
-                  <h3 className="text-white font-semibold mt-1">{item.name}</h3>
-                  <p className="text-[#8451e1] text-lg font-bold mt-2">{item.price}</p>
+                  <h3 className="text-white font-semibold mt-1">{item.title}</h3>
+                  <p className="text-[#8451e1] text-lg font-bold mt-2">₦{item.priceCents ? (item.priceCents / 100).toFixed(2) : '0.00'}</p>
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => handleAddToCart(item.listingId)}

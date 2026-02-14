@@ -53,7 +53,8 @@ export async function createOrderFromCart(
   customerName: string,
   customerEmail: string,
   paymentMethod: string,
-  orderId?: string
+  orderId?: string,
+  shippingCents: number = 0
 ): Promise<{ orderId: string; totalAmountCents: number; totalCurrency: string }> {
   if (!cartItems_.length) {
     throw new TRPCError({
@@ -114,6 +115,9 @@ export async function createOrderFromCart(
       totalAmountCents += item.unitPriceCents * item.quantity;
       currency = item.currency;
     }
+
+    // Add shipping fee to total amount
+    totalAmountCents += shippingCents;
 
     const finalOrderId = orderId || uuidv4();
     const now = new Date();

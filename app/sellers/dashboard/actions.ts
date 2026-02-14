@@ -287,9 +287,51 @@ export async function getDashboardMetrics(timeRange: 'week' | 'month' | 'quarter
     }));
 
     // Calculate percentage changes (compare to previous period)
-    // For this example, we'll use mock calculations. In production, you'd compare with previous period data
-    const revenueChange = totalRevenue > 0 ? ((Math.random() - 0.5) * 50) : 0; // Mock: random between -25% and +25%
-    const ordersChange = totalOrders > 0 ? ((Math.random() - 0.5) * 50) : 0; // Mock: random between -25% and +25%
+    // Get previous period data (same timeRange duration)
+    const getPreviousPeriodDates = () => {
+      const now = new Date();
+      const periodDays = { week: 7, month: 30, quarter: 90, year: 365 }[timeRange];
+      const currentStart = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);
+      const previousStart = new Date(currentStart.getTime() - periodDays * 24 * 60 * 60 * 1000);
+      return { previousStart, currentStart, now };
+    };
+    
+    const { previousStart, currentStart } = getPreviousPeriodDates();
+    
+    // Get previous period revenue
+    const previousRevenueData = await db
+      .select({
+        totalCents: sql<number>`COALESCE(SUM(${orders.amountCents}), 0)`,
+      })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.sellerId, sellerId),
+          gte(orders.orderDate, previousStart),
+          lte(orders.orderDate, currentStart)
+        )
+      );
+    
+    const previousRevenue = (previousRevenueData[0]?.totalCents || 0) / 100;
+    const revenueChange = previousRevenue > 0 ? (((totalRevenue - previousRevenue) / previousRevenue) * 100) : 0;
+    
+    // Get previous period orders
+    const previousOrdersData = await db
+      .select({
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.sellerId, sellerId),
+          gte(orders.orderDate, previousStart),
+          lte(orders.orderDate, currentStart)
+        )
+      );
+    
+    const previousOrders = previousOrdersData[0]?.count || 0;
+    const ordersChange = previousOrders > 0 ? (((totalOrders - previousOrders) / previousOrders) * 100) : 0;
+    
     const customerSatisfaction = (customerSatisfactionScore / 5) * 100; // Convert 0-5 scale to percentage
 
     // Generate revenue chart data (last 7 days)

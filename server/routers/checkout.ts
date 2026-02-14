@@ -201,24 +201,44 @@ export const checkoutRouter = createTRPCRouter({
         let shippingCents = 0;
         
         try {
-          // Get seller ID from first listing (validated to be same for all items in cart)
-          const sellerId = itemsWithDetails[0]?.sellerId;
-          if (sellerId) {
-            // Fetch active shipping rates for this seller
-            const sellerShippingRates = await db
-              .select()
-              .from(shippingRates)
-              .where(and(eq(shippingRates.sellerId, sellerId), eq(shippingRates.active, true)))
-              .limit(1);
-            
-            if (sellerShippingRates.length > 0) {
-              const rate = sellerShippingRates[0];
-              shippingCents = rate.rateCents || 0;
+          // Group items by seller
+          const sellerGroups = new Map<string, typeof itemsWithDetails>();
+          itemsWithDetails.forEach((item) => {
+            if (!sellerGroups.has(item.sellerId)) {
+              sellerGroups.set(item.sellerId, []);
             }
-            // If no shipping rates configured, default to free shipping
+            sellerGroups.get(item.sellerId)!.push(item);
+          });
+          
+          // Calculate shipping for each seller and sum them up
+          for (const [sellerId] of sellerGroups.entries()) {
+            try {
+              // Fetch active shipping rates for this seller (get most recent)
+              const sellerShippingRates = await db
+                .select()
+                .from(shippingRates)
+                .where(
+                  and(
+                    eq(shippingRates.sellerId, sellerId),
+                    eq(shippingRates.active, true)
+                  )
+                )
+                .orderBy(sql`${shippingRates.createdAt} DESC`)
+                .limit(1);
+              
+              if (sellerShippingRates.length > 0) {
+                const rate = sellerShippingRates[0];
+                // Add this seller's shipping cost
+                shippingCents += rate.rateCents || 0;
+              }
+              // If no shipping rates configured for this seller, default to free shipping for them
+            } catch (sellerShippingErr) {
+              console.warn(`Failed to fetch shipping rates for seller ${sellerId}:`, sellerShippingErr);
+              // Default to free shipping for this seller on error
+            }
           }
         } catch (shippingErr) {
-          console.warn('Failed to fetch shipping rates:', shippingErr);
+          console.warn('Failed to calculate shipping:', shippingErr);
           // Default to free shipping on error
           shippingCents = 0;
         }
@@ -349,18 +369,27 @@ export const checkoutRouter = createTRPCRouter({
         // Calculate shipping cost dynamically from seller settings
         let shippingCents = 0;
         try {
+          // Fetch active shipping rates for this seller (get most recent)
           const sellerShippingRates = await db
             .select()
             .from(shippingRates)
-            .where(and(eq(shippingRates.sellerId, sellerId), eq(shippingRates.active, true)))
+            .where(
+              and(
+                eq(shippingRates.sellerId, sellerId),
+                eq(shippingRates.active, true)
+              )
+            )
+            .orderBy(sql`${shippingRates.createdAt} DESC`)
             .limit(1);
           
           if (sellerShippingRates.length > 0) {
             const rate = sellerShippingRates[0];
             shippingCents = rate.rateCents || 0;
           }
+          // If no shipping rates configured, default to free shipping
         } catch (shippingErr) {
           console.warn('Failed to fetch shipping rates for payment:', shippingErr);
+          // Default to free shipping on error
           shippingCents = 0;
         }
         
@@ -444,7 +473,8 @@ export const checkoutRouter = createTRPCRouter({
           input.customerName,
           input.customerEmail,
           input.paymentMethod,
-          orderId
+          orderId,
+          shippingCents // Include shipping fee in order
         );
         
         // Use the actual orderId from the created order

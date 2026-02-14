@@ -69,19 +69,21 @@ export default function DashboardPage() {
     );
   }
 
-  // Generate revenue data
-  const revenueData = Array.from({ length: 7 }, (_, i) => ({
-    date: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-    revenue: Math.floor(Math.random() * 5000) + 2000,
+  // Use real revenue data from metrics
+  const revenueData = (metrics?.revenueData || []).map(d => ({
+    date: new Date(d.date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short' }),
+    revenue: parseFloat(d.revenue),
   }));
 
-  // Generate rating distribution data
-  const ratingData = Array.from({ length: 5 }, (_, i) => ({
-    name: `${5 - i}★`,
-    value: Object.values(metrics?.ratingDistribution || {}).length > 0 
-      ? (Object.values(metrics?.ratingDistribution || {}) as number[])[i] || 0
-      : Math.floor(Math.random() * 50),
-  })).filter(d => d.value > 0);
+  // Use real rating distribution data
+  const ratingData = metrics?.ratingDistribution 
+    ? Object.entries(metrics.ratingDistribution)
+        .map(([rating, count]) => ({
+          name: `${rating}★`,
+          value: count,
+        }))
+        .filter(d => d.value > 0)
+    : [];
 
   // Top products data
   const topProducts = metrics?.trendingProducts.slice(0, 6).map(p => ({
