@@ -101,44 +101,78 @@ export default function CollectionShowcase({
           <h2 className="text-3xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">{title}</h2>
         </div>
       )}
-      {showControls && (
-        <div className="flex gap-2 px-4 sm:px-0 mb-4 sm:mb-8 sm:absolute sm:top-0 sm:right-0">
-          <button
-            onClick={() => scroll('left')}
-            disabled={!canScrollLeft}
-            className={`p-1.5 sm:p-2 rounded-full transition-all ${
-              canScrollLeft
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
-                : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
-            }`}
-          >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            disabled={!canScrollRight}
-            className={`p-1.5 sm:p-2 rounded-full transition-all ${
-              canScrollRight
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
-                : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
-            }`}
-          >
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </div>
-      )}
 
-      <div className="px-4 sm:px-0">
-        <div
-          ref={carouselRef}
-          className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-hide transition-all"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {collections.map((collection) => (
-            <div key={collection.id} className="min-w-[calc(100vw-80px)] sm:min-w-[280px] flex-shrink-0 transition-transform duration-300 hover:scale-105">
-              <EnhancedCollectionCard collection={collection} />
-            </div>
-          ))}
+      <div className="relative group">
+        {/* Mobile scroll buttons - visible on small screens */}
+        {showControls && (
+          <div className="flex gap-2 px-4 sm:px-0 mb-4 sm:mb-0 md:hidden">
+            <button
+              onClick={() => scroll('left')}
+              disabled={!canScrollLeft}
+              className={`p-1.5 sm:p-2 rounded-full transition-all ${
+                canScrollLeft
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
+                  : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              disabled={!canScrollRight}
+              className={`p-1.5 sm:p-2 rounded-full transition-all ${
+                canScrollRight
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
+                  : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
+              }`}
+            >
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+        )}
+
+        <div className="px-4 sm:px-0 relative">
+          {/* Desktop scroll buttons - left side */}
+          {showControls && (
+            <button
+              onClick={() => scroll('left')}
+              disabled={!canScrollLeft}
+              className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-10 p-2 rounded-full transition-all ${
+                canScrollLeft
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
+                  : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
+              }`}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+
+          <div
+            ref={carouselRef}
+            className="flex gap-3 sm:gap-5 overflow-x-auto scrollbar-hide transition-all"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {collections.map((collection) => (
+              <div key={collection.id} className="min-w-[calc(100vw-80px)] sm:min-w-[280px] flex-shrink-0 transition-transform duration-300 hover:scale-105">
+                <EnhancedCollectionCard collection={collection} />
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop scroll buttons - right side */}
+          {showControls && (
+            <button
+              onClick={() => scroll('right')}
+              disabled={!canScrollRight}
+              className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-10 p-2 rounded-full transition-all ${
+                canScrollRight
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/50 cursor-pointer'
+                  : 'bg-[#2a2a2a] text-[#555] cursor-not-allowed'
+              }`}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
     </section>
