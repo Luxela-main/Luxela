@@ -131,7 +131,7 @@ export default function EnhancedAnalyticsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-light">${funnelQuery.data.averageCartValue.toFixed(2)}</div>
+                    <div className="text-3xl font-light">₦{funnelQuery.data.averageCartValue.toFixed(2)}</div>
                     <p className="text-xs text-gray-400 mt-2">Per cart</p>
                   </CardContent>
                 </Card>
@@ -162,7 +162,7 @@ export default function EnhancedAnalyticsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-medium">${seller.totalRevenue.toFixed(2)}</div>
+                          <div className="text-lg font-medium">₦{seller.totalRevenue.toFixed(2)}</div>
                           <div className="text-xs text-gray-400">{seller.totalOrders} orders</div>
                         </div>
                       </div>
@@ -241,7 +241,7 @@ export default function EnhancedAnalyticsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-light">
-                      ${conversionQuery.data.reduce((sum: number, d: typeof conversionQuery.data[number]) => sum + d.revenue, 0).toFixed(2)}
+                      ₦{conversionQuery.data.reduce((sum: number, d: typeof conversionQuery.data[number]) => sum + d.revenue, 0).toFixed(2)}
                     </div>
                   </CardContent>
                 </Card>
@@ -286,7 +286,7 @@ export default function EnhancedAnalyticsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-medium">${product.revenue.toFixed(2)}</div>
+                          <div className="font-medium">₦{product.revenue.toFixed(2)}</div>
                           <div className="text-xs text-gray-400">{product.sales} sales</div>
                         </div>
                       </div>

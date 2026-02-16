@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Heart, ShoppingCart, Grid, List, ChevronRight, Trash2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/hooks/useToast';
 
 export default function FavoriteItemsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -17,7 +17,7 @@ export default function FavoriteItemsPage() {
     { retry: 1 }
   );
 
-  const { toast } = useToast();
+  const toastHandler = useToast();
 
   const removeFavoriteMutation = trpc.buyer.removeFavorite.useMutation();
   const addToCartMutation = trpc.cart.addToCart.useMutation();
@@ -33,34 +33,20 @@ export default function FavoriteItemsPage() {
     try {
       await removeFavoriteMutation.mutateAsync({ favoriteId });
       setFavorites(favorites.filter(item => item.favoriteId !== favoriteId));
-      toast({
-        title: 'Removed from favorites',
-        description: 'Item removed successfully',
-      });
+      toastHandler.success('Item removed from favorites');
     } catch (error: any) {
       const errorMessage = error?.data?.message || error?.message || 'Failed to remove item';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      toastHandler.error(errorMessage);
     }
   };
 
   const handleAddToCart = async (listingId: string) => {
     try {
       await addToCartMutation.mutateAsync({ listingId, quantity: 1 });
-      toast({
-        title: 'Added to cart',
-        description: 'Item added to your cart',
-      });
+      toastHandler.success('Item added to cart successfully!');
     } catch (error: any) {
       const errorMessage = error?.data?.message || error?.message || 'Failed to add to cart';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      toastHandler.error(errorMessage);
     }
   };
 

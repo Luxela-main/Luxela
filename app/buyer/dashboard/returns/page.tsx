@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Package, CheckCircle, Clock, AlertCircle, DollarSign, Download, X, Send } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/hooks/useToast';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 
 
@@ -80,7 +80,7 @@ export default function ReturnsPage() {
   const createReturnMutation = trpc.refund.requestReturn.useMutation();
   const utils = trpc.useUtils();
 
-  const { toast } = useToast();
+  const toastHandler = useToast();
 
   useEffect(() => {
     if (refundsData) {
@@ -106,11 +106,7 @@ export default function ReturnsPage() {
   const handleInitiateReturn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.reason || !formData.description || !formData.orderId) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all fields',
-        variant: 'destructive',
-      });
+      toastHandler.error('Please fill in all fields');
       return;
     }
 
@@ -127,31 +123,17 @@ export default function ReturnsPage() {
       setShowInitiateModal(false);
       await utils.refund.getMyReturns.invalidate();
 
-      toast({
-        title: 'Return initiated',
-        description: 'Your return request has been submitted successfully',
-      });
+      toastHandler.success('Your return request has been submitted successfully');
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: extractErrorMessage(error),
-        variant: 'destructive',
-      });
+      toastHandler.error(extractErrorMessage(error));
     }
   };
 
   const handleDownloadReceipt = (refundId: string) => {
     try {
-      toast({
-        title: 'Downloading',
-        description: 'Receipt download started',
-      });
+      toastHandler.info('Receipt download started');
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to download receipt',
-        variant: 'destructive',
-      });
+      toastHandler.error('Failed to download receipt');
     }
   };
 
@@ -297,7 +279,7 @@ export default function ReturnsPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-[#8451e1] font-bold text-lg">${refund.amount.toFixed(2)}</p>
+                        <p className="text-[#8451e1] font-bold text-lg">₦{refund.amount.toFixed(2)}</p>
                         <span className={`text-xs font-medium ${
                           refund.status === 'completed' ? 'text-green-400' :
                           refund.status === 'processing' ? 'text-blue-400' :

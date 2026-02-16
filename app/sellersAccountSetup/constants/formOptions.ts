@@ -73,12 +73,7 @@ export const WALLET_TYPES = [
 ];
 
 export const PAYOUT_TOKENS = [
-  { label: '🪙 USDC (Circle Stablecoin)', value: 'USDC', type: 'Stablecoin', volatility: '0%', adoption: 'Very High', liquidity: 'Excellent' },
-  { label: '🪙 USDT (Tether Stablecoin)', value: 'USDT', type: 'Stablecoin', volatility: '0%', adoption: 'Highest', liquidity: 'Excellent' },
-  { label: '🪙 DAI (Decentralized Stablecoin)', value: 'DAI', type: 'Stablecoin', volatility: '0%', adoption: 'High', liquidity: 'Good' },
-  { label: '◎ SOL (Solana Native)', value: 'solana', type: 'Native Token', volatility: 'High', adoption: 'High', liquidity: 'Very Good' },
-  { label: '⟠ ETH (Ethereum)', value: 'ETH', type: 'Layer 1', volatility: 'High', adoption: 'Highest', liquidity: 'Excellent' },
-  { label: '🟣 MATIC (Polygon)', value: 'MATIC', type: 'Layer 2', volatility: 'High', adoption: 'High', liquidity: 'Good' },
+  { label: '🪙 USDC (SOL)', value: 'USDC', type: 'Stablecoin', volatility: '0%', adoption: 'Very High', liquidity: 'Excellent' },
 ];
 
 export const PRODUCT_CATEGORIES = [

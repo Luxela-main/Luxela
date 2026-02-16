@@ -1,10 +1,19 @@
 import { createTRPCRouter, publicProcedure } from "../trpc/trpc";
 import { TRPCError } from "@trpc/server";
 import { db } from "../db";
-import { brands, listings, sellerBusiness, buyerBrandFollows, reviews, productImages, collectionItems, products, collections } from "../db/schema";
+import {
+  brands,
+  listings,
+  sellerBusiness,
+  buyerBrandFollows,
+  reviews,
+  productImages,
+  collectionItems,
+  products,
+  collections,
+} from "../db/schema";
 import { eq, desc, asc, countDistinct, count, sql, inArray, and } from "drizzle-orm";
 import { z } from "zod";
-import { redis } from "../lib/redis";
 
 export const brandsRouter = createTRPCRouter({
   getAllBrands: publicProcedure
@@ -40,7 +49,6 @@ export const brandsRouter = createTRPCRouter({
             totalProducts: z.number(),
             followersCount: z.number(),
             sellerId: z.string().uuid(),
-            // Seller/Store information
             storeLogo: z.string().nullable(),
             storeBanner: z.string().nullable(),
             storeDescription: z.string().nullable(),
@@ -56,29 +64,21 @@ export const brandsRouter = createTRPCRouter({
       try {
         const offset = (input.page - 1) * input.limit;
 
-        console.log('\n=== getAllBrands Query Started ===');
-        console.log('Input:', { page: input.page, limit: input.limit, search: input.search, sortBy: input.sortBy });
+        console.log("=== getAllBrands Query Started ===");
+        console.log("Input:", {
+          page: input.page,
+          limit: input.limit,
+          search: input.search,
+          sortBy: input.sortBy,
+        });
 
         // Build where condition
         const whereCondition = input.search
           ? sql`(${brands.name} ILIKE ${`%${input.search}%`} OR ${brands.description} ILIKE ${`%${input.search}%`})`
           : undefined;
 
-        // Determine sort order based on sortBy parameter
-        let orderByClause = desc(brands.totalProducts); 
-        if (input.sortBy === "name") {
-          orderByClause = asc(brands.name);
-        } else if (input.sortBy === "rating") {
-          orderByClause = desc(brands.rating);
-        } else if (input.sortBy === "followers") {
-          // For followers, we'll need to handle in-memory sorting due to join complexity
-          orderByClause = desc(brands.id); // temporary, will re-sort after fetching counts
-        } else if (input.sortBy === "products") {
-          orderByClause = desc(brands.totalProducts);
-        }
-
-        // Get total count first (more efficient)
-        console.log('Counting total brands...');
+        // Get total count first
+        console.log("Counting total brands...");
         let countQuery = db
           .select({ count: countDistinct(brands.id) })
           .from(brands);
@@ -92,8 +92,16 @@ export const brandsRouter = createTRPCRouter({
         const totalPages = Math.ceil(total / input.limit);
         console.log(`✓ Total brands: ${total}, totalPages: ${totalPages}`);
 
+        // Determine sort order
+        let orderByClause = desc(brands.totalProducts);
+        if (input.sortBy === "name") {
+          orderByClause = asc(brands.name);
+        } else if (input.sortBy === "rating") {
+          orderByClause = desc(brands.rating);
+        }
+
         // Fetch paginated brands with seller info in single query
-        console.log('Fetching paginated brands with seller info...');
+        console.log("Fetching paginated brands with seller info...");
         let brandsQuery = db
           .select({
             id: brands.id,
@@ -120,82 +128,63 @@ export const brandsRouter = createTRPCRouter({
           .orderBy(orderByClause)
           .limit(input.limit)
           .offset(offset);
-        
+
         console.log(`✓ Fetched ${allBrands.length} brands`);
 
-        // Prepare seller and brand IDs for batch queries
-        const sellerIds: string[] = Array.from(new Set(allBrands.map((b: any) => b.sellerId))) as string[]; 
+        // Prepare IDs for batch queries
+        const sellerIds: string[] = Array.from(
+          new Set(allBrands.map((b: any) => b.sellerId))
+        ) as string[];
         const brandIds: string[] = allBrands.map((b: any) => b.id) as string[];
 
-        // Execute product and follower count queries with Redis caching
+        // Execute product and follower count queries IN PARALLEL (optimization!)
         console.log(`Fetching counts for ${allBrands.length} brands...`);
-        
-        // Check Redis cache first
-        const cacheKey = 'brands:counts:cache';
-        let cachedCounts: any = null;
-        try {
-          const cached = await redis.get(cacheKey);
-          if (cached) {
-            cachedCounts = JSON.parse(cached);
-            console.log('✓ Using cached counts from Redis');
-          }
-        } catch (cacheErr) {
-          console.warn('Redis cache miss or error, will fetch from DB');
-        }
 
-        let productCountsResult: any, followerCountsResult: any;
+        const [productCountsResult, followerCountsResult] = await Promise.all([
+          // Product counts (only for this page's sellers)
+          db
+            .select({ sellerId: listings.sellerId, count: count() })
+            .from(listings)
+            .where(
+              and(
+                inArray(listings.sellerId, sellerIds),
+                eq(listings.status, "approved")
+              )
+            )
+            .groupBy(listings.sellerId),
+          // Follower counts (only for this page's brands)
+          db
+            .select({
+              brandId: buyerBrandFollows.brandId,
+              count: count(),
+            })
+            .from(buyerBrandFollows)
+            .where(inArray(buyerBrandFollows.brandId, brandIds))
+            .groupBy(buyerBrandFollows.brandId),
+        ]);
 
-        if (cachedCounts) {
-          // Use cached data
-          productCountsResult = cachedCounts.products || [];
-          followerCountsResult = cachedCounts.followers || [];
-        } else {
-          // Fetch from database and cache for 5 minutes
-          [productCountsResult, followerCountsResult] = await Promise.all([
-            // Fetch product counts ONLY for sellers on current page
-            db
-              .select({ sellerId: listings.sellerId, count: count() })
-              .from(listings)
-              .where(inArray(listings.sellerId, sellerIds))
-              .groupBy(listings.sellerId),
-            // Fetch follower counts ONLY for brands on current page
-            db
-              .select({
-                brandId: buyerBrandFollows.brandId,
-                count: count(),
-              })
-              .from(buyerBrandFollows)
-              .where(inArray(buyerBrandFollows.brandId, brandIds))
-              .groupBy(buyerBrandFollows.brandId),
-          ]);
-
-          // Cache the results for 5 minutes
-          try {
-            await redis.setex(cacheKey, 300, JSON.stringify({
-              products: productCountsResult,
-              followers: followerCountsResult,
-            }));
-            console.log('✓ Cached counts in Redis for 5 minutes');
-          } catch (cacheErr) {
-            console.warn('Failed to cache counts in Redis:', cacheErr);
-          }
-        }
         console.log(`✓ Product and follower counts fetched in parallel`);
-        
+
+        // Build maps for O(1) lookup
         const productCountsMap = new Map(
-          (productCountsResult || []).map((r: any) => [r.sellerId, Number(r.count ?? 0)])
+          (productCountsResult || []).map((r: any) => [
+            r.sellerId,
+            Number(r.count ?? 0),
+          ])
         );
         const followerCountsMap = new Map(
-          (followerCountsResult || []).map((r: any) => [r.brandId, Number(r.count ?? 0)])
+          (followerCountsResult || []).map((r: any) => [
+            r.brandId,
+            Number(r.count ?? 0),
+          ])
         );
-        console.log(`✓ Counts fetched (product & follower)`);
 
         // Build final result
         console.log(`Building final result...`);
         let brandsWithCounts = allBrands.map((item: any) => {
           const productCount = productCountsMap.get(item.sellerId) ?? 0;
           const followersCount = followerCountsMap.get(item.id) ?? 0;
-            
+
           return {
             id: item.id,
             name: item.name,
@@ -214,9 +203,11 @@ export const brandsRouter = createTRPCRouter({
           };
         });
 
-        // Handle in-memory sorting for followers (since we need the count which comes from a separate query)
+        // Sort in-memory only for followers (needs the count from separate query)
         if (input.sortBy === "followers") {
-          brandsWithCounts.sort((a: any, b: any) => b.followersCount - a.followersCount);
+          brandsWithCounts.sort(
+            (a: any, b: any) => b.followersCount - a.followersCount
+          );
         }
 
         const result = {
@@ -225,43 +216,39 @@ export const brandsRouter = createTRPCRouter({
           page: input.page,
           totalPages,
         };
-        
-        console.log('=== getAllBrands Query Completed ===\n');
+
+        console.log("=== getAllBrands Query Completed ===\n");
         return result;
       } catch (error: any) {
-        console.error("\n!!! ERROR in getAllBrands !!!", {
+        console.error("!!! ERROR in getAllBrands !!!", {
           message: error?.message || "Unknown error",
           code: error?.code,
           status: error?.status,
-          name: error?.name,
-          errno: error?.errno,
-          sqlState: error?.sqlState,
           stack: error?.stack,
-          fullError: JSON.stringify(error, null, 2),
           input,
         });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to fetch brands: ${error?.message || error?.name || "Unknown database error"}`,
+          message: `Failed to fetch brands: ${
+            error?.message || error?.name || "Unknown database error"
+          }`,
           cause: error,
         });
       }
     }),
 
-  getBrandDetails: publicProcedure
+  getBrandBySlug: publicProcedure
     .meta({
       openapi: {
         method: "GET",
-        path: "/brands/:brandId",
+        path: "/brands/by-slug/:slug",
         tags: ["Brands"],
-        summary: "Get brand details with products",
+        summary: "Get brand details by slug",
       },
     })
     .input(
       z.object({
-        brandId: z.string().uuid(),
-        page: z.number().int().positive().default(1),
-        limit: z.number().int().positive().max(50).default(20),
+        slug: z.string(),
       })
     )
     .output(
@@ -276,28 +263,21 @@ export const brandsRouter = createTRPCRouter({
           rating: z.string(),
           totalProducts: z.number(),
           followersCount: z.number(),
+          totalCollections: z.number(),
+          reviewsCount: z.number(),
           sellerId: z.string().uuid(),
-          // Seller/Store information
           storeLogo: z.string().nullable(),
           storeBanner: z.string().nullable(),
           storeDescription: z.string().nullable(),
           brandName: z.string().nullable(),
         }),
-        products: z.array(
-          z.object({
-            id: z.string().uuid(),
-            name: z.string(),
-            slug: z.string(),
-            description: z.string().nullable(),
-            image: z.string().nullable(),
-            price: z.number(),
-            rating: z.number().nullable(),
-          })
-        ),
       })
     )
     .query(async ({ input }) => {
       try {
+        console.log("=== getBrandBySlug Query Started ===");
+        console.log("Brand slug:", input.slug);
+
         const brandData = await db
           .select({
             id: brands.id,
@@ -307,7 +287,6 @@ export const brandsRouter = createTRPCRouter({
             logoImage: brands.logoImage,
             heroImage: brands.heroImage,
             rating: brands.rating,
-            totalProducts: brands.totalProducts,
             sellerId: brands.sellerId,
             storeLogo: sellerBusiness.storeLogo,
             storeBanner: sellerBusiness.storeBanner,
@@ -315,47 +294,61 @@ export const brandsRouter = createTRPCRouter({
             brandName: sellerBusiness.brandName,
           })
           .from(brands)
-          .leftJoin(sellerBusiness, eq(brands.sellerId, sellerBusiness.sellerId))
-          .where(eq(brands.id, input.brandId))
+          .leftJoin(
+            sellerBusiness,
+            eq(brands.sellerId, sellerBusiness.sellerId)
+          )
+          .where(eq(brands.slug, input.slug))
           .limit(1);
 
-        if (!brandData.length) {
-          throw new Error("Brand not found");
+        if (!brandData || !brandData.length) {
+          console.error(`[getBrandBySlug] Brand not found for slug: "${input.slug}"`);
+          throw new Error(`Brand not found: ${input.slug}`);
         }
 
         const brand = brandData[0];
-        const offset = (input.page - 1) * input.limit;
+        console.log(`✓ Found brand: ${brand.name} (${brand.id})`);
 
-        // Get listings for this brand with pagination
-        const brandListings = await db
-          .select({
-            id: listings.id,
-            name: listings.title,
-            slug: listings.slug,
-            description: listings.description,
-            image: listings.image,
-            price: listings.priceCents,
-          })
-          .from(listings)
-          .where(eq(listings.sellerId, brand.sellerId))
-          .orderBy(desc(listings.createdAt))
-          .limit(input.limit)
-          .offset(offset);
-
-        // Count total products for this seller
-        const totalProductCountResult = await db
-          .select({ count: count() })
-          .from(listings)
-          .where(eq(listings.sellerId, brand.sellerId));
-
-        // Count followers for this brand
-        const followersCountResult = await db
-          .select({ count: count() })
-          .from(buyerBrandFollows)
-          .where(eq(buyerBrandFollows.brandId, input.brandId));
+        // OPTIMIZATION: Execute all counts in parallel instead of sequentially
+        const [
+          totalProductCountResult,
+          followersCountResult,
+          totalCollectionsResult,
+          reviewsCountResult,
+        ] = await Promise.all([
+          db
+            .select({ count: count() })
+            .from(listings)
+            .where(eq(listings.sellerId, brand.sellerId)),
+          db
+            .select({ count: count() })
+            .from(buyerBrandFollows)
+            .where(eq(buyerBrandFollows.brandId, brand.id)),
+          db
+            .select({ count: count() })
+            .from(listings)
+            .where(
+              and(
+                eq(listings.sellerId, brand.sellerId),
+                eq(listings.type, "collection")
+              )
+            ),
+          db
+            .select({ count: count() })
+            .from(reviews)
+            .innerJoin(listings, eq(reviews.listingId, listings.id))
+            .where(eq(listings.sellerId, brand.sellerId)),
+        ]);
 
         const totalProductCount = Number(totalProductCountResult[0]?.count ?? 0);
         const followersCount = Number(followersCountResult[0]?.count ?? 0);
+        const totalCollections = Number(totalCollectionsResult[0]?.count ?? 0);
+        const reviewsCount = Number(reviewsCountResult[0]?.count ?? 0);
+
+        console.log(
+          `✓ Products: ${totalProductCount}, Followers: ${followersCount}, Collections: ${totalCollections}, Reviews: ${reviewsCount}`
+        );
+        console.log("=== getBrandBySlug Query Completed ===\n");
 
         return {
           brand: {
@@ -368,25 +361,17 @@ export const brandsRouter = createTRPCRouter({
             rating: brand.rating ? String(brand.rating) : "0",
             totalProducts: totalProductCount,
             followersCount,
+            totalCollections,
+            reviewsCount,
             sellerId: brand.sellerId,
             storeLogo: brand.storeLogo,
             storeBanner: brand.storeBanner,
             storeDescription: brand.storeDescription,
             brandName: brand.brandName,
           },
-          products: brandListings.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            slug: p.slug || p.id,
-            description: p.description,
-            image: p.image,
-            price: (p.price || 0) / 100,
-            rating: null,
-          })),
         };
       } catch (error: any) {
-        // Handle specific error case for brand not found
-        if (error?.message === "Brand not found") {
+        if (error?.message?.includes("Brand not found")) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Brand not found",
@@ -394,15 +379,17 @@ export const brandsRouter = createTRPCRouter({
           });
         }
 
-        console.error("Error fetching brand details:", {
+        console.error("Error fetching brand by slug:", {
           message: error?.message || "Unknown error",
           code: error?.code,
           stack: error?.stack,
-          brandId: input.brandId,
+          slug: input.slug,
         });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to fetch brand details: ${error?.message || "Unknown database error"}`,
+          message: `Failed to fetch brand: ${
+            error?.message || "Unknown database error"
+          }`,
           cause: error,
         });
       }
@@ -446,8 +433,8 @@ export const brandsRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       try {
-        console.log('\n=== getBrandById Query Started ===');
-        console.log('Brand ID:', input.brandId);
+        console.log("=== getBrandById Query Started ===");
+        console.log("Brand ID:", input.brandId);
 
         const brandData = await db
           .select({
@@ -465,7 +452,10 @@ export const brandsRouter = createTRPCRouter({
             brandName: sellerBusiness.brandName,
           })
           .from(brands)
-          .leftJoin(sellerBusiness, eq(brands.sellerId, sellerBusiness.sellerId))
+          .leftJoin(
+            sellerBusiness,
+            eq(brands.sellerId, sellerBusiness.sellerId)
+          )
           .where(eq(brands.id, input.brandId))
           .limit(1);
 
@@ -477,34 +467,46 @@ export const brandsRouter = createTRPCRouter({
         const brand = brandData[0];
         console.log(`✓ Found brand: ${brand.name} (${brand.id})`);
 
-        const totalProductCountResult = await db
-          .select({ count: count() })
-          .from(listings)
-          .where(eq(listings.sellerId, brand.sellerId));
-
-        const followersCountResult = await db
-          .select({ count: count() })
-          .from(buyerBrandFollows)
-          .where(eq(buyerBrandFollows.brandId, brand.id));
-
-        const totalCollectionsResult = await db
-          .select({ count: count() })
-          .from(listings)
-          .where(and(eq(listings.sellerId, brand.sellerId), eq(listings.type, 'collection')));
-
-        const reviewsCountResult = await db
-          .select({ count: count() })
-          .from(reviews)
-          .innerJoin(listings, eq(reviews.listingId, listings.id))
-          .where(eq(listings.sellerId, brand.sellerId));
+        // OPTIMIZATION: Execute all counts in parallel instead of sequentially
+        const [
+          totalProductCountResult,
+          followersCountResult,
+          totalCollectionsResult,
+          reviewsCountResult,
+        ] = await Promise.all([
+          db
+            .select({ count: count() })
+            .from(listings)
+            .where(eq(listings.sellerId, brand.sellerId)),
+          db
+            .select({ count: count() })
+            .from(buyerBrandFollows)
+            .where(eq(buyerBrandFollows.brandId, brand.id)),
+          db
+            .select({ count: count() })
+            .from(listings)
+            .where(
+              and(
+                eq(listings.sellerId, brand.sellerId),
+                eq(listings.type, "collection")
+              )
+            ),
+          db
+            .select({ count: count() })
+            .from(reviews)
+            .innerJoin(listings, eq(reviews.listingId, listings.id))
+            .where(eq(listings.sellerId, brand.sellerId)),
+        ]);
 
         const totalProductCount = Number(totalProductCountResult[0]?.count ?? 0);
         const followersCount = Number(followersCountResult[0]?.count ?? 0);
         const totalCollections = Number(totalCollectionsResult[0]?.count ?? 0);
         const reviewsCount = Number(reviewsCountResult[0]?.count ?? 0);
 
-        console.log(`✓ Products: ${totalProductCount}, Followers: ${followersCount}, Collections: ${totalCollections}, Reviews: ${reviewsCount}`);
-        console.log('=== getBrandById Query Completed ===\n');
+        console.log(
+          `✓ Products: ${totalProductCount}, Followers: ${followersCount}, Collections: ${totalCollections}, Reviews: ${reviewsCount}`
+        );
+        console.log("=== getBrandById Query Completed ===\n");
 
         return {
           brand: {
@@ -543,161 +545,14 @@ export const brandsRouter = createTRPCRouter({
         });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to fetch brand: ${error?.message || "Unknown database error"}`,
+          message: `Failed to fetch brand: ${
+            error?.message || "Unknown database error"
+          }`,
           cause: error,
         });
       }
     }),
 
-  getBrandBySlug: publicProcedure
-    .meta({
-      openapi: {
-        method: "GET",
-        path: "/brands/by-slug/:slug",
-        tags: ["Brands"],
-        summary: "Get brand details by slug",
-      },
-    })
-    .input(
-      z.object({
-        slug: z.string(),
-      })
-    )
-    .output(
-      z.object({
-        brand: z.object({
-          id: z.string().uuid(),
-          name: z.string(),
-          slug: z.string(),
-          description: z.string().nullable(),
-          logoImage: z.string().nullable(),
-          heroImage: z.string().nullable(),
-          rating: z.string(),
-          totalProducts: z.number(),
-          followersCount: z.number(),
-          totalCollections: z.number(),
-          reviewsCount: z.number(),
-          sellerId: z.string().uuid(),
-          // Seller/Store information
-          storeLogo: z.string().nullable(),
-          storeBanner: z.string().nullable(),
-          storeDescription: z.string().nullable(),
-          brandName: z.string().nullable(),
-        }),
-      })
-    )
-    .query(async ({ input }) => {
-      try {
-        console.log('\\n=== getBrandBySlug Query Started ===');
-        console.log('[getBrandBySlug] Requesting slug:', input.slug);
-
-        const brandData = await db
-          .select({
-            id: brands.id,
-            name: brands.name,
-            slug: brands.slug,
-            description: brands.description,
-            logoImage: brands.logoImage,
-            heroImage: brands.heroImage,
-            rating: brands.rating,
-            sellerId: brands.sellerId,
-            storeLogo: sellerBusiness.storeLogo,
-            storeBanner: sellerBusiness.storeBanner,
-            storeDescription: sellerBusiness.storeDescription,
-            brandName: sellerBusiness.brandName,
-          })
-          .from(brands)
-          .leftJoin(sellerBusiness, eq(brands.sellerId, sellerBusiness.sellerId))
-          .where(eq(brands.slug, input.slug))
-          .limit(1);
-
-        if (!brandData || !brandData.length) {
-          console.error(`[getBrandBySlug] Brand not found for slug: "${input.slug}"`);
-          throw new Error(`Brand not found: ${input.slug}`);
-        }
-
-        const brand = brandData[0];
-        console.log(`✓ Found brand: ${brand.name} (${brand.id})`);
-
-        // Count total products for this seller
-        const totalProductCountResult = await db
-          .select({ count: count() })
-          .from(listings)
-          .where(eq(listings.sellerId, brand.sellerId));
-
-        // Count followers for this brand
-        const followersCountResult = await db
-          .select({ count: count() })
-          .from(buyerBrandFollows)
-          .where(eq(buyerBrandFollows.brandId, brand.id));
-
-        // Count total collections for this brand (collections are listings with type='collection')
-        const totalCollectionsResult = await db
-          .select({ count: count() })
-          .from(listings)
-          .where(and(eq(listings.sellerId, brand.sellerId), eq(listings.type, 'collection')));
-
-        // Count total reviews for this brand (reviews are linked to listings)
-        // Since listings don't have brandId directly, we need to check through products or collections
-        const reviewsCountResult = await db
-          .select({ count: count() })
-          .from(reviews)
-          .innerJoin(listings, eq(reviews.listingId, listings.id))
-          .where(eq(listings.sellerId, brand.sellerId));
-
-        const totalProductCount = Number(totalProductCountResult[0]?.count ?? 0);
-        const followersCount = Number(followersCountResult[0]?.count ?? 0);
-        const totalCollections = Number(totalCollectionsResult[0]?.count ?? 0);
-        const reviewsCount = Number(reviewsCountResult[0]?.count ?? 0);
-
-        console.log(`✓ Products: ${totalProductCount}, Followers: ${followersCount}`);
-        console.log('=== getBrandBySlug Query Completed ===\\n');
-
-        return {
-          brand: {
-            id: brand.id,
-            name: brand.name,
-            slug: brand.slug,
-            description: brand.description,
-            logoImage: brand.logoImage || brand.storeLogo,
-            heroImage: brand.heroImage || brand.storeBanner,
-            rating: brand.rating ? String(brand.rating) : "0",
-            totalProducts: totalProductCount,
-            followersCount,
-            totalCollections,
-            reviewsCount,
-            sellerId: brand.sellerId,
-            storeLogo: brand.storeLogo,
-            storeBanner: brand.storeBanner,
-            storeDescription: brand.storeDescription,
-            brandName: brand.brandName,
-          },
-        };
-      } catch (error: any) {
-        // Handle specific error case for brand not found
-        if (error?.message?.includes("Brand not found")) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: `Brand "${input.slug}" not found`,
-            cause: error,
-          });
-        }
-
-        console.error("Error fetching brand by slug:", {
-          message: error?.message || "Unknown error",
-          code: error?.code,
-          stack: error?.stack,
-          slug: input.slug,
-        });
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to fetch brand: ${error?.message || "Unknown database error"}`,
-          cause: error,
-        });
-      }
-    }),
-
-  // Get approved listings for a specific brand
   getBrandListings: publicProcedure
     .meta({
       openapi: {
@@ -716,61 +571,7 @@ export const brandsRouter = createTRPCRouter({
     )
     .output(
       z.object({
-        listings: z.array(
-          z.object({
-            id: z.string().uuid(),
-            title: z.string(),
-            description: z.string().nullable(),
-            image: z.string().nullable(),
-            imagesJson: z.string().nullable(),
-            price: z.number(),
-            price_cents: z.number(),
-            currency: z.string(),
-            category: z.string().nullable(),
-            type: z.enum(["single", "collection"]),
-            quantity_available: z.number(),
-            seller_id: z.string().uuid(),
-            created_at: z.date(),
-            updated_at: z.date(),
-            slug: z.string().nullable(),
-            sku: z.string().nullable(),
-            status: z.string(),
-            barcode: z.string().nullable().optional(),
-            supplyCapacity: z.string().nullable().optional(),
-            sizes: z.array(z.string()).nullable().optional(),
-            colors: z.array(z.object({
-              colorName: z.string(),
-              colorHex: z.string(),
-            })).nullable().optional(),
-            materialComposition: z.string().nullable().optional(),
-            shippingOption: z.string().nullable().optional(),
-            etaDomestic: z.string().nullable().optional(),
-            etaInternational: z.string().nullable().optional(),
-            refundPolicy: z.string().nullable().optional(),
-            localPricing: z.string().nullable().optional(),
-            videoUrl: z.string().nullable().optional(),
-            careInstructions: z.string().nullable().optional(),
-            limitedEditionBadge: z.string().nullable().optional(),
-            releaseDuration: z.string().nullable().optional(),
-            additionalTargetAudience: z.string().nullable().optional(),
-            metaDescription: z.string().nullable().optional(),
-            // Collection-specific fields
-            collectionItemCount: z.number().optional(),
-            collectionTotalPrice: z.number().optional(),
-            collectionProducts: z.array(z.object({
-              id: z.string().uuid(),
-              title: z.string(),
-              description: z.string().nullable(),
-              price: z.number(),
-              price_cents: z.number(),
-              images: z.array(z.string()),
-              colors: z.any().nullable(),
-              sizes: z.any().nullable(),
-              material: z.string().nullable(),
-              careInstructions: z.string().nullable(),
-            })).optional(),
-          })
-        ),
+        listings: z.array(z.any()),
         total: z.number(),
         page: z.number(),
         totalPages: z.number(),
@@ -781,7 +582,7 @@ export const brandsRouter = createTRPCRouter({
         console.log("=== getBrandListings Query Started ===");
         console.log("Brand ID:", input.brandId);
 
-        // First verify the brand exists
+        // Verify brand exists
         const brandExists = await db
           .select({ id: brands.id, sellerId: brands.sellerId })
           .from(brands)
@@ -789,7 +590,6 @@ export const brandsRouter = createTRPCRouter({
           .limit(1);
 
         if (!brandExists.length) {
-          console.log(`Brand not found: ${input.brandId}`);
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Brand not found",
@@ -799,441 +599,26 @@ export const brandsRouter = createTRPCRouter({
         const brand = brandExists[0];
         const offset = (input.page - 1) * input.limit;
 
-        console.log(`[getBrandListings] Brand found:`, { id: brand.id, sellerId: brand.sellerId });
-        console.log(`[getBrandListings] Fetching products for brand ${brand.id}`);
+        console.log(`[getBrandListings] Brand found:`, {
+          id: brand.id,
+          sellerId: brand.sellerId,
+        });
 
-        // First get all products for this brand
-        // Count total approved listings for ALL products from this seller
+        // Count total approved listings
         const countResult = await db
           .select({ count: count() })
           .from(listings)
-          .where(and(
-            eq(listings.sellerId, brand.sellerId),
-            // Only show approved listings to buyers
-            eq(listings.status, 'approved')
-          ));
+          .where(
+            and(
+              eq(listings.sellerId, brand.sellerId),
+              eq(listings.status, "approved")
+            )
+          );
 
         const total = Number(countResult[0]?.count ?? 0);
-        console.log(`[getBrandListings] Total listings (approved) from seller: ${total}`);
 
-        // Fetch approved listings for ALL products from this seller
-        console.log(`[getBrandListings] Fetching listings with offset ${offset}, limit ${input.limit}`);
+        // Fetch paginated approved listings
         const brandListings = await db
-            .select({
-              id: listings.id,
-            title: listings.title,
-            description: listings.description,
-            image: listings.image,
-            price_cents: listings.priceCents,
-            currency: listings.currency,
-            category: listings.category,
-            type: listings.type,
-            quantity_available: listings.quantityAvailable,
-            seller_id: listings.sellerId,
-            created_at: listings.createdAt,
-            updated_at: listings.updatedAt,
-            slug: listings.slug,
-            sku: listings.sku,
-            status: listings.status,
-            barcode: listings.barcode,
-            supplyCapacity: listings.supplyCapacity,
-            imagesJson: listings.imagesJson,
-            colorsAvailable: listings.colorsAvailable,
-            sizes: listings.sizesJson,
-            materialComposition: listings.materialComposition,
-            shippingOption: listings.shippingOption,
-            etaDomestic: listings.etaDomestic,
-            etaInternational: listings.etaInternational,
-            refundPolicy: listings.refundPolicy,
-            localPricing: listings.localPricing,
-            videoUrl: listings.videoUrl,
-            careInstructions: listings.careInstructions,
-            limitedEditionBadge: listings.limitedEditionBadge,
-            releaseDuration: listings.releaseDuration,
-            additionalTargetAudience: listings.additionalTargetAudience,
-            metaDescription: listings.metaDescription,
-            productId: listings.productId,
-          })
-            .from(listings)
-            .where(and(
-              eq(listings.sellerId, brand.sellerId),
-              // Only show approved listings to buyers
-              eq(listings.status, 'approved')
-            ))
-            .orderBy(desc(listings.createdAt))
-            .limit(input.limit)
-            .offset(offset);
-          console.log(`[getBrandListings] Fetched ${brandListings.length} listings`);
-          
-          // Apply null coalescing for fields that can be nullable
-          const coalescedListings = brandListings.map((l: any) => ({
-            ...l,
-            price_cents: l.price_cents ?? 0,
-            currency: l.currency ?? 'NGN',
-            category: l.category ?? 'general',
-            quantity_available: l.quantity_available ?? 0,
-          }));
-
-        console.log(`[getBrandListings] Processing ${coalescedListings.length} listings for enrichment`);
-
-        // Enrich listings with product images and parsed data (only if there are listings)
-        const enrichedListings = await Promise.all(
-          brandListings.map(async (listing: any) => {
-            // Check if this is a collection
-            const isCollection = listing.type === 'collection';
-            let collectionItemCount = 0;
-            let collectionTotalPrice = 0;
-            let collectionProductsList: any[] = [];
-            let allCollectionImages: string[] = [];
-
-            if (isCollection && listing.id) {
-              console.log(`[getBrandListings] Processing collection: ${listing.title} (${listing.id})`);
-              // Fetch collection items
-              const collectionItemsList = await db
-                .select()
-                .from(collectionItems)
-                .where(eq(collectionItems.collectionId, listing.id))
-                .orderBy(collectionItems.position);
-
-              collectionItemCount = collectionItemsList.length;
-              console.log(`[getBrandListings] Collection has ${collectionItemCount} items`);
-
-              if (collectionItemsList.length > 0) {
-                const productIds = collectionItemsList.map((item: any) => item.productId);
-                
-                // Fetch all products in collection
-                const productsInCollection = await db
-                  .select()
-                  .from(products)
-                  .where(inArray(products.id, productIds));
-
-                // Fetch all product listings to get pricing and details
-                const productListings = await db
-                  .select()
-                  .from(listings)
-                  .where(inArray(listings.productId, productIds));
-
-                // Fetch all images for collection products
-                const allProductImages = await db
-                  .select()
-                  .from(productImages)
-                  .where(inArray(productImages.productId, productIds))
-                  .orderBy(productImages.position);
-                
-                console.log(`[getBrandListings] Fetched ${allProductImages.length} images for ${productIds.length} products in collection`);
-
-                // Build product data with pricing
-                collectionProductsList = collectionItemsList
-                  .map((collectionItem: any) => {
-                    const product = productsInCollection.find((p: any) => p.id === collectionItem.productId);
-                    const productListing = productListings.find((l: any) => l.productId === collectionItem.productId);
-                    const productImages = allProductImages.filter((img: any) => img.productId === collectionItem.productId);
-
-                    if (!product) return null;
-
-                    const price = productListing?.priceCents ? productListing.priceCents / 100 : (product.priceCents ? product.priceCents / 100 : 0);
-                    collectionTotalPrice += price;
-
-                    // Collect all images for collection
-                    productImages.forEach((img: any) => {
-                      if (img.imageUrl && !allCollectionImages.includes(img.imageUrl)) {
-                        allCollectionImages.push(img.imageUrl);
-                      }
-                    });
-                    if (!collectionProductsList[collectionProductsList.length - 1]) {
-                      console.log(`[getBrandListings] Product ${collectionItem.productId} has ${productImages.length} images`);
-                    }
-
-                    let colors = null;
-                    let sizes = null;
-                    if (productListing?.colorsAvailable) {
-                      try {
-                        colors = JSON.parse(productListing.colorsAvailable);
-                      } catch (e) {
-                        // Silently fail
-                      }
-                    }
-                    if (productListing?.sizesJson) {
-                      try {
-                        sizes = JSON.parse(productListing.sizesJson);
-                      } catch (e) {
-                        // Silently fail
-                      }
-                    }
-
-                    return {
-                      id: product.id,
-                      title: product.name,
-                      description: product.description,
-                      price,
-                      price_cents: productListing?.priceCents ?? product.priceCents ?? 0,
-                      images: productImages.map((img: any) => img.imageUrl),
-                      colors,
-                      sizes,
-                      material: productListing?.materialComposition || null,
-                      careInstructions: productListing?.careInstructions || null,
-                    };
-                  })
-                  .filter((p: any) => p !== null);
-              }
-            }
-
-            // Fetch images from productImages table if available (for single listings or collection cover image)
-            let listingImages: any[] = [];
-            if (listing.productId) {
-              listingImages = await db
-                .select()
-                .from(productImages)
-                .where(eq(productImages.productId, listing.productId))
-                .orderBy(productImages.position);
-            }
-
-            // Fallback to parsing imagesJson if no productImages found
-            if (listingImages.length === 0 && listing.imagesJson) {
-              try {
-                const parsedImages = JSON.parse(listing.imagesJson);
-                if (Array.isArray(parsedImages)) {
-                  listingImages = parsedImages.map((img: any, index: number) => ({
-                    imageUrl: typeof img === 'string' ? img : img.imageUrl || img.url,
-                    position: index,
-                  }));
-                }
-              } catch (e) {
-                console.warn('[getBrandListings] Failed to parse imagesJson for listing:', listing.id);
-              }
-            }
-
-            // Extract URLs and ensure primary image is included
-            let imageUrls = listingImages
-              .map((img) => img.imageUrl || img.url || (typeof img === 'string' ? img : ''))
-              .filter((url) => url && typeof url === 'string' && url.trim() !== '');
-
-            // For collections, include all product images
-            if (isCollection) {
-              console.log(`[getBrandListings] Collection ${listing.id}: imageUrls before = ${imageUrls.length}, allCollectionImages = ${allCollectionImages.length}`);
-              if (allCollectionImages.length > 0) {
-                imageUrls = [...new Set([...imageUrls, ...allCollectionImages])];
-              }
-              console.log(`[getBrandListings] Collection ${listing.id}: imageUrls after = ${imageUrls.length}`);
-            }
-
-            if (imageUrls.length === 0 && listing.image) {
-              imageUrls = [listing.image];
-            }
-
-            // Parse colors and sizes
-            let colors = null;
-            let sizes = null;
-            
-            if (listing.colorsAvailable) {
-              try {
-                colors = JSON.parse(listing.colorsAvailable);
-              } catch (e) {
-                console.warn('[getBrandListings] Failed to parse colors for listing:', listing.id);
-              }
-            }
-
-            if (listing.sizes) {
-              try {
-                sizes = JSON.parse(listing.sizes);
-              } catch (e) {
-                console.warn('[getBrandListings] Failed to parse sizes for listing:', listing.id);
-              }
-            }
-
-            // Build price - for collections use the calculated total
-            const price = isCollection ? collectionTotalPrice : (listing.price_cents ? listing.price_cents / 100 : 0);
-
-            return {
-              id: listing.id,
-              title: listing.title,
-              description: listing.description,
-              image: listing.image,
-              imagesJson: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
-              price,
-              price_cents: listing.price_cents || 0,
-              currency: listing.currency || 'NGN',
-              category: listing.category || 'general',
-              type: listing.type,
-              quantity_available: listing.quantity_available || 0,
-              seller_id: listing.seller_id,
-              created_at: listing.created_at,
-              updated_at: listing.updated_at,
-              slug: listing.slug,
-              sku: listing.sku,
-              status: listing.status,
-              barcode: listing.barcode,
-              supplyCapacity: listing.supplyCapacity,
-              colors: colors,
-              sizes: sizes,
-              materialComposition: listing.materialComposition,
-              shippingOption: listing.shippingOption,
-              etaDomestic: listing.etaDomestic,
-              etaInternational: listing.etaInternational,
-              refundPolicy: listing.refundPolicy,
-              localPricing: listing.localPricing,
-              videoUrl: listing.videoUrl,
-              careInstructions: listing.careInstructions,
-              limitedEditionBadge: listing.limitedEditionBadge,
-              releaseDuration: listing.releaseDuration,
-              additionalTargetAudience: listing.additionalTargetAudience,
-              metaDescription: listing.metaDescription,
-              ...(isCollection ? {
-                collectionItemCount,
-                collectionTotalPrice,
-                collectionProducts: collectionProductsList,
-              } : {}),
-            };
-          })
-        );
-
-        const totalPages = Math.ceil(total / input.limit);
-
-        console.log(`✓ Found ${enrichedListings.length} listings for brand with complete details`);
-        console.log("=== getBrandListings Query Completed ===");
-
-        return {
-          listings: enrichedListings,
-          total,
-          page: input.page,
-          totalPages,
-        };
-      } catch (error: any) {
-        if (error.code === "NOT_FOUND") {
-          throw error;
-        }
-
-        console.error("Error fetching brand listings:", {
-          message: error?.message || "Unknown error",
-          code: error?.code,
-          brandId: input.brandId,
-        });
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch brand listings",
-          cause: error,
-        });
-      }
-    }),
-
-  // Get all seller's brands with their products from listings
-  getSellerBrandsWithProducts: publicProcedure
-    .meta({
-      openapi: {
-        method: "GET",
-        path: "/brands/seller/:sellerId/with-products",
-        tags: ["Brands"],
-        summary: "Get seller's brands with their products from listings",
-      },
-    })
-    .input(
-      z.object({
-        sellerId: z.string().uuid(),
-        page: z.number().int().positive().default(1),
-        limit: z.number().int().positive().max(100).default(20),
-      })
-    )
-    .output(
-      z.object({
-        brands: z.array(
-          z.object({
-            id: z.string().uuid(),
-            name: z.string(),
-            slug: z.string(),
-            description: z.string().nullable(),
-            logoImage: z.string().nullable(),
-            heroImage: z.string().nullable(),
-            rating: z.string(),
-            followersCount: z.number(),
-            products: z.array(
-              z.object({
-                id: z.string().uuid(),
-                title: z.string(),
-                description: z.string().nullable(),
-                image: z.string().nullable(),
-                imagesJson: z.string().nullable(),
-                price: z.number(),
-                price_cents: z.number(),
-                currency: z.string(),
-                category: z.string().nullable(),
-                type: z.enum(["single", "collection"]),
-                quantity_available: z.number(),
-                seller_id: z.string().uuid(),
-                created_at: z.date(),
-                updated_at: z.date(),
-                slug: z.string().nullable(),
-                sku: z.string().nullable(),
-                status: z.string(),
-                barcode: z.string().nullable().optional(),
-                supplyCapacity: z.string().nullable().optional(),
-                sizes: z.array(z.string()).nullable().optional(),
-                colors: z.array(z.object({
-                  colorName: z.string(),
-                  colorHex: z.string(),
-                })).nullable().optional(),
-                materialComposition: z.string().nullable().optional(),
-                shippingOption: z.string().nullable().optional(),
-                etaDomestic: z.string().nullable().optional(),
-                etaInternational: z.string().nullable().optional(),
-                refundPolicy: z.string().nullable().optional(),
-                localPricing: z.string().nullable().optional(),
-                videoUrl: z.string().nullable().optional(),
-                careInstructions: z.string().nullable().optional(),
-                limitedEditionBadge: z.string().nullable().optional(),
-                releaseDuration: z.string().nullable().optional(),
-              })
-            ),
-          })
-        ),
-        total: z.number(),
-        page: z.number(),
-        totalPages: z.number(),
-      })
-    )
-    .query(async ({ input }) => {
-      try {
-        console.log("\n=== getSellerBrandsWithProducts Query Started ===");
-        console.log("Seller ID:", input.sellerId);
-
-        // Fetch all brands for this seller
-        const sellerBrands = await db
-          .select({
-            id: brands.id,
-            name: brands.name,
-            slug: brands.slug,
-            description: brands.description,
-            logoImage: brands.logoImage,
-            heroImage: brands.heroImage,
-            rating: brands.rating,
-            sellerId: brands.sellerId,
-          })
-          .from(brands)
-          .where(eq(brands.sellerId, input.sellerId));
-
-        console.log(`Found ${sellerBrands.length} brands for seller ${input.sellerId}`);
-
-        if (sellerBrands.length === 0) {
-          return {
-            brands: [],
-            total: 0,
-            page: input.page,
-            totalPages: 0,
-          };
-        }
-
-        const brandIds = sellerBrands.map((b: any) => b.id);
-
-        // Fetch all products for these brands
-        const brandProducts = await db
-          .select({ id: products.id, brandId: products.brandId })
-          .from(products)
-          .where(inArray(products.brandId, brandIds));
-
-        const brandProductIds = brandProducts.map((p: any) => p.id);
-        console.log(`Found ${brandProductIds.length} products for seller's brands`);
-
-        // Fetch listings for these products (approved and pending_review only)
-        const productListings = await db
           .select({
             id: listings.id,
             title: listings.title,
@@ -1270,145 +655,250 @@ export const brandsRouter = createTRPCRouter({
             productId: listings.productId,
           })
           .from(listings)
-          .where(and(
-            eq(listings.sellerId, input.sellerId),
-            inArray(listings.status, ['approved', 'pending_review'])
-          ))
-          .orderBy(desc(listings.createdAt));
+          .where(
+            and(
+              eq(listings.sellerId, brand.sellerId),
+              eq(listings.status, "approved")
+            )
+          )
+          .orderBy(desc(listings.createdAt))
+          .limit(input.limit)
+          .offset(offset);
 
-        console.log(`Found ${productListings.length} listings for seller (approved + pending)`);
+        console.log(`[getBrandListings] Fetched ${brandListings.length} listings`);
 
-        // Fetch all images for these listings
-        // Get productIds from listings to fetch their images
-        const productIds = productListings.map((l: any) => l.productId).filter((id: any): id is string => id !== null && id !== undefined);
-        const listingImages = await db
-          .select({
-            productId: productImages.productId,
-            imageUrl: productImages.imageUrl,
-            position: productImages.position,
-          })
-          .from(productImages)
-          .where(productIds.length > 0 ? inArray(productImages.productId, productIds) : sql`false`)
-          .orderBy(asc(productImages.position));
+        // OPTIMIZATION: Batch fetch all collection data ONCE (prevents N+1!)
+        const collectionIds = brandListings
+          .filter((l: any) => l.type === "collection")
+          .map((l: any) => l.id);
 
-        // Count followers for each brand
-        const followersData = await db
-          .select({
-            brandId: buyerBrandFollows.brandId,
-            count: count(),
-          })
-          .from(buyerBrandFollows)
-          .where(inArray(buyerBrandFollows.brandId, brandIds))
-          .groupBy(buyerBrandFollows.brandId);
+        const allCollectionItemsData =
+          collectionIds.length > 0
+            ? await db
+                .select()
+                .from(collectionItems)
+                .where(inArray(collectionItems.collectionId, collectionIds))
+            : [];
 
-        const followersMap = new Map(
-          followersData.map((f: any) => [f.brandId, f.count])
+        const allProductIdsInCollections: string[] = Array.from(
+          new Set<string>(
+            allCollectionItemsData.map((item: any) => item.productId as string)
+          )
         );
 
-        // Build the response by enriching brands with their products
-        const enrichedBrands = sellerBrands.map((brand: any) => {
-          // Get all listings for this brand's products
-          const brandProductIds = brandProducts
-            .filter((p: any) => p.brandId === brand.id)
-            .map((p: any) => p.id);
+        const [allCollectionProducts, allCollectionProductListings, allCollectionProductImages] =
+          allProductIdsInCollections.length > 0
+            ? await Promise.all([
+                db
+                  .select()
+                  .from(products)
+                  .where(inArray(products.id, allProductIdsInCollections)),
+                db
+                  .select()
+                  .from(listings)
+                  .where(
+                    inArray(listings.productId, allProductIdsInCollections)
+                  ),
+                db
+                  .select()
+                  .from(productImages)
+                  .where(
+                    inArray(productImages.productId, allProductIdsInCollections)
+                  )
+                  .orderBy(productImages.position),
+              ])
+            : [[], [], []];
 
-          const brandListings = productListings.filter((l: any) =>
-            l.productId ? brandProductIds.includes(l.productId) : false
-          );
+        // Build lookup maps for O(1) access
+        const collectionItemsMap = new Map<string, any[]>();
+        allCollectionItemsData.forEach((item: any) => {
+          const items = collectionItemsMap.get(item.collectionId) || [];
+          items.push(item);
+          collectionItemsMap.set(item.collectionId, items);
+        });
 
-          // Enrich listings with images
-          const enrichedListings = brandListings.map((listing: any) => {
-            const listingImageUrls = listingImages
-              .filter((img: any) => img.productId === listing.productId)
-              .sort((a: any, b: any) => a.position - b.position)
-              .map((img: any) => img.imageUrl);
+        const productsMap = new Map<string, any>(
+          allCollectionProducts.map((p: any) => [p.id, p])
+        );
+        const productListingsMap = new Map<string, any>(
+          allCollectionProductListings.map((l: any) => [l.productId, l])
+        );
+        const productImagesMap = new Map<string, any[]>();
+        allCollectionProductImages.forEach((img: any) => {
+          const images = productImagesMap.get(img.productId) || [];
+          images.push(img);
+          productImagesMap.set(img.productId, images);
+        });
 
-            // Parse colors
-            let colors = null;
+        console.log(
+          `[getBrandListings] Batch fetched: ${allCollectionItemsData.length} items, ${allCollectionProducts.length} products, ${allCollectionProductImages.length} images`
+        );
+
+        // Enrich listings without N+1 queries
+        const enrichedListings = brandListings.map((listing: any) => {
+          const isCollection = listing.type === "collection";
+          let collectionItemCount = 0;
+          let collectionTotalPrice = 0;
+          let collectionProductsList: any[] = [];
+          let allCollectionImages: string[] = [];
+
+          if (isCollection && listing.id) {
+            const collectionItemsList =
+              collectionItemsMap.get(listing.id) || [];
+            collectionItemCount = collectionItemsList.length;
+
+            if (collectionItemsList.length > 0) {
+              collectionProductsList = collectionItemsList
+                .map((collectionItem: any) => {
+                  const product = productsMap.get(collectionItem.productId);
+                  const productListing = productListingsMap.get(
+                    collectionItem.productId
+                  );
+                  const productImages =
+                    productImagesMap.get(collectionItem.productId) || [];
+
+                  if (!product) return null;
+
+                  const price = (productListing as any)?.priceCents
+                    ? (productListing as any).priceCents / 100
+                    : (product as any).priceCents
+                      ? (product as any).priceCents / 100
+                      : 0;
+                  collectionTotalPrice += price;
+
+                  productImages.forEach((img: any) => {
+                    if (
+                      img.imageUrl &&
+                      !allCollectionImages.includes(img.imageUrl)
+                    ) {
+                      allCollectionImages.push(img.imageUrl);
+                    }
+                  });
+
+                  let colors = null;
+                  let sizes = null;
+                  if ((productListing as any)?.colorsAvailable) {
+                    try {
+                      colors = JSON.parse((productListing as any).colorsAvailable);
+                    } catch (e) {
+                      colors = null;
+                    }
+                  }
+                  if ((productListing as any)?.sizesJson) {
+                    try {
+                      sizes = JSON.parse((productListing as any).sizesJson);
+                    } catch (e) {
+                      sizes = null;
+                    }
+                  }
+
+                  return {
+                    id: (product as any).id,
+                    title: (product as any).name,
+                    description: (product as any).description,
+                    price,
+                    price_cents: (productListing as any)?.priceCents ?? (product as any).priceCents ?? 0,
+                    images: productImages.map((img: any) => img.imageUrl),
+                    colors,
+                    sizes,
+                    material: (productListing as any)?.materialComposition || null,
+                    careInstructions: (productListing as any)?.careInstructions || null,
+                  };
+                })
+                .filter((p: any) => p !== null);
+            }
+          }
+
+          // Parse colors and sizes
+          let colors = null;
+          let sizes = null;
+
+          if (listing.colorsAvailable) {
             try {
-              if (listing.colorsAvailable) {
-                colors = JSON.parse(listing.colorsAvailable);
-              }
+              colors = JSON.parse(listing.colorsAvailable);
             } catch (e) {
               colors = null;
             }
+          }
 
-            // Parse sizes
-            let sizes = null;
+          if (listing.sizes) {
             try {
-              if (listing.sizes) {
-                sizes = JSON.parse(listing.sizes);
-              }
+              sizes = JSON.parse(listing.sizes);
             } catch (e) {
               sizes = null;
             }
-
-            return {
-              id: listing.id,
-              title: listing.title,
-              description: listing.description,
-              image: listing.image,
-              imagesJson: listingImageUrls.length > 0 ? JSON.stringify(listingImageUrls) : listing.imagesJson,
-              price: (listing.price_cents ?? 0) / 100,
-              price_cents: listing.price_cents ?? 0,
-              currency: listing.currency ?? 'NGN',
-              category: listing.category,
-              type: listing.type,
-              quantity_available: listing.quantity_available ?? 0,
-              seller_id: listing.seller_id,
-              created_at: listing.created_at,
-              updated_at: listing.updated_at,
-              slug: listing.slug,
-              sku: listing.sku,
-              status: listing.status,
-              barcode: listing.barcode,
-              supplyCapacity: listing.supplyCapacity,
-              sizes,
-              colors,
-              materialComposition: listing.materialComposition,
-              shippingOption: listing.shippingOption,
-              etaDomestic: listing.etaDomestic,
-              etaInternational: listing.etaInternational,
-              refundPolicy: listing.refundPolicy,
-              localPricing: listing.localPricing,
-              videoUrl: listing.videoUrl,
-              careInstructions: listing.careInstructions,
-              limitedEditionBadge: listing.limitedEditionBadge,
-              releaseDuration: listing.releaseDuration,
-            };
-          });
+          }
 
           return {
-            id: brand.id,
-            name: brand.name,
-            slug: brand.slug,
-            description: brand.description,
-            logoImage: brand.logoImage,
-            heroImage: brand.heroImage,
-            rating: brand.rating ? String(brand.rating) : "0",
-            followersCount: followersMap.get(brand.id) || 0,
-            products: enrichedListings,
+            id: listing.id,
+            title: listing.title,
+            description: listing.description,
+            image: listing.image,
+            imagesJson: allCollectionImages.length > 0
+              ? JSON.stringify(allCollectionImages)
+              : listing.imagesJson,
+            price: isCollection ? collectionTotalPrice : (listing.price_cents ? listing.price_cents / 100 : 0),
+            price_cents: listing.price_cents || 0,
+            currency: listing.currency || "NGN",
+            category: listing.category || "general",
+            type: listing.type,
+            quantity_available: listing.quantity_available || 0,
+            seller_id: listing.seller_id,
+            created_at: listing.created_at,
+            updated_at: listing.updated_at,
+            slug: listing.slug,
+            sku: listing.sku,
+            status: listing.status,
+            barcode: listing.barcode,
+            supplyCapacity: listing.supplyCapacity,
+            colors,
+            sizes,
+            materialComposition: listing.materialComposition,
+            shippingOption: listing.shippingOption,
+            etaDomestic: listing.etaDomestic,
+            etaInternational: listing.etaInternational,
+            refundPolicy: listing.refundPolicy,
+            localPricing: listing.localPricing,
+            videoUrl: listing.videoUrl,
+            careInstructions: listing.careInstructions,
+            limitedEditionBadge: listing.limitedEditionBadge,
+            releaseDuration: listing.releaseDuration,
+            additionalTargetAudience: listing.additionalTargetAudience,
+            metaDescription: listing.metaDescription,
+            ...(isCollection
+              ? {
+                  collectionItemCount,
+                  collectionTotalPrice,
+                  collectionProducts: collectionProductsList,
+                }
+              : {}),
           };
         });
 
-        console.log(`✓ Enriched ${enrichedBrands.length} brands with products`);
-        console.log("=== getSellerBrandsWithProducts Query Completed ===");
+        const totalPages = Math.ceil(total / input.limit);
+
+        console.log(`✓ Found ${enrichedListings.length} listings for brand`);
+        console.log("=== getBrandListings Query Completed ===");
 
         return {
-          brands: enrichedBrands,
-          total: enrichedBrands.length,
+          listings: enrichedListings,
+          total,
           page: input.page,
-          totalPages: 1,
+          totalPages,
         };
       } catch (error: any) {
-        console.error("Error fetching seller brands with products:", {
+        if (error.code === "NOT_FOUND") {
+          throw error;
+        }
+
+        console.error("Error fetching brand listings:", {
           message: error?.message || "Unknown error",
           code: error?.code,
-          sellerId: input.sellerId,
+          brandId: input.brandId,
         });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch seller brands with products",
+          message: "Failed to fetch brand listings",
           cause: error,
         });
       }

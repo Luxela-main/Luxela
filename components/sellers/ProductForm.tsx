@@ -2,13 +2,66 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import ProductInfoForm from './NewListing/ProductInfoForm';
 import CollectionForm from './NewListing/CollectionForm';
 import AdditionalInfoForm from './NewListing/AdditionalInfoForm';
 import PreviewForm from './NewListing/PreviewForm';
+import SuccessModal from './NewListing/SuccessModal';
 import { FormData } from '@/types/newListing';
 import { getVanillaTRPCClient } from '@/lib/trpc';
 import { uploadImage } from '@/lib/upload-image';
+
+// Color palette matching AdditionalInfoForm
+const AVAILABLE_COLORS = [
+  { name: 'Black', hex: '#000000' },
+  { name: 'White', hex: '#FFFFFF' },
+  { name: 'Red', hex: '#FF0000' },
+  { name: 'Crimson', hex: '#DC143C' },
+  { name: 'Blue', hex: '#0000FF' },
+  { name: 'Navy Blue', hex: '#000080' },
+  { name: 'Royal Blue', hex: '#4169E1' },
+  { name: 'Sky Blue', hex: '#87CEEB' },
+  { name: 'Green', hex: '#00AA00' },
+  { name: 'Dark Green', hex: '#006400' },
+  { name: 'Olive', hex: '#808000' },
+  { name: 'Yellow', hex: '#FFFF00' },
+  { name: 'Gold', hex: '#FFD700' },
+  { name: 'Orange', hex: '#FFA500' },
+  { name: 'Dark Orange', hex: '#FF8C00' },
+  { name: 'Purple', hex: '#800080' },
+  { name: 'Violet', hex: '#EE82EE' },
+  { name: 'Magenta', hex: '#FF00FF' },
+  { name: 'Pink', hex: '#FFC0CB' },
+  { name: 'Hot Pink', hex: '#FF69B4' },
+  { name: 'Brown', hex: '#8B4513' },
+  { name: 'Tan', hex: '#D2B48C' },
+  { name: 'Gray', hex: '#808080' },
+  { name: 'Light Gray', hex: '#D3D3D3' },
+  { name: 'Beige', hex: '#F5F5DC' },
+];
+
+// Helper function to parse colors from comma-separated string to array with hex values
+const parseColorsWithHex = (colorsString: string | undefined) => {
+  if (!colorsString || typeof colorsString !== 'string') return undefined;
+  
+  const colorNames = colorsString.split(',').map(c => c.trim()).filter(c => c);
+  if (colorNames.length === 0) return undefined;
+  
+  const colorsWithHex = colorNames.map(colorName => {
+    const colorObj = AVAILABLE_COLORS.find(c => c.name.toLowerCase() === colorName.toLowerCase());
+    console.log(`[ProductForm] Color: "${colorName}" -> Hex: ${colorObj?.hex || 'NOT FOUND (defaulting to black)'}`);
+    if (!colorObj) {
+      console.warn(`[ProductForm] Color not found: \"${colorName}\". Available colors: ${AVAILABLE_COLORS.map(c => c.name).join(', ')}`);
+    }
+    return {
+      colorName: colorObj?.name || colorName,
+      colorHex: colorObj?.hex || '#000000'
+    };
+  });
+  
+  return colorsWithHex;
+};
 
 interface ProductFormProps {
   productType: 'single' | 'collection';
@@ -16,7 +69,10 @@ interface ProductFormProps {
 
 export function ProductForm({ productType }: ProductFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successTitle, setSuccessTitle] = useState('');
   const [formData, setFormData] = useState<FormData>({
     name: '',
     price: '',
@@ -24,7 +80,7 @@ export function ProductForm({ productType }: ProductFormProps) {
     description: '',
     sizes: [],
     releaseDate: '',
-    supplyCapacity: 'no-max',
+    supplyCapacity: 'no_max',
     quantity: '',
     showBadge: 'do_not_show',
     releaseDuration: '',
@@ -94,12 +150,57 @@ export function ProductForm({ productType }: ProductFormProps) {
     router.push('/sellers/my-listings');
   };
 
+  const mapEtaValue = (value: string): string | null => {
+    if (!value) return null;
+    const days = parseInt(value);
+    
+    // Map days to shipping ETA enum values
+    const etaMap: { [key: number]: string } = {
+      0: 'same_day',
+      1: 'next_day',
+      2: '48hrs',
+      3: '72hrs',
+      5: '5_working_days',
+    };
+    
+    // Check if exact day match exists
+    if (etaMap[days]) {
+      return etaMap[days];
+    }
+    
+    // Otherwise map to appropriate range
+    if (days === 1) return 'next_day';
+    if (days === 2) return '48hrs';
+    if (days === 3) return '72hrs';
+    if (days === 4 || days === 5) return '5_working_days';
+    if (days >= 6 && days <= 14) return '1_2_weeks';
+    if (days >= 15 && days <= 21) return '2_3_weeks';
+    
+    return 'custom';
+  };
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       setError(null);
       
+      // Comprehensive validation before submission
+      if (productType === 'single') {
+        if (!formData.name || !formData.name.trim()) {
+          throw new Error('Product name is required');
+        }
+        if (!formData.price || parseFloat(formData.price) <= 0) {
+          throw new Error('Valid product price is required and must be greater than 0');
+        }
+      }
+      
       const trpc = getVanillaTRPCClient();
+      let createdTitle = '';
+      
+      // Debug logging
+      console.log('[ProductForm] Form colors value:', formData.colors);
+      const parsedColors = parseColorsWithHex(formData.colors);
+      console.log('[ProductForm] Parsed colors:', parsedColors);
       
       if (productType === 'single') {
         // Upload images first
@@ -133,11 +234,11 @@ export function ProductForm({ productType }: ProductFormProps) {
           limitedEditionBadge: (formData.showBadge as any) || 'do_not_show',
           releaseDuration: (formData.releaseDuration as any) || null,
           materialComposition: formData.material || null,
-          colorsAvailable: formData.colors ? [{ colorName: formData.colors, colorHex: '#000000' }] : undefined,
+          colorsAvailable: parseColorsWithHex(formData.colors),
           additionalTargetAudience: (formData.targetAudience as any) || null,
           shippingOption: (formData.shippingOption as any) || 'both',
-          etaDomestic: formData.domesticDays ? `${parseInt(formData.domesticDays)}_days` : null,
-          etaInternational: formData.internationalDays ? `${parseInt(formData.internationalDays)}_days` : null,
+          etaDomestic: mapEtaValue(formData.domesticDays),
+          etaInternational: mapEtaValue(formData.internationalDays),
           refundPolicy: (formData.refundPolicy as any) || null,
           images: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
           sku: formData.sku || undefined,
@@ -149,7 +250,8 @@ export function ProductForm({ productType }: ProductFormProps) {
         };
         
         // Call createSingle mutation
-        await trpc.listing.createSingle.mutate(singleListingInput as any);
+        const result = await trpc.listing.createSingle.mutate(singleListingInput as any);
+        createdTitle = formData.name;
       } else {
         // Collection submission - Upload images for each item first
         const itemsWithUploadedImages = await Promise.all(
@@ -189,8 +291,8 @@ export function ProductForm({ productType }: ProductFormProps) {
           items: itemsWithUploadedImages,
           supplyCapacity: (formData.supplyCapacity as any) || 'no_max',
           shippingOption: (formData.shippingOption as any) || 'both',
-          etaDomestic: formData.domesticDays ? `${parseInt(formData.domesticDays)}_days` : null,
-          etaInternational: formData.internationalDays ? `${parseInt(formData.internationalDays)}_days` : null,
+          etaDomestic: mapEtaValue(formData.domesticDays),
+          etaInternational: mapEtaValue(formData.internationalDays),
           refundPolicy: (formData.refundPolicy as any) || null,
           sku: formData.collectionSku || undefined,
           slug: formData.collectionSlug || undefined,
@@ -201,26 +303,56 @@ export function ProductForm({ productType }: ProductFormProps) {
         };
         
         // Call createCollection mutation
-        await trpc.listing.createCollection.mutate(collectionInput as any);
+        const result = await trpc.listing.createCollection.mutate(collectionInput as any);
+        createdTitle = formData.collectionTitle || '';
       }
       
       // Clear localStorage after successful submission
       const storageKey = `product_form_${productType}`;
       localStorage.removeItem(storageKey);
       
-      // Redirect to my-listings page
-      router.push('/sellers/my-listings');
-      router.refresh();
+      // Invalidate listings query cache to fetch fresh data
+      await queryClient.invalidateQueries({ queryKey: ['listing', 'getMyListings'] });
+      
+      // Also invalidate collections cache for collection types
+      if (productType === 'collection') {
+        await queryClient.invalidateQueries({ queryKey: ['listing', 'getMyCollections'] });
+      }
+      
+      // Show success modal
+      setSuccessTitle(createdTitle);
+      setShowSuccessModal(true);
+      setIsSubmitting(false);
     } catch (err) {
-      console.error('Submission error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create listing. Please try again.';
+      console.error('[ProductForm] Submission error:', err);
+      let errorMessage = 'Failed to create listing. Please try again.';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        if ('message' in err) {
+          errorMessage = (err as any).message;
+        } else if ('data' in err && (err as any).data && 'message' in (err as any).data) {
+          errorMessage = (err as any).data.message;
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      }
+      
+      console.error('[ProductForm] Error message:', errorMessage);
       setError(errorMessage);
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div>
+    <>
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        productTitle={successTitle}
+      />
+      <div>
       {productType === 'single' ? (
         // Single Product Flow
         <div>
@@ -327,5 +459,6 @@ export function ProductForm({ productType }: ProductFormProps) {
         />
       )}
     </div>
+      </>
   );
 }

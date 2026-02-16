@@ -15,57 +15,66 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [supabase] = useState(() => createClient()); 
+  const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
-    
+
     const initAuth = async () => {
       try {
-        console.log('[AUTH] Initializing session from server cookies...');
+        console.log("[AUTH] Initializing session from server cookies...");
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
-          console.warn('[AUTH] Session error:', error.message);
+          console.warn("[AUTH] Session error:", error.message);
         }
-        
+
         if (mounted) {
           setUser(data?.session?.user ?? null);
-          console.log('[AUTH] Session initialized, user:', data?.session?.user?.id || 'none');
+          console.log(
+            "[AUTH] Session initialized, user:",
+            data?.session?.user?.id || "none"
+          );
         }
       } catch (e) {
-        console.error('[AUTH] Init error:', e);
+        console.error("[AUTH] Init error:", e);
         if (mounted) setUser(null);
       } finally {
         if (mounted) setLoading(false);
       }
     };
-    
+
     initAuth();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      if (!mounted) return;
-      console.log('[AUTH] State changed:', event);
-      setUser(session?.user ?? null);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event: any, session: any) => {
+        if (!mounted) return;
+        console.log("[AUTH] State changed:", event);
+        setUser(session?.user ?? null);
+      }
+    );
 
     return () => {
       mounted = false;
       listener?.subscription?.unsubscribe?.();
     };
-  }, []); 
-  
+  }, []);
 
   const logout = async () => {
     try {
       setUser(null);
+      // Sign out from Supabase first, then redirect to home
       await supabase.auth.signOut();
-      router.push('/');
+      console.log("[AUTH] Successfully signed out from Supabase");
+      router.push("/");
     } catch (e) {
-      console.error("Logout error", e);
+      console.error("[AUTH] Logout error:", e);
+      // Even if logout fails, redirect to home to ensure user can log back in
+      console.log("[AUTH] Redirecting to home despite logout error");
+      router.push("/");
     }
   };
 
@@ -75,7 +84,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </AuthContext.Provider>
   );
 };
-
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);

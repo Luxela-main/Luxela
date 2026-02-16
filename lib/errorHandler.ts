@@ -1,12 +1,18 @@
 export const getErrorMessage = (error: any): string => {
+  // Handle tRPC errors (message is directly on error object)
+  if (error?.message && typeof error.message === 'string' && error.message.trim() !== '') {
+    return error.message;
+  }
+  // Handle API response structure
   if (error?.response?.data?.message) {
     return error.response.data.message;
   }
   if (error?.response?.data?.error) {
     return error.response.data.error;
   }
-  if (error?.message) {
-    return error.message;
+  // Handle data.message (alternative structure)
+  if (error?.data?.message) {
+    return error.data.message;
   }
   return "An unexpected error occurred";
 };
@@ -31,4 +37,4 @@ export const getAxiosErrorMessage = (error: any): string => {
     return error.message;
   }
   return "An unexpected error occurred";
-};
+};

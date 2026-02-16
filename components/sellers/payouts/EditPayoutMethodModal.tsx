@@ -253,12 +253,7 @@ export function EditPayoutMethodModal({
                   className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-purple-600 disabled:opacity-50"
                 >
                   <option value="">Select network</option>
-                  <option value="USDT (TRC-20)">USDT (TRC-20)</option>
-                  <option value="USDT (ERC-20)">USDT (ERC-20)</option>
-                  <option value="USDC (Polygon)">USDC (Polygon)</option>
-                  <option value="Bitcoin">Bitcoin</option>
-                  <option value="Solana">Solana</option>
-                  <option value="Ethereum">Ethereum</option>
+                  <option value="USDC (SOL)">USDC (SOL)</option>
                 </select>
               </div>
 

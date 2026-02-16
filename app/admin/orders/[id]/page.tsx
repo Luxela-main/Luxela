@@ -70,6 +70,7 @@ interface OrderDetail {
   created_at?: string | null;
   updated_at?: string | null;
   shipped_at?: string | null;
+  items?: Array<{ image: string; title: string }> | null;
   history?: Array<{ status: string; created_at: string }> | null;
 }
 
@@ -213,34 +214,80 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 aspect-square bg-[#1a1a1a] rounded-lg flex items-center justify-center">
-                  <div className="text-gray-400 text-center">
-                    <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Product Image</p>
+              {orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0 ? (
+                <>
+                  <p className="text-sm font-medium text-gray-400 mb-2">
+                    Collection Items ({orderData.items.length})
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                    {orderData.items.map((item: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="aspect-square bg-[#1a1a1a] rounded-lg flex items-center justify-center overflow-hidden border border-[#2a2a2a]"
+                      >
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.title || `Product ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            title={item.title}
+                          />
+                        ) : (
+                          <div className="text-gray-400 text-center flex flex-col items-center justify-center">
+                            <Package className="w-6 h-6 mb-1 opacity-50" />
+                            <p className="text-xs">No Image</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-400 mb-1">
-                  Product Name
-                </p>
-                <p className="text-white">Premium Leather Handbag</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-400 mb-1">
-                    Category
-                  </p>
-                  <p className="text-white">Accessories</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-400 mb-1">
-                    Quantity
-                  </p>
-                  <p className="text-white">1</p>
-                </div>
-              </div>
+                  <div className="pt-4 border-t border-[#2a2a2a] space-y-2">
+                    <p className="text-sm font-medium text-gray-400">Items in Collection:</p>
+                    {orderData.items.map((item: any, idx: number) => (
+                      <div key={idx} className="text-sm text-gray-300">
+                        {idx + 1}. {item.title || `Item ${idx + 1}`}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="col-span-2 aspect-square bg-[#1a1a1a] rounded-lg flex items-center justify-center overflow-hidden">
+                    {orderData.product_image ? (
+                      <img
+                        src={orderData.product_image}
+                        alt={orderData.product_title || 'Product'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-gray-400 text-center">
+                        <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No Image Available</p>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400 mb-1">
+                      Product Name
+                    </p>
+                    <p className="text-white">{orderData.product_title || 'N/A'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 mb-1">
+                        Category
+                      </p>
+                      <p className="text-white">{orderData.product_category || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 mb-1">
+                        Quantity
+                      </p>
+                      <p className="text-white">1</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -257,20 +304,20 @@ export default function OrderDetailPage() {
                 <p className="text-sm font-medium text-gray-400 mb-1">
                   Customer Name
                 </p>
-                <p className="text-white">John Doe</p>
+                <p className="text-white">{orderData.customer_name || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-400 mb-1">
                   Email
                 </p>
-                <p className="text-white">john@example.com</p>
+                <p className="text-white">{orderData.customer_email || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-400 mb-1">
                   Shipping Address
                 </p>
                 <p className="text-white text-sm">
-                  123 Main Street, New York, NY 10001
+                  {orderData.shipping_address || 'N/A'}
                 </p>
               </div>
             </CardContent>
@@ -289,19 +336,23 @@ export default function OrderDetailPage() {
                 <p className="text-sm font-medium text-gray-400 mb-1">
                   Tracking Number
                 </p>
-                <p className="text-white font-mono">TRK-1234-5678-9012</p>
+                <p className="text-white font-mono">{orderData.tracking_number || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-400 mb-1">
                   Carrier
                 </p>
-                <p className="text-white">FedEx</p>
+                <p className="text-white">{orderData.delivery_status || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-400 mb-1">
-                  Estimated Arrival
+                  Order Date
                 </p>
-                <p className="text-white">Dec 22, 2024</p>
+                <p className="text-white">
+                  {orderData.shipped_at
+                    ? new Date(orderData.shipped_at).toLocaleDateString()
+                    : 'Pending'}
+                </p>
               </div>
               <Button className="w-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border border-blue-500/30">
                 Track Shipment
@@ -385,20 +436,20 @@ export default function OrderDetailPage() {
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Subtotal</span>
-                <span className="text-white">{formatNaira(1200, true)}</span>
+                <span className="text-white">{formatNaira(orderData.amount_cents || 0, false)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Shipping</span>
-                <span className="text-white">{formatNaira(20, true)}</span>
+                <span className="text-white">N/A</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Tax</span>
-                <span className="text-white">{formatNaira(14.56, true)}</span>
+                <span className="text-white">N/A</span>
               </div>
               <div className="border-t border-[#1a1a1a] pt-3 flex justify-between">
                 <span className="font-medium text-white">Total</span>
                 <span className="text-2xl font-bold text-[#8451e1]">
-                  $1,234.56
+                  {formatNaira(orderData.amount_cents || 0, false)}
                 </span>
               </div>
             </CardContent>

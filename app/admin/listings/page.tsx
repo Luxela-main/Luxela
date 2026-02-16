@@ -19,6 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle, XCircle, AlertCircle, Eye, Search, Headphones, Package } from "lucide-react";
 import { formatNaira } from "@/lib/currency";
+import { formatCurrency } from "@/lib/utils";
+import Image from "next/image";
 
 type FilterStatus = "pending" | "revision_requested" | "approved" | "rejected" | "all";
 
@@ -223,6 +225,7 @@ export default function AdminListingsReview() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-[#2B2B2B]">
+                        <TableHead className="text-[#9CA3AF]">Image</TableHead>
                         <TableHead className="text-[#9CA3AF]">Title</TableHead>
                         <TableHead className="text-[#9CA3AF]">Seller</TableHead>
                         <TableHead className="text-[#9CA3AF]">Category</TableHead>
@@ -234,8 +237,26 @@ export default function AdminListingsReview() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredListings.map((listing) => (
+                      {filteredListings.map((listing) => {
+                        const firstImage = listing.image || null;
+                        return (
                         <TableRow key={listing.listingId} className="hover:bg-[#0e0e0e] border-[#2B2B2B]">
+                          <TableCell className="w-16">
+                            {firstImage ? (
+                              <div className="relative w-12 h-12 bg-[#0e0e0e] rounded overflow-hidden border border-[#2B2B2B]">
+                                <Image
+                                  src={firstImage}
+                                  alt={listing.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 bg-[#0e0e0e] rounded border border-[#2B2B2B] flex items-center justify-center">
+                                <Package className="w-6 h-6 text-[#6B7280]" />
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium max-w-xs truncate text-white">
                             <div className="flex items-center gap-2">
                               <span>{listing.title}</span>
@@ -258,7 +279,7 @@ export default function AdminListingsReview() {
                           </TableCell>
                           <TableCell className="text-[#9CA3AF]">
                             <div className="flex flex-col gap-1">
-                              <span>{listing.price ? formatNaira(listing.price, true) : "N/A"}</span>
+                              <span>{listing.price ? formatCurrency(listing.price, { currency: 'NGN', truncate: true }) : "N/A"}</span>
                               {listing.type === 'collection' && listing.collectionItemCount && (
                                 <span className="text-xs text-[#6B7280]">({listing.collectionItemCount} items)</span>
                               )}
@@ -298,7 +319,8 @@ export default function AdminListingsReview() {
                             </Link>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

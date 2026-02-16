@@ -42,7 +42,7 @@ export default function BrandsPage() {
   );
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const { brands: brandsList, isLoading, totalPages, total } = useBrands({
+  const { brands: brandsList, isLoading, totalPages, total, error } = useBrands({
     page,
     limit,
     search: search.length > 0 ? search : undefined,
@@ -164,6 +164,15 @@ export default function BrandsPage() {
             </div>
           </div>
         </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 sm:p-6 mb-8">
+            <p className="text-red-400 text-sm sm:text-base">
+              <strong>Error loading brands:</strong> {error}
+            </p>
+          </div>
+        )}
 
         {/* Loading State */}
         {isLoading ? (

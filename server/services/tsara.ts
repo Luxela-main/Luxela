@@ -1,7 +1,8 @@
 import axios from "axios";
+import { env } from "@/env";
 
-const TSARA_BASE_URL = process.env.TSARA_BASE_URL || "https://api.tsara.africa/v1";
-const TSARA_SANDBOX_URL = "https://sandbox.tsara.africa/v1";
+const TSARA_BASE_URL = env.TSARA_BASE_URL;
+const TSARA_SANDBOX_URL = "https://sandbox.tsara.ng/v1";
 const TSARA_SECRET_KEY = process.env.TSARA_SECRET_KEY!;
 export const TSARA_PUBLIC_KEY = process.env.TSARA_PUBLIC_KEY!;
 

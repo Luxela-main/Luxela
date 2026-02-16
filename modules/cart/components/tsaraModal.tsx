@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { toastSvc } from "@/services/toast";
 import { Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/errorHandler";
 
 interface TsaraPaymentModalProps {
   isOpen: boolean;
@@ -39,14 +40,55 @@ export function TsaraPaymentModal({
         window.location.href = data.paymentUrl;
       }
     },
-    onError: (err) => {
-      toastSvc.error(err.message || "Tsara connection failed");
+    onError: (err: any) => {
+      // Extract error message - tRPC errors have message directly or in err.message
+      let displayMessage = 'Failed to create payment. Please try again.';
+      let errorCode = 'UNKNOWN';
+      
+      // For tRPC errors
+      if (err?.message) {
+        displayMessage = err.message;
+        errorCode = err?.code || 'TRPC_ERROR';
+      }
+      // Fallback to API response structure
+      else if (err?.data?.message) {
+        displayMessage = err.data.message;
+        errorCode = err?.data?.code;
+      }
+      // Try the getErrorMessage utility as last resort
+      else {
+        const fallbackMessage = getErrorMessage(err);
+        if (fallbackMessage && fallbackMessage !== 'An unexpected error occurred') {
+          displayMessage = fallbackMessage;
+        }
+      }
+      
+      console.error('[TsaraPaymentModal] Error raw:', err);
+      console.error('[TsaraPaymentModal] Error keys:', Object.keys(err || {}));
+      console.error('[TsaraPaymentModal] Error.data:', err?.data);
+      console.error('[TsaraPaymentModal] Error.message:', err?.message);
+      console.error('[TsaraPaymentModal] Payment error:', {
+        message: displayMessage,
+        code: errorCode,
+        buyerId,
+        orderId,
+        amount: totalAmount,
+      });
+      
+      toastSvc.error(displayMessage);
     },
   });
 
   const nairaAmount = totalAmount / 100;
 
   const handleConfirm = () => {
+    console.log('[TsaraPaymentModal] Payment initiated with:', {
+      buyerId: buyerId,
+      orderId: orderId,
+      amount: nairaAmount,
+      paymentMethod: paymentMethod,
+    });
+
     // For crypto, wallet selection is required
     if (paymentMethod === "crypto" && !selectedWallet) {
       toastSvc.error("Please select a wallet");

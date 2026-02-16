@@ -115,9 +115,9 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       const hexFromMap = UI_COLOR_MAP[name];
       return {
         ...c,
-        displayHex: hexFromDb || hexFromMap || null,
+        displayHex: hexFromDb || hexFromMap || "#666666",
       };
-    });
+    }).filter(c => c.colorName);
   }, [product.colors, product.colors_available]);
 
   const performAddToCart = async (qty: number = 1) => {
@@ -134,7 +134,19 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
 
     setAddingToCart(true);
     try {
-      await addToCart(product.id, qty);
+      // Get the first selected size and color
+      const selectedSize = selectedSizes.length > 0 ? selectedSizes[0] : undefined;
+      const selectedColorIndex = selectedColors.length > 0 ? selectedColors[0] : undefined;
+      
+      // Get the color hex for the selected color
+      let selectedColorHex: string | undefined;
+      let selectedColorName: string | undefined;
+      if (selectedColorIndex !== undefined && colors.length > selectedColorIndex) {
+        selectedColorName = colors[selectedColorIndex].colorName;
+        selectedColorHex = colors[selectedColorIndex].colorHex;
+      }
+      
+      await addToCart(product.id, qty, selectedSize, selectedColorName, selectedColorHex);
       const priceInNGN = product.price_cents ? (product.price_cents / 100).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' }) : 'Price unavailable';
       toast.success(`✓ ${product.title} added to cart • ${priceInNGN}`);
       return true;
@@ -243,7 +255,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
               </p>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-light text-white">
-                  {formatCurrency(product.price_cents / 100, { currency: product.currency || 'NGN', truncate: true })}
+                  {formatCurrency(product.price_cents / 100, { currency: 'NGN', truncate: true })}
                 </span>
               </div>
             </div>

@@ -20,12 +20,12 @@ export default function ProfileLayout({
 
   // On other routes, render with sidebar
   return (
-    <div className="flex flex-col lg:flex-row h-screen">
+    <div className="flex flex-col lg:flex-row">
       <div className="hidden lg:block w-60 bg-white border-r border-gray-200">
         <Sidebar hideMobileMenu={false} />
       </div>
       
-      <main className="flex-1 overflow-auto pt-20 lg:pt-0">
+      <main className="flex-1 pt-20 lg:pt-0">
         {children}
       </main>
     </div>

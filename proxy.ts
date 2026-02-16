@@ -1,45 +1,58 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { jwtDecode } from "jwt-decode";
-
-function getUserFromToken(token: string | undefined) {
-  if (!token) return null;
-  
-  try {
-    const decoded = jwtDecode(token) as any;
-    
-    const userMetadata = decoded.user_metadata || decoded.metadata || {};
-    const appMetadata = decoded.app_metadata || {};
-    
-    // Check for admin flag in multiple places for compatibility
-    const isAdmin = 
-      userMetadata.admin === true || 
-      appMetadata.admin === true || 
-      decoded.admin === true;
-    
-    return {
-      id: decoded.sub,
-      email: decoded.email,
-      user_metadata: {
-        ...userMetadata,
-        admin: isAdmin, 
-      },
-      app_metadata: appMetadata,
-    };
-  } catch (error) {
-    console.error('Error decoding JWT:', error);
-    return null;
-  }
-}
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
-  const authToken =
-    request.cookies.get("sb-auth-token")?.value ||
-    request.cookies.get("access_token")?.value ||
-    Array.from(request.cookies.getAll())
-      .find((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"))?.value;
-
-  const user = getUserFromToken(authToken);
+  
+  // Create a server-side Supabase client that can read session from cookies
+  let user: any = null;
+  let role: string | null = null;
+  let isAdmin = false;
+  
+  try {
+    // Read cookies from the request
+    const cookieHeader = request.headers.get('cookie');
+    const cookies = new Map<string, string>();
+    
+    if (cookieHeader) {
+      cookieHeader.split(';').forEach(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        if (name && value) {
+          cookies.set(decodeURIComponent(name), decodeURIComponent(value));
+        }
+      });
+    }
+    
+    // Create server-side Supabase client
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return Array.from(cookies.entries()).map(([name, value]) => ({
+              name,
+              value,
+            }));
+          },
+          setAll() {
+            // No-op for request middleware
+          },
+        },
+      }
+    );
+    
+    // Get the current user - getUser() is more secure as it verifies with Supabase server
+    const { data: { user: authUser }, error } = await supabase.auth.getUser();
+    
+    if (authUser) {
+      user = authUser;
+      role = authUser.user_metadata?.role;
+      isAdmin = authUser.user_metadata?.admin === true || role === 'admin';
+    }
+  } catch (error) {
+    console.error('[PROXY] Error reading session:', error);
+  }
 
   const pathname = request.nextUrl.pathname;
 
@@ -66,11 +79,6 @@ export async function proxy(request: NextRequest) {
     "/verify-email",
     "/select-role",
   ].includes(pathname);
-
-  const role =
-    user?.user_metadata?.role || user?.app_metadata?.role;
-
-  const isAdmin = user?.user_metadata?.admin === true;
 
   // Admin routes that require admin role
   const adminRoutes = ["/admin/support", "/admin"];
@@ -126,14 +134,18 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Protect admin routes - only admins can access
   if (isAdminRoute && !isPublicAdminRoute) {
     if (!user) {
+      console.log(`[PROXY] No user token for admin route: ${pathname}`);
       return NextResponse.redirect(new URL("/admin/signin", request.url));
     }
-    if (!isAdmin) {
-      return NextResponse.redirect(new URL("/admin/signin", request.url));
+    // Redirect /admin/support to /admin (main dashboard)
+    if (pathname === '/admin/support') {
+      return NextResponse.redirect(new URL('/admin', request.url));
     }
+    console.log(
+      `[PROXY] User authenticated for admin route: user=${user?.email}, role=${role}, isAdmin=${isAdmin}, pathname=${pathname}`
+    );
   }
 
   // Not logged in? Block all private routes

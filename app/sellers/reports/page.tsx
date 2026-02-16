@@ -53,7 +53,7 @@ export default function Reports() {
   const [orderStatus, setOrderStatus] = useState("all")
 
   
-  const { data: allSalesData = [], isLoading, error } = (trpc.sales as any).getAllSales.useQuery(
+  const { data: allSalesData = [], isLoading, error } = trpc.sales.getAllSales.useQuery(
     { status: "all" },
     {
       staleTime: 1000 * 30, 
@@ -276,4 +276,4 @@ export default function Reports() {
       </div>
     </div>
   )
-}
+}

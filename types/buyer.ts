@@ -71,11 +71,14 @@ export interface Order {
   productTitle: string;
   productImage?: string;
   productCategory: ProductCategory;
+  quantity?: number;
+  sizes?: string[];
+  colors?: string[];
   
   // Customer Information
   customerName: string;
   customerEmail: string;
-  recipientEmail?: string;
+  recipientEmail?: string | null;
   
   // Payment Information
   paymentMethod: PaymentMethod;
@@ -88,10 +91,16 @@ export interface Order {
   deliveryStatus: DeliveryStatus;
   
   // Shipping Information
-  shippingAddress?: string;
+  shippingAddress?: string | null;
   trackingNumber?: string;
-  estimatedArrival?: Date;
-  deliveredDate?: Date;
+  estimatedArrival?: Date | null;
+  deliveredDate?: Date | null;
+  
+  // Seller Information
+  sellerName?: string;
+  sellerEmail?: string;
+  sellerStoreName?: string;
+  sellerRating?: number;
   
   // Timestamps
   orderDate: Date;

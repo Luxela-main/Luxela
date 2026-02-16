@@ -355,7 +355,12 @@ export default function BrowsePage() {
     const maxPrice = filteredListings.length > 0 
       ? Math.max(...filteredListings.map(p => p.price_cents || 0)) / 100 
       : 0;
-    const brands = new Set(filteredListings.map(p => p.sellers?.seller_business?.[0]?.brand_name).filter(Boolean)).size;
+    // Count unique sellers/brands
+    const brands = new Set(filteredListings
+      .filter(p => p.seller_id)
+      .map(p => p.seller_id)
+      .filter(Boolean)
+    ).size;
     
     return { inStock, minPrice, maxPrice, brands };
   }, [filteredListings]);

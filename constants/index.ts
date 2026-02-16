@@ -1,7 +1,9 @@
+import type { OrderStatus } from '@/modules/sellers/queries/useSales';
+
 export const DEFAULT_CURRENCY = "NGN";
 
-export const getStatusFromTab = (tab: string): string | undefined => {
-  const mapping: Record<string, string> = {
+export const getStatusFromTab = (tab: string): OrderStatus | undefined => {
+  const mapping: Record<string, OrderStatus> = {
     "All": "all",
     "Processing": "processing",
     "Shipped": "shipped",
@@ -11,4 +13,4 @@ export const getStatusFromTab = (tab: string): string | undefined => {
     "Returned": "returned",
   };
   return mapping[tab];
-};
+};

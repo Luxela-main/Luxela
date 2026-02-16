@@ -26,13 +26,8 @@ function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60 * 1000, // 5 minutes - reduce unnecessary refetches
-        gcTime: 10 * 60 * 1000, // 10 minutes - keep data longer in cache
-        retry: 1,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      },
-      mutations: {
-        retry: 1,
+        staleTime: 60 * 1000,
+        retry: false,
       },
     },
   });
@@ -52,55 +47,25 @@ interface ClientProvidersProps {
 
 export default function ClientProviders({ children }: ClientProvidersProps) {
   const [queryClient] = useState(() => createQueryClient());
-  
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL 
     ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
     : '/api/trpc';
-  
+
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
         httpBatchLink({
           url: apiUrl,
-          fetch: async (url, options) => {
-            // Add 180s timeout for tRPC requests (buffer before 300s Vercel limit)
-            // Increased to handle slower batch queries like getApprovedCollections
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 180000);
-            
-            try {
-              const response = await fetch(url, {
-                ...options,
-                signal: controller.signal,
-              });
-              return response;
-            } catch (error) {
-              if (error instanceof TypeError && error.message === 'Failed to fetch') {
-                console.error('[tRPC] Network error - Failed to fetch', {
-                  url,
-                  isAborted: controller.signal.aborted,
-                  timestamp: new Date().toISOString(),
-                });
-              } else if (error instanceof DOMException && error.name === 'AbortError') {
-                console.error('[tRPC] Request timeout - Query took longer than 180 seconds', {
-                  url,
-                  timestamp: new Date().toISOString(),
-                });
-              }
-              throw error;
-            } finally {
-              clearTimeout(timeoutId);
-            }
-          },
           async headers() {
             // Only try to access browser APIs in browser environment
             if (typeof window === 'undefined') {
               return {};
             }
-            
+
             try {
               const supabase = createClient();
-              // Add a timeout to prevent hanging on session retrieval
+               // Add a timeout to prevent hanging on session retrieval
               const sessionPromise = supabase.auth.getSession();
               const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error('Session retrieval timeout')), 5000)
@@ -110,9 +75,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
                 sessionPromise,
                 timeoutPromise as Promise<any>,
               ]);
-
-              if (session?.access_token) {
-                console.log('[TRPC-CLIENT] Token found, sending to server');
+               if (session?.access_token) {
                 return {
                   authorization: `Bearer ${session.access_token}`,
                 };

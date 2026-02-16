@@ -37,7 +37,6 @@ export default function AdminNavbar({ userEmail: initialUserEmail, currentPath =
       label: 'Listings Review',
       href: '/admin/listings',
       icon: <FileCheck className="w-5 h-5" />,
-      badge: 'pending',
     },
     {
       label: 'Orders Management',
@@ -206,7 +205,10 @@ export default function AdminNavbar({ userEmail: initialUserEmail, currentPath =
 
             {/* Navigation Items - Mobile */}
             {navItems.map((item) => {
-              const isActive = currentPath?.includes(item.href);
+              // Dashboard should only be active on exact /admin path, others match by startsWith
+              const isActive = item.href === '/admin' 
+                ? currentPath === '/admin' 
+                : currentPath?.startsWith(item.href);
               // Don't show badge for Disputes & Returns on mobile
               const shouldShowBadge = item.badge && !item.href.includes('/disputes');
               return (

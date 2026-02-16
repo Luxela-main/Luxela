@@ -167,7 +167,7 @@ class ValidationService {
     }
 
     // Currency validation
-    const validCurrencies = ['NGN', 'USD', 'EUR', 'GBP', 'USDC', 'USDT'];
+    const validCurrencies = ['NGN', 'USD', 'EUR', 'GBP', 'USDC'];
     if (payment.currency && !validCurrencies.includes(payment.currency)) {
       errors.push({
         field: 'currency',

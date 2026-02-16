@@ -89,7 +89,12 @@ export default function AdminSidebar() {
     },
   ];
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const isActive = (href: string) => {
+    if (href === '/admin') {
+      return pathname === '/admin';
+    }
+    return pathname === href || pathname.startsWith(href + '/');
+  };
 
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const active = isActive(item.href);

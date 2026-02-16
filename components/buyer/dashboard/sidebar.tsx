@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { User, ShoppingBag, Heart, Bell, Settings, LogOut, Menu, X, Package, HelpCircle, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useNotificationsCount } from '@/modules/buyer';
@@ -64,7 +64,7 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
 
   const activeItemValue = derivedActive();
 
-  const menuItems: MenuItem[] = [
+  const menuItems: MenuItem[] = useMemo(() => [
     { id: 'dashboard', label: 'Dashboard', icon: ShoppingBag, href: '/buyer/dashboard' },
     { id: 'account', label: 'Account Details', icon: User, href: '/buyer/dashboard/account' },
     { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/buyer/dashboard/orders' },
@@ -74,7 +74,7 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
     { id: 'support-tickets', label: 'Support Tickets', icon: Ticket, href: '/buyer/dashboard/support-tickets' },
     { id: 'help', label: 'Help Center', icon: HelpCircle, href: '/buyer/dashboard/help' },
     { id: 'settings', label: 'Settings', icon: Settings, href: '/buyer/dashboard/settings' },
-  ];
+  ], [notificationCount]);
 
   const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), []);
 

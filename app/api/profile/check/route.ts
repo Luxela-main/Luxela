@@ -1,4 +1,5 @@
 export const runtime = "nodejs";
+export const maxDuration = 60; // Max 60s timeout for serverless functions
 
 import { NextResponse, NextRequest } from "next/server";
 import { createClient } from "@/utils/supabase/server";
@@ -6,7 +7,7 @@ import { db } from "@/app/api/lib/db";
 import { buyers, sellers, buyerAccountDetails, sellerBusiness } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
-// Timeout helper
+// Timeout helper with retry logic
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return Promise.race([
     promise,
@@ -14,6 +15,45 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
       setTimeout(() => reject(new Error(`Query timeout after ${timeoutMs}ms`)), timeoutMs)
     ),
   ]);
+}
+
+// Retry helper with exponential backoff
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxAttempts: number = 3,
+  baseDelayMs: number = 100
+): Promise<T> {
+  let lastError: Error | undefined;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const isTimeout = lastError.message.includes("timeout");
+      const isLastAttempt = attempt === maxAttempts;
+      
+      if (isLastAttempt) {
+        throw lastError;
+      }
+      
+      // Only retry on timeouts
+      if (!isTimeout) {
+        throw lastError;
+      }
+      
+      const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+      console.warn(
+        `[Profile Check] Query attempt ${attempt} failed, retrying in ${delayMs}ms:
+`,
+        lastError.message
+      );
+      
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  throw lastError || new Error("Unknown error");
 }
 
 export async function GET(request: NextRequest) {
@@ -58,14 +98,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Query database for buyer profile with timeout
+    // Query database for buyer profile with timeout and retry
     if (role === "buyer") {
       try {
-        const buyer = await withTimeout(
-          db.query.buyers.findFirst({
-            where: eq(buyers.userId, userId),
-          }),
-          10000
+        const buyer = await withRetry(
+          () => withTimeout(
+            db.query.buyers.findFirst({
+              where: eq(buyers.userId, userId),
+            }),
+            30000 // 30s timeout instead of 10s
+          ),
+          2 // Max 2 attempts
         );
 
         if (!buyer) {
@@ -79,11 +122,14 @@ export async function GET(request: NextRequest) {
         }
 
         // Check if buyer account details exist
-        const buyerDetails = await withTimeout(
-          db.query.buyerAccountDetails.findFirst({
-            where: eq(buyerAccountDetails.buyerId, buyer.id),
-          }),
-          10000 
+        const buyerDetails = await withRetry(
+          () => withTimeout(
+            db.query.buyerAccountDetails.findFirst({
+              where: eq(buyerAccountDetails.buyerId, buyer.id),
+            }),
+            30000 // 30s timeout instead of 10s
+          ),
+          2 // Max 2 attempts
         );
 
         const profileComplete = !!buyerDetails;
@@ -97,27 +143,34 @@ export async function GET(request: NextRequest) {
           userId,
         });
       } catch (queryError: any) {
-        console.error("[Profile Check] Buyer query error:", queryError.message);
-        // Return partial response if query fails
+        const errorMsg = queryError.message || String(queryError);
+        console.error("[Profile Check] Buyer query error:", errorMsg);
+        
+        // Return 503 for timeouts or connection issues
+        const status = errorMsg.includes("timeout") || errorMsg.includes("ECONNREFUSED") ? 503 : 500;
+        
         return NextResponse.json({
           role: "buyer",
           exists: false,
           profileComplete: false,
           userId,
-          message: "Could not verify buyer profile (database timeout)",
-          error: queryError.message,
-        }, { status: 503 });
+          message: "Could not verify buyer profile (database temporarily unavailable)",
+          error: process.env.NODE_ENV === 'development' ? errorMsg : undefined,
+        }, { status });
       }
     }
 
-    // Query database for seller profile with timeout
+    // Query database for seller profile with timeout and retry
     if (role === "seller") {
       try {
-        const seller = await withTimeout(
-          db.query.sellers.findFirst({
-            where: eq(sellers.userId, userId),
-          }),
-          10000
+        const seller = await withRetry(
+          () => withTimeout(
+            db.query.sellers.findFirst({
+              where: eq(sellers.userId, userId),
+            }),
+            30000 // 30s timeout instead of 10s
+          ),
+          2 // Max 2 attempts
         );
 
         if (!seller) {
@@ -131,11 +184,14 @@ export async function GET(request: NextRequest) {
         }
 
         // Check if seller business details exist
-        const sellerDetails = await withTimeout(
-          db.query.sellerBusiness.findFirst({
-            where: eq(sellerBusiness.sellerId, seller.id),
-          }),
-          10000 
+        const sellerDetails = await withRetry(
+          () => withTimeout(
+            db.query.sellerBusiness.findFirst({
+              where: eq(sellerBusiness.sellerId, seller.id),
+            }),
+            30000 // 30s timeout instead of 10s
+          ),
+          2 // Max 2 attempts
         );
 
         const profileComplete = !!sellerDetails;
@@ -149,16 +205,20 @@ export async function GET(request: NextRequest) {
           userId,
         });
       } catch (queryError: any) {
-        console.error("[Profile Check] Seller query error:", queryError.message);
-        // Return partial response if query fails
+        const errorMsg = queryError.message || String(queryError);
+        console.error("[Profile Check] Seller query error:", errorMsg);
+        
+        // Return 503 for timeouts or connection issues
+        const status = errorMsg.includes("timeout") || errorMsg.includes("ECONNREFUSED") ? 503 : 500;
+        
         return NextResponse.json({
           role: "seller",
           exists: false,
           profileComplete: false,
           userId,
-          message: "Could not verify seller profile (database timeout)",
-          error: queryError.message,
-        }, { status: 503 });
+          message: "Could not verify seller profile (database temporarily unavailable)",
+          error: process.env.NODE_ENV === 'development' ? errorMsg : undefined,
+        }, { status });
       }
     }
 

@@ -208,9 +208,9 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     return items.map(item => {
       const colorsAvailable = item.colors && item.colors.length > 0
         ? item.colors.map(colorName => {
-            const colorObj = AVAILABLE_COLORS.find(c => c.name === colorName);
+            const colorObj = AVAILABLE_COLORS.find(c => c.name.toLowerCase() === colorName.toLowerCase());
             return {
-              colorName: colorName,
+              colorName: colorObj?.name || colorName,
               colorHex: colorObj?.hex || "#000000",
             };
           })

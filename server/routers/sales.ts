@@ -104,12 +104,12 @@ export const salesRouter = createTRPCRouter({
           customer: o.customerName,
           customerEmail: o.customerEmail,
           orderDate: o.orderDate,
-          paymentMethod: o.paymentMethod,
+          paymentMethod: String(o.paymentMethod),
           amountCents: o.amountCents,
           currency: o.currency,
-          payoutStatus: o.payoutStatus,
-          deliveryStatus: o.deliveryStatus,
-          orderStatus: o.orderStatus,
+          payoutStatus: String(o.payoutStatus),
+          deliveryStatus: String(o.deliveryStatus),
+          orderStatus: String(o.orderStatus),
         }))
       } catch (err: any) {
         throw new TRPCError({
@@ -183,22 +183,24 @@ export const salesRouter = createTRPCRouter({
           customer: order.customerName,
           customerEmail: order.customerEmail,
           orderDate: order.orderDate,
-          paymentMethod: order.paymentMethod,
+          paymentMethod: String(order.paymentMethod),
           amountCents: order.amountCents,
           currency: order.currency,
           quantity: order.quantity,
           shippingAddress: order.shippingAddress,
-          payoutStatus: order.payoutStatus,
-          deliveryStatus: order.deliveryStatus,
-          orderStatus: order.orderStatus,
+          payoutStatus: String(order.payoutStatus),
+          deliveryStatus: String(order.deliveryStatus),
+          orderStatus: String(order.orderStatus),
           selectedSize: order.selectedSize,
           selectedColor: order.selectedColor,
           selectedColorHex: order.selectedColorHex,
           productImage: order.productImage,
-          productCategory: order.productCategory,
+          productCategory: order.productCategory ? String(order.productCategory) : undefined,
         };
       } catch (err: any) {
         console.error("[getSaleById] Error:", err?.message);
+        console.error("[getSaleById] Full error object:", err);
+        console.error("[getSaleById] Stack trace:", err?.stack);
         
         if (err instanceof TRPCError) {
           throw err;

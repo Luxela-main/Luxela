@@ -99,6 +99,46 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
     }
   };
 
+  // Helper to extract colors from listing
+  const getColors = (listing: any): any[] => {
+    try {
+      // Try colorsAvailable first (from backend format)
+      if (listing.colorsAvailable) {
+        if (typeof listing.colorsAvailable === 'string') {
+          return JSON.parse(listing.colorsAvailable);
+        }
+        return Array.isArray(listing.colorsAvailable) ? listing.colorsAvailable : [];
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  // Helper to extract sizes from listing
+  const getSizes = (listing: any): string[] => {
+    try {
+      // Try sizes first
+      if (listing.sizes) {
+        if (typeof listing.sizes === 'string') {
+          const parsed = JSON.parse(listing.sizes);
+          return Array.isArray(parsed) ? parsed : [listing.sizes];
+        }
+        return Array.isArray(listing.sizes) ? listing.sizes : [];
+      }
+      // Try sizesJson
+      if (listing.sizesJson) {
+        if (typeof listing.sizesJson === 'string') {
+          return JSON.parse(listing.sizesJson);
+        }
+        return Array.isArray(listing.sizesJson) ? listing.sizesJson : [];
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
   const filteredListings =
     listings?.filter((listing: any) => {
       const matchesTab = listing.type === activeTab;
@@ -631,9 +671,49 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                         </div>
                       </div>
                       <div className="text-gray-500 group-hover:text-gray-400 transition-colors">
-                        <span className="text-xs bg-gray-900/50 px-2 py-1 rounded capitalize">
-                          {getCategory(listing)}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs bg-gray-900/50 px-2 py-1 rounded capitalize inline-block w-fit">
+                            {getCategory(listing)}
+                          </span>
+                          {/* Colors Display */}
+                          {getColors(listing).length > 0 && (
+                            <div className="flex items-center -space-x-1 mt-1">
+                              {getColors(listing).slice(0, 3).map((color: any, i: number) => (
+                                <div
+                                  key={`${listing.id}-color-${i}`}
+                                  title={color.colorName || 'Color'}
+                                  className="w-3.5 h-3.5 rounded-full border border-gray-600 shadow-sm"
+                                  style={{
+                                    backgroundColor: color.colorHex || '#cccccc',
+                                  }}
+                                />
+                              ))}
+                              {getColors(listing).length > 3 && (
+                                <span className="text-[7px] text-gray-500 pl-1">
+                                  +{getColors(listing).length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {/* Sizes Display */}
+                          {getSizes(listing).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {getSizes(listing).slice(0, 2).map((size: string, i: number) => (
+                                <span
+                                  key={`${listing.id}-size-${i}`}
+                                  className="text-[7px] bg-gray-800/50 px-1.5 py-0.5 rounded text-gray-400"
+                                >
+                                  {size}
+                                </span>
+                              ))}
+                              {getSizes(listing).length > 2 && (
+                                <span className="text-[7px] text-gray-500 px-1.5 py-0.5">
+                                  +{getSizes(listing).length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="text-white font-semibold">
                         {listing.type === "single" && listing.priceCents
@@ -798,6 +878,44 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-medium text-sm truncate">{listing.title}</p>
+                        {/* Colors for Mobile */}
+                        {getColors(listing).length > 0 && (
+                          <div className="flex items-center -space-x-1 mt-1">
+                            {getColors(listing).slice(0, 4).map((color: any, i: number) => (
+                              <div
+                                key={`mobile-${listing.id}-color-${i}`}
+                                title={color.colorName || 'Color'}
+                                className="w-3 h-3 rounded-full border border-gray-600 shadow-sm"
+                                style={{
+                                  backgroundColor: color.colorHex || '#cccccc',
+                                }}
+                              />
+                            ))}
+                            {getColors(listing).length > 4 && (
+                              <span className="text-[7px] text-gray-500 pl-1">
+                                +{getColors(listing).length - 4}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {/* Sizes for Mobile */}
+                        {getSizes(listing).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {getSizes(listing).slice(0, 3).map((size: string, i: number) => (
+                              <span
+                                key={`mobile-${listing.id}-size-${i}`}
+                                className="text-[7px] bg-gray-800/50 px-1 py-0.5 rounded text-gray-400"
+                              >
+                                {size}
+                              </span>
+                            ))}
+                            {getSizes(listing).length > 3 && (
+                              <span className="text-[7px] text-gray-500">
+                                +{getSizes(listing).length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <p className="text-xs text-gray-500 mt-1">{getCategory(listing)}</p>
                       </div>
                     </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { setAdminRole, checkAdminStatus } from "@/app/actions/admin";
 import { AlertCircle, CheckCircle, Loader } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 export default function AdminSetupPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -16,25 +17,24 @@ export default function AdminSetupPage() {
   const [success, setSuccess] = useState(false);
   const router = useRouter();
 
+  // Only check admin status on initial load
   useEffect(() => {
     const checkStatus = async () => {
-      const result = await checkAdminStatus();
-      if (result.success) {
-        setIsAdmin(result.isAdmin);
-        setUserEmail(result.userEmail || "");
-        if (result.isAdmin) {
-          setTimeout(() => {
-            router.push("/admin/support");
-          }, 1000);
+      try {
+        const result = await checkAdminStatus();
+        if (result.success) {
+          setUserEmail(result.userEmail || "");
+          if (result.isAdmin) {
+            // Already an admin, redirect immediately
+            setIsAdmin(true);
+            setTimeout(() => {
+              router.push("/admin/support");
+            }, 1000);
+            return;
+          }
         }
-      } else {
-        if (result.error === "Not authenticated") {
-          setTimeout(() => {
-            router.push("/signin");
-          }, 500);
-        } else {
-          setError(result.error || "Failed to check admin status");
-        }
+      } catch (err) {
+        console.error("Failed to check status:", err);
       }
       setIsLoading(false);
     };
@@ -47,36 +47,32 @@ export default function AdminSetupPage() {
     setError("");
     setSuccess(false);
 
-    const result = await setAdminRole(userEmail, adminPassword);
+    try {
+      const result = await setAdminRole(userEmail, adminPassword);
 
-    if (result.success) {
-      setSuccess(true);
-      
-      
-      try {
-        const { createClient } = await import('@/utils/supabase/client');
-        const supabase = createClient();
+      if (result.success) {
+        setSuccess(true);
+        console.log("✅ Admin role granted successfully");
         
-        
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
-          console.warn('Session refresh warning:', refreshError.message);
-          
+        // Refresh Supabase session to get updated JWT with admin flag
+        try {
+          const supabase = createClient();
+          console.log("[SETUP] Refreshing Supabase session...");
+          await supabase.auth.refreshSession();
+          console.log("[SETUP] Session refreshed, redirecting to dashboard...");
+        } catch (err) {
+          console.warn("[SETUP] Session refresh failed (may be okay):", err);
         }
         
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (refreshErr) {
-        console.warn('Failed to refresh client session:', refreshErr);
+        // Wait for JWT to be updated, then redirect
+        setTimeout(() => {
+          window.location.href = "/admin/support";
+        }, 1500);
+      } else {
+        setError(result.error || "Failed to set admin role");
       }
-      
-      
-      setTimeout(() => {
-        router.push('/admin/support');
-      }, 1000);
-    } else {
-      setError(result.error || "Failed to set admin role");
+    } catch (err: any) {
+      setError(err?.message || "An unexpected error occurred");
     }
 
     setIsSubmitting(false);
@@ -88,24 +84,7 @@ export default function AdminSetupPage() {
         <div className="text-center">
           <Loader className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
           <p className="text-white text-lg">Checking authentication...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error === "Not authenticated") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-          <p className="text-white text-lg mb-2">Not Authenticated</p>
-          <p className="text-gray-400 mb-6">Please log in first to access admin setup</p>
-          <Button
-            onClick={() => router.push("/signin")}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer"
-          >
-            Go to Login
-          </Button>
+          <p className="text-gray-400 text-sm mt-2">Syncing with server...</p>
         </div>
       </div>
     );
@@ -164,7 +143,8 @@ export default function AdminSetupPage() {
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
                 placeholder="Enter admin password"
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder:text-gray-500 focus:border-purple-500 focus:outline-none"
+                disabled={success}
+                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder:text-gray-500 focus:border-purple-500 focus:outline-none disabled:opacity-50"
               />
               <p className="text-xs text-gray-500 mt-1 text-[0.65rem] sm:text-xs">
                 Required only if there are existing admins in the system
@@ -187,7 +167,7 @@ export default function AdminSetupPage() {
                 <div>
                   <p className="text-sm font-medium text-green-400">Success!</p>
                   <p className="text-xs text-green-300 mt-1">
-                    Admin role granted. Refreshing session...
+                    Admin role granted. Redirecting to dashboard...
                   </p>
                 </div>
               </div>

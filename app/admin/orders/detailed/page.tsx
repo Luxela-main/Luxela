@@ -35,6 +35,7 @@ import {
   Filter,
   Calendar,
   DollarSign,
+  Package,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -70,35 +71,16 @@ export default function DetailedOrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
   
-  const { data: pendingOrders, isLoading: pendingLoading } =
-    trpc.orderStatus.getOrdersByStatus.useQuery(
-      { status: 'pending' as const, limit: 1000 },
+  const { data: allOrdersData, isLoading } =
+    trpc.orderStatus.getAllOrders.useQuery(
+      { limit: 1000 },
       { enabled: true }
     );
-
-  const { data: processingOrders, isLoading: processingLoading } =
-    trpc.orderStatus.getOrdersByStatus.useQuery(
-      { status: 'processing' as const, limit: 1000 },
-      { enabled: true }
-    );
-
-  const { data: deliveredOrders, isLoading: deliveredLoading } =
-    trpc.orderStatus.getOrdersByStatus.useQuery(
-      { status: 'delivered' as const, limit: 1000 },
-      { enabled: true }
-    );
-
-  const isLoading = pendingLoading || processingLoading || deliveredLoading;
 
   
   const allOrders = useMemo(() => {
-    const combined = [
-      ...(pendingOrders?.orders || []),
-      ...(processingOrders?.orders || []),
-      ...(deliveredOrders?.orders || []),
-    ];
-    return combined;
-  }, [pendingOrders, processingOrders, deliveredOrders]);
+    return allOrdersData?.orders || [];
+  }, [allOrdersData]);
 
   
   const filteredOrders = useMemo(() => {
@@ -415,8 +397,46 @@ export default function DetailedOrdersPage() {
                         onChange={() => toggleOrderSelection(order.id)}
                       />
                     </td>
-                    <td className="py-3 px-4 text-white font-mono text-xs">
-                      {order.id?.substring(0, 12)}...
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-0.5">
+                          {order.product_image ? (
+                            <div className="w-8 h-8 rounded bg-[#1a1a1a] flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <img
+                                src={order.product_image}
+                                alt={order.product_title || 'Product'}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : null}
+                          {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
+                            order.items.slice(0, 2).map((item: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="w-8 h-8 rounded bg-[#1a1a1a] flex items-center justify-center overflow-hidden flex-shrink-0"
+                                style={{ marginLeft: idx > 0 && !order.product_image ? '0' : idx > 0 ? '-6px' : '0' }}
+                              >
+                                {item.image ? (
+                                  <img
+                                    src={item.image}
+                                    alt={item.title || 'Product'}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package className="w-3 h-3 text-gray-500" />
+                                )}
+                              </div>
+                            ))
+                          ) : !order.product_image ? (
+                            <div className="w-8 h-8 rounded bg-[#1a1a1a] flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <Package className="w-3 h-3 text-gray-500" />
+                            </div>
+                          ) : null}
+                        </div>
+                        <span className="text-white font-mono text-xs">
+                          {order.id?.substring(0, 10)}...
+                        </span>
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-gray-300">
                       {order.product_title?.substring(0, 25)}...

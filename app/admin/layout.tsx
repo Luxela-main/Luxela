@@ -23,82 +23,117 @@ export default function AdminLayout({ children }: LayoutProps) {
   const isPublicAdminPage = isSignInPage || isSetupPage;
 
   useEffect(() => {
+    let isMounted = true;
+    let retryCount = 0;
+    const MAX_RETRIES = 2;
+
     const checkAdminAccess = async () => {
       try {
         const supabase = createClient();
+        // Refresh the session to ensure we have the latest user metadata
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.log('[Admin Layout] Session refresh error (non-blocking):', refreshError.message);
+        }
         
-        // Refresh session to ensure we have the latest user metadata
-        // This is critical after metadata updates via setAdminRole
-        await supabase.auth.refreshSession();
+        const delayMs = 1500 + (retryCount * 500);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
         
-        // Add a delay to allow metadata to propagate through Supabase
-        // This handles timing issues after admin role updates (increased to 1500ms for reliability)
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        if (!isMounted) return;
         
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
-          // Not authenticated
-          if (!isPublicAdminPage) {
-            router.push('/admin/signin');
+          // Not authenticated - redirect only if not already on public page
+          if (!isPublicAdminPage && isMounted) {
+            router.push('/admin/');
           }
-          setIsLoading(false);
+          if (isMounted) setIsLoading(false);
           return;
         }
 
-        setUserEmail(user?.email || null);
+        if (isMounted) setUserEmail(user?.email || null);
 
         // If on public pages (signin/setup), just show them
         if (isPublicAdminPage) {
-          setIsLoading(false);
+          if (isMounted) setIsLoading(false);
           return;
         }
 
         // Check if user is admin (check auth metadata first, then database as fallback)
         let userIsAdmin = user.user_metadata?.admin === true;
+        console.log('[Admin Layout] Checking user admin status - metadata.admin:', user.user_metadata?.admin);
         
         // If not found in metadata, check the database users table
         if (!userIsAdmin) {
+          console.log('[Admin Layout] Not admin in metadata, checking database for user:', user.id);
           const { data: userData, error: userError } = await supabase
             .from('users')
             .select('role')
             .eq('id', user.id)
             .single();
           
+          console.log('[Admin Layout] Database query result - data:', userData, 'error:', userError);
+          
           if (!userError && userData?.role === 'admin') {
+            console.log('[Admin Layout] User found as admin in database');
             userIsAdmin = true;
-          } else if (!userError && userData?.role === 'admin') {
-            // Double-check: if database shows admin but metadata doesn't,
-            // do one more refresh to sync the JWT
-            console.log('Admin detected in database, refreshing again for JWT sync...');
-            await supabase.auth.refreshSession();
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const { data: { user: refreshedUser } } = await supabase.auth.getUser();
-            userIsAdmin = refreshedUser?.user_metadata?.admin === true || userData?.role === 'admin';
+          } else {
+            console.log('[Admin Layout] Database check failed - error:', userError, 'role:', userData?.role);
           }
+        } else {
+          console.log('[Admin Layout] User is admin via metadata');
         }
         
-        setIsAdmin(userIsAdmin);
-
-        if (!userIsAdmin) {
-          // Not an admin - if on protected page, redirect to signin
-          // (setup is only for initial setup, not for handling failed permission checks)
-          if (!isPublicAdminPage) {
-            router.push('/admin/signin');
+        if (!isMounted) return;
+        
+        if (userIsAdmin) {
+          // User is admin - allow access
+          console.log('[Admin Layout] User verified as admin, allowing access');
+          setIsAdmin(true);
+          setIsLoading(false);
+        } else {
+          // User is not admin yet - retry a few times in case JWT is still syncing
+          if (retryCount < MAX_RETRIES) {
+            console.log(`[Admin Layout] Admin check failed, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+            retryCount++;
+            await checkAdminAccess();
+          } else {
+            // Max retries reached - user is definitely not admin
+            console.log('[Admin Layout] Max admin verification retries reached, user is not admin');
+            setIsAdmin(false);
+            setIsLoading(false);
+            if (isMounted) {
+              router.push('/admin/signin');
+            }
           }
         }
-
-        setIsLoading(false);
       } catch (error) {
-        console.error('Failed to check admin access:', error);
-        setIsLoading(false);
-        if (!isPublicAdminPage) {
-          router.push('/admin/signin');
+        console.error('[Admin Layout] Failed to check admin access:', error);
+        
+        if (!isMounted) return;
+        
+        if (retryCount < MAX_RETRIES) {
+          console.log(`[Admin Layout] Error during admin check, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+          retryCount++;
+          await checkAdminAccess();
+        } else {
+          // Max retries reached on error
+          console.log('[Admin Layout] Max retries reached due to error, redirecting to signin');
+          setIsLoading(false);
+          if (!isPublicAdminPage && isMounted) {
+            router.push('/admin/signin');
+          }
         }
       }
     };
 
     checkAdminAccess();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, [pathname, isPublicAdminPage, router]);
 
   // Show loading state while checking admin status

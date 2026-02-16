@@ -2,35 +2,42 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sellersKeys } from "./queryKeys";
 import { toastSvc } from "@/services/toast";
 import { Sale } from "../model/sales";
-import { getTRPCClient } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc";
 
-export const useSales = (status?: string) => {
-  return useQuery<Sale[]>({
-    queryKey: sellersKeys.sales(status),
-    queryFn: async () => {
-      const client: any = getTRPCClient();
-      return await ((client.sales as any).getAllSales as any).query(status ? { status } : {});
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    refetchInterval: undefined, // Disable auto-refetch
-    refetchOnWindowFocus: false, // Disable window focus refetch
-  });
+export type OrderStatus = "all" | "pending" | "processing" | "shipped" | "delivered" | "canceled" | "returned";
+
+export type PayoutStatus = "in_escrow" | "processing" | "paid";
+export type DeliveryStatus = "not_shipped" | "in_transit" | "delivered";
+export type UpdateOrderStatus = "processing" | "shipped" | "delivered" | "canceled" | "returned";
+
+export const useSales = (status?: OrderStatus) => {
+  return trpc.sales.getAllSales.useQuery(
+    status ? { status } : {},
+    {
+      staleTime: 30 * 1000, 
+      gcTime: 10 * 60 * 1000, 
+      refetchInterval: 30 * 1000,
+      refetchOnWindowFocus: true,
+    }
+  );
 };
 
 export const useSaleById = (orderId: string) => {
-  return useQuery<Sale>({
-    queryKey: [...sellersKeys.sales(), orderId],
-    queryFn: async () => {
-      const client: any = getTRPCClient();
-      return await ((client.sales as any).getSaleById as any).query({ orderId });
-    },
-    enabled: !!orderId,
-  });
+  return trpc.sales.getSaleById.useQuery(
+    { orderId },
+    {
+      enabled: !!orderId && orderId.trim() !== '',
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    }
+  );
 };
 
 export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();
+  const updateMutation = trpc.sales.updateSale.useMutation();
 
   return useMutation({
     mutationFn: async ({
@@ -40,16 +47,30 @@ export const useUpdateOrderStatus = () => {
       orderStatus,
     }: {
       orderId: string;
-      payoutStatus?: string;
-      deliveryStatus?: string;
-      orderStatus?: string;
+      payoutStatus?: PayoutStatus;
+      deliveryStatus?: DeliveryStatus;
+      orderStatus?: UpdateOrderStatus;
     }) => {
-      const client: any = getTRPCClient();
-      return await client.sales.updateSale.mutate({
+      // Validate status enum values before sending
+      const validPayoutStatuses = ['in_escrow', 'processing', 'paid'];
+      const validDeliveryStatuses = ['not_shipped', 'in_transit', 'delivered'];
+      const validOrderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'canceled', 'returned'];
+      
+      if (payoutStatus && !validPayoutStatuses.includes(payoutStatus)) {
+        throw new Error(`Invalid payout status: ${payoutStatus}`);
+      }
+      if (deliveryStatus && !validDeliveryStatuses.includes(deliveryStatus)) {
+        throw new Error(`Invalid delivery status: ${deliveryStatus}`);
+      }
+      if (orderStatus && !validOrderStatuses.includes(orderStatus)) {
+        throw new Error(`Invalid order status: ${orderStatus}`);
+      }
+      
+      return await updateMutation.mutateAsync({
         orderId,
-        payoutStatus,
-        deliveryStatus,
-        orderStatus,
+        payoutStatus: payoutStatus as PayoutStatus | undefined,
+        deliveryStatus: deliveryStatus as DeliveryStatus | undefined,
+        orderStatus: orderStatus as UpdateOrderStatus | undefined,
       });
     },
     onSuccess: () => {

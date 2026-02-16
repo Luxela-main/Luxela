@@ -10,11 +10,11 @@ export default function CheckoutLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-[#0a0a0a]">
+    <div className="flex bg-[#0a0a0a]">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1">
           <Suspense fallback={<div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>}>
             {children}
           </Suspense>

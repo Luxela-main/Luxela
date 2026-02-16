@@ -14,7 +14,6 @@ export async function setAdminRole(email: string, adminPassword: string) {
       return { success: false, error: "Not authenticated" };
     }
 
-    // Check if there are existing admins in the system
     const { data: adminUsers, error: adminCheckError } = await supabase
       .from("users")
       .select("id")
@@ -25,7 +24,7 @@ export async function setAdminRole(email: string, adminPassword: string) {
 
     if (hasExistingAdmin) {
       const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-      
+
       if (!ADMIN_PASSWORD || adminPassword !== ADMIN_PASSWORD) {
         return {
           success: false,
@@ -41,16 +40,14 @@ export async function setAdminRole(email: string, adminPassword: string) {
       }
     }
 
-    // Update user metadata with admin flag
     const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
-      data: { admin: true },
+      data: { admin: true, role: 'admin' },
     });
 
     if (updateError) {
       return { success: false, error: updateError.message };
     }
 
-    // Also update the database users table to ensure consistency
     const { error: dbUpdateError } = await supabase
       .from('users')
       .update({ role: 'admin' })
@@ -58,34 +55,13 @@ export async function setAdminRole(email: string, adminPassword: string) {
 
     if (dbUpdateError) {
       console.warn('Warning: Failed to update users table role:', dbUpdateError.message);
-      // Don't fail the operation - auth metadata was updated successfully
     }
-
-    // Get a fresh session to ensure JWT is updated
-    const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
-    
-    if (sessionError) {
-      console.warn("Session refresh warning:", sessionError.message);
-      // Don't fail - the metadata was updated, session will refresh on next request
-    } else {
-      // Verify the session was updated with admin flag in the JWT
-      const { data: sessionUser } = await supabase.auth.getUser();
-      if (sessionUser?.user?.user_metadata?.admin === true) {
-        console.log("Admin role confirmed in refreshed session");
-      }
-    }
-
-    // Verify the update was successful by fetching the updated user
-    const { data: verifyUser, error: verifyError } = await supabase.auth.getUser();
-    
-    if (verifyError) {
-      console.error("Error verifying admin role:", verifyError);
-    }
+    console.log("Admin role updated on server, client will verify");
 
     return {
       success: true,
       message: "Admin role has been set successfully",
-      isAdmin: verifyUser?.user?.user_metadata?.admin === true,
+      isAdmin: true,
     };
   } catch (error: any) {
     return {
@@ -178,7 +154,6 @@ export async function checkAdminStatus() {
 
     let isAdmin = user.user_metadata?.admin === true;
     
-    // If not found in metadata, check the database users table as fallback
     if (!isAdmin) {
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -202,6 +177,35 @@ export async function checkAdminStatus() {
       success: false,
       isAdmin: false,
       error: error?.message || "Failed to check admin status",
+    };
+  }
+}
+
+export async function validateAdminPassword(adminPassword: string) {
+  try {
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+    if (!ADMIN_PASSWORD) {
+      return {
+        success: false,
+        error: "Admin password not configured",
+      };
+    }
+
+    if (adminPassword !== ADMIN_PASSWORD) {
+      return {
+        success: false,
+        error: "Invalid admin password",
+      };
+    }
+
+    return {
+      success: true,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error?.message || "Failed to validate admin password",
     };
   }
 }

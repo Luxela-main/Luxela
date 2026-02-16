@@ -26,26 +26,54 @@ const baseOptions: ToastOptions = {
 
 // ✅ Custom toast hook
 export const useToast = () => {
-  return {
-    success: (msg: string) =>
+  const successHandler = (msg: string) => {
+    try {
       toast.success(msg, {
         ...baseOptions,
         className: 'border-l-green-500',
-      }),
-    error: (msg: string) =>
+      });
+    } catch (e) {
+      console.log('Success:', msg);
+    }
+  };
+
+  const errorHandler = (msg: string) => {
+    try {
       toast.error(msg, {
         ...baseOptions,
         className: 'border-l-red-500',
-      }),
-    info: (msg: string) =>
+      });
+    } catch (e) {
+      console.error('Error:', msg);
+    }
+  };
+
+  const infoHandler = (msg: string) => {
+    try {
       toast.info(msg, {
         ...baseOptions,
         className: 'border-l-blue-500',
-      }),
-    warning: (msg: string) =>
+      });
+    } catch (e) {
+      console.info('Info:', msg);
+    }
+  };
+
+  const warningHandler = (msg: string) => {
+    try {
       toast.warning(msg, {
         ...baseOptions,
         className: 'border-l-yellow-500',
-      }),
+      });
+    } catch (e) {
+      console.warn('Warning:', msg);
+    }
   };
-};
+
+  return {
+    success: successHandler,
+    error: errorHandler,
+    info: infoHandler,
+    warning: warningHandler,
+  };
+};

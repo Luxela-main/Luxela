@@ -18,7 +18,7 @@ export function formatCurrency(
   }
 ): string {
   const { currency = "NGN", truncate = false } = options || {};
-  const currencySymbol = currency === "NGN" ? "₦" : "$";
+  const currencySymbol = "₦";
 
   if (truncate) {
     // Always use abbreviated format for truncate mode
@@ -58,10 +58,10 @@ export function formatCurrency(
     // Thousands
     abbreviatedAmount = (amount / 1_000).toFixed(1) + "K";
   } else {
-    // Use standard formatting for smaller amounts
-    return new Intl.NumberFormat("en-US", {
+    // Use standard formatting for smaller amounts - always NGN
+    return new Intl.NumberFormat("en-NG", {
       style: "currency",
-      currency: currency,
+      currency: "NGN",
     }).format(amount);
   }
 

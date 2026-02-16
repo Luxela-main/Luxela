@@ -8,6 +8,9 @@ export type CartItemType = {
   name?: string;
   price?: number;
   image?: any;
+  selectedSize?: string | null;
+  selectedColor?: string | null;
+  selectedColorHex?: string | null;
 };
 
 export type CartType = {
@@ -18,7 +21,7 @@ export type CartType = {
 export type DiscountType = {
   id: string;
   code: string;
- percentOff?: number | null;      
+  percentOff?: number | null;      
   amountOffCents?: number | null;   
   active: boolean;
   expiresAt?: string | Date | null;
@@ -33,6 +36,9 @@ export type CartResponse = {
 export type AddToCartRequest = {
   listingId: string;
   quantity: number;
+  selectedSize?: string;
+  selectedColor?: string;
+  selectedColorHex?: string;
 };
 
 export type UpdateCartItemRequest = {

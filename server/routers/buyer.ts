@@ -25,6 +25,8 @@ import {
   cartItems,
   profiles,
   brands,
+  users,
+  sellers,
 } from "../db/schema";
 import { notificationTypeEnum } from "../db/zodSchemas";
 import { and, eq, desc, sql, isNull, count } from "drizzle-orm";
@@ -461,7 +463,7 @@ export const buyerRouter = createTRPCRouter({
         }
 
         return {
-          id: accountDetails.id,
+          id: buyer.id,
           username: accountDetails.username,
           fullName: accountDetails.fullName,
           dateOfBirth: accountDetails.dateOfBirth,
@@ -1310,13 +1312,17 @@ return {
             payoutStatus: z.string(),
             shippingAddress: z.string().nullable(),
             trackingNumber: z.string().nullable(),
-            estimatedArrival: z.date().nullable(),
-            deliveredDate: z.date().nullable(),
-            orderDate: z.date(),
+            estimatedArrival: z.date().nullable().catch(null),
+            deliveredDate: z.date().nullable().catch(null),
+            orderDate: z.coerce.date().catch(new Date()),
             orderStatus: z.string(),
             deliveryStatus: z.string(),
-            createdAt: z.date(),
-            updatedAt: z.date(),
+            quantity: z.number().default(1),
+            sellerStoreName: z.string().optional(),
+            sellerName: z.string().optional(),
+            sellerEmail: z.string().optional(),
+            createdAt: z.coerce.date().catch(new Date()),
+            updatedAt: z.coerce.date().catch(new Date()),
           })
         ),
         total: z.number(),
@@ -2344,16 +2350,27 @@ return {
             .onConflictDoNothing();
           isFollowing = true;
 
-          // Get brand name for notification
+          // Get seller's display name for notification (current name, not stored brand name)
           const brandData = await db
-            .select({ name: brands.name })
+            .select({ sellerId: brands.sellerId })
             .from(brands)
             .where(eq(brands.id, input.brandId))
             .limit(1);
 
+          let displayName = 'Brand';
+          if (brandData[0]) {
+            const sellerData = await db
+              .select({ displayName: users.displayName })
+              .from(users)
+              .innerJoin(sellers, eq(users.id, sellers.userId))
+              .where(eq(sellers.id, brandData[0].sellerId))
+              .limit(1);
+            displayName = sellerData[0]?.displayName || 'Store';
+          }
+
           // Notify buyer
           try {
-            await notifyBrandFollowed(buyerId, input.brandId, brandData[0]?.name || 'Brand');
+            await notifyBrandFollowed(buyerId, input.brandId, displayName);
           } catch (err) {
             console.error('Failed to send brand follow notification:', err);
           }
@@ -2368,19 +2385,30 @@ return {
             );
           isFollowing = false;
 
-          // Get brand name for notification
+          // Get seller's display name for notification (current name, not stored brand name)
           const brandDataUnfollow = await db
-            .select({ name: brands.name })
+            .select({ sellerId: brands.sellerId })
             .from(brands)
             .where(eq(brands.id, input.brandId))
             .limit(1);
+
+          let displayName = 'Brand';
+          if (brandDataUnfollow[0]) {
+            const sellerData = await db
+              .select({ displayName: users.displayName })
+              .from(users)
+              .innerJoin(sellers, eq(users.id, sellers.userId))
+              .where(eq(sellers.id, brandDataUnfollow[0].sellerId))
+              .limit(1);
+            displayName = sellerData[0]?.displayName || 'Store';
+          }
 
           // Notify buyer
           try {
             await notifyBrandUnfollowed(
               buyerId,
               input.brandId,
-              brandDataUnfollow[0]?.name || 'Brand'
+              displayName
             );
           } catch (err) {
             console.error('Failed to send brand unfollow notification:', err);

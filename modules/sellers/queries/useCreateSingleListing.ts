@@ -33,7 +33,7 @@ export const useCreateSingleListing = () => {
   return useMutation({
     mutationFn: async (input: CreateSingleListingInput) => {
       const client: any = getVanillaTRPCClient();
-      return await client.listing.createSingle.mutate(input);
+      return await client.listing.createSingle(input);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.listings() });

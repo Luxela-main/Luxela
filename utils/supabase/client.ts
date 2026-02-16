@@ -135,7 +135,7 @@ export const createClient = () => {
 
     // Set up listener to persist session data to localStorage as fallback
     try {
-      cachedClient.auth.onAuthStateChange(async (event, session) => {
+      cachedClient.auth.onAuthStateChange(async (event: any, session: any) => {
         try {
           if (session?.user) {
             // Store user and session to localStorage as fallback

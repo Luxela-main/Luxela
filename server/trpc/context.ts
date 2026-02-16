@@ -216,9 +216,12 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           user = null;
         }
       } else if (data?.user) {
-        // Determine user role: check if they're an admin or have a specific role
-        const isAdminUser = isAdmin || data.user.user_metadata?.admin === true;
-        const userRole = isAdminUser ? "admin" : (data.user.user_metadata?.role ?? undefined);
+        // Determine user role: check both admin flag and role field
+        // Priority admin flag in metadata, 2) role field in metadata, 3) header override
+        const metadataAdmin = data.user.user_metadata?.admin === true;
+        const metadataRole = data.user.user_metadata?.role;
+        const isAdminUser = isAdmin || metadataAdmin;
+        const userRole = isAdminUser ? "admin" : (metadataRole ?? undefined);
         
         user = {
           id: data.user.id,
@@ -228,7 +231,14 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
           admin: isAdminUser,
         };
-        console.log("[AUTH] User authenticated successfully:", { userId: user.id, email: user.email, role: user.role });
+        console.log("[AUTH] User authenticated successfully:", { 
+          userId: user.id, 
+          email: user.email, 
+          role: user.role,
+          admin: user.admin,
+          metadataAdmin: metadataAdmin,
+          metadataRole: metadataRole,
+        });
       } else {
         console.log("[AUTH] User data is null or undefined despite successful response");
         // Try JWT fallback even on successful response if no user data

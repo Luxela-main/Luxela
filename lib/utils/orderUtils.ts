@@ -1,9 +1,9 @@
 import type { Order, OrderStatus, OrderFilterType } from '@/types/buyer';
 
-export function formatPrice(amountCents: number, currency: string = 'USD'): string {
-  const formatter = new Intl.NumberFormat('en-US', {
+export function formatPrice(amountCents: number, currency: string = 'NGN'): string {
+  const formatter = new Intl.NumberFormat('en-NG', {
     style: 'currency',
-    currency: currency,
+    currency: 'NGN',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

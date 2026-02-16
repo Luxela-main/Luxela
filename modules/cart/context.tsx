@@ -20,7 +20,7 @@ type CartContextType = {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
-  addToCart: (listingId: string, quantity: number) => Promise<void>;
+  addToCart: (listingId: string, quantity: number, selectedSize?: string, selectedColor?: string, selectedColorHex?: string) => Promise<void>;
   updateQuantity: (listingId: string, quantity: number) => Promise<void>;
   removeItem: (listingId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -99,7 +99,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const total = Math.max(0, subtotal - discountAmount);
 
-  const addToCart = async (listingId: string, quantity: number) => {
+  const addToCart = async (listingId: string, quantity: number, selectedSize?: string, selectedColor?: string, selectedColorHex?: string) => {
     let validation = validateProductForCart(listingId);
 
     if (quantity <= 0) {
@@ -128,8 +128,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
 
     try {
-      console.log("[CartContext.addToCart] Attempting to add to cart:", { listingId, quantity });
-      await addToCartMutation.mutateAsync({ listingId, quantity });
+      console.log("[CartContext.addToCart] Attempting to add to cart:", { listingId, quantity, selectedSize, selectedColor, selectedColorHex });
+      await addToCartMutation.mutateAsync({ listingId, quantity, selectedSize, selectedColor, selectedColorHex });
     } catch (error: any) {
       // Extract error message from TRPC error structure
       let errorMessage = "Failed to add to cart";

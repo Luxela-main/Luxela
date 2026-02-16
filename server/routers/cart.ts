@@ -72,6 +72,9 @@ const CartOutput = z.object({
       barcode: z.string().nullable().optional(),
       metaDescription: z.string().nullable().optional(),
       category: z.string().nullable().optional(),
+      selectedSize: z.string().nullable().optional(),
+      selectedColor: z.string().nullable().optional(),
+      selectedColorHex: z.string().nullable().optional(),
     })
   ),
   discount: z
@@ -114,6 +117,9 @@ export const cartRouter = createTRPCRouter({
             quantity: cartItems.quantity,
             unitPriceCents: cartItems.unitPriceCents,
             currency: cartItems.currency,
+            selectedSize: cartItems.selectedSize,
+            selectedColor: cartItems.selectedColor,
+            selectedColorHex: cartItems.selectedColorHex,
             // Product details from listing
             name: listings.title,
             image: listings.image,
@@ -604,10 +610,30 @@ export const cartRouter = createTRPCRouter({
 
       try {
         const buyer = await ensureBuyer(userId);
+        console.log('[Checkout] Buyer lookup:', { buyerId: buyer.id, userId });
+        
         const cart = await ensureCart(buyer.id);
+        console.log('[Checkout] Cart lookup:', { cartId: cart.id, buyerId: buyer.id });
+        
         const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cart.id));
+        console.log('[Checkout] Cart items query result:', { 
+          itemCount: items.length, 
+          cartId: cart.id,
+          buyerId: buyer.id,
+          items: items.map((i: any) => ({ id: i.id, listingId: i.listingId, quantity: i.quantity }))
+        });
 
-        if (items.length === 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cart is empty' });
+        if (items.length === 0) {
+          console.error('[Checkout] Cart is empty - throwing error', {
+            userId,
+            buyerId: buyer.id,
+            cartId: cart.id,
+          });
+          throw new TRPCError({ 
+            code: 'BAD_REQUEST', 
+            message: 'Cart is empty. Please add items to your cart before checkout.' 
+          });
+        }
 
         // Get buyer account details - auto-create if missing
         let accountDetails = await db
@@ -706,8 +732,11 @@ export const cartRouter = createTRPCRouter({
 
         const total = Math.max(0, subtotal - discountCents);
 
-        // Create orders per item
-        const createdOrders = [] as any[];
+        // IMPORTANT: Orders are NOT created here. They will be created AFTER payment is confirmed.
+        // This mutation only validates the cart and returns order details for the payment flow.
+        
+        // Build order items to return (for preview only, not yet created)
+        const orderItems = [];
         for (const it of items) {
           const listingRow = await db.select().from(listings).where(eq(listings.id, it.listingId)).then((r: any) => r[0]);
           if (!listingRow) continue;
@@ -715,50 +744,47 @@ export const cartRouter = createTRPCRouter({
           const sellerRow = await db.select().from(sellers).where(eq(sellers.id, listingRow.sellerId)).then((r: any) => r[0]);
           if (!sellerRow) continue;
 
-          const orderId = uuidv4();
-          
-          // Validate product category before inserting
+          // Validate product category
           let category = listingRow.category || 'accessories';
           if (!VALID_PRODUCT_CATEGORIES.includes(category as any)) {
             console.warn(`Invalid product category '${category}' for listing ${listingRow.id}, defaulting to 'accessories'`);
             category = 'accessories';
           }
           
-          const [order] = await db
-            .insert(orders)
-            .values({
-              id: orderId,
-              buyerId: buyer.id,
-              sellerId: sellerRow.id,
-              listingId: listingRow.id,
-              productTitle: listingRow.title,
-              productImage: listingRow.image || undefined,
-              productCategory: category,
-              customerName: accountDetails.fullName,
-              customerEmail: accountDetails.email,
-              paymentMethod: input.paymentMethod,
-              amountCents: it.unitPriceCents * it.quantity,
-              currency: it.currency,
-              shippingAddress: shippingAddress,
-            })
-            .returning();
-
-          createdOrders.push(order);
-
-          // Decrement stock if limited
-          if (listingRow.supplyCapacity === 'limited' && listingRow.quantityAvailable != null) {
-            await db
-              .update(listings)
-              .set({ quantityAvailable: Math.max(0, (listingRow.quantityAvailable || 0) - it.quantity) })
-              .where(eq(listings.id, listingRow.id));
-          }
+          // Return order details for preview (no database insertion yet)
+          orderItems.push({
+            listingId: listingRow.id,
+            sellerId: sellerRow.id,
+            productTitle: listingRow.title,
+            productImage: listingRow.image || undefined,
+            productCategory: category,
+            quantity: it.quantity,
+            amountCents: it.unitPriceCents * it.quantity,
+            currency: it.currency,
+          });
         }
 
-        // Clear cart
-        await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
-        await db.update(carts).set({ discountId: null as any, updatedAt: new Date() }).where(eq(carts.id, cart.id));
-
-        return { orders: createdOrders, subtotal, discountCents, total };
+        // Return checkout summary WITHOUT creating orders or clearing cart
+        console.log('[Checkout] Success - returning order preview for payment', {
+          buyerId: buyer.id,
+          itemCount: orderItems.length,
+          total: total,
+          discountCents: discountCents,
+        });
+        
+        return { 
+          orderItems: orderItems,  // Preview items for payment
+          subtotal, 
+          discountCents, 
+          total,
+          cartId: cart.id,  // Include cart ID for later clearing
+          buyerId: buyer.id,
+          accountDetails: {
+            fullName: accountDetails.fullName,
+            email: accountDetails.email,
+            shippingAddress: shippingAddress,
+          }
+        };
       } catch (err: any) {
         console.error('Checkout error:', err);
         throw new TRPCError({ code: 'BAD_REQUEST', message: err?.message || 'Checkout failed' });

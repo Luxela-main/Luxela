@@ -10,7 +10,7 @@ export const usePendingOrders = (params?: { status?: string; limit?: number; off
     queryFn: async () => {
       try {
         const client: any = getVanillaTRPCClient();
-        const response = await ((client.sales as any).getAllSales as any).query({
+        const response = await (client.sales as any).getAllSales.query({
           status: "pending",
           ...params,
         });

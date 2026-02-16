@@ -22,7 +22,7 @@ const PurchaseHistory = () => {
     status: order.deliveryStatus === 'delivered' ? 'Delivered' :
             order.deliveryStatus === 'in_transit' ? 'Shipped' :
             order.orderStatus === 'canceled' ? 'Cancelled' : 'Processing',
-    price: `${order.currency} ${(order.priceCents / 100).toFixed(2)}`,
+    price: `₦${(order.priceCents / 100).toFixed(2)}`,  // Always show Naira since this is Nigeria
     priceColor: order.deliveryStatus === 'delivered' ? 'text-green-400' :
                  order.deliveryStatus === 'in_transit' ? 'text-purple-400' :
                  order.orderStatus === 'canceled' ? 'text-red-400' : 'text-yellow-500',
@@ -224,4 +224,4 @@ const PurchaseHistory = () => {
   );
 };
 
-export default PurchaseHistory;
+export default PurchaseHistory;

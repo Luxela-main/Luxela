@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatNaira } from '@/lib/currency';
+import { formatCurrency } from '@/lib/utils';
 import {
   LineChart,
   Line,
@@ -103,10 +104,12 @@ export default function AnalyticsDashboard() {
   }) => {
     const formattedValue =
       format === 'currency'
-        ? formatNaira(Number(value), true)
+        ? formatCurrency(Number(value), { currency: 'NGN', truncate: true })
         : format === 'percent'
           ? `${value}%`
-          : value;
+          : typeof value === 'number' && value > 999
+            ? (value as number).toLocaleString()
+            : value;
 
     const changeColor =
       change > 0

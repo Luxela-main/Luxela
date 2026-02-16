@@ -17,8 +17,8 @@ export const useDashboardData = () => {
       const client = vanillaTrpc;
 
       const [sales, listings] = await Promise.all([
-        ((client.sales as any).getAllSales as any).query({}) || [],
-        ((client.listing as any).getMyListings as any).query() || [],
+        (client.sales as any).getAllSales.query({}) || [],
+        (client.listing as any).getMyListings.query() || [],
       ]);
 
       const stats = calculateStats(sales, listings);

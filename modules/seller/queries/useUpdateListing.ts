@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getVanillaTRPCClient } from '@/lib/trpc';
 const trpc = getVanillaTRPCClient();
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/hooks/useToast';
 import { sellerQueryKeys } from './queryKeys';
 
 export interface UpdateListingInput {
@@ -28,32 +28,9 @@ export interface UpdateListingInput {
   etaInternational?: 'same_day' | 'next_day' | '48hrs' | '72hrs' | '5_working_days' | '1_2_weeks' | '2_3_weeks' | 'custom' | null;
 }
 
-/**
- * Hook to update a listing with cache invalidation and notifications
- * 
- * Features:
- * - Optimistic updates to UI
- * - Auto-invalidates related queries
- * - Toast notifications for success/error
- * - Automatic cache cleanup
- * 
- * @example
- * ```tsx
- * const updateMutation = useUpdateListing();
- * 
- * const handleUpdate = async () => {
- *   updateMutation.mutate({
- *     id: listingId,
- *     title: 'New Title',
- *     priceCents: 9999,
- *     quantityAvailable: 50
- *   });
- * };
- * ```
- */
 export function useUpdateListing() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const toastHandler = useToast();
 
   return useMutation({
     mutationFn: async (input: UpdateListingInput) => {
@@ -83,12 +60,7 @@ export function useUpdateListing() {
       ]);
 
       // Show success toast
-      toast({
-        title: 'Success',
-        description: `Listing "${data.title}" updated successfully`,
-        variant: 'default',
-        duration: 3000,
-      });
+      toastHandler.success(`Listing "${data.title}" updated successfully`);
     },
 
     // Error handler
@@ -105,12 +77,7 @@ export function useUpdateListing() {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to update listing';
 
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-        duration: 4000,
-      });
+      toastHandler.error(errorMessage);
 
       console.error('[useUpdateListing Error]', error);
     },
@@ -125,22 +92,13 @@ export function useUpdateListing() {
   });
 }
 
-/**
- * Hook to update listing price specifically
- * 
- * @example
- * ```tsx
- * const updatePrice = useUpdateListingPrice();
- * updatePrice.mutate({ id: listingId, priceCents: 5000 });
- * ```
- */
 export function useUpdateListingPrice() {
-  const { toast } = useToast();
+  const toastHandler = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: { id: string; priceCents: number }) => {
-      return await (trpc.listing.updateListing as any).mutate({
+      return await trpc.listing.updateListing.mutate({
         id: input.id,
         priceCents: input.priceCents,
       });
@@ -150,39 +108,22 @@ export function useUpdateListingPrice() {
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.inventory() });
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.inventoryByListing(data.id) });
 
-      toast({
-        title: 'Success',
-        description: `Price updated to ${data.currency} ${(data.priceCents! / 100).toFixed(2)}`,
-        variant: 'default',
-      });
+      toastHandler.success(`Price updated to ${data.currency} ${(data.priceCents! / 100).toFixed(2)}`);
     },
 
     onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update price',
-        variant: 'destructive',
-      });
+      toastHandler.error(error instanceof Error ? error.message : 'Failed to update price');
     },
   });
 }
 
-/**
- * Hook to update listing stock/quantity
- * 
- * @example
- * ```tsx
- * const updateStock = useUpdateListingStock();
- * updateStock.mutate({ id: listingId, quantityAvailable: 100 });
- * ```
- */
 export function useUpdateListingStock() {
-  const { toast } = useToast();
+  const toastHandler = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: { id: string; quantityAvailable: number }) => {
-      return await (trpc.listing.updateListing as any).mutate({
+      return await trpc.listing.updateListing.mutate({
         id: input.id,
         quantityAvailable: input.quantityAvailable,
       });
@@ -192,38 +133,17 @@ export function useUpdateListingStock() {
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.inventory() });
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.inventoryByListing(data.id) });
 
-      toast({
-        title: 'Success',
-        description: `Stock updated to ${data.quantityAvailable} units`,
-        variant: 'default',
-      });
+      toastHandler.success(`Stock updated to ${data.quantityAvailable} units`);
     },
 
     onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update stock',
-        variant: 'destructive',
-      });
+      toastHandler.error(error instanceof Error ? error.message : 'Failed to update stock');
     },
   });
 }
 
-/**
- * Hook to update listing shipping settings
- * 
- * @example
- * ```tsx
- * const updateShipping = useUpdateListingShipping();
- * updateShipping.mutate({
- *   id: listingId,
- *   shippingOption: 'both',
- *   etaDomestic: 'next_day'
- * });
- * ```
- */
 export function useUpdateListingShipping() {
-  const { toast } = useToast();
+  const toastHandler = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -233,7 +153,7 @@ export function useUpdateListingShipping() {
       etaDomestic?: string;
       etaInternational?: string;
     }) => {
-      return await (trpc.listing.updateListing as any).mutate({
+      return await trpc.listing.updateListing.mutate({
         id: input.id,
         shippingOption: input.shippingOption,
         etaDomestic: input.etaDomestic as any,
@@ -244,19 +164,11 @@ export function useUpdateListingShipping() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellerQueryKeys.inventory() });
 
-      toast({
-        title: 'Success',
-        description: 'Shipping settings updated',
-        variant: 'default',
-      });
+      toastHandler.success('Shipping settings updated');
     },
 
     onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update shipping',
-        variant: 'destructive',
-      });
+      toastHandler.error(error instanceof Error ? error.message : 'Failed to update shipping');
     },
   });
 }

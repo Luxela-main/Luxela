@@ -91,11 +91,23 @@ export default function CartPaymentPage() {
       if (checkoutData.orders.length > 0) {
         setCheckoutResult(checkoutData);
         setShowTsaraModal(true);
-        toastSvc.success("Orders created! Processing payment...");
+        toastSvc.success("Proceeding to payment...");
       }
     },
-    onError: (error) => {
-      toastSvc.error((error.data as any)?.message || "Checkout failed. Please try again.");
+    onError: (error: any) => {
+      const errorMessage = (error?.data as any)?.message || error?.message || "Checkout failed. Please try again.";
+      
+      // Log detailed error information for debugging
+      console.error('[CartPayment] Checkout error:', {
+        message: errorMessage,
+        code: error?.code || error?.data?.code,
+        itemCount: items.length,
+        subtotal: subtotal,
+        paymentMethod: paymentMethod,
+        fullError: error,
+      });
+      
+      toastSvc.error(errorMessage);
     },
   });
 
@@ -312,6 +324,12 @@ export default function CartPaymentPage() {
             onClick={async () => {
               if (!activeAddress) {
                 toastSvc.error("Please add a billing address first");
+                return;
+              }
+
+              // Validate cart still has items before checkout
+              if (items.length === 0) {
+                toastSvc.error("Your cart is empty. Please add items before checkout.");
                 return;
               }
 

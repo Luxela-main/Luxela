@@ -34,7 +34,6 @@ import { useToast } from "@/components/hooks/useToast";
 import { useProfile } from "@/context/ProfileContext";
 import { useCartState } from "@/modules/cart/context";
 import { Button } from "../ui/button";
-import router from "next/router";
 
 const NAVLINKS = [
   { name: "Home", href: "/buyer" },

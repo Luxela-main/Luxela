@@ -61,7 +61,7 @@ export const useCreateSupportTicket = () => {
       priority?: SupportTicket["priority"];
     }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.createTicket.mutate({
+      return await client.support.createTicket({
         subject,
         description,
         category,
@@ -92,7 +92,7 @@ export const useUpdateSupportTicket = () => {
       priority?: SupportTicket["priority"];
     }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.updateTicket.mutate({
+      return await client.support.updateTicket({
         ticketId,
         status,
         priority,
@@ -114,7 +114,7 @@ export const useDeleteSupportTicket = () => {
   return useMutation({
     mutationFn: async ({ ticketId }: { ticketId: string }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.deleteTicket.mutate({ ticketId });
+      return await client.support.deleteTicket({ ticketId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.support() });
@@ -132,7 +132,7 @@ export const useCloseTicket = () => {
   return useMutation({
     mutationFn: async ({ ticketId }: { ticketId: string }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.closeTicket.mutate({ ticketId });
+      return await client.support.closeTicket({ ticketId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.support() });
@@ -179,7 +179,7 @@ export const useReplyToTicket = () => {
       attachmentUrl?: string;
     }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.replyToTicket.mutate({
+      return await client.support.replyToTicket({
         ticketId,
         message,
         attachmentUrl,
@@ -204,7 +204,7 @@ export const useDeleteReply = () => {
   return useMutation({
     mutationFn: async ({ replyId, ticketId }: { replyId: string; ticketId: string }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.deleteReply.mutate({ replyId });
+      return await client.support.deleteReply({ replyId });
     },
     onSuccess: (_, { ticketId }) => {
       queryClient.invalidateQueries({

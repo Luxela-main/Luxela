@@ -202,7 +202,7 @@ const ProfilePage = () => {
   const nftItems = loyaltyData?.nfts || [];
 
   return (
-    <div className="min-h-screen text-white px-6 py-10">
+    <div className="text-white px-6 py-10">
       {}
       <header className="flex flex-col gap-10 md:flex-row items-start justify-between px-2 border-b-2 border-[#E5E7EB] pb-6">
         <motion.div

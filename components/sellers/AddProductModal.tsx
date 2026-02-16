@@ -33,10 +33,14 @@ const SHIPPING_OPTIONS = [
 ]
 
 const SHIPPING_ETA = [
+  { value: "same_day", label: "Same Day" },
+  { value: "next_day", label: "Next Day" },
   { value: "48hrs", label: "48 Hours" },
   { value: "72hrs", label: "72 Hours" },
   { value: "5_working_days", label: "5 Working Days" },
-  { value: "1week", label: "1 Week" },
+  { value: "1_2_weeks", label: "1-2 Weeks" },
+  { value: "2_3_weeks", label: "2-3 Weeks" },
+  { value: "custom", label: "Custom" },
 ]
 
 const TARGET_AUDIENCE = [

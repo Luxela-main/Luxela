@@ -14,11 +14,13 @@ export function useSellerBrandsWithProducts(
 ) {
   const { page = 1, limit = 20, enabled = true } = options || {};
 
-  return trpc.brands.getSellerBrandsWithProducts.useQuery(
+  // Using getAllBrands to fetch all brands (filter by sellerId in component if needed)
+  return trpc.brands.getAllBrands.useQuery(
     {
-      sellerId: sellerId || "",
       page,
       limit,
+      search: undefined,
+      sortBy: 'followers',
     },
     {
       enabled: enabled && !!sellerId,

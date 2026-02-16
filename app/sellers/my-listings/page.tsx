@@ -105,7 +105,7 @@ export default function MyListings() {
   };
 
   const handleEdit = (listing: any) => {
-    router.push(`/sellers/my-listings?edit=${listing.id}`);
+    router.push(`/sellers/new-listing?edit=${listing.id}`);
   };
 
   const handleDeleteClick = (listing: any) => {
@@ -303,6 +303,7 @@ export default function MyListings() {
           setSelectedListing(null);
           setLiveListing(null);
         }}
+        onRefresh={refetch}
       />
 
       {/* Collection Preview Modal */}

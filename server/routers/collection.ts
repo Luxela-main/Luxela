@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
 import { db } from "../db";
 import { collections, collectionItems, products, productImages, listings, sellers, reviews, buyers, users } from "../db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
@@ -811,9 +811,7 @@ export const collectionRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       try {
-        console.log('[getApprovedCollections] Starting query with input:', input);
-        
-        // OPTIMIZATION: Fetch only basic listing info first (minimal fields, fast query)
+        // OPTIMIZATION: Simplified query - fetch only essential fields
         const approvedListings = await db
           .select({
             id: listings.id,
@@ -837,113 +835,222 @@ export const collectionRouter = createTRPCRouter({
             eq(listings.type, "collection"),
             eq(listings.status, "approved")
           ))
-          .orderBy(listings.createdAt)
+          .orderBy(desc(listings.createdAt))
           .limit(input.limit)
           .offset(input.offset);
-        
-        console.log('[getApprovedCollections] Found', approvedListings.length, 'approved collection listings');
-
         if (approvedListings.length === 0) {
           return { collections: [], total: 0 };
         }
 
-        // Get total count - optimized separate query
-        const countResult = await db
-          .select({ count: listings.id })
-          .from(listings)
-          .where(and(
-            eq(listings.type, "collection"),
-            eq(listings.status, "approved")
-          ));
-        const totalCount = countResult.length;
+        // Get total count with sql.raw to avoid parameter binding issues
+        const countResult = await db.execute(
+          sql`SELECT COUNT(*) as count FROM listings WHERE type = 'collection' AND status = 'approved'`
+        );
+        const totalCount = Number(countResult.rows[0]?.count || 0);
 
-        const collectionIds = approvedListings
+        const collectionIds: string[] = approvedListings
           .filter((l: typeof approvedListings[number]) => l.collectionId)
           .map((l: typeof approvedListings[number]) => l.collectionId as string);
-        const sellerIds = approvedListings
-          .filter((l: typeof approvedListings[number]) => l.sellerId)
-          .map((l: typeof approvedListings[number]) => l.sellerId as string);
-        
-        console.log(`[getApprovedCollections] Fetching data for ${collectionIds.length} collections...`);
+        const sellerIds: string[] = Array.from(
+          new Set(
+            approvedListings
+              .filter((l: typeof approvedListings[number]) => l.sellerId)
+              .map((l: typeof approvedListings[number]) => l.sellerId as string)
+          )
+        );
 
-        // OPTIMIZATION: Batch fetch with minimal fields and item limit
-        const [allCollectionDetails, allSellers, allCollectionItemsWithProducts] = await Promise.all([
-          collectionIds.length > 0
-            ? db.select().from(collections).where(inArray(collections.id, collectionIds))
-            : Promise.resolve([]),
-          sellerIds.length > 0
-            ? db.select({ id: sellers.id }).from(sellers).where(inArray(sellers.id, sellerIds))
-            : Promise.resolve([]),
-          collectionIds.length > 0
-            ? db.select({
-                collectionId: collectionItems.collectionId,
-                itemId: collectionItems.id,
-                position: collectionItems.position,
-                productId: collectionItems.productId,
-                productName: products.name,
-                productSlug: products.slug,
-                productDescription: products.description,
-                productImage: productImages.imageUrl,
-                productImagePosition: productImages.position,
-                listingId: listings.id,
-                listingTitle: listings.title,
-                listingDescription: listings.description,
-                listingPriceCents: listings.priceCents,
-                listingCurrency: listings.currency,
-                listingCategory: listings.category,
-                listingQuantityAvailable: listings.quantityAvailable,
-                listingImage: listings.image,
-                listingImagesJson: listings.imagesJson,
-                listingColorsAvailable: listings.colorsAvailable,
-                listingSizesJson: listings.sizesJson,
-                listingMaterial: listings.materialComposition,
-                listingCareInstructions: listings.careInstructions,
-                listingVideoUrl: listings.videoUrl,
-                listingEtaDomestic: listings.etaDomestic,
-                listingEtaInternational: listings.etaInternational,
-                listingShippingOption: listings.shippingOption,
-                listingSku: listings.sku,
-                listingBarcode: listings.barcode,
-                listingMetaDescription: listings.metaDescription,
-                listingRefundPolicy: listings.refundPolicy,
-              })
-              .from(collectionItems)
-              .innerJoin(products, eq(collectionItems.productId, products.id))
-              .leftJoin(productImages, eq(products.id, productImages.productId))
-              .leftJoin(listings, and(
-                eq(listings.productId, collectionItems.productId),
-                inArray(listings.status, ['approved', 'pending_review'])
-              ))
-              .where(inArray(collectionItems.collectionId, collectionIds))
-              .orderBy(collectionItems.position)
-            : Promise.resolve([]),
-        ]);
+        // OPTIMIZATION: Batch fetch with chunking for large result sets
+        const BATCH_SIZE = 50; // Process in chunks to avoid timeout
+        const allCollectionItems: any[] = [];
+        
+        // Process collection items in batches
+        for (let i = 0; i < collectionIds.length; i += BATCH_SIZE) {
+          const batchIds = collectionIds.slice(i, i + BATCH_SIZE);
+          const batchItems = await db.select({
+            collectionId: collectionItems.collectionId,
+            itemId: collectionItems.id,
+            position: collectionItems.position,
+            productId: collectionItems.productId,
+          })
+          .from(collectionItems)
+          .where(inArray(collectionItems.collectionId, batchIds))
+          .orderBy(collectionItems.position);
+          allCollectionItems.push(...batchItems);
+        }
+        
+        // OPTIMIZATION: Only fetch first 3 items per collection for display (rest available on demand)
+        const itemsByCollectionId = new Map<string, typeof allCollectionItems>();
+        const MAX_PREVIEW_ITEMS = 3;
+        const allProductIdsSet = new Set<string>();
+        
+        allCollectionItems.forEach((item: typeof allCollectionItems[number]) => {
+          const collId = item.collectionId;
+          if (!itemsByCollectionId.has(collId)) {
+            itemsByCollectionId.set(collId, []);
+          }
+          // Only keep preview items
+          if (itemsByCollectionId.get(collId)!.length < MAX_PREVIEW_ITEMS) {
+            itemsByCollectionId.get(collId)!.push(item);
+            allProductIdsSet.add(item.productId);
+          }
+        });
+        
+        const productIds: string[] = Array.from(allProductIdsSet);
+        
+        console.log(`[getApprovedCollections] Found ${allCollectionItems.length} items, fetching data for ${productIds.length} unique products`);
+
+        // Now batch fetch all related data in separate sequential queries to avoid parameter binding issues
+        let allCollectionDetails: any[] = [];
+        let allSellers: any[] = [];
+        let allProducts: any[] = [];
+        let allProductImages: any[] = [];
+        let allListings: any[] = [];
+        
+        // Fetch collections in batches
+        for (let i = 0; i < collectionIds.length; i += BATCH_SIZE) {
+          const batchIds = collectionIds.slice(i, i + BATCH_SIZE);
+          const batchDetails = await db.select().from(collections).where(inArray(collections.id, batchIds));
+          allCollectionDetails.push(...batchDetails);
+        }
+        
+        // Fetch sellers in batches
+        for (let i = 0; i < sellerIds.length; i += BATCH_SIZE) {
+          const batchIds = sellerIds.slice(i, i + BATCH_SIZE);
+          const batchSellers = await db.select({ id: sellers.id }).from(sellers).where(inArray(sellers.id, batchIds));
+          allSellers.push(...batchSellers);
+        }
+        
+        // Fetch products in batches
+        for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
+          const batchIds = productIds.slice(i, i + BATCH_SIZE);
+          const batchProducts = await db.select({
+            id: products.id,
+            name: products.name,
+            slug: products.slug,
+            description: products.description,
+          })
+          .from(products)
+          .where(inArray(products.id, batchIds));
+          allProducts.push(...batchProducts);
+        }
+        
+        // Fetch product images in batches - with explicit error handling
+        for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
+          const batchIds = productIds.slice(i, i + BATCH_SIZE);
+          try {
+            const batchImages = await db.select({
+              productId: productImages.productId,
+              imageUrl: productImages.imageUrl,
+              position: productImages.position,
+            })
+            .from(productImages)
+            .where(inArray(productImages.productId, batchIds));
+            allProductImages.push(...batchImages);
+          } catch (imageError: any) {
+            console.warn('[getApprovedCollections] Error fetching images for batch', i, ':', imageError?.message);
+          }
+        }
+        
+        // Fetch listings in batches
+        for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
+          const batchIds = productIds.slice(i, i + BATCH_SIZE);
+          const batchListings = await db.select({
+            id: listings.id,
+            productId: listings.productId,
+            title: listings.title,
+            description: listings.description,
+            priceCents: listings.priceCents,
+            currency: listings.currency,
+            category: listings.category,
+            quantityAvailable: listings.quantityAvailable,
+            image: listings.image,
+            imagesJson: listings.imagesJson,
+            colorsAvailable: listings.colorsAvailable,
+            sizesJson: listings.sizesJson,
+            materialComposition: listings.materialComposition,
+            careInstructions: listings.careInstructions,
+            videoUrl: listings.videoUrl,
+            etaDomestic: listings.etaDomestic,
+            etaInternational: listings.etaInternational,
+            shippingOption: listings.shippingOption,
+            sku: listings.sku,
+            barcode: listings.barcode,
+            metaDescription: listings.metaDescription,
+            refundPolicy: listings.refundPolicy,
+          })
+          .from(listings)
+          .where(and(inArray(listings.productId, batchIds), inArray(listings.status, ['approved', 'pending_review'])));
+          allListings.push(...batchListings);
+        }
         
         console.log('[getApprovedCollections] Batch fetch complete. Processing...');
         
         // Create maps for O(1) lookup
         const collectionDetailsMap = new Map<string, typeof allCollectionDetails[number]>(allCollectionDetails.map((c: typeof allCollectionDetails[number]) => [c.id, c]));
         const sellersMap = new Map(allSellers.map((s: typeof allSellers[number]) => [s.id, s]));
+        const productsMap = new Map<string, typeof allProducts[number]>(allProducts.map((p: typeof allProducts[number]) => [p.id, p]));
+        const listingsMap = new Map<string, typeof allListings[number]>(allListings.map((l: typeof allListings[number]) => [l.productId, l]));
         
-        // Group items by collection with limit per collection
+        // Group product images by product ID
+        const imagesByProductId = new Map<string, Array<typeof allProductImages[number]>>();
+        allProductImages.forEach((img: typeof allProductImages[number]) => {
+          if (!imagesByProductId.has(img.productId)) {
+            imagesByProductId.set(img.productId, []);
+          }
+          imagesByProductId.get(img.productId)!.push(img);
+        });
+        
+        // Build items by collection from preview-only items (already limited above)
         const itemsByCollection = new Map<string, any[]>();
         const itemCountByCollection = new Map<string, number>();
-        const MAX_ITEMS_PER_COLLECTION = 5; // Limit items for faster response
         
-        allCollectionItemsWithProducts.forEach((item: typeof allCollectionItemsWithProducts[number]) => {
-          const collId = item.collectionId;
-          if (!itemsByCollection.has(collId)) {
-            itemsByCollection.set(collId, []);
-            itemCountByCollection.set(collId, 0);
-          }
+        // Set item counts from original allCollectionItems and use pre-filtered items
+        itemsByCollectionId.forEach((items: any[], collId: string) => {
+          // Count original items for display
+          const originalCount = allCollectionItems.filter((i: any) => i.collectionId === collId).length;
+          itemCountByCollection.set(collId, originalCount);
           
-          // Count all items
-          itemCountByCollection.set(collId, (itemCountByCollection.get(collId) || 0) + 1);
-          
-          // Only keep first MAX_ITEMS_PER_COLLECTION items in response
-          if ((itemsByCollection.get(collId) || []).length < MAX_ITEMS_PER_COLLECTION) {
-            itemsByCollection.get(collId)!.push(item);
-          }
+          // Add preview items to map
+          itemsByCollection.set(collId, []);
+          items.forEach((item: any) => {
+            const product = productsMap.get(item.productId) as typeof allProducts[number] | undefined;
+            const listing = listingsMap.get(item.productId) as typeof allListings[number] | undefined;
+            const images = (imagesByProductId.get(item.productId) || []) as Array<typeof allProductImages[number]>;
+            
+            itemsByCollection.get(collId)!.push({
+              itemId: item.itemId,
+              position: item.position,
+              productId: item.productId,
+              productName: product?.name,
+              productSlug: product?.slug,
+              productDescription: product?.description,
+              listingId: listing?.id,
+              listingTitle: listing?.title,
+              listingDescription: listing?.description,
+              listingPriceCents: listing?.priceCents,
+              listingCurrency: listing?.currency,
+              listingCategory: listing?.category,
+              listingQuantityAvailable: listing?.quantityAvailable,
+              listingImage: listing?.image,
+              listingImagesJson: listing?.imagesJson,
+              listingColorsAvailable: listing?.colorsAvailable,
+              listingSizesJson: listing?.sizesJson,
+              listingMaterial: listing?.materialComposition,
+              listingCareInstructions: listing?.careInstructions,
+              listingVideoUrl: listing?.videoUrl,
+              listingEtaDomestic: listing?.etaDomestic,
+              listingEtaInternational: listing?.etaInternational,
+              listingShippingOption: listing?.shippingOption,
+              listingSku: listing?.sku,
+              listingBarcode: listing?.barcode,
+              listingMetaDescription: listing?.metaDescription,
+              listingRefundPolicy: listing?.refundPolicy,
+              images: images.map((img: typeof allProductImages[number]) => ({
+                image: img.imageUrl,
+                position: img.position,
+              })),
+            });
+          });
         });
 
         // Process each listing with pre-fetched data (no more async calls per listing!)
@@ -952,54 +1059,39 @@ export const collectionRouter = createTRPCRouter({
           const collectionItemsWithProducts = itemsByCollection.get(listing.collectionId!) || [];
           const totalItemsInCollection = itemCountByCollection.get(listing.collectionId!) || collectionItemsWithProducts.length;
           
-          // Group items by product
-          const itemsMap = new Map();
-          collectionItemsWithProducts.forEach((row: any) => {
-            const key = row.productId;
-            if (!itemsMap.has(key)) {
-              itemsMap.set(key, {
-                itemId: row.itemId,
-                position: row.position,
-                productId: row.productId,
-                productName: row.productName,
-                productSlug: row.productSlug,
-                productDescription: row.productDescription,
-                images: [],
-                title: row.listingTitle || row.productName,
-                description: row.listingDescription || row.productDescription,
-                priceCents: row.listingPriceCents,
-                currency: row.listingCurrency,
-                category: row.listingCategory,
-                quantityAvailable: row.listingQuantityAvailable,
-                listingImage: row.listingImage,
-                listingImagesJson: row.listingImagesJson,
-                listingId: row.listingId,
-                colorsAvailable: row.listingColorsAvailable,
-                sizesJson: row.listingSizesJson,
-                material: row.listingMaterial,
-                careInstructions: row.listingCareInstructions,
-                videoUrl: row.listingVideoUrl,
-                etaDomestic: row.listingEtaDomestic,
-                etaInternational: row.listingEtaInternational,
-                shippingOption: row.listingShippingOption,
-                sku: row.listingSku,
-                barcode: row.listingBarcode,
-                metaDescription: row.listingMetaDescription,
-                refundPolicy: row.listingRefundPolicy,
-              });
-            }
-            if (row.productImage) {
-              const images = itemsMap.get(key).images;
-              if (!images.find((img: any) => img.image === row.productImage)) {
-                images.push({
-                  image: row.productImage,
-                  position: row.productImagePosition,
-                });
-              }
-            }
-          });
+          // Group items by product (items already merged in previous loop)
+          const collectionItemsData = (itemsByCollection.get(listing.collectionId!) || []).map((item: any) => ({
+            itemId: item.itemId,
+            position: item.position,
+            productId: item.productId,
+            productName: item.productName,
+            productSlug: item.productSlug,
+            productDescription: item.productDescription,
+            images: item.images,
+            title: item.listingTitle || item.productName,
+            description: item.listingDescription || item.productDescription,
+            priceCents: item.listingPriceCents,
+            currency: item.listingCurrency,
+            category: item.listingCategory,
+            quantityAvailable: item.listingQuantityAvailable,
+            listingImage: item.listingImage,
+            listingImagesJson: item.listingImagesJson,
+            listingId: item.listingId,
+            colorsAvailable: item.listingColorsAvailable,
+            sizesJson: item.listingSizesJson,
+            material: item.listingMaterial,
+            careInstructions: item.listingCareInstructions,
+            videoUrl: item.listingVideoUrl,
+            etaDomestic: item.listingEtaDomestic,
+            etaInternational: item.listingEtaInternational,
+            shippingOption: item.listingShippingOption,
+            sku: item.listingSku,
+            barcode: item.listingBarcode,
+            metaDescription: item.listingMetaDescription,
+            refundPolicy: item.listingRefundPolicy,
+          }));
 
-          const items = Array.from(itemsMap.values());
+          const items = collectionItemsData;
           const collectionDetails = collectionDetailsMap.get(listing.collectionId!);
 
           return {

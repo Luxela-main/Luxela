@@ -21,7 +21,7 @@ async function verifyWebhookSignature(
     const expectedBuffer = Buffer.from(expectedSignature, "utf8");
 
     if (signatureBuffer.length !== expectedBuffer.length) {
-      console.error("Signature length mismatch:", { 
+      console.error("[Tsara Webhook] Signature length mismatch:", { 
         received: signatureBuffer.length, 
         expected: expectedBuffer.length 
       }); 
@@ -31,15 +31,12 @@ async function verifyWebhookSignature(
     const isValid = crypto.timingSafeEqual(signatureBuffer, expectedBuffer); 
     
     if (!isValid) { 
-      console.error("Signature mismatch:", { 
-        received: signature, 
-        expected: expectedSignature 
-      });
+      console.error("[Tsara Webhook] Signature mismatch - possible tampering or misconfiguration");
     }
     
     return isValid; 
   } catch (err) { 
-    console.error("Webhook signature verification error:", err); 
+    console.error("[Tsara Webhook] Signature verification error:", err); 
     return false;
   }
 }
@@ -54,25 +51,40 @@ export const POST = async (req: NextRequest) => {
     const signature = req.headers.get("x-tsara-signature");
     const secret = process.env.TSARA_WEBHOOK_SECRET;
 
-    if (!secret) {
-      console.error("Missing TSARA_WEBHOOK_SECRET");
+    console.log("[Tsara Webhook] Received webhook request:", {
+      hasSignature: !!signature,
+      hasSecret: !!secret,
+      secretLength: secret?.length || 0,
+    });
+
+    if (!secret || secret.trim().length === 0) {
+      console.error(
+        "[Tsara Webhook] CRITICAL: Missing or empty TSARA_WEBHOOK_SECRET environment variable. " +
+        "Webhook verification cannot be performed. " +
+        "Configure TSARA_WEBHOOK_SECRET in your .env.local file. " +
+        "Get the webhook secret from Tsara dashboard under Settings > Webhooks."
+      );
       return NextResponse.json(
-        { error: "Server misconfigured" },
+        { error: "Server misconfigured: TSARA_WEBHOOK_SECRET not set" },
         { status: 500 }
       );
     }
 
     if (!signature) {
-      console.error("Missing x-tsara-signature");
+      console.error(
+        "[Tsara Webhook] Missing x-tsara-signature header. " +
+        "Ensure Tsara is configured to send webhook signatures. " +
+        "Verify webhook settings in Tsara dashboard."
+      );
       return NextResponse.json(
-        { error: "Missing signature" },
+        { error: "Missing signature header" },
         { status: 401 }
       );
     }
 
     const rawBody = await req.text();
 
-    console.log("Webhook received:", { 
+    console.log("[Tsara Webhook] Webhook metadata:", { 
       signature_length: signature.length, 
       body_length: rawBody.length, 
       body_preview: rawBody.substring(0, 100) 
@@ -80,13 +92,17 @@ export const POST = async (req: NextRequest) => {
 
     const isValid = await verifyWebhookSignature(rawBody, signature, secret);
     if (!isValid) {
-      console.error("Invalid webhook signature");
+      console.error(
+        "[Tsara Webhook] Invalid webhook signature - request rejected. " +
+        "This could mean: 1) Wrong TSARA_WEBHOOK_SECRET, 2) Request was tampered with, " +
+        "3) Webhook not signed properly by Tsara"
+      );
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 401 }
       );
     }
-    console.log("Signature verified successfully");
+    console.log("[Tsara Webhook] Signature verified successfully");
 
     const { event, data, id: eventId } = JSON.parse(rawBody);
     if (!eventId) {
@@ -101,7 +117,7 @@ export const POST = async (req: NextRequest) => {
       .limit(1);
 
     if (existing.length > 0) {
-      console.log("Event already processed (idempotent):", eventId);
+      console.log("[Tsara Webhook] Event already processed (idempotent):", eventId);
       return NextResponse.json({ success: true, idempotent: true });
     }
 
@@ -124,7 +140,7 @@ export const POST = async (req: NextRequest) => {
       .limit(1);
 
     if (!paymentRecords.length) {
-      console.warn(`Payment not found for reference ${data.reference}`);
+      console.warn(`[Tsara Webhook] Payment not found for reference ${data.reference}`);
       // Still record the webhook event for audit
       await db.insert(webhookEvents).values({
         eventId,
@@ -165,7 +181,7 @@ export const POST = async (req: NextRequest) => {
         .where(eq(payments.id, payment.id));
 
       console.log(
-        `Payment ${payment.id} status updated to ${mappedStatus} (event: ${event})`
+        `[Tsara Webhook] Payment ${payment.id} status updated to ${mappedStatus} (event: ${event})`
       );
 
       // Handle payment success
@@ -181,9 +197,9 @@ export const POST = async (req: NextRequest) => {
             listingId: payment.listingId || undefined,
             buyerId: payment.buyerId || undefined,
           });
-          console.log(`Payment success flow processed for ${payment.id}`);
+          console.log(`[Tsara Webhook] Payment success flow processed for ${payment.id}`);
         } catch (err: any) {
-          console.error(`Payment success flow failed for ${payment.id}:`, err);
+          console.error(`[Tsara Webhook] Payment success flow failed for ${payment.id}:`, err);
           throw err; // Transaction will rollback
         }
       }
@@ -198,9 +214,9 @@ export const POST = async (req: NextRequest) => {
             orderId: payment.orderId || undefined,
             listingId: payment.listingId || undefined,
           });
-          console.log(`Payment failure flow processed for ${payment.id}`);
+          console.log(`[Tsara Webhook] Payment failure flow processed for ${payment.id}`);
         } catch (err: any) {
-          console.error(`Payment failure flow failed for ${payment.id}:`, err);
+          console.error(`[Tsara Webhook] Payment failure flow failed for ${payment.id}:`, err);
           throw err; // Transaction will rollback
         }
       }
@@ -215,9 +231,9 @@ export const POST = async (req: NextRequest) => {
             orderId: payment.orderId || undefined,
             listingId: payment.listingId || undefined,
           });
-          console.log(`Refund flow processed for ${payment.id}`);
+          console.log(`[Tsara Webhook] Refund flow processed for ${payment.id}`);
         } catch (err: any) {
-          console.error(`Refund flow failed for ${payment.id}:`, err);
+          console.error(`[Tsara Webhook] Refund flow failed for ${payment.id}:`, err);
           throw err; // Transaction will rollback
         }
       }
@@ -229,7 +245,7 @@ export const POST = async (req: NextRequest) => {
         .where(eq(webhookEvents.eventId, eventId));
     });
 
-    console.log("Webhook processed successfully:", eventId);
+    console.log("[Tsara Webhook] Webhook processed successfully:", eventId);
     return NextResponse.json({
       success: true,
       message: "Webhook processed",
@@ -237,7 +253,7 @@ export const POST = async (req: NextRequest) => {
       status: mappedStatus,
     });
   } catch (err: any) {
-    console.error("Webhook processing error:", err);
+    console.error("[Tsara Webhook] Processing error:", err);
     return NextResponse.json(
       { error: "Internal server error", details: err?.message },
       { status: 500 }

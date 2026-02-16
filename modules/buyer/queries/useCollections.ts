@@ -34,15 +34,15 @@ export interface Collection {
   collectionId?: string | null;
   collectionItemCount?: number;
   collectionTotalPrice?: number;
-  totalPrice?: number; // Total price of all items in collection (from backend)
-  totalPriceCents?: number; // Total price in cents
-  avgPrice?: number; // Average price per item
+  totalPrice?: number;
+  totalPriceCents?: number;
+  avgPrice?: number;
   shippingOption?: string | null;
   refundPolicy?: string | null;
   quantityAvailable?: number | null;
-  items?: any[]; // Collection items from backend
-  itemsJson?: string | null; // Stringified items for backward compatibility
-  colors?: string[]; // Unique colors from collection items
+  items?: any[];
+  itemsJson?: string | null;
+  colors?: string[];
 }
 
 export interface UseCollectionsOptions {
@@ -59,41 +59,40 @@ export interface UseCollectionsResult {
 }
 
 /**
- * Collections hook using tRPC client
- * Fetches APPROVED collection listings with complete data
+ * Collections hook with built-in retry, caching, and error recovery
+ * Handles network errors gracefully with exponential backoff
  */
 export function useCollections({
   limit = 20,
   search,
   category,
 }: UseCollectionsOptions = {}): UseCollectionsResult {
-  // Use tRPC query to fetch approved collections
-  const { data: tRPCData, isLoading, error: tRPCError } = trpc.collection.getApprovedCollections.useQuery(
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const [cachedData, setCachedData] = useState<Collection[] | null>(null);
+  const [data, setData] = useState<Collection[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Use tRPC query with manual retry control
+  const { data: tRPCData, isLoading, error: tRPCError, refetch } = trpc.collection.getApprovedCollections.useQuery(
     {
       limit: limit || 20,
       offset: 0,
     },
     {
       enabled: true,
+      retry: false,
     }
   );
 
-  const [data, setData] = useState<Collection[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  // Process the tRPC data whenever it changes
+  // Process tRPC data
   useEffect(() => {
     if (!tRPCData || !tRPCData.collections) {
-      console.log('[useCollections] No tRPC data received', { tRPCData });
       setData([]);
       return;
     }
 
-    console.log('[useCollections] tRPCData received with', tRPCData.collections.length, 'collections');
-
     try {
-
-      // Transform backend data to match Collection interface
       let collections: Collection[] = (tRPCData.collections || []).map((item: any) => {
         let images: string[] = [];
         if (item.imagesJson) {
@@ -108,11 +107,9 @@ export function useCollections({
           images.unshift(item.image);
         }
 
-        // Extract unique colors from collection items
         const collectionColors = new Set<string>();
         if (item.items && Array.isArray(item.items)) {
           item.items.forEach((product: any) => {
-            // Try multiple possible field names for colors
             const colorsSource = product.colorsAvailable || product.colors_available || product.colors;
             if (colorsSource) {
               try {
@@ -121,19 +118,17 @@ export function useCollections({
                   try {
                     colors = JSON.parse(colorsSource);
                   } catch (e) {
-                    // If not JSON, treat as single color name
                     colors = [colorsSource];
                   }
                 }
                 if (Array.isArray(colors)) {
                   colors.forEach((c: any) => {
-                    // Handle both string and object color formats
                     const colorName = typeof c === 'string' ? c : (c.colorName || c.name || c);
                     collectionColors.add(colorName);
                   });
                 }
               } catch (e) {
-                // Color parsing failed, continue
+                // Color parsing failed
               }
             }
           });
@@ -182,17 +177,17 @@ export function useCollections({
           shippingOption: item.shippingOption,
           refundPolicy: item.refundPolicy,
           quantityAvailable: item.quantityAvailable,
-          items: item.items || [], // Pass collection items from backend
-          itemsJson: item.itemsJson, // Pass stringified items if available
-          colors: Array.from(collectionColors), // Extract unique colors from collection items
+          items: item.items || [],
+          itemsJson: item.itemsJson,
+          colors: Array.from(collectionColors),
         };
       });
 
-      // Sort by creation date - latest first
+      // Sort by latest first
       collections.sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
         const dateB = new Date(b.createdAt).getTime();
-        return dateB - dateA; // Descending order (latest first)
+        return dateB - dateA;
       });
 
       // Apply search filter
@@ -206,52 +201,76 @@ export function useCollections({
         );
       }
 
-      console.log('[useCollections] Transformed', collections.length, 'collections (sorted by latest first):', collections.map((c: any) => ({ id: c.id, title: c.title, createdAt: c.createdAt, itemsCount: c.items?.length || 0 })));
       setData(collections);
+      setCachedData(collections);
+      setRetryCount(0);
       setError(null);
     } catch (err: any) {
-      const errorMessage =
-        err?.message || 'Failed to process collections';
+      const errorMessage = err?.message || 'Failed to process collections';
       setError(errorMessage);
       console.error('Error processing collections:', errorMessage);
     }
   }, [tRPCData, search]);
 
-  // Handle tRPC errors
+  // Handle errors with retry and fallback
   useEffect(() => {
     if (tRPCError) {
       const errorMessage = tRPCError instanceof Error 
         ? tRPCError.message 
         : 'Failed to fetch collections';
+      
+      // Use cached data as fallback
+      if (cachedData && cachedData.length > 0) {
+        console.warn('[useCollections] Fetch failed, using cached data:', cachedData.length, 'items');
+        setData(cachedData);
+        setError(null);
+        return;
+      }
+      
+      // Retry with exponential backoff
+      if (retryCount < MAX_RETRIES) {
+        const delay = Math.pow(2, retryCount) * 1000;
+        console.log(`[useCollections] Retry ${retryCount + 1}/${MAX_RETRIES} in ${delay}ms`);
+        const timer = setTimeout(() => {
+          setRetryCount(retryCount + 1);
+          refetch();
+        }, delay);
+        return () => clearTimeout(timer);
+      }
+      
+      // All retries exhausted
       setError(errorMessage);
-      console.error('tRPC Error fetching collections:', errorMessage);
+      console.error('[useCollections] Failed after retries:', errorMessage);
     }
-  }, [tRPCError]);
+  }, [tRPCError, retryCount, cachedData, refetch]);
 
   return {
-    data,
-    isLoading,
-    error,
-    refetch: () => Promise.resolve(), // tRPC handles refetching internally
+    data: data.length > 0 ? data : (cachedData || []),
+    isLoading: isLoading && data.length === 0,
+    error: data.length > 0 ? null : error,
+    refetch: async () => {
+      setRetryCount(0);
+      await refetch();
+    },
   };
 }
 
 /**
  * Fetch detailed collection information with approved items
- * collectionId here is actually the listing ID of the collection
  */
 export function useCollectionDetails(collectionId: string) {
   const { data: tRPCData, isLoading, error: tRPCError } = trpc.collection.getBuyerCollectionWithProducts.useQuery(
     { collectionId },
     {
       enabled: !!collectionId,
+      retry: 2,
     }
   );
 
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Process the tRPC data whenever it changes
+  // Process the tRPC data
   useEffect(() => {
     if (!tRPCData) {
       setData(null);
@@ -294,6 +313,6 @@ export function useCollectionDetails(collectionId: string) {
     data,
     isLoading,
     error,
-    refetch: () => Promise.resolve(), // tRPC handles refetching internally
+    refetch: () => Promise.resolve(),
   };
 }

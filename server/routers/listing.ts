@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
-import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews, productVariants } from "../db/schema";
+import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews, productVariants, users } from "../db/schema";
 import { and, eq, sql, inArray, asc } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -114,7 +114,6 @@ const DeleteOutput = z.object({
 
 // ---------- INPUT SCHEMAS ----------
 const SingleListingInput = z.object({
-  sellerId: z.string().uuid(),
   title: z.string().min(1),
   description: z.string().nullable().optional(),
   category: CategoryEnum.nullable().optional(),
@@ -211,6 +210,22 @@ async function fetchSeller(ctx: TRPCContext) {
   return seller;
 }
 
+async function getSellerBrandName(sellerId: string): Promise<string> {
+  try {
+    // Get seller's user record to fetch display name
+    const sellerRecord = await db.select({ userId: sellers.userId }).from(sellers).where(eq(sellers.id, sellerId)).limit(1);
+    if (!sellerRecord.length) return "Store";
+    
+    const userRecord = await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, sellerRecord[0].userId)).limit(1);
+    if (!userRecord.length || !userRecord[0].displayName) return "Store";
+    
+    return userRecord[0].displayName;
+  } catch (error) {
+    console.error('Error fetching seller brand name:', error);
+    return "Store";
+  }
+}
+
 // ---------- ROUTER ----------
 export const listingRouter = createTRPCRouter({
   // ---- CREATE SINGLE LISTING ----
@@ -240,7 +255,7 @@ export const listingRouter = createTRPCRouter({
       if (existingBrands.length > 0) {
         brandId = existingBrands[0].id;
       } else {
-        const defaultBrandName = "Default Store";
+        const defaultBrandName = await getSellerBrandName(seller.id);
         const newBrand = await db.insert(brands).values({
           sellerId: seller.id,
           name: defaultBrandName,
@@ -371,6 +386,11 @@ export const listingRouter = createTRPCRouter({
         careInstructions: input.careInstructions ?? null,
       };
 
+      console.log('[LISTING.createSingle] Colors being stored:', {
+        inputColors: input.colorsAvailable,
+        stringified: listingValues.colorsAvailable,
+      });
+
       const listingInserted = await db.insert(listings).values(listingValues).returning();
 
       // Create a corresponding listing review entry for admin review dashboard
@@ -450,6 +470,7 @@ export const listingRouter = createTRPCRouter({
         barcode: created.barcode || undefined,
         videoUrl: created.videoUrl || undefined,
         careInstructions: created.careInstructions || undefined,
+        status: mapStatusToFrontend(created.status),
         createdAt: created.createdAt instanceof Date ? created.createdAt : new Date(created.createdAt),
         updatedAt: created.updatedAt instanceof Date ? created.updatedAt : new Date(created.updatedAt),
       };
@@ -503,16 +524,17 @@ export const listingRouter = createTRPCRouter({
     if (existingBrands.length > 0) {
       brandId = existingBrands[0].id;
     } else {
-      const defaultBrandName = "Default Store";
+      const defaultBrandName = await getSellerBrandName(seller.id);
+      const slugBase = defaultBrandName.toLowerCase().replace(/\s+/g, "-");
       const newBrand = await db.insert(brands).values({
         sellerId: seller.id,
         name: defaultBrandName,
-        slug: 'default-store', // Will be updated to include ID after insert
+        slug: slugBase, // Will be updated to include ID after insert
       }).returning({ id: brands.id });
       brandId = newBrand[0].id;
       
       // Update slug to include brand ID for uniqueness
-      const uniqueSlug = `default-store-${brandId.substring(0, 8)}`;
+      const uniqueSlug = `${slugBase}-${brandId.substring(0, 8)}`;
       await db.update(brands).set({ slug: uniqueSlug }).where(eq(brands.id, brandId));
     }
 
@@ -799,6 +821,7 @@ export const listingRouter = createTRPCRouter({
       barcode: createdListing.barcode || undefined,
       videoUrl: createdListing.videoUrl || undefined,
       careInstructions: createdListing.careInstructions || undefined,
+      status: mapStatusToFrontend(createdListing.status),
       createdAt: new Date(createdListing.createdAt),
       updatedAt: new Date(createdListing.updatedAt),
     };
@@ -1554,6 +1577,7 @@ export const listingRouter = createTRPCRouter({
         localPricing: updated.localPricing ?? null,
         itemsJson: updated.itemsJson ? JSON.parse(updated.itemsJson) : null,
         productId: updated.productId ?? undefined,
+        status: mapStatusToFrontend(updated.status),
         createdAt: new Date(updated.createdAt),
         updatedAt: new Date(updated.updatedAt),
       };
@@ -1631,16 +1655,17 @@ export const listingRouter = createTRPCRouter({
         if (existingBrands.length > 0) {
           brandId = existingBrands[0].id;
         } else {
-          const defaultBrandName = "Default Store";
+          const defaultBrandName = await getSellerBrandName(seller.id);
+          const slugBase = defaultBrandName.toLowerCase().replace(/\s+/g, "-");
           const newBrand = await db.insert(brands).values({
             sellerId: seller.id,
             name: defaultBrandName,
-            slug: 'default-store',
+            slug: slugBase,
           }).returning({ id: brands.id });
           brandId = newBrand[0].id;
           
           // Update slug to include brand ID for uniqueness
-          const uniqueSlug = `default-store-${brandId.substring(0, 8)}`;
+          const uniqueSlug = `${slugBase}-${brandId.substring(0, 8)}`;
           await db.update(brands).set({ slug: uniqueSlug }).where(eq(brands.id, brandId));
         }
 
@@ -1846,6 +1871,7 @@ export const listingRouter = createTRPCRouter({
           barcode: updated.barcode || undefined,
           videoUrl: updated.videoUrl || undefined,
           careInstructions: updated.careInstructions || undefined,
+          status: mapStatusToFrontend(updated.status),
           createdAt: new Date(updated.createdAt),
           updatedAt: new Date(updated.updatedAt),
         };
@@ -2015,6 +2041,72 @@ export const listingRouter = createTRPCRouter({
           });
         }
       });
+    }),
+
+  // ---- SUBMIT FOR REVIEW ----
+  submitForReview: protectedProcedure
+    .input(
+      z.object({
+        listingId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const seller = await fetchSeller(ctx);
+
+      // Get the listing to verify ownership and current status
+      const listing = await db
+        .select()
+        .from(listings)
+        .where(
+          and(
+            eq(listings.id, input.listingId),
+            eq(listings.sellerId, seller.id)
+          )
+        )
+        .limit(1);
+
+      if (!listing.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Listing not found or you don't have permission to submit it",
+        });
+      }
+
+      const currentListing = listing[0];
+
+      // Check if listing is in a state that can be submitted
+      if (
+        currentListing.status !== "draft" &&
+        currentListing.status !== "revision_requested"
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Cannot submit listing with status '${currentListing.status}'. Only draft and revision_requested listings can be submitted.`,
+        });
+      }
+
+      // Update listing status to pending_review
+      const updated = await db
+        .update(listings)
+        .set({
+          status: "pending_review",
+          updatedAt: new Date(),
+        })
+        .where(eq(listings.id, input.listingId))
+        .returning();
+
+      if (!updated.length) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update listing status",
+        });
+      }
+
+      return {
+        success: true,
+        message: "Listing submitted for review",
+        listing: updated[0],
+      };
     }),
 });
 

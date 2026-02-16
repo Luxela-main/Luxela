@@ -26,6 +26,8 @@ interface EnhancedListingCardProps {
   type: "single" | "collection";
   itemCount?: number;
   status?: string;
+  colors?: string[];
+  sizes?: string[];
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -45,6 +47,8 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
   type,
   itemCount,
   status,
+  colors = [],
+  sizes = [],
   onView,
   onEdit,
   onDelete,
@@ -101,10 +105,10 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       {/* Main Card Container */}
-      <div className="h-full bg-gradient-to-b from-[#1a1a1a] via-[#141414] to-[#0f0f0f] rounded-2xl overflow-hidden border border-gray-800/60 hover:border-gray-700/80 transition-all duration-500 backdrop-blur-md shadow-xl hover:shadow-2xl hover:shadow-[#8451E1]/20">
+      <div className="h-full flex flex-col bg-gradient-to-b from-[#1a1a1a] via-[#141414] to-[#0f0f0f] rounded-2xl overflow-hidden border border-gray-800/60 hover:border-gray-700/80 transition-all duration-500 backdrop-blur-md shadow-xl hover:shadow-2xl hover:shadow-[#8451E1]/20">
         
         {/* Image Section */}
-        <div className="relative w-full aspect-[3/4] overflow-hidden bg-gradient-to-br from-gray-900 to-black">
+        <div className="relative w-full aspect-[2/3] overflow-hidden bg-gradient-to-br from-gray-900 to-black">
           {image ? (
             <Image
               src={image}
@@ -225,7 +229,7 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
         </div>
 
         {/* Content Section */}
-        <div className="p-5 space-y-4 flex flex-col h-full">
+        <div className="p-5 space-y-4 flex flex-col flex-1 overflow-y-auto">
           {/* Category Badge */}
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 rounded-full bg-gradient-to-b from-[#8451E1] to-[#6D3FCF]" />
@@ -247,7 +251,7 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
             {price && type === "single" && (
               <div className="flex items-end justify-between">
                 <span className="text-2xl font-bold text-white">
-                  ₦{(price / 100).toLocaleString()}
+                  NGN {(price / 100).toLocaleString()}
                 </span>
                 {conversions > 0 && (
                   <span className="text-xs text-emerald-400 font-semibold">
@@ -291,6 +295,50 @@ export const EnhancedListingCard: React.FC<EnhancedListingCardProps> = ({
                       <span className="font-semibold text-emerald-400">
                         {conversions} {conversions === 1 ? "sale" : "sales"}
                       </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Colors and Sizes */}
+            {(colors.length > 0 || sizes.length > 0) && (
+              <div className="pt-2 border-t border-gray-800/50">
+                <div className="text-xs space-y-2">
+                  {colors.length > 0 && (
+                    <div>
+                      <span className="text-gray-500 text-xs uppercase tracking-widest">Colors</span>
+                      <div className="flex gap-1.5 flex-wrap mt-1">
+                        {colors.slice(0, 3).map((color, idx) => (
+                          <div
+                            key={idx}
+                            className="w-4 h-4 rounded-full border border-gray-600 hover:border-gray-400 transition-colors"
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                        {colors.length > 3 && (
+                          <span className="text-gray-500 text-xs ml-1">+{colors.length - 3}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {sizes.length > 0 && (
+                    <div>
+                      <span className="text-gray-500 text-xs uppercase tracking-widest">Sizes</span>
+                      <div className="flex gap-1 flex-wrap mt-1">
+                        {sizes.slice(0, 3).map((size, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-gray-700/40 text-gray-300 text-xs px-1.5 py-0.5 rounded"
+                          >
+                            {size}
+                          </span>
+                        ))}
+                        {sizes.length > 3 && (
+                          <span className="text-gray-500 text-xs ml-1">+{sizes.length - 3}</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

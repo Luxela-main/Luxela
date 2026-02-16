@@ -5,6 +5,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/app/_trpc/client';
 import {
+  useMarkNotificationAsRead,
+  useMarkAllNotificationsAsRead,
+  useDeleteNotification,
+} from '@/modules/buyer/queries/useNotifications';
+import {
   Loader2,
   Bell,
   CheckCircle2,
@@ -87,40 +92,48 @@ export default function NotificationsPage() {
   );
 
   
-  const markAsReadMutation = trpc.buyerNotifications.markAsRead.useMutation({
-    onSuccess: () => {
-      // Don't refetch on success - optimistic update already updated the UI
-    },
-    onError: (error) => {
-      // Refetch on error to restore correct state
+  const markAsReadMutation = useMarkNotificationAsRead();
+  
+  // Handle errors with custom error handling
+  const originalMarkAsReadMutate = markAsReadMutation.mutateAsync;
+  const wrappedMarkAsReadMutate = useCallback(async (notificationId: string) => {
+    try {
+      await originalMarkAsReadMutate({ notificationId });
+    } catch (error: any) {
       refetchNotifications();
-      toastSvc.error(error.message || 'Failed to update notification');
-    },
-  });
+      toastSvc.error(error?.message || 'Failed to update notification');
+    }
+  }, [originalMarkAsReadMutate, refetchNotifications]);
 
   
-  const deleteNotificationMutation = trpc.buyerNotifications.deleteNotification.useMutation({
-    onSuccess: () => {
-      // Don't refetch - optimistic update already removed it
+  const deleteNotificationMutation = useDeleteNotification();
+  
+  // Handle errors with custom error handling
+  const originalDeleteMutate = deleteNotificationMutation.mutateAsync;
+  const wrappedDeleteMutate = useCallback(async (notificationId: string) => {
+    try {
+      await originalDeleteMutate({ notificationId });
       toastSvc.success('Notification deleted');
-    },
-    onError: (error) => {
-      // Refetch on error to restore correct state
+    } catch (error: any) {
       refetchNotifications();
-      toastSvc.error(error.message || 'Failed to delete notification');
-    },
-  });
+      toastSvc.error(error?.message || 'Failed to delete notification');
+    }
+  }, [originalDeleteMutate, refetchNotifications]);
 
   
-  const markAllAsReadMutation = trpc.buyerNotifications.markAllAsRead.useMutation({
-    onSuccess: () => {
+  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
+  
+  // Handle success/error with custom logic
+  const originalMarkAllMutate = markAllAsReadMutation.mutateAsync;
+  const wrappedMarkAllMutate = useCallback(async () => {
+    try {
+      await originalMarkAllMutate();
       refetchNotifications();
       toastSvc.success('All notifications marked as read');
-    },
-    onError: (error) => {
-      toastSvc.error(error.message || 'Failed to mark all as read');
-    },
-  });
+    } catch (error: any) {
+      toastSvc.error(error?.message || 'Failed to mark all as read');
+    }
+  }, [originalMarkAllMutate, refetchNotifications]);
 
   
   useEffect(() => {
@@ -186,12 +199,12 @@ export default function NotificationsPage() {
 
       // Then mutate in background
       try {
-        await markAsReadMutation.mutateAsync({ notificationId });
+        await wrappedMarkAsReadMutate(notificationId);
       } catch (error) {
         // Error already handled in mutation onError
       }
     }, 300),
-    [markAsReadMutation]
+    [wrappedMarkAsReadMutate]
   );
 
   const handleDeleteNotification = useCallback(
@@ -207,16 +220,16 @@ export default function NotificationsPage() {
 
       // Then mutate in background
       try {
-        await deleteNotificationMutation.mutateAsync({ notificationId });
+        await wrappedDeleteMutate(notificationId);
       } catch (error) {
         // Error already handled in mutation onError
       }
     }, 300),
-    [notifications, deleteNotificationMutation]
+    [notifications, wrappedDeleteMutate]
   );
 
   const handleMarkAllAsRead = async () => {
-    await markAllAsReadMutation.mutateAsync();
+    await wrappedMarkAllMutate();
   };
 
   const getNotificationIcon = (type?: string, metadata?: Record<string, any>) => {

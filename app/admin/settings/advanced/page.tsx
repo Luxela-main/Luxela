@@ -117,7 +117,7 @@ export default function AdvancedSettingsPage() {
                           <div>
                             <div className="font-medium">{provider.name}</div>
                             <div className="text-xs text-gray-400">
-                              {provider.fee && `${provider.fee}% + $${provider.feeFixed}`}
+                              {provider.fee && `${provider.fee}% + ₦${provider.feeFixed}`}
                             </div>
                           </div>
                         </div>
@@ -143,7 +143,7 @@ export default function AdvancedSettingsPage() {
                         <div>
                           <div className="font-medium">{method.name}</div>
                           <div className="text-xs text-gray-400 mt-1">
-                            Min payout: ${method.minPayout} • Processing: {method.processingTime} • Fee: {method.fee}%
+                            Min payout: ₦{method.minPayout} • Processing: {method.processingTime} • Fee: {method.fee}%
                           </div>
                         </div>
                         <Badge className={method.enabled ? 'bg-green-600' : 'bg-gray-600'}>

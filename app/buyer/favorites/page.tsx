@@ -9,6 +9,7 @@ import { Loader2, Heart, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/components/hooks/useToast';
 import { useCartState } from '@/modules/cart/context';
+import { formatNaira } from '@/lib/currency';
 
 interface Favorite {
   id: string;
@@ -189,13 +190,7 @@ export default function FavoritesPage() {
                   {}
                   <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-lg font-light text-white">
-                      {(favorite.listing.price_cents / 100).toLocaleString(
-                        undefined,
-                        { minimumFractionDigits: 2 }
-                      )}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {favorite.listing.currency}
+                      {formatNaira(favorite.listing.price_cents, false)}
                     </span>
                   </div>
 

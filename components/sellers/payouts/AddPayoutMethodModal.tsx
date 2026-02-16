@@ -267,7 +267,7 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                 <DollarSign className="text-green-400" size={24} />
                 <div>
                   <h4 className="font-semibold text-white">Cryptocurrency</h4>
-                  <p className="text-sm text-gray-400">USDT, USDC, or other crypto</p>
+                  <p className="text-sm text-gray-400">USDC stablecoin on Solana network</p>
                 </div>
               </div>
             </button>
@@ -520,12 +520,7 @@ export function AddPayoutMethodModal({ isOpen, onClose, onAdd }: AddPayoutMethod
                     }`}
                   >
                     <option value="">Select network</option>
-                    <option value="USDT (TRC-20)">USDT (TRC-20)</option>
-                    <option value="USDT (ERC-20)">USDT (ERC-20)</option>
-                    <option value="USDC (Polygon)">USDC (Polygon)</option>
-                    <option value="Bitcoin">Bitcoin</option>
-                    <option value="Ethereum">Ethereum</option>
-                    <option value="Solana">Solana</option>
+                    <option value="USDC (SOL)">USDC (SOL)</option>
                   </select>
                   {validationErrors.walletNetwork && (
                     <p className="text-red-400 text-sm mt-1">{validationErrors.walletNetwork}</p>

@@ -47,6 +47,63 @@ export const orderStatusRouter = createTRPCRouter({
       }
     }),
 
+  // Get all orders (admin only) without status filtering
+  getAllOrders: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().default(100),
+        offset: z.number().default(0),
+        status: z.enum([
+          'pending',
+          'confirmed',
+          'processing',
+          'shipped',
+          'delivered',
+          'canceled',
+          'returned',
+        ]).optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        // Check if user is admin
+        if (ctx.user?.role !== 'admin') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admins can view all orders',
+          });
+        }
+
+        let query = ctx.supabase
+          .from('orders')
+          .select('*', { count: 'exact' });
+
+        // If status is provided, filter by it; otherwise get all orders
+        if (input.status) {
+          query = query.eq('order_status', input.status);
+        }
+
+        const { data: orders, error, count } = await query
+          .range(input.offset, input.offset + input.limit - 1)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return {
+          orders: orders || [],
+          count: count || 0,
+          hasMore: (input.offset + input.limit) < (count || 0),
+        };
+      } catch (error) {
+        throw error instanceof TRPCError
+          ? error
+          : new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Failed to fetch orders',
+            });
+      }
+    }),
+
   // Get orders by status
   getOrdersByStatus: protectedProcedure
     .input(
@@ -227,15 +284,22 @@ export const orderStatusRouter = createTRPCRouter({
         currency: z.string().nullable(),
         shipping_address: z.string().nullable(),
         tracking_number: z.string().nullable(),
-        order_date: z.string().nullable(),
-        delivered_date: z.string().nullable(),
+        order_date: z.coerce.date().nullable().catch(null),
+        delivered_date: z.coerce.date().nullable().catch(null),
         payment_method: z.string().nullable(),
         payout_status: z.string().nullable(),
         product_category: z.string().nullable(),
-        created_at: z.string().nullable(),
-        updated_at: z.string().nullable(),
-        shipped_at: z.string().nullable(),
-      }).passthrough()
+        created_at: z.coerce.date().nullable().catch(null),
+        updated_at: z.coerce.date().nullable().catch(null),
+        shipped_at: z.coerce.date().nullable().catch(null),
+        estimated_arrival: z.coerce.date().nullable().catch(null),
+        quantity: z.number().nullable(),
+        selected_size: z.string().nullable(),
+        selected_color: z.string().nullable(),
+        selected_color_hex: z.string().nullable(),
+        recipient_email: z.string().nullable(),
+        items: z.any().nullable(),
+      })
     )
     .query(async ({ ctx, input }) => {
       try {
@@ -252,15 +316,47 @@ export const orderStatusRouter = createTRPCRouter({
           });
         }
 
-        // Verify authorization
-        if (ctx.user?.id !== order.seller_id && ctx.user?.id !== order.buyer_id && ctx.user?.role !== 'admin') {
+        // Verify authorization - user must be seller, buyer, or admin
+        const isAuthorized =
+          ctx.user?.id === order.seller_id ||
+          ctx.user?.id === order.buyer_id ||
+          ctx.user?.role === 'admin';
+
+        if (!isAuthorized) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Not authorized to view this order',
           });
         }
 
-        return order;
+        // Ensure dates are strings for serialization
+        let items = null;
+        try {
+          // Parse items if they're stored as JSON string
+          if (order.items) {
+            if (typeof order.items === 'string') {
+              items = JSON.parse(order.items);
+            } else if (Array.isArray(order.items)) {
+              items = order.items;
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing order items:', e);
+          items = null;
+        }
+
+        const normalizedOrder = {
+          ...order,
+          items: items,
+          order_date: order.order_date ? new Date(order.order_date).toISOString() : null,
+          delivered_date: order.delivered_date ? new Date(order.delivered_date).toISOString() : null,
+          created_at: order.created_at ? new Date(order.created_at).toISOString() : null,
+          updated_at: order.updated_at ? new Date(order.updated_at).toISOString() : null,
+          shipped_at: order.shipped_at ? new Date(order.shipped_at).toISOString() : null,
+          estimated_arrival: order.estimated_arrival ? new Date(order.estimated_arrival).toISOString() : null,
+        };
+
+        return normalizedOrder;
       } catch (error) {
         throw error instanceof TRPCError
           ? error

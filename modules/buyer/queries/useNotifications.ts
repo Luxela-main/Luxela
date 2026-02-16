@@ -49,10 +49,11 @@ export const useNotificationsCount = () => {
 export const useMarkNotificationAsRead = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.buyer as any).markNotificationAsRead.useMutation({
+  return (trpc.buyerNotifications as any).markAsRead.useMutation({
     onSuccess: async () => {
-      await (utils.buyer as any).getNotifications.invalidate();
-      await (utils.buyer as any).getNotifications.refetch();
+      // Invalidate the unified notifications endpoint to update badge count
+      await (utils.buyerNotifications as any).getNotifications.invalidate();
+      await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },
   });
 };
@@ -60,10 +61,11 @@ export const useMarkNotificationAsRead = () => {
 export const useMarkAllNotificationsAsRead = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.buyer as any).markAllNotificationsAsRead.useMutation({
+  return (trpc.buyerNotifications as any).markAllAsRead.useMutation({
     onSuccess: async () => {
-      await (utils.buyer as any).getNotifications.invalidate();
-      await (utils.buyer as any).getNotifications.refetch();
+      // Invalidate both endpoints to update notifications and badge count
+      await (utils.buyerNotifications as any).getNotifications.invalidate();
+      await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },
   });
 };
@@ -71,10 +73,10 @@ export const useMarkAllNotificationsAsRead = () => {
 export const useToggleNotificationFavorite = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.buyer as any).toggleNotificationFavorite.useMutation({
+  return (trpc.buyerNotifications as any).toggleStar.useMutation({
     onSuccess: async () => {
-      await (utils.buyer as any).getNotifications.invalidate();
-      await (utils.buyer as any).getNotifications.refetch();
+      // Invalidate the unified notifications endpoint
+      await (utils.buyerNotifications as any).getNotifications.invalidate();
     },
   });
 };
@@ -82,10 +84,11 @@ export const useToggleNotificationFavorite = () => {
 export const useDeleteNotification = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.buyer as any).deleteNotification.useMutation({
+  return (trpc.buyerNotifications as any).deleteNotification.useMutation({
     onSuccess: async () => {
-      await (utils.buyer as any).getNotifications.invalidate();
-      await (utils.buyer as any).getNotifications.refetch();
+      // Invalidate both endpoints to update notifications and badge count
+      await (utils.buyerNotifications as any).getNotifications.invalidate();
+      await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },
   });
 };
@@ -93,10 +96,11 @@ export const useDeleteNotification = () => {
 export const useDeleteAllNotifications = () => {
   const utils = trpc.useUtils();
 
-  return (trpc.buyer as any).deleteAllNotifications.useMutation({
+  return (trpc.buyerNotifications as any).clearAll.useMutation({
     onSuccess: async () => {
-      await (utils.buyer as any).getNotifications.invalidate();
-      await (utils.buyer as any).getNotifications.refetch();
+      // Invalidate both endpoints to update notifications and badge count
+      await (utils.buyerNotifications as any).getNotifications.invalidate();
+      await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },
   });
 };

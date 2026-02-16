@@ -52,7 +52,7 @@ export const DashboardMetrics: React.FC = () => {
 
   // Fetch active orders (ongoing status)
   const { data: ordersData } = trpc.buyer.getPurchaseHistory.useQuery(
-    { page: 1, limit: 100 },
+    { page: 1, limit: 50 },
     { select: (data) => data?.data || [] }
   );
 

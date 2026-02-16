@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { formatCurrency } from '@/lib/utils';
 import {
   Card,
   CardContent,
@@ -65,6 +67,7 @@ interface Member {
 }
 
 export default function AdminMembersPage() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -236,7 +239,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-white">
-              {stats.totalMembers}
+              {stats.totalMembers.toLocaleString()}
             </div>
             <p className="text-xs text-[#6B7280] mt-1">All roles</p>
           </CardContent>
@@ -251,7 +254,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-green-400">
-              {stats.activeBuyers}
+              {stats.activeBuyers.toLocaleString()}
             </div>
             <p className="text-xs text-[#6B7280] mt-1">Purchasing members</p>
           </CardContent>
@@ -266,7 +269,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-blue-400">
-              {stats.activeSellers}
+              {stats.activeSellers.toLocaleString()}
             </div>
             <p className="text-xs text-[#6B7280] mt-1">Selling members</p>
           </CardContent>
@@ -281,7 +284,7 @@ export default function AdminMembersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-white">
-              {stats.newThisMonth}
+              {stats.newThisMonth.toLocaleString()}
             </div>
             <p className="text-xs text-[#6B7280] mt-1">Recent sign-ups</p>
           </CardContent>
@@ -403,8 +406,7 @@ export default function AdminMembersPage() {
                     <DropdownMenuItem
                       className="text-[#9CA3AF] cursor-pointer hover:bg-[#0e0e0e]"
                       onClick={() => {
-                        setSelectedMember(member);
-                        viewProfileMutation.mutate({ memberId: member.id });
+                        router.push(`/admin/members/${member.id}`);
                       }}
                     >
                       View Profile

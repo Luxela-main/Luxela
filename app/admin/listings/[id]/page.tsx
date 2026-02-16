@@ -32,6 +32,21 @@ export default function ListingDetailPage() {
     listingId,
   });
 
+  // Debug logging
+  React.useEffect(() => {
+    if (listing) {
+      console.log('[Admin Listing Debug] Full listing data:', listing);
+      console.log('[Admin Listing Debug] Colors data:', listing.colors);
+      console.log('[Admin Listing Debug] Colors type:', typeof listing.colors);
+      console.log('[Admin Listing Debug] Colors is array:', Array.isArray(listing.colors));
+      if (Array.isArray(listing.colors) && listing.colors.length > 0) {
+        console.log('[Admin Listing Debug] First color object:', listing.colors[0]);
+        console.log('[Admin Listing Debug] First color keys:', Object.keys(listing.colors[0]));
+        console.log('[Admin Listing Debug] Full colors JSON:', JSON.stringify(listing.colors, null, 2));
+      }
+    }
+  }, [listing]);
+
   const { data: activityHistory, isLoading: activityLoading } = trpc.adminListingReview.getActivityHistory.useQuery({
     listingId,
   });
@@ -41,6 +56,36 @@ export default function ListingDetailPage() {
   const revisionMutation = trpc.adminListingReview.requestRevision.useMutation();
 
   const { invalidateCatalogCache } = useListings();
+
+  const renderColorSwatches = (colorsData: any) => {
+    let colorsArray: any[] = [];
+    if (Array.isArray(colorsData)) {
+      colorsArray = colorsData;
+    } else if (typeof colorsData === 'string') {
+      try {
+        colorsArray = JSON.parse(colorsData);
+      } catch (e) {
+        return null;
+      }
+    } else {
+      return null;
+    }
+    if (!Array.isArray(colorsArray) || colorsArray.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-3">
+        {colorsArray.map((color: any, idx: number) => (
+          <div key={idx} className="flex items-center gap-2">
+            <div
+              className="w-6 h-6 rounded-full border border-[#2B2B2B]"
+              style={{ backgroundColor: color.colorHex || color.hex || '#000000' }}
+              title={color.colorHex || color.hex || 'N/A'}
+            />
+            <span className="text-sm text-white">{color.colorName || color.name || 'Unknown'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const handleApprove = async () => {
     if (!listing) return;
@@ -176,7 +221,10 @@ export default function ListingDetailPage() {
     );
   }
 
-  const images = listing.imagesJson ? JSON.parse(listing.imagesJson) : [];
+  // Use images array from backend (from productImages table) with imagesJson as fallback
+  const images = listing.images && listing.images.length > 0 
+    ? listing.images 
+    : (listing.imagesJson ? JSON.parse(listing.imagesJson) : []);
   const alreadyReviewed = listing.reviewStatus !== null;
 
   return (
@@ -278,7 +326,7 @@ export default function ListingDetailPage() {
                   <div>
                     <p className="text-sm font-medium text-[#9CA3AF]">Price</p>
                     <p className="text-white">
-                      {listing.price ? formatNaira(listing.price, true) : "Not set"}
+                      {listing.priceCents ? formatNaira(listing.priceCents / 100, true) : listing.price ? formatNaira(listing.price, true) : "Not set"}
                     </p>
                   </div>
                   <div>
@@ -298,6 +346,36 @@ export default function ListingDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {}
+            {listing.sizes && listing.sizes.length > 0 && (
+              <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
+                <CardHeader>
+                  <CardTitle>Available Sizes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {listing.sizes.map((size: string, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="bg-[#8451e1]/30 text-[#8451e1]">
+                        {size}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {}
+            {listing.colors && listing.colors.length > 0 && (
+              <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
+                <CardHeader>
+                  <CardTitle>Available Colors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderColorSwatches(listing.colors)}
+                </CardContent>
+              </Card>
+            )}
 
             {}
             {listing.type === 'collection' && listing.collectionProducts && listing.collectionProducts.length > 0 && (
@@ -355,6 +433,97 @@ export default function ListingDetailPage() {
             )}
 
             {}
+            {(listing.quantityAvailable || listing.supplyCapacity || listing.limitedEditionBadge || listing.releaseDuration) && (
+              <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
+                <CardHeader>
+                  <CardTitle>Inventory & Availability</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {listing.quantityAvailable !== null && listing.quantityAvailable !== undefined && (
+                      <div>
+                        <p className="text-sm font-medium text-[#9CA3AF]">Quantity Available</p>
+                        <p className="text-white font-mono text-sm">{listing.quantityAvailable}</p>
+                      </div>
+                    )}
+                    {listing.supplyCapacity && (
+                      <div>
+                        <p className="text-sm font-medium text-[#9CA3AF]">Supply Capacity</p>
+                        <p className="text-white capitalize">{listing.supplyCapacity.replace(/_/g, " ")}</p>
+                      </div>
+                    )}
+                  </div>
+                  {listing.limitedEditionBadge && (
+                    <div className="pt-2 border-t border-[#2B2B2B]">
+                      <Badge className="bg-yellow-500/30 text-yellow-400">{listing.limitedEditionBadge}</Badge>
+                    </div>
+                  )}
+                  {listing.releaseDuration && (
+                    <div className="pt-2 border-t border-[#2B2B2B]">
+                      <p className="text-sm font-medium text-[#9CA3AF]">Release Duration</p>
+                      <p className="text-white capitalize">{listing.releaseDuration.replace(/_/g, " ")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {}
+            {listing.additionalTargetAudience && (
+              <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
+                <CardHeader>
+                  <CardTitle>Target Audience</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-white capitalize">{listing.additionalTargetAudience.replace(/_/g, " ")}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {}
+            {(listing.shippingOption || listing.etaDomestic || listing.etaInternational || listing.refundPolicy || listing.localPricing) && (
+              <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
+                <CardHeader>
+                  <CardTitle>Shipping & Fulfillment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {listing.shippingOption && (
+                      <div>
+                        <p className="text-sm font-medium text-[#9CA3AF]">Shipping Option</p>
+                        <p className="text-white capitalize">{listing.shippingOption.replace(/_/g, " ")}</p>
+                      </div>
+                    )}
+                    {listing.etaDomestic && (
+                      <div>
+                        <p className="text-sm font-medium text-[#9CA3AF]">Domestic ETA</p>
+                        <p className="text-white capitalize">{listing.etaDomestic.replace(/_/g, " ")}</p>
+                      </div>
+                    )}
+                    {listing.etaInternational && (
+                      <div>
+                        <p className="text-sm font-medium text-[#9CA3AF]">International ETA</p>
+                        <p className="text-white capitalize">{listing.etaInternational.replace(/_/g, " ")}</p>
+                      </div>
+                    )}
+                    {listing.refundPolicy && (
+                      <div>
+                        <p className="text-sm font-medium text-[#9CA3AF]">Refund Policy</p>
+                        <p className="text-white capitalize">{listing.refundPolicy.replace(/_/g, " ")}</p>
+                      </div>
+                    )}
+                  </div>
+                  {listing.localPricing && (
+                    <div className="pt-2 border-t border-[#2B2B2B]">
+                      <p className="text-sm font-medium text-[#9CA3AF]">Local Pricing</p>
+                      <p className="text-white mt-2 whitespace-pre-wrap text-sm">{listing.localPricing}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {}
             {(listing.sku || listing.materialComposition || listing.careInstructions) && (
               <Card className="bg-[#1a1a1a] border-[#2B2B2B]">
                 <CardHeader>
@@ -368,6 +537,12 @@ export default function ListingDetailPage() {
                         <p className="text-white font-mono text-sm">{listing.sku}</p>
                       </div>
                     )}
+                    {listing.barcode && (
+                      <div>
+                        <p className="text-sm font-medium text-[#9CA3AF]">Barcode</p>
+                        <p className="text-white font-mono text-sm">{listing.barcode}</p>
+                      </div>
+                    )}
                     {listing.materialComposition && (
                       <div>
                         <p className="text-sm font-medium text-[#9CA3AF]">Material</p>
@@ -375,6 +550,14 @@ export default function ListingDetailPage() {
                       </div>
                     )}
                   </div>
+                  {listing.videoUrl && (
+                    <div className="pt-2 border-t border-[#2B2B2B]">
+                      <p className="text-sm font-medium text-[#9CA3AF]">Video URL</p>
+                      <a href={listing.videoUrl} target="_blank" rel="noopener noreferrer" className="text-[#8451e1] hover:text-[#a86cf8] text-sm break-all">
+                        {listing.videoUrl}
+                      </a>
+                    </div>
+                  )}
                   {listing.careInstructions && (
                     <div className="pt-2 border-t border-[#2B2B2B]">
                       <p className="text-sm font-medium text-[#9CA3AF]">Care Instructions</p>

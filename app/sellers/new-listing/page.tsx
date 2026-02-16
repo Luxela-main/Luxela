@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import ProductListings from "@/components/sellers/NewListing/ProductListings";
 import TabsNav from "@/components/sellers/NewListing/TabsNav";
 import ProductInfoForm from "@/components/sellers/NewListing/ProductInfoForm";
@@ -21,6 +22,7 @@ export const dynamic = 'force-dynamic';
 const NewListing: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const editId = searchParams?.get("edit");
   const lastValidationErrorsRef = useRef<string[]>([]);
   const lastValidationTimeRef = useRef<number>(0);
@@ -510,9 +512,10 @@ const handleSubmitSingle = async () => {
         .split(",")
         .map((c: string) => {
           const colorName = c.trim();
+          const paletteKey = Object.keys(COLOR_PALETTE).find(key => key.toLowerCase() === colorName.toLowerCase());
           return {
             colorName,
-            colorHex: COLOR_PALETTE[colorName] || "#808080" 
+            colorHex: paletteKey ? COLOR_PALETTE[paletteKey] : "#808080" 
           };
         });
     }
@@ -744,8 +747,8 @@ const handleSubmitCollection = async () => {
       items: convertedItems,
       supplyCapacity: (formData.supplyCapacity?.toLowerCase().includes("limit") ? "limited" : "no_max") as "no_max" | "limited",
       shippingOption: (formData.shippingOption || "local") as "local" | "international" | "both",
-      etaDomestic: formData.domesticDays || "",
-      etaInternational: formData.internationalDays || "",
+      etaDomestic: mapEtaValue(formData.domesticDays),
+      etaInternational: formData.internationalDays ? mapEtaValue(formData.internationalDays) : undefined,
       refundPolicy: (formData.collectionRefundPolicy || "") as "no_refunds" | "48hrs" | "30days" | "60days" | "store_credit" | "",
       sku: formData.collectionSku || "",
       slug: collectionSlug,
@@ -792,6 +795,8 @@ const handleSubmitCollection = async () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
       }
+      // Invalidate listings query to immediately show new listing
+      queryClient.invalidateQueries({ queryKey: ['listing', 'getMyListings'] });
       setShowSuccessModal(true);
     },
     onError: (error: any) => {
@@ -817,6 +822,8 @@ const handleSubmitCollection = async () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
     }
+    // Invalidate listings query to immediately show updated listing
+    queryClient.invalidateQueries({ queryKey: ['listing', 'getMyListings'] });
     setShowSuccessModal(true);
   },
   onError: (error: any) => {
@@ -845,6 +852,10 @@ const handleSubmitCollection = async () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
       }
+      // Invalidate listings query to immediately show new collection
+      queryClient.invalidateQueries({ queryKey: ['listing', 'getMyListings'] });
+      // Also invalidate collections cache
+      queryClient.invalidateQueries({ queryKey: ['listing', 'getMyCollections'] });
       setShowSuccessModal(true);
     },
     onError: (error: any) => {
@@ -873,6 +884,10 @@ const handleSubmitCollection = async () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
       }
+      // Invalidate listings query to immediately show updated collection
+      queryClient.invalidateQueries({ queryKey: ['listing', 'getMyListings'] });
+      // Also invalidate collections cache
+      queryClient.invalidateQueries({ queryKey: ['listing', 'getMyCollections'] });
       setShowSuccessModal(true);
     },
     onError: (error: any) => {
@@ -1030,7 +1045,11 @@ const handleSubmitCollection = async () => {
         />
       )}
 
-      <SuccessModal isOpen={showSuccessModal} onClose={handleCloseSuccessModal} />
+      <SuccessModal 
+        isOpen={showSuccessModal} 
+        onClose={handleCloseSuccessModal}
+        productTitle={view === "collection" ? formData.collectionTitle || "Your collection" : formData.name || "Your product"}
+      />
     </div>
   );
 };

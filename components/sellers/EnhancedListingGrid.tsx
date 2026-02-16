@@ -40,6 +40,12 @@ interface Listing {
   imagesJson?: string;
   listingStatus?: string;
   status?: "pending" | "approved" | "rejected" | "revision_requested";
+  colorPalette?: string | any[];
+  colors?: string | any[];
+  colorsAvailable?: any[];
+  sizesJson?: string | any[];
+  sizeOptions?: string | any[];
+  sizes?: string | any[];
 }
 
 interface EnhancedListingGridProps {
@@ -182,7 +188,7 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
       }
     }
     
-    if (listing.image) return listing.image;
+    // Prioritize imagesJson first - it contains the most up-to-date images after editing
     if (listing.imagesJson) {
       try {
         const images = typeof listing.imagesJson === 'string' ? JSON.parse(listing.imagesJson) : listing.imagesJson;
@@ -191,10 +197,93 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
           return typeof firstImg === 'string' ? firstImg : firstImg?.url || firstImg;
         }
       } catch {
-        return undefined;
+        // Fall through to image field if imagesJson parsing fails
       }
     }
+    
+    // Fallback to single image field
+    if (listing.image) return listing.image;
+    
     return undefined;
+  }
+
+  // Helper to get colors from listing
+  const getColors = (listing: Listing): string[] => {
+    try {
+      // First check for colorsAvailable (from backend submission)
+      if (listing.colorsAvailable && Array.isArray(listing.colorsAvailable)) {
+        return listing.colorsAvailable.map((color: any) => {
+          if (typeof color === 'string') return color;
+          if (color.colorHex) return color.colorHex;
+          if (color.hex) return color.hex;
+          return '#808080';
+        });
+      }
+      // Fallback to colorPalette
+      if (listing.colorPalette && typeof listing.colorPalette === "string") {
+        const parsed = JSON.parse(listing.colorPalette);
+        if (Array.isArray(parsed)) {
+          return parsed.map((color: any) => {
+            if (typeof color === 'string') return color;
+            if (color.colorHex) return color.colorHex;
+            if (color.hex) return color.hex;
+            return '#808080';
+          });
+        }
+        return parsed;
+      }
+      // Fallback to colors field
+      if (listing.colors) {
+        const colorData = typeof listing.colors === "string" ? JSON.parse(listing.colors) : listing.colors;
+        if (Array.isArray(colorData)) {
+          return colorData.map((color: any) => {
+            if (typeof color === 'string') return color;
+            if (color.colorHex) return color.colorHex;
+            if (color.hex) return color.hex;
+            return '#808080';
+          });
+        }
+        return colorData;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  // Helper to get sizes from listing
+  const getSizes = (listing: Listing): string[] => {
+    try {
+      // Try sizes array first (most common from submissions)
+      if (listing.sizes) {
+        if (Array.isArray(listing.sizes)) {
+          return listing.sizes.map((s: any) => typeof s === 'string' ? s : String(s));
+        }
+        if (typeof listing.sizes === "string") {
+          const parsed = JSON.parse(listing.sizes);
+          return Array.isArray(parsed) ? parsed.map((s: any) => String(s)) : [];
+        }
+      }
+      // Fallback to sizesJson
+      if (listing.sizesJson) {
+        if (typeof listing.sizesJson === "string") {
+          const parsed = JSON.parse(listing.sizesJson);
+          return Array.isArray(parsed) ? parsed.map((s: any) => String(s)) : [];
+        }
+        return Array.isArray(listing.sizesJson) ? listing.sizesJson.map((s: any) => String(s)) : [];
+      }
+      // Fallback to sizeOptions
+      if (listing.sizeOptions) {
+        if (typeof listing.sizeOptions === "string") {
+          const parsed = JSON.parse(listing.sizeOptions);
+          return Array.isArray(parsed) ? parsed.map((s: any) => String(s)) : [];
+        }
+        return Array.isArray(listing.sizeOptions) ? listing.sizeOptions.map((s: any) => String(s)) : [];
+      }
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   // Get item count for collections
@@ -619,6 +708,8 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                 type={listing.type}
                 itemCount={getItemCount(listing)}
                 status={listing.status}
+                colors={getColors(listing)}
+                sizes={getSizes(listing)}
                 onView={() => onView(listing)}
                 onEdit={() => onEdit(listing)}
                 onDelete={() => onDelete(listing)}
@@ -666,9 +757,9 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                 </div>
                 <div className="text-white font-semibold">
                   {listing.type === "single" && listing.priceCents
-                    ? `₦${(listing.priceCents / 100).toLocaleString()}`
+                    ? `NGN ${(listing.priceCents / 100).toLocaleString()}`
                     : listing.type === "collection"
-                    ? `₦${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
+                    ? `NGN ${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
                     : "—"}
                 </div>
                 <div className="text-white font-medium">
@@ -756,9 +847,9 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
                         <p className="text-gray-500 mb-1 text-xs">Price</p>
                         <p className="text-white font-semibold">
                           {listing.type === "single" && listing.priceCents
-                            ? `₦${(listing.priceCents / 100).toLocaleString()}`
+                            ? `NGN ${(listing.priceCents / 100).toLocaleString()}`
                             : listing.type === "collection"
-                            ? `₦${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
+                            ? `NGN ${(getCollectionTotalPrice(listing) / 100).toLocaleString()}`
                             : "—"}
                         </p>
                       </div>

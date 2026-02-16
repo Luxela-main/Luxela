@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "../trpc/trpc";
 import { db } from "../db";
 import {
   listings,
@@ -478,9 +478,13 @@ export const adminListingReviewRouter = createTRPCRouter({
       if (item.listing.colorsAvailable) {
         try {
           colors = JSON.parse(item.listing.colorsAvailable);
+          console.log('[AdminListingReview] Colors parsed successfully:', { raw: item.listing.colorsAvailable, parsed: colors });
         } catch (e) {
+          console.log('[AdminListingReview] Failed to parse colors:', { raw: item.listing.colorsAvailable, error: (e as any).message });
           colors = null;
         }
+      } else {
+        console.log('[AdminListingReview] No colorsAvailable field');
       }
 
       const responseData: any = {
@@ -1089,7 +1093,7 @@ export const adminListingReviewRouter = createTRPCRouter({
       }));
     }),
 
-  getDashboardStats: protectedProcedure
+  getDashboardStats: adminProcedure
     .meta({
       openapi: {
         method: "GET",
@@ -1108,7 +1112,7 @@ export const adminListingReviewRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx }) => {
-      await verifyAdminRole(ctx);
+      // adminProcedure already verified user is admin, no need to call verifyAdminRole
 
       const pendingCount = await db
         .select({ count: countFn() })

@@ -11,9 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import GoogleSignInButton from '@/components/auth/google';
-import * as authActions from '@/app/actions/auth';
+import { signinAction } from '@/app/actions/auth';
 import { useAuth } from '@/context/AuthContext';
-import { checkAdminStatus } from '@/app/actions/admin';
+import { validateAdminPassword } from '@/app/actions/admin';
 
 type AdminSignInFormValues = {
   email: string;
@@ -44,45 +44,43 @@ function AdminSignInContent() {
     try {
       const { email, adminPassword } = values;
 
-      
-      const expectedAdminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
-      
-      if (!expectedAdminPassword) {
-        toast.error('Admin password not configured');
-        setSubmitting(false);
-        return;
-      }
-
-      if (adminPassword !== expectedAdminPassword) {
-        toast.error('Invalid admin password');
-        setSubmitting(false);
-        return;
-      }
-
-      
+      // Authenticate with email and password
       setIsCheckingAdmin(true);
-      const adminStatus = await checkAdminStatus();
-
-      if (!adminStatus.success) {
-        toast.error(adminStatus.error || 'Failed to verify admin status');
+      const signInResult = await signinAction(email, adminPassword);
+      
+      if (!signInResult.success) {
+        toast.error(signInResult.error || 'Invalid email or password');
         setIsCheckingAdmin(false);
         setSubmitting(false);
         return;
       }
 
-      if (!adminStatus.isAdmin) {
-        toast.error('You do not have admin access. Please use the setup page to request admin access.');
+      if (!signInResult.user) {
+        toast.error('User not found');
         setIsCheckingAdmin(false);
         setSubmitting(false);
         return;
       }
 
+      // Update auth context with signed-in user
+      setUser(signInResult.user);
+
+      // Validate admin password via server action (secure)
+      const passwordValidation = await validateAdminPassword(adminPassword);
       
-      toast.success('Admin access verified!');
+      if (!passwordValidation.success) {
+        toast.error(passwordValidation.error || 'Invalid admin password');
+        setIsCheckingAdmin(false);
+        setSubmitting(false);
+        return;
+      }
+
+      // Success! Redirect to setup page to complete admin role grant
+      toast.success('Credentials verified! Completing setup...');
       
-      
+      // Brief delay then redirect to setup
       await new Promise(resolve => setTimeout(resolve, 800));
-      router.push('/admin/dashboard');
+      router.push('/admin/setup');
       
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -98,7 +96,7 @@ function AdminSignInContent() {
 
   return (
     <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
-      {}
+      {/* Left side - Branding */}
       <div className="relative md:flex items-center justify-center p-10 hidden">
         <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
         <div className="relative z-10 max-w-md p-10 rounded-2xl border border-amber-500 backdrop-blur-md bg-black/30">
@@ -115,7 +113,7 @@ function AdminSignInContent() {
         </div>
       </div>
 
-      {}
+      {/* Right side - Form */}
       <div className="flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-2 mb-6">
@@ -134,7 +132,7 @@ function AdminSignInContent() {
           >
             {({ errors, touched, isSubmitting }) => (
               <Form className="space-y-3 sm:space-y-4">
-                {}
+                {/* Email Field */}
                 <div>
                   <Label htmlFor="email" className="mb-1">
                     Email
@@ -143,16 +141,18 @@ function AdminSignInContent() {
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                     <Field
                       as={Input}
+                      id="email"
                       name="email"
                       type="email"
                       placeholder="Enter your email"
+                      autoComplete="email"
                       className={`pl-10 ${errors.email && touched.email ? 'border-destructive' : ''}`}
                     />
                   </div>
                   <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
                 </div>
 
-                {}
+                {/* Password Field */}
                 <div>
                   <Label htmlFor="adminPassword" className="mb-1">
                     Admin Password
@@ -161,9 +161,11 @@ function AdminSignInContent() {
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
                     <Field
                       as={Input}
+                      id="adminPassword"
                       name="adminPassword"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Enter admin password"
+                      autoComplete="current-password"
                       className={`pl-10 pr-10 ${errors.adminPassword && touched.adminPassword ? 'border-destructive' : ''}`}
                     />
                     <Button
@@ -179,25 +181,25 @@ function AdminSignInContent() {
                   <ErrorMessage name="adminPassword" component="div" className="text-sm text-destructive mt-1" />
                 </div>
 
-                {}
+                {/* Remember Me */}
                 <div className="flex items-center">
-                  <input type="checkbox" id="rememberMe" className="mr-2 accent-amber-600" />
-                  <Label htmlFor="rememberMe">Remember me</Label>
+                  <input type="checkbox" id="rememberMe" name="rememberMe" className="mr-2 accent-amber-600" />
+                  <label htmlFor="rememberMe" className="text-sm font-medium cursor-pointer">Remember me</label>
                 </div>
 
-                {}
+                {/* Sign In Button */}
                 <Button
                   type="submit"
                   className="w-full bg-gradient-to-b from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600"
-                  disabled={isSubmitting || isCheckingAdmin}
+                  disabled={isSubmitting}
                 >
-                  {isSubmitting || isCheckingAdmin ? 'Processing...' : 'Sign In to Admin'}
+                  {isSubmitting ? 'Processing...' : 'Sign In to Admin'}
                 </Button>
               </Form>
             )}
           </Formik>
 
-          {}
+          {/* Divider */}
           <div className="flex items-center my-4">
             <div className="flex-grow border-t border-zinc-700" />
             <span className="px-2 text-zinc-500 text-sm">Or</span>
@@ -206,7 +208,7 @@ function AdminSignInContent() {
 
           <GoogleSignInButton redirectPath="/admin/setup" />
 
-          {}
+          {/* Fallback Link */}
           <p className="text-center text-zinc-500 text-sm mt-4">
             Not an admin?{' '}
             <Link href="/signin" className="text-amber-400 underline cursor-pointer">

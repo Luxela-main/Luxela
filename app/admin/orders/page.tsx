@@ -27,6 +27,7 @@ import {
   Cell,
 } from 'recharts';
 import { formatNaira } from '@/lib/currency';
+import { formatCurrency } from '@/lib/utils';
 import {
   Package,
   TrendingUp,
@@ -96,15 +97,10 @@ export default function AdminOrdersDashboard() {
 
   
   const { data: ordersData, isLoading: ordersLoading } =
-    trpc.orderStatus.getOrdersByStatus.useQuery(
-      { status: 'pending' as const, limit: 1000 },
+    trpc.orderStatus.getAllOrders.useQuery(
+      { limit: 1000 },
       { enabled: true }
     );
-
-  const { data: allOrders } = trpc.orderStatus.getOrdersByStatus.useQuery(
-    { status: 'delivered' as const, limit: 1000 },
-    { enabled: true }
-  );
 
   useEffect(() => {
     if (!ordersLoading) {
@@ -272,28 +268,28 @@ export default function AdminOrdersDashboard() {
         <StatCard
           icon={Package}
           title="Total Orders"
-          value={stats.totalOrders}
+          value={stats.totalOrders.toString()}
           description="All orders in system"
           color="bg-blue-500/10 text-blue-500"
         />
         <StatCard
           icon={Clock}
           title="Pending Orders"
-          value={stats.pendingOrders}
+          value={stats.pendingOrders.toString()}
           description="Awaiting shipment"
           color="bg-yellow-500/10 text-yellow-500"
         />
         <StatCard
           icon={CheckCircle}
           title="Completed Orders"
-          value={stats.completedOrders}
+          value={stats.completedOrders.toString()}
           description="Successfully delivered"
           color="bg-green-500/10 text-green-500"
         />
         <StatCard
           icon={DollarSign}
           title="Total Revenue"
-          value={formatNaira(stats.totalRevenue, true)}
+          value={formatCurrency(stats.totalRevenue, { currency: 'NGN', truncate: true })}
           description="All orders combined"
           color="bg-purple-500/10 text-purple-500"
         />
@@ -445,7 +441,7 @@ export default function AdminOrdersDashboard() {
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Avg Order Value</span>
               <span className="text-2xl font-bold text-cyan-500">
-                {formatNaira(stats.averageOrderValue, true)}
+                {formatCurrency(stats.averageOrderValue, { currency: 'NGN', truncate: true })}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -522,7 +518,7 @@ export default function AdminOrdersDashboard() {
               <thead>
                 <tr className="border-b border-[#1a1a1a]">
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">
-                    Order ID
+                    Order
                   </th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">
                     Product
@@ -547,8 +543,46 @@ export default function AdminOrdersDashboard() {
                     key={order.id}
                     className="border-b border-[#1a1a1a] hover:bg-[#1a1a1a]/50 transition-colors"
                   >
-                    <td className="py-3 px-4 text-white font-mono text-xs">
-                      {order.id?.substring(0, 8)}...
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          {order.product_image ? (
+                            <div className="w-10 h-10 rounded bg-[#1a1a1a] flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <img
+                                src={order.product_image}
+                                alt={order.product_title || 'Product'}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : null}
+                          {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
+                            order.items.slice(0, 3).map((item: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="w-10 h-10 rounded bg-[#1a1a1a] flex items-center justify-center overflow-hidden flex-shrink-0"
+                                style={{ marginLeft: idx > 0 ? '-8px' : '0' }}
+                              >
+                                {item.image ? (
+                                  <img
+                                    src={item.image}
+                                    alt={item.title || 'Product'}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package className="w-4 h-4 text-gray-500" />
+                                )}
+                              </div>
+                            ))
+                          ) : !order.product_image ? (
+                            <div className="w-10 h-10 rounded bg-[#1a1a1a] flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <Package className="w-4 h-4 text-gray-500" />
+                            </div>
+                          ) : null}
+                        </div>
+                        <span className="text-white font-mono text-xs whitespace-nowrap">
+                          {order.id?.substring(0, 8)}...
+                        </span>
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-gray-300">
                       {order.product_title?.substring(0, 30)}...

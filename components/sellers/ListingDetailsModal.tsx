@@ -24,20 +24,55 @@ import {
   BarChart3,
   CheckCircle,
   XCircle,
+  Send,
+  Loader2,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
+import { toastSvc } from "@/services/toast";
 
 interface ListingDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   listing: any;
+  onRefresh?: () => void;
 }
 
 export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
   isOpen,
   onClose,
   listing,
+  onRefresh,
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submitForReviewMutation = (trpc.listing as any).submitForReview.useMutation({
+    onSuccess: () => {
+      toastSvc.success("Listing submitted for review successfully!");
+      if (onRefresh) onRefresh();
+      onClose();
+    },
+    onError: (error: any) => {
+      toastSvc.error(error.message || "Failed to submit listing for review");
+    },
+  });
+
+  const handleSubmitForReview = async () => {
+    if (!listing?.id) return;
+    setIsSubmitting(true);
+    try {
+      await submitForReviewMutation.mutateAsync({
+        listingId: listing.id,
+      });
+    } catch (error) {
+      console.error('Error submitting listing:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canSubmitForReview = listing?.status === "draft" || listing?.status === "revision_requested";
 
   if (!listing) {
     return (
@@ -214,8 +249,7 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Price</p>
                   <p className="text-4xl font-bold text-purple-500">
-                    {listing.currency || "NGN"}{" "}
-                    {((listing.priceCents || 0) / 100).toFixed(2)}
+                    NGN {((listing.priceCents || 0) / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="text-right">
@@ -266,8 +300,7 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
                     <div>
                       <p className="text-gray-500">Shipping Cost</p>
                       <p className="text-white">
-                        {listing.currency || "NGN"}{" "}
-                        {((listing.shippingPrice || 0) / 100).toFixed(2)}
+                        NGN {((listing.shippingPrice || 0) / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                   )}
@@ -586,6 +619,33 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
                     ? "Revision Requested"
                     : listing.status.replace(/_/g, " ")}
                 </p>
+              </div>
+            )}
+
+            {/* Submit for Review Button */}
+            {canSubmitForReview && (
+              <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-lg p-4 border border-purple-500/30">
+                <h4 className="text-sm font-semibold text-gray-400 mb-3">Ready to Submit?</h4>
+                <p className="text-xs text-gray-300 mb-4">
+                  Submit this listing to our admin team for review and approval. Once approved, it will be visible to all buyers.
+                </p>
+                <Button
+                  onClick={handleSubmitForReview}
+                  disabled={isSubmitting}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Submit for Review
+                    </>
+                  )}
+                </Button>
               </div>
             )}
 

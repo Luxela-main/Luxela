@@ -7,7 +7,6 @@ const t = initTRPC.context<TRPCContext>().create();
 export const publicProcedure = t.procedure;
 
 // PROTECTED PROCEDURE
-// -------------------------------
 export const protectedProcedure = t.procedure.use(async (opts: any) => {
   const ctx = opts.ctx as TRPCContext;
   const next = opts.next as (opts: { ctx: TRPCContext }) => Promise<any>;
@@ -34,7 +33,7 @@ export const adminProcedure = t.procedure.use(async (opts: any) => {
   const ctx = opts.ctx as TRPCContext;
   const next = opts.next as (opts: { ctx: TRPCContext }) => Promise<any>;
   
-  if (!ctx.user || ctx.user.role !== 'admin') {
+  if (!ctx.user || !ctx.user.admin) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'You must be an admin to access this route.',

@@ -91,7 +91,11 @@ export const sellers = pgTable('sellers', {
   payoutMethods: text('payout_methods'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+},
+(t) => ({
+  userIdIdx: index('idx_sellers_user_id').on(t.userId),
+})
+);
 
 // --- Profiles (optional extension of auth.users) ---
 export const profiles = pgTable('profiles', {
@@ -122,7 +126,11 @@ export const buyerAccountDetails = pgTable('buyer_account_details', {
   securityAlerts: boolean('security_alerts').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+},
+(t) => ({
+  buyerIdIdx: index('idx_buyer_account_details_buyer_id').on(t.buyerId),
+})
+);
 
 export const buyerBillingAddress = pgTable('buyer_billing_address', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -180,7 +188,11 @@ export const sellerBusiness = pgTable('seller_business', {
   storeBanner: text('store_banner'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+},
+(t) => ({
+  sellerIdIdx: index('idx_seller_business_seller_id').on(t.sellerId),
+})
+);
 
 export const sellerShipping = pgTable('seller_shipping', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -318,6 +330,13 @@ export const listings = pgTable('listings', {
 },
 (t) => ({
   sellerIdIdx: index('idx_listings_seller_id').on(t.sellerId),
+  statusIdx: index('idx_listings_status').on(t.status),
+  typeIdx: index('idx_listings_type').on(t.type),
+  statusTypeIdx: index('idx_listings_status_type').on(t.status, t.type),
+  createdAtIdx: index('idx_listings_created_at').on(t.createdAt),
+  productIdIdx: index('idx_listings_product_id').on(t.productId),
+  statusTypeCreatedIdx: index('idx_listings_status_type_created').on(t.status, t.type, t.createdAt),
+  statusCreatedIdx: index('idx_listings_status_created').on(t.status, t.createdAt),
 })
 );
 
@@ -1086,7 +1105,11 @@ export const productImages = pgTable('product_images', {
   productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
   imageUrl: text('image_url').notNull(),
   position: integer('position').notNull(),
-});
+},
+(t) => ({
+  productIdIdx: index('idx_product_images_product_id').on(t.productId),
+})
+);
 
 // =======================
 // LISTING REVIEWS

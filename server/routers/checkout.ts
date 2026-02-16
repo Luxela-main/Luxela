@@ -408,8 +408,8 @@ export const checkoutRouter = createTRPCRouter({
             message: 'Invalid payment method',
           });
         }
-
-        // Note: We don't create the order until AFTER successful payment initialization
+        // Orders will only be created AFTER payment is confirmed by Tsara
+        // This prevents orphaned orders when payment is incomplete
 
         // Create Tsara payment link
         let paymentResponse;
@@ -460,11 +460,11 @@ export const checkoutRouter = createTRPCRouter({
           }
         }
 
-        // Now that payment initialization succeeded, create the order
-        const orderResult = await createOrderFromCart(
-          buyer.id,
+        // Store order metadata for later (order will be created after payment confirmation)
+        const orderMetadata = {
+          buyerId: buyer.id,
           sellerId,
-          items.map((item: any) => ({
+          items: items.map((item: any) => ({
             listingId: item.listingId,
             quantity: item.quantity,
             unitPriceCents: item.unitPriceCents,
@@ -473,15 +473,14 @@ export const checkoutRouter = createTRPCRouter({
             selectedColor: item.selectedColor,
             selectedColorHex: item.selectedColorHex,
           })),
-          input.customerName,
-          input.customerEmail,
-          input.paymentMethod,
-          orderId,
-          shippingCents // Include shipping fee in order
-        );
+          customerName: input.customerName,
+          customerEmail: input.customerEmail,
+          paymentMethod: input.paymentMethod,
+          shippingCents,
+        };
         
-        // Use the actual orderId from the created order
-        const actualOrderId = orderResult.orderId;
+        // Use the pre-generated orderId (will be validated on confirmation)
+        const actualOrderId = orderId;
 
         // Store payment in database
         const [payment] = await db
@@ -662,17 +661,16 @@ export const checkoutRouter = createTRPCRouter({
           });
         }
 
-        if (!payment.orderId) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'Order not associated with payment',
-          });
-        }
+        // Note: Order may not exist yet if it wasn't created during initializePayment
+        // It will be created during payment confirmation below
 
         // Confirm payment status - MUST succeed before notification
+        // Create order if it doesn't exist yet
+        let orderIdToUse = payment.orderId || uuidv4();
+        
         let confirmResult;
         try {
-          confirmResult = await confirmPayment(input.paymentId, payment.orderId, input.transactionRef);
+          confirmResult = await confirmPayment(input.paymentId, orderIdToUse, input.transactionRef);
         } catch (confirmErr: any) {
           console.error('Payment confirmation failed:', confirmErr);
           // If confirmation fails, order cannot proceed
@@ -686,7 +684,7 @@ export const checkoutRouter = createTRPCRouter({
         const [order] = await db
           .select()
           .from(orders)
-          .where(eq(orders.id, payment.orderId));
+          .where(eq(orders.id, orderIdToUse));
 
         if (!order) {
           throw new TRPCError({

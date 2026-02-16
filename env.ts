@@ -25,4 +25,11 @@ export const env = {
   // Polling Configuration
   NOTIFICATION_POLL_INTERVAL: parseInt(process.env.NOTIFICATION_POLL_INTERVAL || '5000', 10), // 5 seconds
   NOTIFICATION_RETENTION_DAYS: parseInt(process.env.NOTIFICATION_RETENTION_DAYS || '30', 10),
+  
+  // Tsara Payment Configuration
+  NEXT_PUBLIC_TSARA_PUBLIC_KEY: process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || '',
+  TSARA_SECRET_KEY: process.env.TSARA_SECRET_KEY || '',
+  TSARA_WEBHOOK_SECRET: process.env.TSARA_WEBHOOK_SECRET || '',
+  TSARA_API_URL: process.env.TSARA_API_URL || 'https://api.tsara.ng/v1',
+  TSARA_BASE_URL: process.env.TSARA_BASE_URL || 'https://api.tsara.ng/v1',
 };

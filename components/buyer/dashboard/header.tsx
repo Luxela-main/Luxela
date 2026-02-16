@@ -12,7 +12,6 @@ export default function Header() {
 
   const handleLogout = useCallback(async () => {
     await logout();
-    router.push('/signin');
   }, [logout, router]);
 
   const handleProfileClick = useCallback(() => {

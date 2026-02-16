@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
+import { createTRPCRouter, protectedProcedure, adminProcedure } from '../trpc/trpc';
 import { db } from '../db';
 import {
   buyers,
@@ -463,7 +463,7 @@ export const adminMembersRouter = createTRPCRouter({
   /**
    * Get members statistics
    */
-  getMembersStats: protectedProcedure
+  getMembersStats: adminProcedure
     .output(
       z.object({
         totalMembers: z.number(),
@@ -475,7 +475,7 @@ export const adminMembersRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx }) => {
-      await verifyAdminRole(ctx);
+      // adminProcedure already verified user is admin
 
       const buyersData = await db.select({ count: countFn() }).from(buyers);
       const sellersData = await db.select({ count: countFn() }).from(sellers);

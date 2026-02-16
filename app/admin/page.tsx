@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
+import { formatCurrency } from '@/lib/utils';
 import {
   Card,
   CardContent,
@@ -26,44 +27,58 @@ import { Badge } from '@/components/ui/badge';
 
 export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   
-  const { data: listingStats, isLoading: statsLoading } =
+  const { data: listingStats, isLoading: statsLoading, error: statsError } =
     trpc.adminListingReview.getDashboardStats.useQuery();
 
-  const { data: membersStats, isLoading: membersStatsLoading } =
+  const { data: membersStats, isLoading: membersStatsLoading, error: membersError } =
     trpc.adminMembers.getMembersStats.useQuery();
 
-  const { data: ordersData, isLoading: ordersLoading } =
-    trpc.orderStatus.getOrdersByStatus.useQuery(
-      { status: 'pending', limit: 100 },
+  const { data: ordersData, isLoading: ordersLoading, error: ordersError } =
+    trpc.orderStatus.getAllOrders.useQuery(
+      { limit: 100 },
       { enabled: true }
     );
 
   useEffect(() => {
-    if (!statsLoading && !membersStatsLoading && !ordersLoading) {
+    console.log('[DASHBOARD] Query states:', {
+      statsLoading,
+      membersStatsLoading,
+      ordersLoading,
+      statsError: statsError?.message,
+      membersError: membersError?.message,
+      ordersError: ordersError?.message,
+    });
+    
+    if (statsError || membersError || ordersError) {
+      setHasError(true);
       setIsLoading(false);
+    } else if (!statsLoading && !membersStatsLoading && !ordersLoading) {
+      setIsLoading(false);
+      setHasError(false);
     }
-  }, [statsLoading, membersStatsLoading, ordersLoading]);
+  }, [statsLoading, membersStatsLoading, ordersLoading, statsError, membersError, ordersError]);
 
   const stats = [
     {
       title: 'Pending Listings',
-      value: listingStats?.pending ?? 0,
+      value: (listingStats?.pending ?? 0).toString(),
       icon: Clock,
       color: 'bg-yellow-500/10 text-yellow-500',
       description: 'Awaiting review',
     },
     {
       title: 'Total Listings',
-      value: listingStats?.total ?? 0,
+      value: (listingStats?.total ?? 0).toString(),
       icon: FileCheck,
       color: 'bg-blue-500/10 text-blue-500',
       description: 'All time listings',
     },
     {
       title: 'Approved',
-      value: listingStats?.approved ?? 0,
+      value: (listingStats?.approved ?? 0).toString(),
       icon: CheckCircle,
       color: 'bg-green-500/10 text-green-500',
       description: 'Approved listings',
@@ -111,7 +126,32 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 text-[#8451e1] animate-spin" />
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-[#8451e1] animate-spin mx-auto mb-4" />
+          <p className="text-white text-sm">Loading dashboard...</p>
+          <p className="text-gray-500 text-xs mt-2">stats: {String(statsLoading)} | members: {String(membersStatsLoading)} | orders: {String(ordersLoading)}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-white mb-2">Error Loading Dashboard</h2>
+          {statsError && <p className="text-xs text-red-400 mb-2">Stats Error: {statsError.message}</p>}
+          {membersError && <p className="text-xs text-red-400 mb-2">Members Error: {membersError.message}</p>}
+          {ordersError && <p className="text-xs text-red-400 mb-2">Orders Error: {ordersError.message}</p>}
+          <p className="text-sm text-[#9CA3AF] mb-4">Failed to load dashboard data. Please try refreshing the page.</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="bg-[#8451e1] hover:bg-[#6d3fb8] text-white"
+          >
+            Refresh Page
+          </Button>
+        </div>
       </div>
     );
   }

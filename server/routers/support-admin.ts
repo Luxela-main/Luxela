@@ -28,8 +28,13 @@ import { v4 as uuidv4 } from 'uuid';
  * - Audit logging
  */
 
-async function ensureAdmin(userId: string, userRole?: string): Promise<boolean> {
-  // Check auth metadata first
+async function ensureAdmin(userId: string, userRole?: string, isAdminFlag?: boolean): Promise<boolean> {
+  // Check admin flag first (from context.user.admin)
+  if (isAdminFlag === true) {
+    return true;
+  }
+  
+  // Check auth metadata role
   if (userRole === 'admin') {
     return true;
   }
@@ -80,7 +85,7 @@ export const supportAdminRouter = createTRPCRouter({
           throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
         }
         
-        await ensureAdmin(userId, ctx.user?.role);
+        await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
         const allTickets = await db.select().from(supportTickets).orderBy(desc(supportTickets.createdAt));
         
@@ -140,7 +145,7 @@ export const supportAdminRouter = createTRPCRouter({
           throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
         }
         
-        await ensureAdmin(userId, ctx.user?.role);
+        await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
         const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
         
@@ -211,7 +216,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       // Get all tickets
       const allTickets = await db.select().from(supportTickets);
@@ -299,7 +304,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       // Verify ticket exists
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
@@ -354,7 +359,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       // Get ticket to find assigned member
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
@@ -413,7 +418,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       const existing = await db.select().from(slaMetrics)
         .where(and(
@@ -463,7 +468,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       const policies = await db.select().from(slaMetrics);
       return policies.map((p: any) => ({
@@ -497,7 +502,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       await db.insert(escalationRules).values({
         name: input.name,
@@ -528,7 +533,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       const rules = await db.select().from(escalationRules);
       return rules.map((r: any) => ({
@@ -563,7 +568,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       const existing = await db.select().from(supportTeamMembers)
         .where(eq(supportTeamMembers.userId, input.userId));
@@ -610,7 +615,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       const members = await db.select().from(supportTeamMembers);
       return members.map((m: any) => ({
@@ -653,7 +658,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       let query = db.select().from(supportAuditLogs);
       if (input.ticketId) {
@@ -707,7 +712,7 @@ export const supportAdminRouter = createTRPCRouter({
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       
-      await ensureAdmin(userId, ctx.user?.role);
+      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
       if (!ticket[0]) {
