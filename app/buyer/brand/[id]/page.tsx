@@ -17,11 +17,14 @@ type SortOption =
 
 export default function BrandPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ sellerId?: string }>;
 }) {
   const { id } = use(params);
-  console.log('[BrandPage] Rendering with id:', id);
+  const { sellerId } = use(searchParams);
+  console.log('[BrandPage] Rendering with id:', id, 'sellerId:', sellerId);
   const [activeTab, setActiveTab] = useState<"products" | "collections">(
 
     "products"
@@ -32,7 +35,10 @@ export default function BrandPage({
   // Determine if the ID is a UUID or a slug
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const isUUID = uuidRegex.test(id);
-  console.log('[BrandPage] UUID check:', { id, isUUID });
+  // Convert empty string sellerId to undefined for proper query handling
+  const normalizedSellerId = sellerId && sellerId.trim() ? sellerId : undefined;
+  const useSellerIdLookup = normalizedSellerId && !isUUID;
+  console.log('[BrandPage] UUID check:', { id, isUUID, useSellerIdLookup, sellerId, normalizedSellerId });
 
   // Fetch brand by ID using tRPC (if ID is UUID)
   const { data: brandDataById, isLoading: isBrandLoadingById, error: brandErrorById } = trpc.brands.getBrandById.useQuery(
@@ -42,22 +48,29 @@ export default function BrandPage({
 
   // Fetch brand by slug using tRPC (if ID is not UUID)
   const { data: brandDataBySlug, isLoading: isBrandLoadingBySlug, error: brandErrorBySlug } = trpc.brands.getBrandBySlug.useQuery(
-    { slug: id },
-    { enabled: !!id && !isUUID }
+    { slug: id, sellerId: normalizedSellerId },
+    { enabled: Boolean(id && !isUUID && !useSellerIdLookup) }
   );
 
-  // Use whichever query succeeded
-  const brandData = isUUID ? brandDataById : brandDataBySlug;
-  const isBrandLoading = isUUID ? isBrandLoadingById : isBrandLoadingBySlug;
-  const brandError = isUUID ? brandErrorById : brandErrorBySlug;
+  // Fetch brand by seller ID as fallback
+  const { data: brandDataBySellerId, isLoading: isBrandLoadingBySellerId, error: brandErrorBySellerId } = trpc.brands.getBrandBySellerId.useQuery(
+    { sellerId: normalizedSellerId! },
+    { enabled: Boolean(normalizedSellerId && useSellerIdLookup) }
+  );
+
+
+  // Use whichever query succeeded (prioritize seller ID lookup if enabled)
+  const brandData = useSellerIdLookup ? brandDataBySellerId : (isUUID ? brandDataById : brandDataBySlug);
+  const isBrandLoading = useSellerIdLookup ? isBrandLoadingBySellerId : (isUUID ? isBrandLoadingById : isBrandLoadingBySlug);
+  const brandError = useSellerIdLookup ? brandErrorBySellerId : (isUUID ? brandErrorById : brandErrorBySlug);
   
   console.log('[BrandPage] Brand query state:', {
     isUUID,
+    useSellerIdLookup,
     isBrandLoading,
     hasError: !!brandError,
     errorMessage: brandError?.message,
     brandData: brandData ? 'exists' : 'null',
-    fullBrandData: JSON.stringify(brandData),
   });
 
   // Extract brand from the response
@@ -144,10 +157,11 @@ export default function BrandPage({
       error: brandError,
       errorMessage: brandError?.message || 'No error message',
       brandExists: !!brand,
-      brandDataStructure: brandData ? Object.keys(brandData) : 'null',
       isUUID,
-      queryUsed: isUUID ? 'getBrandById' : 'getBrandBySlug',
+      useSellerIdLookup,
+      queryUsed: useSellerIdLookup ? 'getBrandBySellerId' : (isUUID ? 'getBrandById' : 'getBrandBySlug'),
       attemptedId: id,
+      attemptedSellerId: sellerId,
     });
     return (
       <div className="bg-black min-h-screen flex items-center justify-center text-center">

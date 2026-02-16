@@ -6,9 +6,10 @@ import { ArrowRight } from 'lucide-react'
 interface RelatedProductsProps {
   products: Listing[]
   brandName?: string
+  seller_id?: string
 }
 
-export default function RelatedProducts({ products, brandName }: RelatedProductsProps) {
+export default function RelatedProducts({ products, brandName, seller_id }: RelatedProductsProps) {
   if (products.length === 0) return null
 
   const displayProducts = products.slice(0, 8)
@@ -24,7 +25,7 @@ export default function RelatedProducts({ products, brandName }: RelatedProducts
         </h2>
         {brandName && (
           <Link 
-            href={`/buyer/brand/${brandSlug}`}
+            href={`/buyer/brand/${brandSlug}${seller_id ? `?sellerId=${seller_id}` : ''}`}
             className="flex items-center gap-2 text-[#8451E1] hover:text-[#9665F5] text-xs font-semibold uppercase tracking-wider transition-colors group"
           >
             See all

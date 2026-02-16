@@ -142,8 +142,8 @@ export default function HorizontalImageScroller({
     <div className={`w-full flex flex-col ${className}`} style={{ touchAction: 'pan-y' }}>
       {/* Main Image Container - Includes dots and thumbnails in layout */}
       <div
-        className="relative w-full bg-gray-100 overflow-hidden flex-shrink-0 flex flex-col"
-        style={{ aspectRatio: '1 / 1' }}
+        className="relative w-full bg-gray-100 overflow-hidden flex flex-col"
+        style={{ aspectRatio: '1 / 1', minHeight: 0 }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onMouseEnter={() => setIsHovering(true)}
@@ -245,6 +245,7 @@ export default function HorizontalImageScroller({
             style={{
               scrollBehavior: 'smooth',
               WebkitOverflowScrolling: 'touch',
+              maxHeight: '50px',
             }}
           >
             {validImages.map((image, index) => (
@@ -279,33 +280,7 @@ export default function HorizontalImageScroller({
         </div>
       )}
 
-      {/* Mobile Arrow Buttons - Outside main container */}
-      {validImages.length > 1 && (
-        <div className="sm:hidden flex gap-2 mt-2 justify-center">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              goToPrevious();
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 transition-all cursor-pointer"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              goToNext();
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 transition-all cursor-pointer"
-            aria-label="Next image"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      )}
+
     </div>
   );
 }

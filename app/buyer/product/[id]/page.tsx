@@ -145,7 +145,7 @@ function ProductDetailPage({
           {}
           <div className="grid lg:grid-cols-12 gap-12 mb-20">
             {}
-            <div className="lg:col-span-6 flex flex-col">
+            <div className="lg:col-span-6 flex flex-col overflow-hidden">
               <ProductImageCarousel
                 images={(() => {
                   try {
@@ -203,6 +203,7 @@ function ProductDetailPage({
               <RelatedProducts
                 products={brandProducts}
                 brandName={business?.brand_name}
+                seller_id={business?.seller_id}
               />
             </section>
           )}

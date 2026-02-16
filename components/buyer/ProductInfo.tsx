@@ -237,9 +237,9 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
             {product.title}
           </h1>
           <Link
-            href={`/buyer/brand/${business?.brand_name
+            href={`/buyer/brand/${business?.slug || business?.brand_name
               ?.toLowerCase()
-              .replace(/\s+/g, "-")}`}
+              .replace(/\s+/g, "-")}?sellerId=${product.seller_id}`}
             className="text-[#8451E1] hover:text-[#9665F5] text-sm font-medium transition-colors uppercase tracking-wide"
           >
             by {business?.brand_name}
@@ -646,4 +646,4 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       </Dialog>
     </div>
   );
-}
+}

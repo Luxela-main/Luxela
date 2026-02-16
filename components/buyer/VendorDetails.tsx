@@ -30,7 +30,7 @@ export default function VendorDetails({
         {/* View Products Button */}
         {brandSlug && (
           <Link
-            href={`/buyer/brand/${brandSlug}`}
+            href={`/buyer/brand/${brandSlug}${business?.seller_id ? `?sellerId=${business.seller_id}` : ''}`}
             className="text-[#8451E1] hover:text-[#9665F5] text-xs font-semibold uppercase tracking-wider transition-colors flex items-center gap-2 group"
           >
             View All

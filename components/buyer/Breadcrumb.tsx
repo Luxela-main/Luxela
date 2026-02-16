@@ -8,7 +8,7 @@ interface BreadcrumbProps {
 }
 
 export default function Breadcrumb({ product, business }: BreadcrumbProps) {
-  const brandSlug = business?.brand_name?.toLowerCase().replace(/\s+/g, '-') || ''
+  const brandSlug = business?.slug || business?.brand_name?.toLowerCase().replace(/\s+/g, '-') || ''
 
   return (
     <nav className="flex items-center gap-2 text-xs mb-8 py-3 px-4 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a]">
@@ -17,7 +17,7 @@ export default function Breadcrumb({ product, business }: BreadcrumbProps) {
       </Link>
       <ChevronRight className="w-4 h-4 text-gray-600" />
       <Link 
-        href={`/buyer/brand/${brandSlug}`}
+        href={`/buyer/brand/${brandSlug}${business?.seller_id ? `?sellerId=${business.seller_id}` : ''}`}
         className="text-gray-400 hover:text-white transition-colors"
       >
         {business?.brand_name || 'Brand'}
