@@ -777,6 +777,58 @@ export const listingRouter = createTRPCRouter({
     const createdListing = result[0];
     if (!createdListing) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create listing' });
 
+    // Build itemsJson with collection items data for the newly created collection
+    let itemsJson: string | null = null;
+    try {
+      const collectionItemsData = await db
+        .select({
+          id: collectionItems.productId,
+          productId: collectionItems.productId,
+          position: collectionItems.position,
+        })
+        .from(collectionItems)
+        .where(eq(collectionItems.collectionId, collectionId));
+
+      const itemsWithDetails = await Promise.all(
+        collectionItemsData.map(async (item: { id: string; productId: string; position: number }) => {
+          const product = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, item.id));
+
+          if (product.length === 0) return null;
+
+          const p = product[0];
+          const images = await db
+            .select({ imageUrl: productImages.imageUrl })
+            .from(productImages)
+            .where(eq(productImages.productId, p.id))
+            .orderBy(productImages.position);
+
+          return {
+            id: p.id,
+            productId: p.id,
+            title: p.name,
+            description: p.description,
+            category: p.category,
+            priceCents: p.priceCents,
+            currency: p.currency,
+            sizes: p.sizes ? JSON.parse(p.sizes) : [],
+            colors: p.colors ? JSON.parse(p.colors) : [],
+            images: images.map((img: { imageUrl: string }) => img.imageUrl),
+            sku: p.sku,
+          };
+        })
+      );
+
+      itemsJson = JSON.stringify(itemsWithDetails.filter((item) => item !== null));
+
+      // Update the listing with the built itemsJson
+      await db.update(listings).set({ itemsJson }).where(eq(listings.id, createdListing.id));
+    } catch (err) {
+      console.error('Error building itemsJson for new collection:', err);
+    }
+
     // Helper to reverse-map shipping eta from DB values to full enum
     const unmapShippingEta = (value: string | null): string | null => {
       if (!value) return null;
@@ -813,7 +865,7 @@ export const listingRouter = createTRPCRouter({
       etaInternational: unmapShippingEta(createdListing.etaInternational) as any,
       refundPolicy: createdListing.refundPolicy,
       localPricing: createdListing.localPricing,
-      itemsJson: createdListing.itemsJson ? JSON.parse(createdListing.itemsJson) : null,
+      itemsJson: itemsJson ? JSON.parse(itemsJson) : null,
       productId: createdListing.productId ?? undefined,
       sku: createdListing.sku || undefined,
       slug: createdListing.slug || undefined,
@@ -1813,54 +1865,53 @@ export const listingRouter = createTRPCRouter({
         const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
 
         // Build itemsJson with collection items data
+        // Always rebuild itemsJson from the database collection items to ensure item count is accurate
         let itemsJson: string | null = null;
-        if (input.items && input.items.length > 0) {
-          try {
-            const collectionItemsData = await db
-              .select({
-                id: collectionItems.productId,
-                productId: collectionItems.productId,
-                position: collectionItems.position,
-              })
-              .from(collectionItems)
-              .where(eq(collectionItems.collectionId, listing.collectionId!));
+        try {
+          const collectionItemsData = await db
+            .select({
+              id: collectionItems.productId,
+              productId: collectionItems.productId,
+              position: collectionItems.position,
+            })
+            .from(collectionItems)
+            .where(eq(collectionItems.collectionId, listing.collectionId!));
 
-            const itemsWithDetails = await Promise.all(
-              collectionItemsData.map(async (item: { id: string; productId: string; position: number }) => {
-                const product = await db
-                  .select()
-                  .from(products)
-                  .where(eq(products.id, item.id));
+          const itemsWithDetails = await Promise.all(
+            collectionItemsData.map(async (item: { id: string; productId: string; position: number }) => {
+              const product = await db
+                .select()
+                .from(products)
+                .where(eq(products.id, item.id));
 
-                if (product.length === 0) return null;
+              if (product.length === 0) return null;
 
-                const p = product[0];
-                const images = await db
-                  .select({ imageUrl: productImages.imageUrl })
-                  .from(productImages)
-                  .where(eq(productImages.productId, p.id))
-                  .orderBy(productImages.position);
+              const p = product[0];
+              const images = await db
+                .select({ imageUrl: productImages.imageUrl })
+                .from(productImages)
+                .where(eq(productImages.productId, p.id))
+                .orderBy(productImages.position);
 
-                return {
-                  id: p.id,
-                  productId: p.id,
-                  title: p.name,
-                  description: p.description,
-                  category: p.category,
-                  priceCents: p.priceCents,
-                  currency: p.currency,
-                  sizes: p.sizes ? JSON.parse(p.sizes) : [],
-                  colors: p.colors ? JSON.parse(p.colors) : [],
-                  images: images.map((img: { imageUrl: string }) => img.imageUrl),
-                  sku: p.sku,
-                };
-              })
-            );
+              return {
+                id: p.id,
+                productId: p.id,
+                title: p.name,
+                description: p.description,
+                category: p.category,
+                priceCents: p.priceCents,
+                currency: p.currency,
+                sizes: p.sizes ? JSON.parse(p.sizes) : [],
+                colors: p.colors ? JSON.parse(p.colors) : [],
+                images: images.map((img: { imageUrl: string }) => img.imageUrl),
+                sku: p.sku,
+              };
+            })
+          );
 
-            itemsJson = JSON.stringify(itemsWithDetails.filter((item) => item !== null));
-          } catch (err) {
-            console.error('Error building itemsJson:', err);
-          }
+          itemsJson = JSON.stringify(itemsWithDetails.filter((item) => item !== null));
+        } catch (err) {
+          console.error('Error building itemsJson:', err);
         }
 
         return {

@@ -317,11 +317,11 @@ const handleBackToListings = () => {
     setFormData((prev: any) => ({ ...prev, ...data }));
   };
 
-  const handleImagesChange = (images: File[]) => {
+  const handleImagesChange = (images: (File | string)[]) => {
     setFormData((prev: any) => ({ ...prev, images }));
   };
 
-  const handleVideosChange = (videos: File[]) => {
+  const handleVideosChange = (videos: (File | string)[]) => {
     setFormData((prev: any) => ({ ...prev, videos }));
   };
 

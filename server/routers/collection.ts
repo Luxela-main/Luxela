@@ -157,6 +157,68 @@ export const collectionRouter = createTRPCRouter({
           })
           .returning();
 
+        // Rebuild itemsJson in the listing after adding item
+        try {
+          const collectionItemsData = await db
+            .select({
+              id: collectionItems.productId,
+              productId: collectionItems.productId,
+              position: collectionItems.position,
+            })
+            .from(collectionItems)
+            .where(eq(collectionItems.collectionId, input.collectionId))
+            .orderBy(collectionItems.position);
+
+          const itemsWithDetails = await Promise.all(
+            collectionItemsData.map(async (item: { id: string; productId: string; position: number }) => {
+              const product = await db
+                .select()
+                .from(products)
+                .where(eq(products.id, item.id))
+                .limit(1);
+
+              if (product.length === 0) return null;
+
+              const p = product[0];
+              const images = await db
+                .select({ imageUrl: productImages.imageUrl })
+                .from(productImages)
+                .where(eq(productImages.productId, p.id))
+                .orderBy(productImages.position);
+
+              return {
+                id: p.id,
+                productId: p.id,
+                title: p.name,
+                description: p.description,
+                category: p.category,
+                priceCents: p.priceCents,
+                currency: p.currency,
+                sizes: p.sizes ? JSON.parse(p.sizes) : [],
+                colors: p.colors ? JSON.parse(p.colors) : [],
+                images: images.map((img: { imageUrl: string }) => img.imageUrl),
+                sku: p.sku,
+              };
+            })
+          );
+
+          const itemsJson = JSON.stringify(itemsWithDetails.filter((item) => item !== null));
+
+          // Find the listing for this collection and update itemsJson
+          const listing = await db
+            .select()
+            .from(listings)
+            .where(eq(listings.collectionId, input.collectionId))
+            .limit(1);
+
+          if (listing.length > 0) {
+            await db.update(listings).set({ itemsJson }).where(eq(listings.id, listing[0].id));
+          }
+        } catch (err) {
+          console.error('Error rebuilding itemsJson after adding product to collection:', err);
+          // Don't throw - the item was added successfully even if itemsJson rebuild fails
+        }
+
         return newItem[0];
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -193,6 +255,67 @@ export const collectionRouter = createTRPCRouter({
           });
         }
 
+        // Rebuild itemsJson in the listing after removing item
+        try {
+          const collectionItemsData = await db
+            .select({
+              id: collectionItems.productId,
+              productId: collectionItems.productId,
+              position: collectionItems.position,
+            })
+            .from(collectionItems)
+            .where(eq(collectionItems.collectionId, input.collectionId))
+            .orderBy(collectionItems.position);
+
+          const itemsWithDetails = await Promise.all(
+            collectionItemsData.map(async (item: { id: string; productId: string; position: number }) => {
+              const product = await db
+                .select()
+                .from(products)
+                .where(eq(products.id, item.id))
+                .limit(1);
+
+              if (product.length === 0) return null;
+
+              const p = product[0];
+              const images = await db
+                .select({ imageUrl: productImages.imageUrl })
+                .from(productImages)
+                .where(eq(productImages.productId, p.id))
+                .orderBy(productImages.position);
+
+              return {
+                id: p.id,
+                productId: p.id,
+                title: p.name,
+                description: p.description,
+                category: p.category,
+                priceCents: p.priceCents,
+                currency: p.currency,
+                sizes: p.sizes ? JSON.parse(p.sizes) : [],
+                colors: p.colors ? JSON.parse(p.colors) : [],
+                images: images.map((img: { imageUrl: string }) => img.imageUrl),
+                sku: p.sku,
+              };
+            })
+          );
+
+          const itemsJson = JSON.stringify(itemsWithDetails.filter((item) => item !== null));
+
+          // Find the listing for this collection and update itemsJson
+          const listing = await db
+            .select()
+            .from(listings)
+            .where(eq(listings.collectionId, input.collectionId))
+            .limit(1);
+
+          if (listing.length > 0) {
+            await db.update(listings).set({ itemsJson }).where(eq(listings.id, listing[0].id));
+          }
+        } catch (err) {
+          console.error('Error rebuilding itemsJson after removing product from collection:', err);
+        }
+
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -227,6 +350,66 @@ export const collectionRouter = createTRPCRouter({
                 eq(collectionItems.productId, item.productId)
               )
             );
+        }
+
+        // Rebuild itemsJson in the listing after reordering items
+        try {
+          const collectionItemsData = await db
+            .select({
+              id: collectionItems.productId,
+              productId: collectionItems.productId,
+              position: collectionItems.position,
+            })
+            .from(collectionItems)
+            .where(eq(collectionItems.collectionId, input.collectionId))
+            .orderBy(collectionItems.position);
+
+          const itemsWithDetails = await Promise.all(
+            collectionItemsData.map(async (item: { id: string; productId: string; position: number }) => {
+              const product = await db
+                .select()
+                .from(products)
+                .where(eq(products.id, item.id))
+                .limit(1);
+
+              if (product.length === 0) return null;
+
+              const p = product[0];
+              const images = await db
+                .select({ imageUrl: productImages.imageUrl })
+                .from(productImages)
+                .where(eq(productImages.productId, p.id))
+                .orderBy(productImages.position);
+
+              return {
+                id: p.id,
+                productId: p.id,
+                title: p.name,
+                description: p.description,
+                category: p.category,
+                priceCents: p.priceCents,
+                currency: p.currency,
+                sizes: p.sizes ? JSON.parse(p.sizes) : [],
+                colors: p.colors ? JSON.parse(p.colors) : [],
+                images: images.map((img: { imageUrl: string }) => img.imageUrl),
+                sku: p.sku,
+              };
+            })
+          );
+
+          const itemsJson = JSON.stringify(itemsWithDetails.filter((item) => item !== null));
+
+          const listing = await db
+            .select()
+            .from(listings)
+            .where(eq(listings.collectionId, input.collectionId))
+            .limit(1);
+
+          if (listing.length > 0) {
+            await db.update(listings).set({ itemsJson }).where(eq(listings.id, listing[0].id));
+          }
+        } catch (err) {
+          console.error('Error rebuilding itemsJson after reordering collection items:', err);
         }
 
         return { success: true };

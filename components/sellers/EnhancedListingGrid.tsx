@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   Filter,
@@ -97,12 +98,17 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
   const [isRestocking, setIsRestocking] = useState(false);
 
   // Restock mutation
+  const queryClient = useQueryClient();
   const restockMutation = (trpc.listing as any).restockListing.useMutation({
     onSuccess: () => {
       toastSvc.success("Stock updated successfully!");
+      // Invalidate the listings query to trigger a real-time refetch
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
       setShowRestockModal(false);
       setSelectedListing(null);
       setIsRestocking(false);
+      // Also trigger the parent refetch if available
+      refetch?.();
     },
     onError: (error: any) => {
       toastSvc.error(error.message || "Failed to update stock");
@@ -291,8 +297,9 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
     if (listing.type === "collection") {
       if (listing.itemsJson) {
         try {
-          const items = JSON.parse(listing.itemsJson);
-          return items.length;
+          // itemsJson can be either a JSON string or already an array
+          const items = typeof listing.itemsJson === 'string' ? JSON.parse(listing.itemsJson) : listing.itemsJson;
+          return Array.isArray(items) ? items.length : 0;
         } catch {
           return 0;
         }

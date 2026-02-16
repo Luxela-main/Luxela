@@ -627,6 +627,10 @@ export function ProductForm({ productType }: ProductFormProps) {
           videoUrl={formData.collectionVideoUrl}
           careInstructions={formData.collectionCareInstructions}
           refundPolicy={formData.collectionRefundPolicy}
+          supplyCapacity={formData.supplyCapacity}
+          shippingOption={formData.shippingOption}
+          etaDomestic={formData.domesticDays}
+          etaInternational={formData.internationalDays}
           items={formData.collectionItems || []}
           onTitleChange={(title) => handleFormChange({ collectionTitle: title })}
           onDescriptionChange={(desc) => handleFormChange({ collectionDescription: desc })}
@@ -637,6 +641,10 @@ export function ProductForm({ productType }: ProductFormProps) {
           onVideoUrlChange={(url) => handleFormChange({ collectionVideoUrl: url })}
           onCareInstructionsChange={(care) => handleFormChange({ collectionCareInstructions: care })}
           onRefundPolicyChange={(policy) => handleFormChange({ collectionRefundPolicy: policy })}
+          onSupplyCapacityChange={(capacity) => handleFormChange({ supplyCapacity: capacity })}
+          onShippingOptionChange={(option) => handleFormChange({ shippingOption: option })}
+          onEtaDomesticChange={(eta) => handleFormChange({ domesticDays: eta })}
+          onEtaInternationalChange={(eta) => handleFormChange({ internationalDays: eta })}
           onItemsChange={(items) => handleFormChange({ collectionItems: items })}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}

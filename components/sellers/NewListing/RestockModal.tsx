@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, AlertCircle, CheckCircle } from 'lucide-react';
+import { trpc, vanillaTrpc } from '@/lib/trpc';
 
 interface RestockModalProps {
   isOpen: boolean;
@@ -18,15 +19,62 @@ const RestockModal: React.FC<RestockModalProps> = ({
   onUpdate,
   isLoading = false,
 }) => {
-  const [newQuantity, setNewQuantity] = useState(listing?.quantity || 0);
+  const [freshListing, setFreshListing] = useState(listing);
+
+  // Calculate current quantity based on listing type
+  const getCurrentQuantity = (): number => {
+    if (!freshListing) return 0;
+    
+    // For collections, get item count from itemsJson
+    if (freshListing.type === 'collection' && freshListing.itemsJson) {
+      try {
+        const items = Array.isArray(freshListing.itemsJson) ? freshListing.itemsJson : JSON.parse(freshListing.itemsJson);
+        return items.length;
+      } catch {
+        return 0;
+      }
+    }
+    
+    // For single listings, use quantityAvailable
+    return freshListing.quantityAvailable || 0;
+  };
+  const currentQuantity = getCurrentQuantity();
+  const [newQuantity, setNewQuantity] = useState(currentQuantity);
   const [mode, setMode] = useState<'set' | 'add'>('set');
   const [error, setError] = useState('');
 
+  // Refetch fresh listing data when modal opens
+  useEffect(() => {
+    if (!isOpen || !listing?.id) return;
+
+    const fetchFreshListing = async () => {
+      try {
+        // Use vanillaTrpc for async queries in useEffect
+        const myListings = await vanillaTrpc.listing.getMyListings.query();
+        const fresh = myListings.find((l: any) => l.id === listing.id);
+        if (fresh) {
+          setFreshListing(fresh);
+        }
+      } catch (error) {
+        console.error('Failed to fetch fresh listing data:', error);
+      }
+    };
+
+    // Fetch immediately when modal opens
+    fetchFreshListing();
+
+    // Also set up polling every 1 second while modal is open
+    const interval = setInterval(fetchFreshListing, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, listing?.id]);
+
   if (!isOpen) return null;
 
-  const currentQuantity = listing?.quantity || 0;
+  const isCollection = freshListing?.type === 'collection';
+  const effectiveMode = isCollection ? 'add' : mode;
   const quantityDifference = newQuantity - currentQuantity;
-  const quantityChange = mode === 'add' ? quantityDifference : newQuantity - currentQuantity;
+  const quantityChange = effectiveMode === 'add' ? newQuantity : (newQuantity - currentQuantity);
 
   const getStockLevel = (qty: number) => {
     if (qty === 0) return { label: 'Out of Stock', color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30' };
@@ -40,7 +88,7 @@ const RestockModal: React.FC<RestockModalProps> = ({
   const newLevel = getStockLevel(newQuantity);
 
   const handleIncrement = () => {
-    const newVal = mode === 'set' ? newQuantity + 1 : newQuantity + 1;
+    const newVal = newQuantity + 1;
     if (newVal <= 9999) {
       setNewQuantity(newVal);
       setError('');
@@ -48,7 +96,7 @@ const RestockModal: React.FC<RestockModalProps> = ({
   };
 
   const handleDecrement = () => {
-    const newVal = mode === 'set' ? Math.max(0, newQuantity - 1) : newQuantity - 1;
+    const newVal = effectiveMode === 'set' ? Math.max(0, newQuantity - 1) : Math.max(0, newQuantity - 1);
     if (newVal >= 0) {
       setNewQuantity(newVal);
       setError('');
@@ -108,7 +156,7 @@ const RestockModal: React.FC<RestockModalProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">Restock Inventory</h2>
-            <p className="text-sm text-gray-400">{listing?.title}</p>
+            <p className="text-sm text-gray-400">{freshListing?.title}</p>
           </div>
           <button
             onClick={onClose}
@@ -130,8 +178,9 @@ const RestockModal: React.FC<RestockModalProps> = ({
           <p className="text-3xl font-bold text-white">{currentQuantity} units</p>
         </div>
 
-        {/* Mode Selector */}
-        <div className="mb-6 flex gap-2">
+        {/* Mode Selector - Hidden for collections */}
+        {!isCollection && (
+          <div className="mb-6 flex gap-2">
           <button
             onClick={() => {
               setMode('set');
@@ -161,13 +210,14 @@ const RestockModal: React.FC<RestockModalProps> = ({
             style={mode === 'add' ? { backgroundColor: '#8451E1' } : {}}
           >
             Add Amount
-          </button>
-        </div>
+            </button>
+          </div>
+        )}
 
         {/* Quantity Input */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-400 mb-2">
-            {mode === 'set' ? 'New Quantity' : 'Quantity to Add'}
+            {isCollection ? 'Items to Add' : effectiveMode === 'set' ? 'New Quantity' : 'Quantity to Add'}
           </label>
           <div className="flex items-center gap-3">
             <button
@@ -232,7 +282,7 @@ const RestockModal: React.FC<RestockModalProps> = ({
           </button>
           <button
             onClick={handleUpdate}
-            disabled={isLoading || !!error || (currentQuantity === newQuantity && mode === 'set')}
+            disabled={isLoading || !!error || (effectiveMode === 'set' && currentQuantity === newQuantity) || (effectiveMode === 'add' && newQuantity === 0)}
             className="flex-1 px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
             style={{ backgroundColor: '#8451E1' }}
           >
@@ -244,7 +294,7 @@ const RestockModal: React.FC<RestockModalProps> = ({
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                Update Stock
+                {isCollection ? 'Add to Collection' : 'Update Stock'}
               </>
             )}
           </button>
