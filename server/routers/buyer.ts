@@ -802,20 +802,7 @@ return {
           });
         });
 
-        // Send address creation notification
-        try {
-          await notifyAddressAdded(
-            buyer.id,
-            JSON.stringify({
-              houseAddress: input.houseAddress,
-              city: input.city,
-              postalCode: input.postalCode,
-              isDefault: input.isDefault,
-            })
-          );
-        } catch (notifErr) {
-          console.warn('Failed to send address creation notification:', notifErr);
-        }
+        // Address creation notification removed per user request
 
         return { success: true, id: addressId };
       } catch (err: any) {
