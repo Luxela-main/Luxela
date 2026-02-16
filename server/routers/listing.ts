@@ -1551,6 +1551,24 @@ export const listingRouter = createTRPCRouter({
       // Fetch updated listing
       const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
       
+      // Fetch product images from database to ensure they're included in response
+      let imagesJson = updated.imagesJson;
+      if (listing.productId) {
+        try {
+          const productImages_data = await db
+            .select({ imageUrl: productImages.imageUrl })
+            .from(productImages)
+            .where(eq(productImages.productId, listing.productId))
+            .orderBy(productImages.position);
+          
+          if (productImages_data.length > 0) {
+            imagesJson = JSON.stringify(productImages_data.map((img: any) => img.imageUrl));
+          }
+        } catch (imgFetchError) {
+          console.error('[LISTING.updateListing] Error fetching product images:', imgFetchError);
+        }
+      }
+      
       const result: any = {
         id: updated.id,
         sellerId: updated.sellerId,
@@ -1559,7 +1577,7 @@ export const listingRouter = createTRPCRouter({
         description: updated.description,
         category: updated.category,
         image: updated.image,
-        imagesJson: updated.imagesJson,
+        imagesJson: imagesJson,
         priceCents: updated.priceCents,
         currency: updated.currency,
         sizesJson: updated.sizesJson ? JSON.parse(updated.sizesJson) : null,
@@ -1589,6 +1607,12 @@ export const listingRouter = createTRPCRouter({
       if (updated.barcode) result.barcode = updated.barcode;
       if (updated.videoUrl) result.videoUrl = updated.videoUrl;
       if (updated.careInstructions) result.careInstructions = updated.careInstructions;
+      
+      console.log('[LISTING.updateListing] Response with images:', {
+        listingId: result.id,
+        hasImages: !!result.imagesJson,
+        imagesCount: result.imagesJson ? (typeof result.imagesJson === 'string' ? JSON.parse(result.imagesJson).length : 0) : 0,
+      });
       
       return result;
     }),
