@@ -52,6 +52,7 @@ const BuyerHeader = () => {
   useRealtimeFavorites(); // Enable real-time favorites syncing
   const { user, logout } = useAuth();
   const toast = useToast();
+  const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mobileLogoutOpen, setMobileLogoutOpen] = useState(false);
@@ -291,10 +292,10 @@ const BuyerHeader = () => {
                   </DropdownMenuGroup>
 
                   <DropdownMenuItem
-                    asChild
                     className="cursor-pointer text-red-400 hover:bg-red-600! hover:text-white!"
+                    onClick={handleLogout}
                   >
-                    <Link href="/signin">Log out</Link>
+                    Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -469,10 +470,13 @@ const BuyerHeader = () => {
                       </Link>
                     );
                   })}
-                  <Link href="/signin" className="flex items-center gap-2 w-full text-left text-red-400 text-sm py-2 hover:text-red-300 transition-colors cursor-pointer">
+                  <button onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }} className="flex items-center gap-2 w-full text-left text-red-400 text-sm py-2 hover:text-red-300 transition-colors cursor-pointer">
                     <LogOut className="w-4 h-4" />
                     Log out
-                  </Link>
+                  </button>
                 </div>
               )}
             </div>

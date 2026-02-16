@@ -580,21 +580,12 @@ export const cartRouter = createTRPCRouter({
       z.object({
         orders: z.array(
           z.object({
-            id: z.string().uuid(),
-            sellerId: z.string().uuid(),
             listingId: z.string().uuid(),
+            sellerId: z.string().uuid(),
             productTitle: z.string(),
+            productImage: z.string().optional(),
             productCategory: z.string(),
-            customerName: z.string(),
-            customerEmail: z.string().email(),
-            paymentMethod: z.enum([
-              'card',
-              'bank_transfer',
-              'paypal',
-              'stripe',
-              'flutterwave',
-              'crypto',
-            ]),
+            quantity: z.number().int(),
             amountCents: z.number().int(),
             currency: z.string(),
           })
@@ -602,6 +593,13 @@ export const cartRouter = createTRPCRouter({
         subtotal: z.number().int(),
         discountCents: z.number().int(),
         total: z.number().int(),
+        cartId: z.string().uuid(),
+        buyerId: z.string().uuid(),
+        accountDetails: z.object({
+          fullName: z.string(),
+          email: z.string().email(),
+          shippingAddress: z.string(),
+        }),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -736,7 +734,16 @@ export const cartRouter = createTRPCRouter({
         // This mutation only validates the cart and returns order details for the payment flow.
         
         // Build order items to return (for preview only, not yet created)
-        const orderItems = [];
+        const orderItems: Array<{
+          listingId: string;
+          sellerId: string;
+          productTitle: string;
+          productImage?: string;
+          productCategory: string;
+          quantity: number;
+          amountCents: number;
+          currency: string;
+        }> = [];
         for (const it of items) {
           const listingRow = await db.select().from(listings).where(eq(listings.id, it.listingId)).then((r: any) => r[0]);
           if (!listingRow) continue;
@@ -773,7 +780,7 @@ export const cartRouter = createTRPCRouter({
         });
         
         return { 
-          orderItems: orderItems,  // Preview items for payment
+          orders: orderItems,  // Preview items for payment
           subtotal, 
           discountCents, 
           total,
