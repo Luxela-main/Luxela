@@ -2,8 +2,8 @@ import React, { useRef } from 'react';
 import { Upload, Plus, X, GripVertical } from 'lucide-react';
 
 interface ImageUploadProps {
-  images: File[];
-  onImagesChange: (images: File[]) => void;
+  images: (File | string)[];
+  onImagesChange: (images: (File | string)[]) => void;
   videos?: File[];
   onVideosChange?: (videos: File[]) => void;
 }
@@ -70,8 +70,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ images, onImagesChange, video
     onImagesChange(newImages);
   };
 
-  const getImagePreview = (file: File): string => {
-    return URL.createObjectURL(file);
+  const getImagePreview = (file: File | string): string => {
+    if (typeof file === 'string') {
+      return file; // Already a URL
+    }
+    return URL.createObjectURL(file); // Create object URL from File
   };
 
   const handleMainVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -9,8 +9,8 @@ interface ProductInfoFormProps {
   onFormChange: (data: Partial<FormData>) => void;
   onNext: () => void;
   onCancel: () => void;
-  images: File[];
-  onImagesChange: (images: File[]) => void;
+  images: (File | string)[];
+  onImagesChange: (images: (File | string)[]) => void;
   videos: File[];
   onVideosChange: (videos: File[]) => void;
 }

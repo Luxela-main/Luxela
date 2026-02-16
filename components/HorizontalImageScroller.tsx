@@ -236,16 +236,16 @@ export default function HorizontalImageScroller({
         )}
       </div>
 
-      {/* Thumbnail Scrollbar - Positioned at bottom within image container */}
+      {/* Thumbnail Scrollbar - Mobile-friendly with larger thumbs */}
       {showThumbnails && validImages.length > 1 && (
-        <div className="w-full px-1 py-1 bg-gray-50 border-t border-gray-200 flex-shrink-0" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div className="w-full px-2 py-2 bg-gray-50 dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-700 flex-shrink-0" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div
             ref={thumbnailScrollRef}
-            className="flex gap-1 sm:gap-1.5 overflow-x-auto scroll-smooth touch-pan-x"
+            className="flex gap-1.5 sm:gap-2 overflow-x-auto scroll-smooth touch-pan-x"
             style={{
               scrollBehavior: 'smooth',
               WebkitOverflowScrolling: 'touch',
-              maxHeight: '50px',
+              maxHeight: '60px',
             }}
           >
             {validImages.map((image, index) => (
@@ -256,14 +256,15 @@ export default function HorizontalImageScroller({
                   e.stopPropagation();
                   handleImageChange(index);
                 }}
-                className={`flex-shrink-0 relative rounded border-1.5 transition-all ${
+                className={`flex-shrink-0 relative rounded border-2 transition-all ${
                   index === currentIndex
                     ? 'border-blue-500 ring-1 ring-blue-400'
-                    : 'border-gray-300 hover:border-gray-400'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                 }`}
                 style={{
-                  width: '30px',
-                  height: '30px',
+                  width: '40px',
+                  height: '40px',
+                  minWidth: '40px',
                 }}
                 aria-label={`Select image ${index + 1}`}
               >
@@ -272,14 +273,14 @@ export default function HorizontalImageScroller({
                   alt={`${alt} thumbnail ${index + 1}`}
                   fill
                   className="object-cover rounded"
-                  sizes="30px"
+                  sizes="40px"
+                  loading="lazy"
                 />
               </button>
             ))}
           </div>
         </div>
       )}
-
 
     </div>
   );

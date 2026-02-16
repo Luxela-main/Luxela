@@ -36,8 +36,8 @@ const AVAILABLE_COLORS = [
 interface AdditionalInfoFormProps {
   formData: FormData;
   onFormChange: (data: Partial<FormData>) => void;
-  images: File[];
-  onImagesChange: (images: File[]) => void;
+  images: (File | string)[];
+  onImagesChange: (images: (File | string)[]) => void;
   onNext: () => void;
   onCancel: () => void;
 }
@@ -54,7 +54,7 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
     onFormChange({ [field]: value });
   };
 
-  const [imagesp, setImagesp] = useState<File[]>([]);
+  const [imagesp, setImagesp] = useState<(File | string)[]>([]);
   const [isPreview, setIsPreview] = useState(false);
   const handleRemovePreviewImage = (index: number) => {
     const newImages = images.filter((_, i) => i !== index);

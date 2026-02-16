@@ -164,18 +164,18 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl bg-[#0a0a0a] border border-[#222] text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-2xl sm:max-w-3xl md:max-w-4xl bg-[#0a0a0a] border border-[#222] text-white max-h-[95vh] overflow-y-auto p-2 sm:p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-white">
             {listing.title}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4 md:space-y-6">
           {/* Image Carousel */}
           {filteredImages.length > 0 && (
-            <div className="relative">
-              <div className="relative aspect-square bg-[#1a1a1a] rounded-lg overflow-hidden">
+            <div className="relative w-full">
+              <div className="relative w-full h-48 sm:h-64 md:h-96 bg-[#1a1a1a] rounded-lg overflow-hidden">
                 <Image
                   src={filteredImages[currentImageIndex]}
                   alt={listing.title}
@@ -187,23 +187,23 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
                   <>
                     <button
                       onClick={handlePrevImage}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full transition z-10"
+                      className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-1.5 sm:p-2 rounded-full transition z-10"
                     >
-                      <ChevronLeft className="w-5 h-5 text-white" />
+                      <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </button>
                     <button
                       onClick={handleNextImage}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full transition z-10"
+                      className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-1.5 sm:p-2 rounded-full transition z-10"
                     >
-                      <ChevronRight className="w-5 h-5 text-white" />
+                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </button>
 
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 px-4 py-2 rounded-full">
+                    <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 bg-black/50 px-2 sm:px-4 py-1.5 sm:py-2 rounded-full">
                       {filteredImages.map((_: string, index: number) => (
                         <button
                           key={index}
                           onClick={() => setCurrentImageIndex(index)}
-                          className={`w-2 h-2 rounded-full transition ${
+                          className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition ${
                             index === currentImageIndex
                               ? "bg-white"
                               : "bg-gray-600"
@@ -217,12 +217,12 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
               {/* Thumbnail Preview */}
               {filteredImages.length > 1 && (
-                <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
+                <div className="flex gap-2 mt-2 sm:mt-4 overflow-x-auto pb-2 px-1">
                   {filteredImages.map((img: any, index: number) => (
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition ${
+                      className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition ${
                         index === currentImageIndex
                           ? "border-purple-500"
                           : "border-[#333]"
@@ -244,17 +244,17 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
           {/* Product Info */}
           <div className="space-y-4">
             {/* Pricing */}
-            <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-              <div className="flex justify-between items-start mb-4">
+            <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+              <div className="flex justify-between items-start mb-4 gap-4">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Price</p>
-                  <p className="text-4xl font-bold text-purple-500">
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Price</p>
+                  <p className="text-2xl sm:text-4xl font-bold text-purple-500">
                     NGN {((listing.priceCents || 0) / 100).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-gray-400 text-sm mb-1">Stock Available</p>
-                  <p className="text-3xl font-bold text-green-500">
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Stock Available</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-green-500">
                     {listing.quantityAvailable || 0}
                   </p>
                 </div>
@@ -264,11 +264,11 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
             {/* Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Category & Material */}
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-3">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-3">
                   Product Details
                 </h4>
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2 text-xs sm:text-sm">
                   {listing.category && (
                     <div>
                       <p className="text-gray-500">Category</p>
@@ -291,11 +291,11 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
               </div>
 
               {/* Shipping Info */}
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-3">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-3">
                   Shipping Information
                 </h4>
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2 text-xs sm:text-sm">
                   {listing.shippingPrice !== undefined && (
                     <div>
                       <p className="text-gray-500">Shipping Cost</p>
@@ -326,8 +326,8 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Colors */}
             {colors.length > 0 && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
                   <Palette className="w-4 h-4" />
                   Available Colors
                 </h4>
@@ -351,8 +351,8 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Sizes */}
             {sizes.length > 0 && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
                   <Ruler className="w-4 h-4" />
                   Available Sizes
                 </h4>
@@ -371,11 +371,11 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Description */}
             {listing.description && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                   Description
                 </h4>
-                <p className="text-sm text-gray-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
                   {listing.description}
                 </p>
               </div>
@@ -383,34 +383,34 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Meta Description */}
             {listing.metaDescription && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                   Meta Description
                 </h4>
-                <p className="text-sm text-gray-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
                   {listing.metaDescription}
                 </p>
               </div>
             )}
 
             {/* SKU & Barcode */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {listing.sku && (
-                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                  <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                     SKU
                   </h4>
-                  <p className="text-sm font-mono text-purple-400 bg-black/50 px-3 py-2 rounded break-all">
+                  <p className="text-xs sm:text-sm font-mono text-purple-400 bg-black/50 px-3 py-2 rounded break-all">
                     {listing.sku}
                   </p>
                 </div>
               )}
               {listing.barcode && (
-                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                  <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                     Barcode
                   </h4>
-                  <p className="text-sm font-mono text-green-400 bg-black/50 px-3 py-2 rounded break-all">
+                  <p className="text-xs sm:text-sm font-mono text-green-400 bg-black/50 px-3 py-2 rounded break-all">
                     {listing.barcode}
                   </p>
                 </div>
@@ -419,8 +419,8 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Video URL */}
             {listing.videoUrl && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
                   <Film className="w-4 h-4" />
                   Video URL
                 </h4>
@@ -428,7 +428,7 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
                   href={listing.videoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-400 hover:text-blue-300 hover:underline break-all"
+                  className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 hover:underline break-all"
                 >
                   {listing.videoUrl}
                 </a>
@@ -437,12 +437,12 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Care Instructions */}
             {listing.careInstructions && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Care Instructions
                 </h4>
-                <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
                   {listing.careInstructions}
                 </p>
               </div>
@@ -450,11 +450,11 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Material Composition */}
             {listing.materialComposition && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                   Material Composition
                 </h4>
-                <p className="text-sm text-gray-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
                   {listing.materialComposition}
                 </p>
               </div>
@@ -462,14 +462,14 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Limited Edition & Release Duration */}
             {(listing.limitedEditionBadge || listing.releaseDuration) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {listing.limitedEditionBadge && (
-                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                  <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                    <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
                       <Badge className="w-4 h-4" />
                       Limited Edition
                     </h4>
-                    <p className="text-sm text-amber-400">
+                    <p className="text-xs sm:text-sm text-amber-400">
                       {listing.limitedEditionBadge === "show_badge"
                         ? "✓ Badge will be shown"
                         : "✗ Badge hidden"}
@@ -477,36 +477,36 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
                   </div>
                 )}
                 {listing.releaseDuration && (
-                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                  <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                    <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       Release Duration
                     </h4>
-                    <p className="text-sm text-white">{listing.releaseDuration}</p>
+                    <p className="text-xs sm:text-sm text-white">{listing.releaseDuration}</p>
                   </div>
                 )}
               </div>
             )}
 
             {/* Shipping & Supply Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {listing.supplyCapacity && (
-                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                  <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
                     Supply Capacity
                   </h4>
-                  <p className="text-sm text-white">
+                  <p className="text-xs sm:text-sm text-white">
                     {listing.supplyCapacity === "no_max" ? "Unlimited" : "Limited"}
                   </p>
                 </div>
               )}
               {listing.shippingOption && (
-                <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                  <h4 className="text-sm font-semibold text-gray-400 mb-2">
+                <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                     Shipping Options
                   </h4>
-                  <p className="text-sm text-white capitalize">
+                  <p className="text-xs sm:text-sm text-white capitalize">
                     {listing.shippingOption.replace(/_/g, " ")}
                   </p>
                 </div>
@@ -515,25 +515,25 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Shipping ETA */}
             {(listing.etaDomestic || listing.etaInternational) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {listing.etaDomestic && (
-                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                  <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                    <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
                       <Truck className="w-4 h-4" />
                       Domestic Shipping ETA
                     </h4>
-                    <p className="text-sm text-white capitalize">
+                    <p className="text-xs sm:text-sm text-white capitalize">
                       {listing.etaDomestic.replace(/_/g, " ")}
                     </p>
                   </div>
                 )}
                 {listing.etaInternational && (
-                  <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                    <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                  <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                    <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
                       <Truck className="w-4 h-4" />
                       International Shipping ETA
                     </h4>
-                    <p className="text-sm text-white capitalize">
+                    <p className="text-xs sm:text-sm text-white capitalize">
                       {listing.etaInternational.replace(/_/g, " ")}
                     </p>
                   </div>
@@ -543,11 +543,11 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Refund Policy */}
             {listing.refundPolicy && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                   Refund Policy
                 </h4>
-                <p className="text-sm text-white capitalize">
+                <p className="text-xs sm:text-sm text-white capitalize">
                   {listing.refundPolicy === "no_refunds"
                     ? "No Refunds"
                     : listing.refundPolicy === "1week"
@@ -575,11 +575,11 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Local Pricing */}
             {listing.localPricing && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2">
                   Pricing Type
                 </h4>
-                <p className="text-sm text-white capitalize">
+                <p className="text-xs sm:text-sm text-white capitalize">
                   {listing.localPricing === "fiat"
                     ? "Fiat Currency"
                     : listing.localPricing === "cryptocurrency"
@@ -591,8 +591,8 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
 
             {/* Listing Status */}
             {listing.status && (
-              <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-                <h4 className="text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
+              <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-2 flex items-center gap-2">
                   {listing.status === "approved" ? (
                     <CheckCircle className="w-4 h-4 text-green-500" />
                   ) : listing.status === "rejected" ? (
@@ -650,11 +650,11 @@ export const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
             )}
 
             {/* Metadata */}
-            <div className="bg-[#1a1a1a] rounded-lg p-4 border border-[#222]">
-              <h4 className="text-sm font-semibold text-gray-400 mb-3">
+            <div className="bg-[#1a1a1a] rounded-lg p-3 sm:p-4 border border-[#222]">
+              <h4 className="text-xs sm:text-sm font-semibold text-gray-400 mb-3">
                 Listing Information
               </h4>
-              <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs">
                 <div>
                   <p className="text-gray-500">Created</p>
                   <p className="text-white">

@@ -17,13 +17,13 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
   };
 
   return (
-    <div className="col-span-5">
+    <div className="col-span-12 lg:col-span-5">
       {/* Main Image Section */}
       <div className="mb-6">
         <h3 className="text-sm text-gray-400 mb-4">
           Product Images ({images.length} of 4)
         </h3>
-        <div className="border border-gray-600 rounded-lg p-8 flex items-center justify-center bg-[#1a1a1a] h-72">
+        <div className="border border-gray-600 rounded-lg p-4 md:p-8 flex items-center justify-center bg-[#1a1a1a] w-full" style={{ aspectRatio: '1 / 1', maxHeight: '400px', minHeight: '220px' }}>
           {images.length > 0 ? (
             <img
               src={getImageUrl(images[0])}
@@ -41,10 +41,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images }) => {
         </div>
       </div>
 
-      {/* Additional Images Grid */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Additional Images Grid - Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
         {[1, 2, 3].map((index) => (
-          <div key={index} className="border border-gray-600 rounded-lg p-4 flex items-center justify-center bg-[#1a1a1a] h-24">
+          <div key={index} className="border border-gray-600 rounded-lg p-2 sm:p-4 flex items-center justify-center bg-[#1a1a1a] w-full" style={{ aspectRatio: '1 / 1', minHeight: '80px' }}>
             {images[index] ? (
               <img
                 src={getImageUrl(images[index])}

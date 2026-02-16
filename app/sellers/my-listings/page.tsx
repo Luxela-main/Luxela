@@ -105,7 +105,7 @@ export default function MyListings() {
   };
 
   const handleEdit = (listing: any) => {
-    router.push(`/sellers/new-listing?edit=${listing.id}`);
+    router.push(`/sellers/create-product?type=${listing.type}&edit=${listing.id}`);
   };
 
   const handleDeleteClick = (listing: any) => {

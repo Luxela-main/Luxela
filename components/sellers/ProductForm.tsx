@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import ProductInfoForm from './NewListing/ProductInfoForm';
 import CollectionForm from './NewListing/CollectionForm';
@@ -9,7 +9,7 @@ import AdditionalInfoForm from './NewListing/AdditionalInfoForm';
 import PreviewForm from './NewListing/PreviewForm';
 import SuccessModal from './NewListing/SuccessModal';
 import { FormData } from '@/types/newListing';
-import { getVanillaTRPCClient } from '@/lib/trpc';
+import { trpc } from '@/app/_trpc/client';
 import { uploadImage } from '@/lib/upload-image';
 
 // Color palette matching AdditionalInfoForm
@@ -69,10 +69,24 @@ interface ProductFormProps {
 
 export function ProductForm({ productType }: ProductFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams?.get('edit');
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successTitle, setSuccessTitle] = useState('');
+  const [isLoadingExisting, setIsLoadingExisting] = useState(!!editId);
+
+  // Initialize TRPC mutations
+  const { mutateAsync: createSingleAsync } = (trpc.listing as any).createSingle.useMutation();
+  const { mutateAsync: updateSingleAsync } = (trpc.listing as any).updateListing.useMutation();
+
+  const { mutateAsync: createCollectionAsync } = (trpc.listing as any).createCollection.useMutation();
+  const { mutateAsync: updateCollectionAsync } = (trpc.listing as any).updateCollection.useMutation();
+
+  // Fetch existing listings
+  const { data: listings = [] } = (trpc.listing as any).getMyListings.useQuery();
+
   const [formData, setFormData] = useState<FormData>({
     name: '',
     price: '',
@@ -102,7 +116,7 @@ export function ProductForm({ productType }: ProductFormProps) {
     images: [],
     videos: [],
   });
-  const [images, setImages] = useState<File[]>([]);
+  const [images, setImages] = useState<(File | string)[]>([]);
   const [videos, setVideos] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +134,133 @@ export function ProductForm({ productType }: ProductFormProps) {
     }
   }, [productType]);
 
+  // Load existing listing data when editing
+  useEffect(() => {
+    if (!editId || listings.length === 0) {
+      setIsLoadingExisting(false);
+      return;
+    }
+
+    try {
+      const existingListing = listings.find((l: any) => l.id === editId);
+      if (!existingListing) {
+        console.warn('[ProductForm] Listing not found for editId:', editId);
+        setIsLoadingExisting(false);
+        return;
+      }
+
+      console.log('[ProductForm] Loading existing listing for edit:', existingListing);
+
+      // Convert colors array back to comma-separated string
+      const colorsString = existingListing.colorsAvailable
+        ? Array.isArray(existingListing.colorsAvailable)
+          ? existingListing.colorsAvailable
+              .map((c: any) => (typeof c === 'string' ? c : c.colorName))
+              .join(', ')
+          : existingListing.colorsAvailable
+        : '';
+
+      // Convert sizes array to comma-separated string
+      const sizesString = existingListing.sizesJson
+        ? Array.isArray(existingListing.sizesJson)
+          ? existingListing.sizesJson.join(', ')
+          : existingListing.sizesJson
+        : '';
+
+      // Parse itemsJson if it exists
+      let collectionItems = [];
+      if (existingListing.itemsJson) {
+        collectionItems = Array.isArray(existingListing.itemsJson)
+          ? existingListing.itemsJson
+          : typeof existingListing.itemsJson === 'string'
+          ? JSON.parse(existingListing.itemsJson)
+          : [];
+      }
+
+      // Build the form data object
+      const loadedFormData: Partial<FormData> = {
+        name: existingListing.title || '',
+        price: existingListing.priceCents ? (existingListing.priceCents / 100).toString() : '',
+        category: existingListing.category || '',
+        description: existingListing.description || '',
+        sizes: existingListing.sizesJson || [],
+        material: existingListing.materialComposition || '',
+        colors: colorsString,
+        targetAudience: existingListing.additionalTargetAudience || '',
+        refundPolicy: existingListing.refundPolicy || '',
+        shippingOption: existingListing.shippingOption || '',
+        domesticDays: existingListing.etaDomestic || '',
+        internationalDays: existingListing.etaInternational || '',
+        supplyCapacity: existingListing.supplyCapacity || 'no_max',
+        quantity: existingListing.quantityAvailable?.toString() || '',
+        showBadge: existingListing.limitedEditionBadge ? 'show_badge' : 'do_not_show',
+        releaseDuration: existingListing.releaseDuration || '',
+      };
+
+      // Add collection-specific fields if editing a collection
+      if (productType === 'collection') {
+        loadedFormData.collectionTitle = existingListing.title || '';
+        loadedFormData.collectionDescription = existingListing.description || '';
+        loadedFormData.collectionSku = existingListing.sku || '';
+        loadedFormData.collectionSlug = existingListing.slug || '';
+        loadedFormData.collectionMetaDescription = existingListing.metaDescription || '';
+        loadedFormData.collectionBarcode = existingListing.barcode || '';
+        loadedFormData.collectionVideoUrl = existingListing.videoUrl || '';
+        loadedFormData.collectionCareInstructions = existingListing.careInstructions || '';
+        
+        // Load collection items with their images
+        const itemsWithImages = collectionItems.map((item: any) => {
+          const itemImages = item.imagesJson
+            ? Array.isArray(item.imagesJson)
+              ? item.imagesJson
+              : typeof item.imagesJson === 'string'
+              ? JSON.parse(item.imagesJson)
+              : []
+            : [];
+          return {
+            ...item,
+            images: itemImages, // Set images as URLs for display and editing
+          };
+        });
+        
+        loadedFormData.collectionItems = itemsWithImages;
+      }
+
+      // Add single-specific fields if editing a single
+      if (productType === 'single') {
+        loadedFormData.sku = existingListing.sku || '';
+        loadedFormData.barcode = existingListing.barcode || '';
+        loadedFormData.slug = existingListing.slug || '';
+        loadedFormData.metaDescription = existingListing.metaDescription || '';
+        loadedFormData.videoUrl = existingListing.videoUrl || '';
+        loadedFormData.careInstructions = existingListing.careInstructions || '';
+      }
+
+      // Load images from the listing's imagesJson
+      if (existingListing.imagesJson) {
+        try {
+          const imageUrls = Array.isArray(existingListing.imagesJson)
+            ? existingListing.imagesJson
+            : typeof existingListing.imagesJson === 'string'
+            ? JSON.parse(existingListing.imagesJson)
+            : [];
+          loadedFormData.imageUrls = imageUrls;
+          // Also set images state so they display in ImageUpload component
+          setImages(imageUrls as (File | string)[]);
+        } catch (err) {
+          console.error('[ProductForm] Failed to parse images:', err);
+        }
+      }
+
+      console.log('[ProductForm] Loaded form data:', loadedFormData);
+      setFormData((prev) => ({ ...prev, ...loadedFormData }));
+      setIsLoadingExisting(false);
+    } catch (err) {
+      console.error('[ProductForm] Error loading existing listing:', err);
+      setIsLoadingExisting(false);
+    }
+  }, [editId, listings, productType]);
+
   const handleFormChange = (data: Partial<FormData>) => {
     const updatedData = { ...formData, ...data };
     setFormData(updatedData);
@@ -127,7 +268,7 @@ export function ProductForm({ productType }: ProductFormProps) {
     localStorage.setItem(storageKey, JSON.stringify(updatedData));
   };
 
-  const handleImagesChange = (newImages: File[]) => {
+  const handleImagesChange = (newImages: (File | string)[]) => {
     setImages(newImages);
     handleFormChange({ images: newImages });
   };
@@ -145,8 +286,10 @@ export function ProductForm({ productType }: ProductFormProps) {
   };
 
   const handleCancel = () => {
-    const storageKey = `product_form_${productType}`;
-    localStorage.removeItem(storageKey);
+    if (!editId) {
+      const storageKey = `product_form_${productType}`;
+      localStorage.removeItem(storageKey);
+    }
     router.push('/sellers/my-listings');
   };
 
@@ -194,7 +337,6 @@ export function ProductForm({ productType }: ProductFormProps) {
         }
       }
       
-      const trpc = getVanillaTRPCClient();
       let createdTitle = '';
       
       // Debug logging
@@ -203,14 +345,20 @@ export function ProductForm({ productType }: ProductFormProps) {
       console.log('[ProductForm] Parsed colors:', parsedColors);
       
       if (productType === 'single') {
-        // Upload images first
+        // Upload images first (only upload File objects, keep URL strings as-is)
         const uploadedImageUrls: string[] = [];
         if (images && images.length > 0) {
           for (const image of images) {
             try {
-              const uploaded = await uploadImage(image, 'store-assets', 'products');
-              if (uploaded) {
-                uploadedImageUrls.push(uploaded.url);
+              // If it's already a string URL, keep it as-is
+              if (typeof image === 'string') {
+                uploadedImageUrls.push(image);
+              } else if (image instanceof File) {
+                // Only upload File objects
+                const uploaded = await uploadImage(image, 'store-assets', 'products');
+                if (uploaded) {
+                  uploadedImageUrls.push(uploaded.url);
+                }
               }
             } catch (imgErr) {
               console.error('Image upload error:', imgErr);
@@ -249,28 +397,42 @@ export function ProductForm({ productType }: ProductFormProps) {
           careInstructions: formData.careInstructions || undefined,
         };
         
-        // Call createSingle mutation
-        const result = await trpc.listing.createSingle.mutate(singleListingInput as any);
+        // Call createSingle or updateSingle mutation with timeout safeguard
+        if (editId) {
+          await Promise.race([
+            updateSingleAsync({ id: editId, ...singleListingInput } as any),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Product update request timed out after 30 seconds')), 30000)
+            ),
+          ]);
+        } else {
+          await Promise.race([
+            createSingleAsync(singleListingInput as any),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Product creation request timed out after 30 seconds')), 30000)
+            ),
+          ]);
+        }
         createdTitle = formData.name;
       } else {
         // Collection submission - Upload images for each item first
         const itemsWithUploadedImages = await Promise.all(
-          (formData.collectionItems || []).map(async (item) => {
+          (formData.collectionItems || []).map(async (item: any) => {
             const uploadedImageUrls: string[] = [];
             
-            // Upload item images if they exist and are File objects
+            // Upload item images if they exist
             if (item.images && item.images.length > 0) {
               for (const imageFile of item.images) {
                 try {
-                  // Only upload if it's a File object (not already a URL string)
-                  if (imageFile instanceof File) {
+                  // If it's a string URL, keep it as-is
+                  if (typeof imageFile === 'string') {
+                    uploadedImageUrls.push(imageFile);
+                  } else if (imageFile instanceof File) {
+                    // Only upload File objects
                     const uploaded = await uploadImage(imageFile, 'store-assets', 'collection-items');
                     if (uploaded) {
                       uploadedImageUrls.push(uploaded.url);
                     }
-                  } else if (typeof imageFile === 'string') {
-                    // Already a URL string
-                    uploadedImageUrls.push(imageFile);
                   }
                 } catch (imgErr) {
                   console.error(`Image upload error for item "${item.title}":`, imgErr);
@@ -302,8 +464,22 @@ export function ProductForm({ productType }: ProductFormProps) {
           careInstructions: formData.collectionCareInstructions || undefined,
         };
         
-        // Call createCollection mutation
-        const result = await trpc.listing.createCollection.mutate(collectionInput as any);
+        // Call createCollection or updateCollection mutation with timeout safeguard
+        if (editId) {
+          await Promise.race([
+            updateCollectionAsync({ id: editId, ...collectionInput } as any),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Collection update request timed out after 30 seconds')), 30000)
+            ),
+          ]);
+        } else {
+          await Promise.race([
+            createCollectionAsync(collectionInput as any),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Collection creation request timed out after 30 seconds')), 30000)
+            ),
+          ]);
+        }
         createdTitle = formData.collectionTitle || '';
       }
       
@@ -353,7 +529,15 @@ export function ProductForm({ productType }: ProductFormProps) {
         productTitle={successTitle}
       />
       <div>
-      {productType === 'single' ? (
+      {isLoadingExisting && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="inline-block w-12 h-12 border-4 border-[#8451E1] border-opacity-30 rounded-full animate-spin" />
+            <p className="mt-4 text-gray-400 text-sm">Loading listing details...</p>
+          </div>
+        </div>
+      )}
+      {(!isLoadingExisting && productType === 'single') ? (
         // Single Product Flow
         <div>
           {/* Step Indicator */}
@@ -431,7 +615,7 @@ export function ProductForm({ productType }: ProductFormProps) {
             </>
           )}
         </div>
-      ) : (
+      ) : (!isLoadingExisting && productType === 'collection') ? (
         // Collection Flow
         <CollectionForm
           title={formData.collectionTitle || ''}
@@ -457,7 +641,7 @@ export function ProductForm({ productType }: ProductFormProps) {
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
         />
-      )}
+      ) : null}
     </div>
       </>
   );
