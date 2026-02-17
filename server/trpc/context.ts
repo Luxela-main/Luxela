@@ -175,10 +175,16 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
     const rawAuthHeader = extractAuthorizationHeader(req);
     token = parseBearerToken(rawAuthHeader);
     if (token) {
-      console.log("[AUTH] Token extracted from Authorization header");
+      console.log('[AUTH] Token extracted from Authorization header', {
+        timestamp: new Date().toISOString(),
+        tokenLength: token.length,
+      });
     }
   } else {
-    console.log("[AUTH] Token extracted from cookie");
+    console.log('[AUTH] Token extracted from cookie', {
+      timestamp: new Date().toISOString(),
+      tokenLength: token.length,
+    });
   }
 
   const authClient = getAuthClient();
@@ -191,28 +197,33 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
   let user: User | null = null;
 
   if (token) {
-    console.log("[AUTH] Token found, attempting to verify with Supabase...");
     try {
       // Only the ANON client can call getUser
       const { data, error } = await authClient.auth.getUser(token);
       
       if (error) {
-        console.error("[AUTH] Supabase getUser error:", {
-          message: error.message,
-          code: error.code,
-          status: (error as any).status,
-          tokenLength: token?.length,
-        });
+        console.warn(`[AUTH] Supabase getUser error: {
+  message: '${error.message}',
+  code: '${error.code}',
+  status: ${error.status ?? 'undefined'},
+  tokenLength: ${token?.length ?? 0}
+}`);
+        console.warn('[AUTH] Attempting JWT token decode fallback...');
         
         // FALLBACK: If getUser fails, try to decode JWT token directly
         // This handles cases where Supabase API is temporarily unavailable
-        console.log("[AUTH] Attempting JWT token decode fallback...");
         user = decodeJWTToken(token);
         
         if (user) {
-          console.log("[AUTH] User extracted from JWT token fallback:", { userId: user.id, email: user.email });
+          console.log(`[AUTH] User extracted from JWT token fallback: {
+  userId: '${user.id}',
+  email: '${user.email}'
+}`);
         } else {
-          console.warn("[AUTH] JWT decode fallback also failed");
+          console.warn('[AUTH] JWT decode fallback failed', {
+            timestamp: new Date().toISOString(),
+            tokenLength: token?.length,
+          });
           user = null;
         }
       } else if (data?.user) {
@@ -231,16 +242,19 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
           admin: isAdminUser,
         };
-        console.log("[AUTH] User authenticated successfully:", { 
-          userId: user.id, 
-          email: user.email, 
+        console.log('[AUTH] User authenticated via Supabase', {
+          timestamp: new Date().toISOString(),
+          userId: user.id,
+          email: user.email,
           role: user.role,
           admin: user.admin,
-          metadataAdmin: metadataAdmin,
-          metadataRole: metadataRole,
+          method: 'supabase',
         });
       } else {
-        console.log("[AUTH] User data is null or undefined despite successful response");
+        console.warn('[AUTH] No user data in Supabase response', {
+          timestamp: new Date().toISOString(),
+          tokenLength: token?.length,
+        });
         // Try JWT fallback even on successful response if no user data
         user = decodeJWTToken(token);
       }
@@ -250,20 +264,17 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
       const isDOMException = err instanceof Error && (err as any).name === "DOMException";
       
       if (isAbortError || isDOMException) {
-        console.warn("[AUTH_TIMEOUT] Supabase auth request aborted (10s timeout)", {
-          errorName: (err as Error).name,
-          errorMessage: errorMessage,
+        console.warn('[AUTH] Supabase auth timeout (10s), attempting JWT fallback', {
           timestamp: new Date().toISOString(),
+          errorName: (err as Error).name,
+          tokenLength: token?.length,
         });
         // On timeout, try JWT fallback before giving up
-        console.log("[AUTH] Attempting JWT token decode due to timeout...");
         user = decodeJWTToken(token);
-        if (!user) {
-          user = null;
-        }
       } else {
-        console.error("[AUTH] Failed to verify JWT token:", {
-          errorMessage,
+        console.error('[AUTH] Auth verification exception', {
+          timestamp: new Date().toISOString(),
+          error: errorMessage,
           errorName: err instanceof Error ? err.name : typeof err,
           tokenLength: token?.length,
         });
@@ -271,7 +282,7 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
       }
     }
   } else {
-    console.log("[AUTH] No token found in request - user will be null");
+    console.debug('[AUTH] No token provided in request');
   }
 
   return {

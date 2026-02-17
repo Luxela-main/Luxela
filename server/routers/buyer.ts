@@ -1114,7 +1114,7 @@ return {
 
         // Get listing details for notification
         const listing = await db
-          .select({ title: listings.title, productId: listings.productId })
+          .select({ id: listings.id, title: listings.title })
           .from(listings)
           .where(eq(listings.id, input.listingId))
           .limit(1);
@@ -1122,10 +1122,7 @@ return {
         // Notify buyer
         try {
           if (listing[0]) {
-            // Only notify if productId exists
-            if (listing[0].productId) {
-              await notifyProductFavorited(buyer.id, listing[0].productId, listing[0].title);
-            }
+            await notifyProductFavorited(buyer.id, listing[0].id, listing[0].title);
           }
         } catch (err) {
           console.error('Failed to send favorite notification:', err);

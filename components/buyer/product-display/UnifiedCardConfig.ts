@@ -71,7 +71,7 @@ export function getCardBorderColor(listingId: string): string {
 
 // Utility function to get grid class names
 export function getGridClasses(): string {
-  return `grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6`;
+  return `grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-1 md:gap-3 lg:gap-6`;
 }
 
 // Utility function to get shadow color based on border color

@@ -5,6 +5,7 @@ import Script from "next/script";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { spaceGrotesk } from "@/public/fonts";
+import { inter, poppins } from "./fonts";
 import ClientProviders from "./ClientProviders";
 import { SITE } from "@/lib/seo/config";
 import {
@@ -74,7 +75,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <head>
         {/* Organization & Website Schema */}
         <Script

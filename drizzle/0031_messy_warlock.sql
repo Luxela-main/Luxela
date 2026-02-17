@@ -1,0 +1,1 @@
+ALTER TYPE "notification_category" ADD VALUE 'new_review';

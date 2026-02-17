@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -18,7 +18,7 @@ export async function DELETE(
       );
     }
 
-    const favoriteId = params.id;
+    const { id: favoriteId } = await params;
 
     // Get buyer record
     const buyer = await db.query.buyers.findFirst({

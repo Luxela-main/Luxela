@@ -19,8 +19,8 @@ interface TsaraPaymentModalProps {
   totalAmount: number;
   orderId: string;
   buyerId: string;
-  listingId: string;
   paymentMethod: "card" | "bank_transfer" | "crypto";
+  checkoutData?: any;
 }
 
 export function TsaraPaymentModal({
@@ -29,22 +29,36 @@ export function TsaraPaymentModal({
   totalAmount,
   orderId,
   buyerId,
-  listingId,
   paymentMethod,
+  checkoutData,
 }: TsaraPaymentModalProps) {
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
 
   const createPayment = trpc.payment.createPayment.useMutation({
     onSuccess: (data) => {
+      console.log('[TsaraPaymentModal] Payment created successfully:', {
+        paymentId: data.paymentId,
+        paymentUrl: data.paymentUrl,
+      });
+
       if (data.paymentUrl) {
+        console.log('[TsaraPaymentModal] Redirecting to payment URL:', data.paymentUrl);
+        // Store payment reference in session storage for verification after return
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('pendingPaymentRef', data.paymentId);
+          sessionStorage.setItem('checkoutOrderId', orderId);
+        }
+        // Redirect to Tsara payment page
         window.location.href = data.paymentUrl;
+      } else {
+        toastSvc.error('Payment URL not received from gateway');
       }
     },
     onError: (err: any) => {
       // Extract error message - tRPC errors have message directly or in err.message
       let displayMessage = 'Failed to create payment. Please try again.';
       let errorCode = 'UNKNOWN';
-      
+
       // For tRPC errors
       if (err?.message) {
         displayMessage = err.message;
@@ -62,19 +76,16 @@ export function TsaraPaymentModal({
           displayMessage = fallbackMessage;
         }
       }
-      
-      console.error('[TsaraPaymentModal] Error raw:', err);
-      console.error('[TsaraPaymentModal] Error keys:', Object.keys(err || {}));
-      console.error('[TsaraPaymentModal] Error.data:', err?.data);
-      console.error('[TsaraPaymentModal] Error.message:', err?.message);
+
       console.error('[TsaraPaymentModal] Payment error:', {
         message: displayMessage,
         code: errorCode,
         buyerId,
         orderId,
         amount: totalAmount,
+        fullError: err,
       });
-      
+
       toastSvc.error(displayMessage);
     },
   });
@@ -87,6 +98,7 @@ export function TsaraPaymentModal({
       orderId: orderId,
       amount: nairaAmount,
       paymentMethod: paymentMethod,
+      checkoutData: checkoutData,
     });
 
     // For crypto, wallet selection is required
@@ -95,17 +107,30 @@ export function TsaraPaymentModal({
       return;
     }
 
+    // Validate checkout data
+    if (!checkoutData || !checkoutData.orders || checkoutData.orders.length === 0) {
+      toastSvc.error("Invalid checkout data. Please go back and try again.");
+      return;
+    }
+
     const paymentData: any = {
       buyerId,
-      listingId,
-      orderId,
+      // For multiple orders, use the first one's listing ID
+      listingId: checkoutData.orders[0]?.listingId || "",
+      orderId: orderId, // Use cart ID as reference
       amount: nairaAmount,
       currency: "NGN",
-      description: `Luxela Order Payment`,
+      description: `Luxela Order Payment - ${checkoutData.orders.length} item(s)`,
       paymentMethod: paymentMethod,
       paymentType: paymentMethod === "crypto" ? "stablecoin" : "fiat",
       success_url: `${window.location.origin}/cart/success`,
       cancel_url: `${window.location.origin}/cart/checkout`,
+      metadata: {
+        cartId: orderId,
+        itemCount: checkoutData.orders.length,
+        subtotal: checkoutData.subtotal,
+        discount: checkoutData.discountCents,
+      },
     };
 
     // Add wallet ID for crypto payments
@@ -113,8 +138,14 @@ export function TsaraPaymentModal({
       paymentData.wallet_id = selectedWallet;
     }
 
+    console.log('[TsaraPaymentModal] Sending payment request:', paymentData);
     createPayment.mutate(paymentData);
   };
+
+  // Don't render if modal is closed
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -167,6 +198,24 @@ export function TsaraPaymentModal({
             </div>
           )}
 
+          {/* Order Summary */}
+          {checkoutData && checkoutData.orders && (
+            <div className="w-full mb-6 p-4 bg-gray-900/50 rounded-lg border border-neutral-800">
+              <div className="text-left space-y-2">
+                <p className="text-sm font-medium text-white">Order Summary</p>
+                <div className="text-xs text-gray-400 space-y-1">
+                  <p>Items: {checkoutData.orders.length}</p>
+                  <p>Subtotal: ₦{(checkoutData.subtotal / 100).toLocaleString('en-NG')}</p>
+                  {checkoutData.discountCents > 0 && (
+                    <p className="text-green-500">
+                      Discount: -₦{(checkoutData.discountCents / 100).toLocaleString('en-NG')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="w-full flex justify-between items-center py-4 border-t border-neutral-800/60 mb-8">
             <span className="text-gray-400 text-sm">Total amount</span>
             <span className="text-white font-medium text-lg">
@@ -192,6 +241,13 @@ export function TsaraPaymentModal({
               "Continue to payment"
             )}
           </Button>
+
+          {/* Debug Info in Development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 text-xs text-gray-500 bg-gray-900 p-2 rounded w-full max-h-20 overflow-y-auto">
+              <p>Debug: {paymentMethod} | Amount: {nairaAmount} NGN | Cart ID: {orderId?.substring(0, 8)}...</p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

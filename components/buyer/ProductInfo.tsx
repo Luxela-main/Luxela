@@ -204,7 +204,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
         const result = await addToFavorites(product.id);
         if (result.success) {
           setIsFav(true);
-          toast.success('Added to favorites');
+          toast.success('✓ Added to favorites');
         } else {
           toast.error(result.error || 'Failed to add to favorites');
         }
@@ -646,4 +646,4 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
       </Dialog>
     </div>
   );
-}
+}

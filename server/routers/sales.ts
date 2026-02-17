@@ -45,7 +45,7 @@ export const salesRouter = createTRPCRouter({
           product: z.string(),
           customer: z.string(),
           customerEmail: z.string().optional(),
-          orderDate: z.string(),
+          orderDate: z.string().datetime(),
           paymentMethod: z.string(),
           amountCents: z.number(),
           currency: z.string(),
@@ -97,20 +97,29 @@ export const salesRouter = createTRPCRouter({
                 .limit(limit)
                 .offset(offset);
 
-        return rows.map((o: any) => ({
-          id: o.id,
-          orderId: o.id,
-          product: o.productTitle || '',
-          customer: o.customerName || '',
-          customerEmail: o.customerEmail || undefined,
-          orderDate: o.orderDate instanceof Date ? o.orderDate : new Date(o.orderDate),
-          paymentMethod: String(o.paymentMethod || ''),
-          amountCents: o.amountCents || 0,
-          currency: o.currency || '',
-          payoutStatus: String(o.payoutStatus || ''),
-          deliveryStatus: String(o.deliveryStatus || ''),
-          orderStatus: String(o.orderStatus || ''),
-        }))
+        return rows.map((o: any) => {
+          // Convert orderDate to ISO string for Zod validation
+          const orderDateStr = o.orderDate instanceof Date 
+            ? o.orderDate.toISOString()
+            : typeof o.orderDate === 'string'
+              ? o.orderDate
+              : new Date(o.orderDate).toISOString();
+          
+          return {
+            id: o.id,
+            orderId: o.id,
+            product: o.productTitle || '',
+            customer: o.customerName || '',
+            customerEmail: o.customerEmail || undefined,
+            orderDate: orderDateStr,
+            paymentMethod: String(o.paymentMethod || ''),
+            amountCents: o.amountCents || 0,
+            currency: o.currency || '',
+            payoutStatus: String(o.payoutStatus || ''),
+            deliveryStatus: String(o.deliveryStatus || ''),
+            orderStatus: String(o.orderStatus || ''),
+          };
+        });
       } catch (err: any) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -129,7 +138,7 @@ export const salesRouter = createTRPCRouter({
         product: z.string(),
         customer: z.string(),
         customerEmail: z.string().optional(),
-        orderDate: z.string(),
+        orderDate: z.string().datetime(),
         paymentMethod: z.string(),
         amountCents: z.number(),
         currency: z.string(),
@@ -858,4 +867,3 @@ export const salesRouter = createTRPCRouter({
       }
     }),
 });
-

@@ -366,18 +366,16 @@ export default function CartPaymentPage() {
         </div>
       </div>
 
-      {/* Modal with actual checkout data */}
-      {activeAddress && checkoutResult && (
-        <TsaraPaymentModal
-          isOpen={showTsaraModal}
-          onClose={() => setShowTsaraModal(false)}
-          totalAmount={checkoutResult.total}
-          orderId={checkoutResult.orders[0]?.id || ""}
-          buyerId={profile?.id || ""}
-          listingId={checkoutResult.orders[0]?.listingId || ""}
-          paymentMethod={paymentMethod}
-        />
-      )}
+      {/* Modal with actual checkout data - Always mounted for proper state management */}
+      <TsaraPaymentModal
+        isOpen={showTsaraModal}
+        onClose={() => setShowTsaraModal(false)}
+        totalAmount={checkoutResult?.total || 0}
+        orderId={checkoutResult?.cartId || ""}
+        buyerId={profile?.id || ""}
+        checkoutData={checkoutResult}
+        paymentMethod={paymentMethod}
+      />
     </div>
   );
 }

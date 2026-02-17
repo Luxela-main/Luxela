@@ -48,6 +48,20 @@ export interface CreateAdminNotificationInput {
  */
 export async function createBuyerNotification(input: CreateBuyerNotificationInput) {
   try {
+    // Validate required fields before database operation
+    if (!input.buyerId) {
+      throw new Error('buyerId is required for buyer notification');
+    }
+    if (!input.type) {
+      throw new Error('type is required for buyer notification');
+    }
+    if (!input.title) {
+      throw new Error('title is required for buyer notification');
+    }
+    if (!input.message) {
+      throw new Error('message is required for buyer notification');
+    }
+
     const result = await db.insert(buyerNotifications).values({
       buyerId: input.buyerId,
       type: input.type as any,
@@ -59,12 +73,26 @@ export async function createBuyerNotification(input: CreateBuyerNotificationInpu
       metadata: input.metadata || null,
       isRead: false,
       isStarred: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
     return result;
-  } catch (error) {
-    console.error('Failed to create buyer notification:', error);
+  } catch (error: any) {
+    console.error('[DB_ERROR] Failed to create buyer notification:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      column: error.column,
+      table: error.table,
+      constraint: error.constraint,
+      input: {
+        buyerId: input.buyerId,
+        type: input.type,
+        title: input.title,
+        message: input.message,
+        hasRelatedEntityId: !!input.relatedEntityId,
+        hasMetadata: !!input.metadata,
+      },
+      timestamp: new Date().toISOString(),
+    });
     throw error;
   }
 }
@@ -74,6 +102,20 @@ export async function createBuyerNotification(input: CreateBuyerNotificationInpu
  */
 export async function createSellerNotification(input: CreateSellerNotificationInput) {
   try {
+    // Validate required fields
+    if (!input.sellerId) {
+      throw new Error('sellerId is required for seller notification');
+    }
+    if (!input.type) {
+      throw new Error('type is required for seller notification');
+    }
+    if (!input.title) {
+      throw new Error('title is required for seller notification');
+    }
+    if (!input.message) {
+      throw new Error('message is required for seller notification');
+    }
+
     const result = await db.insert(sellerNotifications).values({
       sellerId: input.sellerId,
       type: input.type as any,
@@ -86,12 +128,20 @@ export async function createSellerNotification(input: CreateSellerNotificationIn
       metadata: input.metadata || null,
       isRead: false,
       isStarred: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
     return result;
-  } catch (error) {
-    console.error('Failed to create seller notification:', error);
+  } catch (error: any) {
+    console.error('[DB_ERROR] Failed to create seller notification:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      input: {
+        sellerId: input.sellerId,
+        type: input.type,
+        severity: input.severity,
+      },
+      timestamp: new Date().toISOString(),
+    });
     throw error;
   }
 }
@@ -101,6 +151,20 @@ export async function createSellerNotification(input: CreateSellerNotificationIn
  */
 export async function createAdminNotification(input: CreateAdminNotificationInput) {
   try {
+    // Validate required fields
+    if (!input.adminId) {
+      throw new Error('adminId is required for admin notification');
+    }
+    if (!input.type) {
+      throw new Error('type is required for admin notification');
+    }
+    if (!input.title) {
+      throw new Error('title is required for admin notification');
+    }
+    if (!input.message) {
+      throw new Error('message is required for admin notification');
+    }
+
     const result = await db.insert(adminNotifications).values({
       adminId: input.adminId,
       type: input.type as any,
@@ -113,12 +177,20 @@ export async function createAdminNotification(input: CreateAdminNotificationInpu
       metadata: input.metadata || null,
       isRead: false,
       isStarred: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
     return result;
-  } catch (error) {
-    console.error('Failed to create admin notification:', error);
+  } catch (error: any) {
+    console.error('[DB_ERROR] Failed to create admin notification:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      input: {
+        adminId: input.adminId,
+        type: input.type,
+        severity: input.severity,
+      },
+      timestamp: new Date().toISOString(),
+    });
     throw error;
   }
 }

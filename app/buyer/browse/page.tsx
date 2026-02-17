@@ -7,6 +7,7 @@ import { useSearch } from '@/context/SearchContext';
 import { useRealtimeListings } from '@/hooks/useRealtimeListings';
 import {
   ProductDisplayHero,
+  ProductDisplayGrid,
   MasonryGrid,
   UnifiedListingCard,
 } from '@/components/buyer/product-display';
@@ -63,6 +64,7 @@ export default function BrowsePage() {
   const [showSortLeftArrow, setShowSortLeftArrow] = useState(false);
   const [showSortRightArrow, setShowSortRightArrow] = useState(false);
   const productsCarouselRef = useRef<HTMLDivElement>(null);
+  const newArrivalsScrollRef = useRef<HTMLDivElement>(null);
   const [productsScrollPos, setProductsScrollPos] = useState(0);
   const [showProductsLeftArrow, setShowProductsLeftArrow] = useState(false);
   const [showProductsRightArrow, setShowProductsRightArrow] = useState(false);
@@ -189,6 +191,14 @@ export default function BrowsePage() {
         return sorted;
     }
   }, [filteredListings, sortBy]);
+
+  // Featured products - ALL newest items for New Arrivals section (infinite scroll)
+  const featuredProducts = useMemo(() => {
+    if (!listings || listings.length === 0) return [];
+    const sorted = [...listings]
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return sorted;
+  }, [listings]);
 
   // Dynamically extract actual categories from products
   const actualCategories = useMemo(() => {
@@ -365,13 +375,6 @@ export default function BrowsePage() {
     return { inStock, minPrice, maxPrice, brands };
   }, [filteredListings]);
 
-  // Get featured products (top 12 by newest)
-  const featuredProducts = useMemo(() => {
-    return [...singleProducts]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 12);
-  }, [singleProducts]);
-
   // Get products by category for carousels
   const productsByCategory = useMemo(() => {
     const categories: Record<string, any[]> = {};
@@ -414,27 +417,62 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-16">
 
-        {/* Featured Products Carousel */}
-        {!searchQuery && filters.categories.length === 0 && activeFilterCount === 0 && (
+        {/* New Arrivals Section - Infinite Grid Format */}
+        {!searchQuery && filters.categories.length === 0 && activeFilterCount === 0 && featuredProducts.length > 0 && (
           <div className="mb-14 sm:mb-20 relative animate-fade-in">
             {/* Background glow */}
             <div className="absolute -left-10 -top-10 w-96 h-96 bg-[#8451E1]/10 rounded-full blur-3xl pointer-events-none opacity-50"></div>
             <div className="relative z-10">
-              <div className="mb-4 sm:mb-6">
-                <div className="inline-flex items-center gap-2 p-3 rounded-xl bg-gradient-to-r from-[#8451E1]/10 to-[#5C2EAF]/10 border border-[#8451E1]/20 mb-3">
-                  <span className="text-2xl">⭐</span>
-                  <h2 className="text-lg sm:text-2xl font-bold text-white">New Arrivals</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 sm:mb-10 md:mb-12 gap-4 sm:gap-0">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white mb-2 sm:mb-3">✨ New Arrivals</h2>
+                  <p className="text-[#999] text-sm sm:text-base md:text-lg">Latest additions to our exclusive collection</p>
                 </div>
-                <p className="text-[#999] text-sm sm:text-base font-light ml-12">Discover the latest luxury collections</p>
               </div>
-              <ProductCarousel
-                title="New Arrivals"
-                products={featuredProducts}
-                isFeatured={true}
-                categoryIcon="⭐"
-              />
+              {/* Horizontal Scrollable Carousel of New Arrivals */}
+              <div className="relative group">
+                {/* Scroll Container */}
+                <div 
+                  ref={newArrivalsScrollRef}
+                  className="flex gap-4 sm:gap-5 md:gap-6 overflow-x-auto scroll-smooth pb-4 scrollbar-hide"
+                  style={{
+                    scrollBehavior: 'smooth',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                  }}
+                >
+                  {featuredProducts.map((product) => (
+                    <div key={product.id} className="flex-shrink-0 w-52 sm:w-56 md:w-64">
+                      <UnifiedListingCard
+                        listing={product}
+                        showWishlist={true}
+                        showQuickView={true}
+                        showShare={true}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Left Scroll Button */}
+                <button
+                  onClick={() => newArrivalsScrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' })}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 bg-gradient-to-r from-[#8451E1]/80 to-[#8451E1]/40 hover:from-[#8451E1] hover:to-[#8451E1]/60 backdrop-blur-md border border-[#8451E1]/50 rounded-full p-2.5 sm:p-3 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-[0_0_30px_rgba(132,81,225,0.5)]"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+
+                {/* Right Scroll Button */}
+                <button
+                  onClick={() => newArrivalsScrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' })}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 bg-gradient-to-l from-[#8451E1]/80 to-[#8451E1]/40 hover:from-[#8451E1] hover:to-[#8451E1]/60 backdrop-blur-md border border-[#8451E1]/50 rounded-full p-2.5 sm:p-3 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-[0_0_30px_rgba(132,81,225,0.5)]"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -664,46 +702,57 @@ export default function BrowsePage() {
             </div>
           </div>
         ) : sortedListings.length > 0 ? (
-          <div className="relative">
-            {/* Products Left Scroll Arrow */}
-            {showProductsLeftArrow && (
-              <button
-                onClick={() => handleProductsScroll('left')}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-[#8451E1] hover:bg-[#9468F2] text-white transition-all shadow-lg flex items-center justify-center"
-                aria-label="Scroll products left"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            )}
-            
-            {/* Products Right Scroll Arrow */}
-            {showProductsRightArrow && (
-              <button
-                onClick={() => handleProductsScroll('right')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-[#8451E1] hover:bg-[#9468F2] text-white transition-all shadow-lg flex items-center justify-center"
-                aria-label="Scroll products right"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            )}
-            
+          <div className="group relative w-full">
+            {/* Left Scroll Button */}
+            <button
+              onClick={() => {
+                if (productsCarouselRef.current) {
+                  productsCarouselRef.current.scrollBy({
+                    left: -300,
+                    behavior: 'smooth',
+                  });
+                }
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#8451E1] to-[#5C2EAF] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:scale-110 shadow-lg hover:shadow-2xl hover:shadow-[#8451E1]/50"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+
+            {/* Products Carousel */}
             <div
               ref={productsCarouselRef}
-              className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide px-0 sm:px-0"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              onScroll={() => checkScroll()}
+              className="w-full overflow-x-auto scrollbar-hide scroll-smooth"
             >
-              {sortedListings.map((product) => (
-                <div key={product.id} className="min-w-[calc(100vw-100px)] sm:min-w-[280px] md:min-w-[300px] flex-shrink-0">
-                  <UnifiedListingCard
-                    listing={product}
-                    showWishlist={true}
-                    showQuickView={true}
-                    showShare={true}
-                  />
-                </div>
-              ))}
+              <div className="flex gap-4 sm:gap-5 pb-2">
+                {sortedListings.map((product) => (
+                  <div key={product.id} className="flex-shrink-0 w-52 sm:w-56 md:w-64">
+                    <UnifiedListingCard
+                      listing={product}
+                      showWishlist={true}
+                      showQuickView={true}
+                      showShare={true}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Right Scroll Button */}
+            <button
+              onClick={() => {
+                if (productsCarouselRef.current) {
+                  productsCarouselRef.current.scrollBy({
+                    left: 300,
+                    behavior: 'smooth',
+                  });
+                }
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#8451E1] to-[#5C2EAF] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:scale-110 shadow-lg hover:shadow-2xl hover:shadow-[#8451E1]/50"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">

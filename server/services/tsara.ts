@@ -11,9 +11,18 @@ const BASE_URL = process.env.NODE_ENV === "production" ? TSARA_BASE_URL : TSARA_
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    Authorization: `Bearer ${TSARA_SECRET_KEY}`,
+    "Authorization": `Bearer ${TSARA_SECRET_KEY}`,
     "Content-Type": "application/json",
+    "Accept": "application/json",
   },
+});
+
+// Add request interceptor to log auth attempts
+tsaraApi.interceptors.request.use((config) => {
+  // Log that we're sending the request
+  console.log('[Tsara API] Request to:', config.url);
+  console.log('[Tsara API] Auth header:', config.headers.Authorization ? 'Bearer token present' : 'NO AUTH');
+  return config;
 });
 
 export interface TsaraResponse<T> {

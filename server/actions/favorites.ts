@@ -8,11 +8,15 @@ import { getCurrentUser } from '@/lib/utils/getCurrentUser';
 
 export async function addToFavorites(listingId: string) {
   try {
+    console.log('[FAVORITES] addToFavorites called for listing:', listingId);
     const user = await getCurrentUser();
     
     if (!user) {
+      console.log('[FAVORITES] No user found');
       return { success: false, error: 'User not authenticated' };
     }
+
+    console.log('[FAVORITES] User authenticated:', user.id);
 
     // Get buyer record for the user
     const buyer = await db.query.buyers.findFirst({
@@ -20,8 +24,11 @@ export async function addToFavorites(listingId: string) {
     });
 
     if (!buyer) {
+      console.log('[FAVORITES] Buyer profile not found for user:', user.id);
       return { success: false, error: 'Buyer profile not found' };
     }
+
+    console.log('[FAVORITES] Found buyer:', buyer.id);
 
     // Check if listing exists
     const listing = await db.query.listings.findFirst({
@@ -29,8 +36,11 @@ export async function addToFavorites(listingId: string) {
     });
 
     if (!listing) {
+      console.log('[FAVORITES] Listing not found:', listingId);
       return { success: false, error: 'Listing not found' };
     }
+
+    console.log('[FAVORITES] Found listing:', listing.id, listing.title);
 
     // Check if already in favorites
     const existingFavorite = await db.query.buyerFavorites.findFirst({
@@ -41,43 +51,47 @@ export async function addToFavorites(listingId: string) {
     });
 
     if (existingFavorite) {
+      console.log('[FAVORITES] Already in favorites');
       return { success: false, error: 'Already in favorites' };
     }
 
     // Add to favorites
-    await db.insert(buyerFavorites).values({
+    console.log('[FAVORITES] Inserting favorite for buyer:', buyer.id, 'listing:', listingId);
+    const result = await db.insert(buyerFavorites).values({
       buyerId: buyer.id,
       listingId: listingId,
     });
+    console.log('[FAVORITES] Insert result:', result);
 
-    // Create notification for buyer
-    try {
-      await db.insert(buyerNotifications).values({
-        id: uuidv4(),
-        buyerId: buyer.id,
-        type: 'favorite_added' as any,
-        title: 'Added to Favorites',
-        message: `You added "${listing.title}" to your favorites!`,
-        relatedEntityId: listingId,
-        relatedEntityType: 'listing',
-        actionUrl: `/buyer/product/${listingId}`,
-        isRead: false,
-        metadata: {
-          notificationType: 'favorite_added',
-          listingId: listingId,
-          listingTitle: listing.title,
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    } catch (notifErr) {
+    // Create notification for buyer (non-blocking)
+    console.log('[FAVORITES] Creating notification');
+    db.insert(buyerNotifications).values({
+      buyerId: buyer.id,
+      type: 'favorite_added',
+      title: 'Added to Favorites',
+      message: `You added "${listing.title}" to your favorites!`,
+      relatedEntityId: listingId,
+      relatedEntityType: 'listing',
+      actionUrl: `/buyer/product/${listingId}`,
+      isRead: false,
+      isStarred: false,
+      metadata: {
+        notificationType: 'favorite_added',
+        listingId: listingId,
+        listingTitle: listing.title,
+      },
+    }).catch((notifErr: any) => {
       // Log but don't fail if notification fails
-      console.error('Failed to create favorite notification:', notifErr);
-    }
+      console.error('[FAVORITES] Failed to create notification:', notifErr);
+    });
 
+    console.log('[FAVORITES] Successfully added to favorites:', listingId);
     return { success: true, message: 'Added to favorites' };
   } catch (error) {
-    console.error('Error adding to favorites:', error);
+    console.error('[FAVORITES] Error adding to favorites:', error);
+    if (error instanceof Error) {
+      console.error('[FAVORITES] Error details:', error.message, error.stack);
+    }
     return { success: false, error: 'Failed to add to favorites' };
   }
 }
@@ -149,7 +163,14 @@ export async function isFavorite(listingId: string) {
 export async function getBuyerFavorites() {
   try {
     console.log('[FAVORITES] Starting getBuyerFavorites...');
-    const user = await getCurrentUser();
+    
+    let user;
+    try {
+      user = await getCurrentUser();
+    } catch (authErr) {
+      console.error('[FAVORITES] Error getting current user:', authErr);
+      return { success: false, error: 'Authentication error', favorites: [] };
+    }
     
     if (!user) {
       console.log('[FAVORITES] User not authenticated');
@@ -170,12 +191,13 @@ export async function getBuyerFavorites() {
 
     console.log('[FAVORITES] Got buyer:', buyer.id);
 
-    // Get favorites with listing data
+    // Get favorites with listing data - limit to 500 for performance
     const favoritesList = await db.query.buyerFavorites.findMany({
       where: eq(buyerFavorites.buyerId, buyer.id),
       with: {
         listing: true,
       },
+      limit: 500,
     });
 
     console.log('[FAVORITES] Found', favoritesList.length, 'favorites');

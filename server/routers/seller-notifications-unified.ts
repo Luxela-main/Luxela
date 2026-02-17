@@ -297,7 +297,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
             isRead: z.boolean(),
             isStarred: z.boolean(),
             createdAt: z.string(),
-            metadata: z.record(z.string(), z.any()).nullable(),
+            metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).nullable(),
           })
         ),
         total: z.number(),
@@ -370,20 +370,37 @@ export const sellerNotificationsRouter = createTRPCRouter({
         .offset(input.offset);
 
       return {
-        notifications: notifs.map((n: typeof notifs[number]) => ({
-          id: n.id,
-          type: n.type,
-          title: n.title,
-          message: n.message,
-          severity: n.severity,
-          relatedEntityId: n.relatedEntityId,
-          relatedEntityType: n.relatedEntityType,
-          actionUrl: n.actionUrl,
-          isRead: n.isRead,
-          isStarred: n.isStarred,
-          createdAt: n.createdAt.toISOString(),
-          metadata: n.metadata,
-        })),
+        notifications: notifs.map((n: typeof notifs[number]) => {
+          // Serialize metadata values to ensure they match schema
+          const serializedMetadata = n.metadata ? Object.entries(n.metadata).reduce((acc, [key, value]) => {
+            // Convert dates and objects to safe primitives
+            if (value instanceof Date) {
+              acc[key] = value.toISOString();
+            } else if (typeof value === 'object' && value !== null) {
+              acc[key] = JSON.stringify(value);
+            } else if (value === undefined) {
+              acc[key] = null;
+            } else {
+              acc[key] = value;
+            }
+            return acc;
+          }, {} as Record<string, any>) : null;
+
+          return {
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            severity: n.severity,
+            relatedEntityId: n.relatedEntityId,
+            relatedEntityType: n.relatedEntityType,
+            actionUrl: n.actionUrl,
+            isRead: n.isRead,
+            isStarred: n.isStarred,
+            createdAt: n.createdAt.toISOString(),
+            metadata: serializedMetadata,
+          };
+        }),
         total,
         unreadCount,
       };
@@ -503,8 +520,17 @@ export const sellerNotificationsRouter = createTRPCRouter({
           title: notif.title,
           message: notif.message,
           severity: notif.severity,
-          createdAt: notif.createdAt.toISOString(),
-          unreadCount: grouped[notif.type].filter((n: any) => !n.isRead).length,
+          createdAt: notif.createdAt instanceof Date ? notif.createdAt.toISOString() : String(notif.createdAt),
+          unreadCount: 0, // Will recalculate after grouping
+        });
+      });
+
+      // Recalculate unreadCount for each type
+      Object.keys(grouped).forEach((type) => {
+        const typeNotifs = notifs.filter((n: typeof notifs[number]) => n.type === type);
+        const unreadInType = typeNotifs.filter((n: typeof notifs[number]) => !n.isRead).length;
+        grouped[type].forEach((item: any) => {
+          item.unreadCount = unreadInType;
         });
       });
 

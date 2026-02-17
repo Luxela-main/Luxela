@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { getBuyerFavorites } from '@/server/actions/favorites';
 import { useAuth } from '@/context/AuthContext';
 import { useRealtimeListings } from '@/hooks/useRealtimeListings';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Heart, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/components/hooks/useToast';
@@ -33,6 +33,7 @@ export default function FavoritesPage() {
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const { addToCart } = useCartState();
 
@@ -46,8 +47,8 @@ export default function FavoritesPage() {
       return;
     }
 
-    
-    if (hasFetched) return;
+    // Always refetch if there's a refresh query param or if we haven't fetched yet
+    const shouldRefetch = searchParams.get('refresh') === 'true' || !hasFetched;
 
     const fetchFavorites = async () => {
       try {
@@ -66,8 +67,10 @@ export default function FavoritesPage() {
       }
     };
 
-    fetchFavorites();
-  }, [authLoading, user, hasFetched, toast]);
+    if (shouldRefetch) {
+      fetchFavorites();
+    }
+  }, [authLoading, user, hasFetched, searchParams]);
 
   const handleRemoveFavorite = async (favoriteId: string) => {
     try {
@@ -149,7 +152,7 @@ export default function FavoritesPage() {
               Start saving your favorite products to easily find them later
             </p>
             <Link
-              href="/buyer"
+              href="/buyer/browse"
               className="px-6 py-3 bg-[#8451E1] hover:bg-[#9665F5] text-white rounded-lg font-semibold transition-colors uppercase tracking-wide"
             >
               Browse Products

@@ -21,6 +21,7 @@ import { useCartState } from '@/modules/cart/context';
 import { useAuth } from '@/context/AuthContext';
 import { toastSvc } from '@/services/toast';
 import { useRouter } from 'next/navigation';
+import { addToFavorites, removeFromFavorites } from '@/server/actions/favorites';
 import { useListings } from '@/context/ListingsContext';
 import { formatCurrency } from '@/lib/utils';
 import { ApprovalBadge } from '../ApprovalBadge';
@@ -97,6 +98,7 @@ export default function UnifiedListingCard({
   const [added, setAdded] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const [showQuickPreview, setShowQuickPreview] = useState(false);
 
   const business = listing.sellers?.seller_business?.[0];
@@ -257,7 +259,7 @@ export default function UnifiedListingCard({
             }}
           >
             {/* Image Section - Responsive height with aspect ratio */}
-            <div className="relative w-full bg-[#222] overflow-hidden flex-shrink-0 pointer-events-auto" style={{ aspectRatio: '1 / 1', height: 'auto', minHeight: '220px', touchAction: 'pan-y' }}>
+            <div className="relative w-full bg-[#222] overflow-hidden flex-shrink-0 pointer-events-auto" style={{ aspectRatio: '1 / 1', height: 'auto', touchAction: 'pan-y' }}>
               {isValidImage && images.length > 0 ? (
                 <HorizontalImageScroller
                   images={images}
@@ -342,17 +344,41 @@ export default function UnifiedListingCard({
 
                   {showWishlist && (
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setIsWishlisted(!isWishlisted);
-                        toastSvc.success(
-                          isWishlisted
-                            ? 'Removed from wishlist'
-                            : 'Added to wishlist'
-                        );
+                        if (!user) {
+                          setShowAuthModal(true);
+                          return;
+                        }
+                        try {
+                          setWishlistLoading(true);
+                          if (isWishlisted) {
+                            const result = await removeFromFavorites(listing.id);
+                            if (result.success) {
+                              setIsWishlisted(false);
+                              toastSvc.success('Removed from wishlist');
+                            } else {
+                              toastSvc.error(result.error || 'Failed to remove from favorites');
+                            }
+                          } else {
+                            const result = await addToFavorites(listing.id);
+                            if (result.success) {
+                              setIsWishlisted(true);
+                              toastSvc.success('Added to wishlist');
+                            } else {
+                              toastSvc.error(result.error || 'Failed to add to favorites');
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Error toggling wishlist:', error);
+                          toastSvc.error('Failed to update wishlist');
+                        } finally {
+                          setWishlistLoading(false);
+                        }
                       }}
-                      className={`p-2.5 backdrop-blur-md rounded-full transition-all transform hover:scale-110 active:scale-95 ${
+                      disabled={wishlistLoading}
+                      className={`p-2.5 backdrop-blur-md rounded-full transition-all transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                         isWishlisted
                           ? 'bg-red-500/90 text-white'
                           : 'bg-white/90 hover:bg-white text-black'
@@ -617,7 +643,7 @@ export default function UnifiedListingCard({
 
       {/* Quick Preview Modal */}
       <Dialog open={showQuickPreview} onOpenChange={setShowQuickPreview}>
-        <DialogContent className="bg-[#141414] border-[#212121] text-white sm:max-w-2xl rounded-2xl">
+        <DialogContent className="bg-[#141414] border-[#212121] text-white w-[95vw] sm:w-full sm:max-w-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
               {listing.title}
@@ -627,24 +653,24 @@ export default function UnifiedListingCard({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid md:grid-cols-2 gap-6 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-4 px-2 sm:px-0">
             {/* Image - Fixed Height */}
-            <div className="bg-[#222] rounded-lg overflow-hidden max-h-96">
+            <div className="bg-[#222] rounded-lg overflow-hidden w-full">
               {isValidImage ? (
                 <img
                   src={listing.image}
                   alt={listing.title}
-                  className="w-full h-96 object-cover"
+                  className="w-full h-64 sm:h-96 object-cover"
                 />
               ) : (
-                <div className="w-full h-96 flex items-center justify-center">
+                <div className="w-full h-64 sm:h-96 flex items-center justify-center">
                   <Images className="w-16 h-16 text-gray-700" />
                 </div>
               )}
             </div>
 
             {/* Details */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <p className="text-sm text-[#acacac] mb-2">Price</p>
                 <p className="text-2xl font-bold text-[#8451E1]">

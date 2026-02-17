@@ -133,7 +133,7 @@ app.post("/webhooks/tsara", express.raw({ type: "application/json" }), async (re
     const { verifyWebhookSignature } = await import("./services/tsara");
 
     // Verify webhook signature
-    const isValidSignature = verifyWebhookSignature(payload, signature);
+    const isValidSignature = await verifyWebhookSignature(payload, signature);
     if (!isValidSignature) {
       return res.status(401).json({ error: "Invalid signature" });
     }

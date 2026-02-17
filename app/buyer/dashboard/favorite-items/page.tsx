@@ -12,6 +12,7 @@ export default function FavoriteItemsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const utils = trpc.useUtils();
   const { data: favoritesData } = trpc.buyer.getFavorites.useQuery(
     { page: currentPage, limit: 10 },
     { retry: 1 }
@@ -19,7 +20,12 @@ export default function FavoriteItemsPage() {
 
   const toastHandler = useToast();
 
-  const removeFavoriteMutation = trpc.buyer.removeFavorite.useMutation();
+  const removeFavoriteMutation = trpc.buyer.removeFavorite.useMutation({
+    onSuccess: async () => {
+      // Invalidate the favorites query to refetch data
+      await utils.buyer.getFavorites.invalidate();
+    },
+  });
   const addToCartMutation = trpc.cart.addToCart.useMutation();
 
   useEffect(() => {
@@ -32,7 +38,6 @@ export default function FavoriteItemsPage() {
   const handleRemoveFavorite = async (favoriteId: string) => {
     try {
       await removeFavoriteMutation.mutateAsync({ favoriteId });
-      setFavorites(favorites.filter(item => item.favoriteId !== favoriteId));
       toastHandler.success('Item removed from favorites');
     } catch (error: any) {
       const errorMessage = error?.data?.message || error?.message || 'Failed to remove item';
@@ -196,4 +201,4 @@ export default function FavoriteItemsPage() {
       </div>
     </div>
   );
-}
+}

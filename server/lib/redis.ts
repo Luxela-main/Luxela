@@ -297,13 +297,10 @@ export async function getCached<T>(
     }
     const cached = await instance.get(cacheKey);
     if (cached) {
-      console.log(`Cache hit: ${key}`);
       const parsed = JSON.parse(cached);
       // Revive Date objects from ISO strings
       return reviveObject(parsed) as T;
     }
-
-    console.log(`Cache miss: ${key}`);
     const data = await fetchFn();
     if (instance) {
       await instance.setex(cacheKey, ttl, JSON.stringify(data));

@@ -47,9 +47,9 @@ export default function ProductDisplayGrid({
   const [isScrolling, setIsScrolling] = useState(false);
 
   const layoutClasses = {
-    compact: 'gap-3 md:gap-4',
-    normal: 'gap-4 md:gap-5 lg:gap-6',
-    comfortable: 'gap-6 md:gap-7 lg:gap-8',
+    compact: 'gap-2 md:gap-3',
+    normal: 'gap-2 md:gap-3 lg:gap-4',
+    comfortable: 'gap-3 md:gap-4 lg:gap-5',
   };
 
   // Check scroll position for horizontal scrolling indicators
@@ -106,7 +106,7 @@ export default function ProductDisplayGrid({
       {/* Loading Skeleton */}
       {isLoading && products.length === 0 && (
         <div className="px-4 md:px-6 lg:px-8">
-          <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6`}>
+          <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 md:gap-3 lg:gap-4`}>
             {[...Array(columns.desktop || 4)].map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="h-80 md:h-96 bg-[#222] rounded-lg mb-4" />
@@ -179,7 +179,7 @@ export default function ProductDisplayGrid({
                   {/* Scrollable Grid Container */}
                   <div
                     ref={scrollContainerRef}
-                    className="flex gap-4 md:gap-5 lg:gap-6 overflow-x-auto scrollbar-hide pr-4"
+                    className="flex gap-2 md:gap-3 lg:gap-4 overflow-x-auto scrollbar-hide pr-4"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {products && products.length > 0 && products.map((product) => (
@@ -222,7 +222,7 @@ export default function ProductDisplayGrid({
                 {/* Scroll Container */}
                 <div
                   ref={scrollContainerRef}
-                  className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2"
+                  className="flex gap-2 overflow-x-auto scrollbar-hide px-4 pb-2"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {products && products.length > 0 && products.map((product) => (

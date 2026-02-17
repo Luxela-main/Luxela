@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { orders, orderStateTransitions, buyers, sellers } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { orders, orderStateTransitions, buyers, sellers, payments } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
 import {
@@ -38,6 +38,26 @@ export async function validateAndUpdateOrderStatus(
     throw new TRPCError({
       code: 'NOT_FOUND',
       message: 'Order not found',
+    });
+  }
+
+  // Validate payment exists and is completed before transitioning
+  const [payment] = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.orderId, orderId));
+
+  if (!payment) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Payment not found for this order',
+    });
+  }
+
+  if (payment.status !== 'completed') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `Cannot update order status - payment status is ${payment.status}, not completed`,
     });
   }
 

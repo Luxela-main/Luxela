@@ -10,9 +10,9 @@ interface CacheEntry<T> {
 }
 
 const BRANDS_CACHE = new Map<string, CacheEntry<any>>();
-const CACHE_TTL = 20 * 60 * 1000; // 20 minutes - extended for better performance
-const REQUEST_TIMEOUT = 60000; // 60 seconds - increased timeout for production
-const MAX_RETRIES = 4; // Increased for better reliability
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes - extended for better performance
+const REQUEST_TIMEOUT = 90000; // 90 seconds - increased timeout for production while DB indexes optimize
+const MAX_RETRIES = 3; // Reduced since DB is now faster with indexes
 const RETRY_DELAY = 500; // Exponential backoff starts here
 const MAX_TIMEOUT = 90000; // 90 seconds max timeout for retries
 
@@ -299,10 +299,10 @@ export function useBrands({
       // Create controller outside async IIFE to ensure proper scope
       controller = new AbortController();
       
-      // Set timeout to abort the request with proper error reason
+      // Set timeout to abort the request
       timeoutId = setTimeout(() => {
         if (controller && !controller.signal.aborted) {
-          controller.abort(new Error('Request timeout'));
+          controller.abort();
         }
       }, REQUEST_TIMEOUT);
 

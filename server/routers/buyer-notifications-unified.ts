@@ -23,6 +23,22 @@ async function generateAndStoreBuyerNotifications(
   const now = new Date();
 
   try {
+    // CRITICAL: Validate buyer exists before attempting any operations
+    const buyerExists = await db
+      .select({ id: buyers.id })
+      .from(buyers)
+      .where(eq(buyers.id, buyerId))
+      .limit(1);
+
+    if (buyerExists.length === 0) {
+      console.error(`[DB_ERROR] BUYER_NOT_FOUND: Buyer ${buyerId} does not exist in buyers table. Notifications cannot be created.`, {
+        buyerId,
+        timestamp: new Date().toISOString(),
+        severity: 'CRITICAL',
+      });
+      return; // Exit early - cannot proceed without valid buyer
+    }
+
     // Check for order updates
     const buyerOrders = await db
       .select()
@@ -91,15 +107,20 @@ async function generateAndStoreBuyerNotifications(
           },
           });
         } catch (notifError: any) {
-          console.error(`Failed to create order notification for buyer ${buyerId}:`, {
-            message: notifError.message,
-            code: notifError.code,
-            detail: notifError.detail,
+          const errorDetail = {
+            message: notifError.message || String(notifError),
+            code: notifError.code || notifError.constraint || 'UNKNOWN_CODE',
+            detail: notifError.detail || notifError.hint || 'No detail provided',
+            state: notifError.state || undefined,
+            buyerId,
             orderId: order.id,
+            orderStatus: order.orderStatus,
             type: notifType,
-          });
+            timestamp: new Date().toISOString(),
+          };
+          console.error(`[DB_ERROR] Failed to create order notification for buyer ${buyerId}:`, errorDetail);
           if (notifError.message?.includes('invalid input value for enum')) {
-            console.error('ENUM ERROR: notification_category enum value might not be in database yet');
+            console.error('[DB_ERROR] ENUM_CONSTRAINT: notification_category enum value might not exist in database');
           }
         }
       }
@@ -153,20 +174,20 @@ async function generateAndStoreBuyerNotifications(
             },
           });
         } catch (notifError: any) {
-          console.error(`Failed to create review notification for buyer ${buyerId}:`, {
-            message: notifError.message,
-            code: notifError.code,
-            detail: notifError.detail,
-            buyerId: buyerId,
+          const errorDetail = {
+            message: notifError.message || String(notifError),
+            code: notifError.code || notifError.constraint || 'UNKNOWN_CODE',
+            detail: notifError.detail || notifError.hint || 'No detail provided',
+            state: notifError.state || undefined,
+            buyerId,
             reviewId: review.id,
+            listingId: review.listingId,
+            listingTitle,
+            rating: review.rating,
             type: 'new_review',
-          });
-          // Log enum error details for debugging
-          if (notifError.message?.includes('invalid input value for enum')) {
-            console.error('ENUM ERROR: notification_category enum value might not be in database yet');
-            console.error('Please run: npx ts-node migrations/add-all-missing-notification-categories.ts');
-          }
-          // Don't throw - continue processing other notifications
+            timestamp: new Date().toISOString(),
+          };
+          console.error(`[DB_ERROR] Failed to create review notification for buyer ${buyerId}:`, errorDetail);
         }
       }
     }
@@ -223,10 +244,18 @@ async function generateAndStoreBuyerNotifications(
             },
           });
           } catch (notifError: any) {
-            console.error(`Failed to create price drop notification for buyer ${buyerId}:`, notifError.message);
-            if (notifError.message?.includes('invalid input value for enum')) {
-              console.error('ENUM ERROR: notification_category enum value might not be in database yet');
-            }
+            const errorDetail = {
+              message: notifError.message || String(notifError),
+              code: notifError.code || notifError.constraint || 'UNKNOWN_CODE',
+              detail: notifError.detail || notifError.hint || 'No detail provided',
+              state: notifError.state || undefined,
+              buyerId,
+              listingId: favorite.listingId,
+              listingTitle,
+              currentPrice,
+              timestamp: new Date().toISOString(),
+            };
+            console.error(`[DB_ERROR] Failed to create price drop notification for buyer ${buyerId}:`, errorDetail);
           }
         }
       }
@@ -291,10 +320,18 @@ async function generateAndStoreBuyerNotifications(
             },
           });
           } catch (notifError: any) {
-            console.error(`Failed to create dispute notification for buyer ${buyerId}:`, notifError.message);
-            if (notifError.message?.includes('invalid input value for enum')) {
-              console.error('ENUM ERROR: notification_category enum value might not be in database yet');
-            }
+            const errorDetail = {
+              message: notifError.message || String(notifError),
+              code: notifError.code || notifError.constraint || 'UNKNOWN_CODE',
+              detail: notifError.detail || notifError.hint || 'No detail provided',
+              state: notifError.state || undefined,
+              buyerId,
+              disputeId: dispute.id,
+              status: dispute.status,
+              subject: dispute.subject,
+              timestamp: new Date().toISOString(),
+            };
+            console.error(`[DB_ERROR] Failed to create dispute notification for buyer ${buyerId}:`, errorDetail);
           }
         }
       }
@@ -303,7 +340,13 @@ async function generateAndStoreBuyerNotifications(
     // Back in stock notifications - SKIPPED: Schema doesn't have quantity/isActive fields
     // Would implement once inventory fields are added to listings schema
   } catch (error) {
-    console.error('Error generating buyer notifications:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('[CRITICAL_ERROR] Error generating buyer notifications:', {
+      message: errorMsg,
+      buyerId,
+      timestamp: new Date().toISOString(),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
   }
 }
 

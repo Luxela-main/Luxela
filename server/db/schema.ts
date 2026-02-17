@@ -34,7 +34,7 @@ export const ticketCategoryEnum = pgEnum('ticket_category', ['general_inquiry', 
 export const deliveryStatusEnum = pgEnum('delivery_status', ['not_shipped', 'in_transit', 'delivered']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'bank_transfer','crypto','paypal','stripe','flutterwave','tsara']);
 export const notificationTypeEnum = pgEnum('notification_type', ['purchase','review','comment','reminder','order_confirmed','payment_failed','refund_issued','delivery_confirmed','listing_approved','listing_rejected','listing_revision_requested','dispute_opened','dispute_resolved','return_initiated','return_completed','payment_processed']);
-export const notificationCategoryEnum = pgEnum('notification_category', ['order_confirmed','order_processing','shipment_ready','in_transit','out_for_delivery','delivered','delivery_failed','return_request','refund_processed','review_request','product_back_in_stock','price_drop','dispute','payment_failed','system_alert','urgent_ticket','sla_breach','escalation','team_capacity','new_reply','listing_approved','listing_rejected','listing_revision_requested','order_update','order_pending','shipment_due','dispute_open','new_review','low_inventory','order_canceled','payment_success','refund_initiated','return_initiated','return_completed','dispute_resolved','listing_update']);
+export const notificationCategoryEnum = pgEnum('notification_category', ['order_confirmed','order_processing','shipment_ready','in_transit','out_for_delivery','delivered','delivery_failed','return_request','refund_processed','review_request','product_back_in_stock','price_drop','dispute','payment_failed','system_alert','urgent_ticket','sla_breach','escalation','team_capacity','new_reply','listing_approved','listing_rejected','listing_revision_requested','order_update','order_pending','shipment_due','dispute_open','new_review','low_inventory','order_canceled','payment_success','refund_initiated','return_initiated','return_completed','dispute_resolved','listing_update','favorite_added']);
 export const notificationSeverityEnum = pgEnum('notification_severity', ['info','warning','critical']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending','processing','completed','failed','refunded']);
 export const WebhookEventStatusEnum = pgEnum('webhook_event_status', ['pending', 'processed', 'failed']);
@@ -229,6 +229,10 @@ export const brands = pgTable(
   },
   (t) => ({
     uniqueSellerSlug: unique().on(t.sellerId, t.slug),
+    sellerIdIdx: index('idx_brands_seller_id').on(t.sellerId),
+    ratingIdx: index('idx_brands_rating').on(t.rating),
+    createdAtIdx: index('idx_brands_created_at').on(t.createdAt),
+    totalProductsIdx: index('idx_brands_total_products').on(t.totalProducts),
   })
 );
 
@@ -720,12 +724,20 @@ export const users = pgTable('users', {
 // =======================
 // BUYER FAVORITES
 // =======================
-export const buyerFavorites = pgTable('buyer_favorites', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
-  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+export const buyerFavorites = pgTable(
+  'buyer_favorites',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
+    listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueFavorites: unique('buyer_favorites_unique').on(t.buyerId, t.listingId),
+    buyerIdIdx: index('idx_buyer_favorites_buyer_id').on(t.buyerId),
+    listingIdIdx: index('idx_buyer_favorites_listing_id').on(t.listingId),
+  })
+)
 
 // =======================
 // BUYER BRAND FOLLOWS

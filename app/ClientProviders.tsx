@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useRef, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
@@ -15,30 +15,52 @@ import { PendingToastHandler } from "@/components/utils/pending-toast-handler";
 import "react-toastify/dist/ReactToastify.css";
 
 const ToastContainer = dynamic(
-  async () => {
-    const mod = await import("react-toastify");
-    return mod.ToastContainer;
-  },
-  { ssr: false }
+  () => import("react-toastify").then(mod => ({ default: mod.ToastContainer })),
+  { ssr: false, loading: () => null }
 );
+
+// Global session cache to avoid repeated lookups
+let cachedSession: { token: string; expiresAt: number } | null = null;
+const SESSION_CACHE_TTL = 55000; // 55 seconds (tokens typically last 1 hour)
 
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,
-        retry: false,
+        gcTime: 10 * 60 * 1000, // Keep cache for 10 minutes
+        retry: 1,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       },
     },
   });
 }
 
-let browserQueryClient: QueryClient | undefined;
+// Get cached auth token without repeated API calls
+async function getCachedSessionToken() {
+  if (typeof window === "undefined") return null;
+  
+  const now = Date.now();
+  if (cachedSession && cachedSession.expiresAt > now) {
+    return cachedSession.token;
+  }
 
-function getQueryClient() {
-  if (typeof window === "undefined") return createQueryClient();
-  if (!browserQueryClient) browserQueryClient = createQueryClient();
-  return browserQueryClient;
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.access_token) {
+      cachedSession = {
+        token: session.access_token,
+        expiresAt: now + SESSION_CACHE_TTL,
+      };
+      return session.access_token;
+    }
+  } catch (error) {
+    console.warn('[TRPC] Session fetch failed:', error instanceof Error ? error.message : String(error));
+  }
+  
+  return null;
 }
 
 interface ClientProvidersProps {
@@ -47,10 +69,35 @@ interface ClientProvidersProps {
 
 export default function ClientProviders({ children }: ClientProvidersProps) {
   const [queryClient] = useState(() => createQueryClient());
+  const sessionTokenRef = useRef<string | null>(null);
+  const [isToastReady, setIsToastReady] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL 
-    ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
-    : '/api/trpc';
+  // Update session token once when component mounts
+  useEffect(() => {
+    let isMounted = true;
+    getCachedSessionToken().then((token) => {
+      if (isMounted) {
+        sessionTokenRef.current = token;
+      }
+    });
+    
+    // Defer toast initialization to avoid blocking render
+    const toastTimer = setTimeout(() => {
+      if (isMounted) setIsToastReady(true);
+    }, 2000);
+    
+    return () => { 
+      isMounted = false;
+      clearTimeout(toastTimer);
+    };
+  }, []);
+
+  const apiUrl = useMemo(() => 
+    process.env.NEXT_PUBLIC_API_URL 
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
+      : '/api/trpc',
+    []
+  );
 
   const [trpcClient] = useState(() =>
     trpc.createClient({
@@ -58,42 +105,19 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
         httpBatchLink({
           url: apiUrl,
           async headers() {
-            // Only try to access browser APIs in browser environment
-            if (typeof window === 'undefined') {
-              return {};
+            const token = await getCachedSessionToken();
+            if (token) {
+              return { authorization: `Bearer ${token}` };
             }
-
-            try {
-              const supabase = createClient();
-               // Add a timeout to prevent hanging on session retrieval
-              const sessionPromise = supabase.auth.getSession();
-              const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Session retrieval timeout')), 5000)
-              );
-              
-              const { data: { session } } = await Promise.race([
-                sessionPromise,
-                timeoutPromise as Promise<any>,
-              ]);
-               if (session?.access_token) {
-                return {
-                  authorization: `Bearer ${session.access_token}`,
-                };
-              }
-              
-              return {};
-            } catch (error) {
-              // If there's any error accessing auth, return empty headers
-              console.warn('[TRPC] Failed to get session:', error instanceof Error ? error.message : String(error));
-              return {};
-            }
+            return {};
           },
         }),
       ],
     })
   );
 
-  return (
+  // Memoize the provider structure to prevent unnecessary re-renders
+  const providers = useMemo(() => (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
@@ -103,18 +127,19 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
                 <CartProvider>
                   <PendingToastHandler />
                   {children}
-
-                  <ToastContainer
-                    position="top-right"
-                    autoClose={3000}      
-                    hideProgressBar={false}
-                    newestOnTop
-                    closeOnClick
-                    pauseOnHover={false}   
-                    pauseOnFocusLoss={false}
-                    draggable
-                    theme="colored"
-                  />
+                  {isToastReady && (
+                    <ToastContainer
+                      position="top-right"
+                      autoClose={3000}      
+                      hideProgressBar={false}
+                      newestOnTop
+                      closeOnClick
+                      pauseOnHover={false}   
+                      pauseOnFocusLoss={false}
+                      draggable
+                      theme="colored"
+                    />
+                  )}
                 </CartProvider>
               </ListingsProvider>
             </ProfileProvider>
@@ -122,5 +147,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
         </AuthProvider>
       </QueryClientProvider>
     </trpc.Provider>
-  );
+  ), [trpcClient, queryClient, children]);
+
+  return providers;
 }

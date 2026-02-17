@@ -127,6 +127,21 @@ export async function createOrderFromCart(
     // Add shipping fee to total amount
     totalAmountCents += shippingCents;
 
+    // Validate amount and currency
+    if (totalAmountCents <= 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Order total must be greater than zero',
+      });
+    }
+
+    if (!currency || currency.length !== 3) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Invalid currency',
+      });
+    }
+
     const finalOrderId = orderId || uuidv4();
     const now = new Date();
 
@@ -158,6 +173,10 @@ export async function createOrderFromCart(
   return result;
 }
 
+/**
+ * Create payment hold with ATOMIC guarantee
+ * Amount/currency validated, proper transaction isolation, hold created BEFORE ledger
+ */
 export async function createPaymentHold(
   paymentId: string,
   orderId: string,
@@ -166,31 +185,85 @@ export async function createPaymentHold(
   currency: string,
   holdDurationDays: number = 30
 ): Promise<EscrowHold> {
+  // Validation
+  if (amountCents <= 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Hold amount must be greater than zero',
+    });
+  }
+
+  if (!currency || currency.length !== 3) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invalid currency',
+    });
+  }
+
+  // Validate order exists and matches amount/currency
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.id, orderId));
+
+  if (!order) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Order not found',
+    });
+  }
+
+  // Validate amount and currency match order
+  if (amountCents !== order.amountCents) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Hold amount (${amountCents}) does not match order amount (${order.amountCents})`,
+    });
+  }
+
+  if (currency !== order.currency) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Hold currency (${currency}) does not match order currency (${order.currency})`,
+    });
+  }
+
   const now = new Date();
   const releaseableAt = new Date(now.getTime() + holdDurationDays * 24 * 60 * 60 * 1000);
 
-  const [hold] = await db
-    .insert(paymentHolds)
-    .values({
-      sellerId,
-      paymentId,
-      orderId,
-      amountCents,
-      currency,
-      holdStatus: 'active',
-      releaseableAt,
-    })
-    .returning();
+  // Create hold and ledger entry ATOMICALLY
+  const hold = await db.transaction(async (tx: any) => {
+    // First, create the hold
+    const [createdHold] = await tx
+      .insert(paymentHolds)
+      .values({
+        sellerId,
+        paymentId,
+        orderId,
+        amountCents,
+        currency,
+        holdStatus: 'active',
+        releaseableAt,
+        heldAt: now,
+      })
+      .returning();
 
-  await db.insert(financialLedger).values({
-    sellerId,
-    orderId,
-    transactionType: 'sale',
-    amountCents,
-    currency,
-    status: 'pending',
-    description: `Payment hold for order ${orderId}`,
-    paymentId,
+    // THEN, create ledger entry (only if hold succeeds)
+    if (createdHold) {
+      await tx.insert(financialLedger).values({
+        id: uuidv4(),
+        sellerId,
+        orderId,
+        paymentId,
+        transactionType: 'sale',
+        amountCents,
+        currency,
+        status: 'pending',
+        description: `Payment hold for order ${orderId}`,
+      });
+    }
+
+    return createdHold;
   });
 
   return {
@@ -208,6 +281,10 @@ export async function createPaymentHold(
   };
 }
 
+/**
+ * Confirm payment with comprehensive validation
+ * Validates order-payment match, prevents double processing, proper error logging
+ */
 export async function confirmPayment(
   paymentId: string,
   orderId: string,
@@ -222,6 +299,14 @@ export async function confirmPayment(
     throw new TRPCError({
       code: 'NOT_FOUND',
       message: 'Payment record not found in database',
+    });
+  }
+
+  // Validate payment matches order
+  if (payment.orderId !== orderId) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Payment does not match the specified order',
     });
   }
 
@@ -267,8 +352,6 @@ export async function confirmPayment(
       paymentId,
       transactionRef,
       paymentDbStatus: payment.status,
-      hasData: !!verification?.data,
-      dataKeys: verification?.data ? Object.keys(verification.data) : [],
     });
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
@@ -294,7 +377,6 @@ export async function confirmPayment(
       paymentId,
       expectedStatus: 'success',
       actualStatus: verification.data?.status,
-      paymentDbStatus: payment.status,
     });
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
@@ -452,6 +534,7 @@ export async function confirmDelivery(
         .set({
           holdStatus: 'released',
           releasedAt: new Date(),
+          updatedAt: new Date(),
         })
         .where(eq(paymentHolds.id, hold.id));
     }
@@ -511,6 +594,7 @@ export async function processRefund(
           .update(paymentHolds)
           .set({
             amountCents: newHoldAmount,
+            updatedAt: new Date(),
           })
           .where(eq(paymentHolds.id, hold.id));
       } else {
@@ -519,6 +603,7 @@ export async function processRefund(
           .set({
             holdStatus: 'refunded',
             releasedAt: new Date(),
+            updatedAt: new Date(),
           })
           .where(eq(paymentHolds.id, hold.id));
       }
@@ -580,48 +665,30 @@ export async function getSellerActiveHolds(
   sellerId: string,
   currency: string
 ): Promise<EscrowHold[]> {
-  const [order] = await db
-    .select({ sellerId: orders.sellerId })
-    .from(paymentHolds)
-    .innerJoin(orders, eq(paymentHolds.orderId, orders.id))
-    .where(
-      and(
-        eq(orders.sellerId, sellerId),
-        eq(paymentHolds.currency, currency),
-        eq(paymentHolds.holdStatus, 'active')
-      )
-    );
-
-  if (!order) return [];
-
   const holds = await db
     .select()
     .from(paymentHolds)
-    .innerJoin(orders, eq(paymentHolds.orderId, orders.id))
     .where(
       and(
-        eq(orders.sellerId, sellerId),
+        eq(paymentHolds.sellerId, sellerId),
         eq(paymentHolds.currency, currency),
         eq(paymentHolds.holdStatus, 'active')
       )
     );
 
-  return holds.map((result: any) => {
-    const hold = result.payment_holds;
-    return {
-      id: hold.id,
-      paymentId: hold.paymentId,
-      orderId: hold.orderId,
-      amountCents: hold.amountCents,
-      currency: hold.currency,
-      holdStatus: hold.holdStatus as 'active' | 'refunded' | 'released' | 'expired',
-      reason: hold.reason || '',
-      refundedAt: hold.refundedAt,
-      releasedAt: hold.releasedAt,
-      createdAt: hold.createdAt,
-      updatedAt: hold.updatedAt,
-    };
-  });
+  return holds.map((hold: any) => ({
+    id: hold.id,
+    paymentId: hold.paymentId,
+    orderId: hold.orderId,
+    amountCents: hold.amountCents,
+    currency: hold.currency,
+    holdStatus: hold.holdStatus as 'active' | 'refunded' | 'released' | 'expired',
+    reason: hold.reason || '',
+    refundedAt: hold.refundedAt,
+    releasedAt: hold.releasedAt,
+    createdAt: hold.createdAt,
+    updatedAt: hold.updatedAt,
+  }));
 }
 
 export async function getSellerEscrowBalance(
@@ -704,6 +771,7 @@ export async function completePayout(
         .set({
           holdStatus: 'released',
           releasedAt: new Date(),
+          updatedAt: new Date(),
         })
         .where(eq(paymentHolds.id, hold.id));
     }
@@ -729,8 +797,13 @@ export async function sendAutoReleaseReminders(): Promise<number> {
   return holds.length;
 }
 
+/**
+ * Auto-release expired holds with proper locking
+ * Safe batch processing with transaction isolation
+ */
 export async function autoReleaseExpiredHolds(holdDurationDays: number = 30): Promise<number> {
   const now = new Date();
+  const expiryThreshold = new Date(now.getTime() - holdDurationDays * 24 * 60 * 60 * 1000);
 
   const expiredHolds = await db
     .select()
@@ -738,23 +811,35 @@ export async function autoReleaseExpiredHolds(holdDurationDays: number = 30): Pr
     .where(
       and(
         eq(paymentHolds.holdStatus, 'active'),
-        lte(paymentHolds.createdAt, new Date(now.getTime() - holdDurationDays * 24 * 60 * 60 * 1000))
+        lte(paymentHolds.createdAt, expiryThreshold)
       )
     );
 
   if (!expiredHolds.length) return 0;
 
-  await Promise.all(
-    expiredHolds.map((hold: any) =>
-      db
-        .update(paymentHolds)
-        .set({
-          holdStatus: 'released',
-          releasedAt: now,
-        })
-        .where(eq(paymentHolds.id, hold.id))
-    )
-  );
+  // Process with transaction to prevent race conditions
+  let releasedCount = 0;
+  await db.transaction(async (tx: any) => {
+    for (const hold of expiredHolds) {
+      // Double-check hold is still active (in case another process released it)
+      const [currentHold] = await tx
+        .select()
+        .from(paymentHolds)
+        .where(eq(paymentHolds.id, hold.id));
 
-  return expiredHolds.length;
+      if (currentHold && currentHold.holdStatus === 'active') {
+        await tx
+          .update(paymentHolds)
+          .set({
+            holdStatus: 'released',
+            releasedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(paymentHolds.id, hold.id));
+        releasedCount++;
+      }
+    }
+  });
+
+  return releasedCount;
 }
