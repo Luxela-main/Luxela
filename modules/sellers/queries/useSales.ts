@@ -23,16 +23,31 @@ export const useSales = (status?: OrderStatus) => {
 };
 
 export const useSaleById = (orderId: string) => {
-  return trpc.sales.getSaleById.useQuery(
+  const query = trpc.sales.getSaleById.useQuery(
     { orderId },
     {
       enabled: !!orderId && orderId.trim() !== '',
       staleTime: 30 * 1000,
       gcTime: 5 * 60 * 1000,
-      retry: 2,
+      retry: 3,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     }
   );
+
+  // Enhanced error logging for debugging
+  if (query.error) {
+    const errorMsg = (query.error as any)?.message || 'Unknown error';
+    const errorCode = (query.error as any)?.code || 'UNKNOWN';
+    console.error('[useSaleById] Query failed:', {
+      orderId,
+      error: errorMsg,
+      code: errorCode,
+      fullError: query.error,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  return query;
 };
 
 export const useUpdateOrderStatus = () => {

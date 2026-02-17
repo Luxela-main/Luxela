@@ -45,7 +45,7 @@ export const salesRouter = createTRPCRouter({
           product: z.string(),
           customer: z.string(),
           customerEmail: z.string().optional(),
-          orderDate: z.date(),
+          orderDate: z.string(),
           paymentMethod: z.string(),
           amountCents: z.number(),
           currency: z.string(),
@@ -100,16 +100,16 @@ export const salesRouter = createTRPCRouter({
         return rows.map((o: any) => ({
           id: o.id,
           orderId: o.id,
-          product: o.productTitle,
-          customer: o.customerName,
-          customerEmail: o.customerEmail,
-          orderDate: o.orderDate,
-          paymentMethod: String(o.paymentMethod),
-          amountCents: o.amountCents,
-          currency: o.currency,
-          payoutStatus: String(o.payoutStatus),
-          deliveryStatus: String(o.deliveryStatus),
-          orderStatus: String(o.orderStatus),
+          product: o.productTitle || '',
+          customer: o.customerName || '',
+          customerEmail: o.customerEmail || undefined,
+          orderDate: o.orderDate instanceof Date ? o.orderDate : new Date(o.orderDate),
+          paymentMethod: String(o.paymentMethod || ''),
+          amountCents: o.amountCents || 0,
+          currency: o.currency || '',
+          payoutStatus: String(o.payoutStatus || ''),
+          deliveryStatus: String(o.deliveryStatus || ''),
+          orderStatus: String(o.orderStatus || ''),
         }))
       } catch (err: any) {
         throw new TRPCError({
@@ -129,7 +129,7 @@ export const salesRouter = createTRPCRouter({
         product: z.string(),
         customer: z.string(),
         customerEmail: z.string().optional(),
-        orderDate: z.date(),
+        orderDate: z.string(),
         paymentMethod: z.string(),
         amountCents: z.number(),
         currency: z.string(),
@@ -176,26 +176,33 @@ export const salesRouter = createTRPCRouter({
             code: "NOT_FOUND",
             message: "Order not found",
           });
+        // Safely format orderDate - handle both Date objects and strings
+        const orderDateStr = order.orderDate instanceof Date 
+          ? order.orderDate.toISOString()
+          : typeof order.orderDate === 'string'
+            ? order.orderDate
+            : new Date(order.orderDate).toISOString();
+        
         return {
           id: order.id,
           orderId: order.id,
-          product: order.productTitle,
-          customer: order.customerName,
-          customerEmail: order.customerEmail,
-          orderDate: order.orderDate,
-          paymentMethod: String(order.paymentMethod),
-          amountCents: order.amountCents,
-          currency: order.currency,
-          quantity: order.quantity,
-          shippingAddress: order.shippingAddress,
-          payoutStatus: String(order.payoutStatus),
-          deliveryStatus: String(order.deliveryStatus),
-          orderStatus: String(order.orderStatus),
-          selectedSize: order.selectedSize,
-          selectedColor: order.selectedColor,
-          selectedColorHex: order.selectedColorHex,
-          productImage: order.productImage,
-          productCategory: order.productCategory ? String(order.productCategory) : undefined,
+          product: order.productTitle || '',
+          customer: order.customerName || '',
+          customerEmail: order.customerEmail || undefined,
+          orderDate: orderDateStr,
+          paymentMethod: String(order.paymentMethod || ''),
+          amountCents: order.amountCents || 0,
+          currency: order.currency || '',
+          quantity: order.quantity || 1,
+          shippingAddress: order.shippingAddress || undefined,
+          payoutStatus: String(order.payoutStatus || ''),
+          deliveryStatus: String(order.deliveryStatus || ''),
+          orderStatus: String(order.orderStatus || ''),
+          selectedSize: order.selectedSize || undefined,
+          selectedColor: order.selectedColor || undefined,
+          selectedColorHex: order.selectedColorHex || undefined,
+          productImage: order.productImage || undefined,
+          productCategory: String(order.productCategory || ''),
         };
       } catch (err: any) {
         console.error("[getSaleById] Error:", err?.message);
@@ -851,3 +858,4 @@ export const salesRouter = createTRPCRouter({
       }
     }),
 });
+

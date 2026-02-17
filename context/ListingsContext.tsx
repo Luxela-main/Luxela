@@ -23,6 +23,7 @@ interface ListingsContextType {
   validateProductForCart: (id: string) => { valid: boolean; reason?: string };
   fetchListingDetailsById: (id: string) => Promise<Listing | undefined>;
   invalidateCatalogCache: () => void;
+  invalidateCachedListing: (listingId: string) => void;
 }
 
 const ListingsContext = createContext<ListingsContextType | undefined>(
@@ -415,7 +416,14 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
   };
 
   const getApprovedListingById = async (id: string, fetchIfMissing: boolean = true): Promise<Listing | undefined> => {
-    // First check in-memory cache
+    // First check the secondary cache (for fresh data after restock)
+    let cachedListing = cachedListings[id];
+    if (cachedListing) {
+      console.log('[ListingsContext.getApprovedListingById] Found in secondary cache:', id);
+      return cachedListing;
+    }
+
+    // Then check in-memory listings
     let listing = approvedListings.find((listing) => listing.id === id);
     if (listing) {
       console.log('[ListingsContext.getApprovedListingById] Found in memory:', id);
@@ -431,7 +439,7 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
     }
 
     // Fetch complete details from server
-    console.log('[ListingsContext.getApprovedListingById] Not in memory, fetching from server:', id);
+    console.log('[ListingsContext.getApprovedListingById] Not in cache, fetching from server:', id);
     return await fetchListingDetailsById(id);
   };
 
@@ -473,6 +481,16 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
     refetchCatalog();
   };
 
+  const invalidateCachedListing = (listingId: string) => {
+    console.log('[ListingsContext.invalidateCachedListing] Invalidating cached listing:', listingId);
+    // Remove from local cache so next fetch will get fresh data
+    setCachedListings(prev => {
+      const updated = { ...prev };
+      delete updated[listingId];
+      return updated;
+    });
+  };
+
   return (
     <ListingsContext.Provider
       value={{
@@ -488,6 +506,7 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
         validateProductForCart,
         fetchListingDetailsById,
         invalidateCatalogCache,
+        invalidateCachedListing,
       }}
     >
       {children}

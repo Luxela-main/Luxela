@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   Package,
@@ -218,10 +219,13 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
     },
   });
 
+  const queryClient = useQueryClient();
   const restockMutation = (trpc.listing as any).restockListing.useMutation({
     onSuccess: () => {
       toastSvc.success("Stock updated successfully!");
       refetch();
+      // Invalidate buyer-side catalog queries to update product pages
+      queryClient.invalidateQueries({ queryKey: ["buyerListingsCatalog"] });
       setShowRestockModal(false);
       setSelectedListing(null);
       setIsRestocking(false);

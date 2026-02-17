@@ -118,6 +118,18 @@ export default function SellerOrderDetailPage() {
   }
 
   if (error) {
+    const errorMsg = (error as any)?.message || 'Unknown error';
+    const errorCode = (error as any)?.code || 'UNKNOWN';
+    const isNotFound = errorCode === 'NOT_FOUND';
+    
+    console.error('[OrderDetail] Error details:', {
+      orderId,
+      error: errorMsg,
+      code: errorCode,
+      fullError: error,
+      timestamp: new Date().toISOString(),
+    });
+    
     return (
       <div className="px-4 md:px-6 mt-4 md:mt-0">
         <Link href="/sellers/orders">
@@ -126,11 +138,26 @@ export default function SellerOrderDetailPage() {
             Back to Orders
           </Button>
         </Link>
-        <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 flex items-center gap-3 text-red-200">
-          <AlertCircle className="h-5 w-5 flex-shrink-0" />
-          <div>
-            <h3 className="font-semibold">Failed to load order</h3>
-            <p className="text-sm text-red-200/80 mt-1">Please try refreshing the page or contact support.</p>
+        <div className="space-y-4">
+          <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 flex items-center gap-3 text-red-200">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold">Failed to load order</h3>
+              <p className="text-sm text-red-200/80 mt-1">
+                {isNotFound ? 'This order does not exist or you do not have permission to view it.' : 'Please try refreshing the page or contact support.'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-300 mb-3">Debug Information</h4>
+            <div className="space-y-2 font-mono text-xs text-gray-400 bg-black/20 p-3 rounded border border-gray-800">
+              <div><span className="text-gray-500">Order ID:</span> {orderId}</div>
+              <div><span className="text-gray-500">Error Code:</span> {errorCode}</div>
+              <div><span className="text-gray-500">Error Message:</span> {errorMsg}</div>
+              <div><span className="text-gray-500">Timestamp:</span> {new Date().toISOString()}</div>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Check browser console (F12) for more details</p>
           </div>
         </div>
       </div>

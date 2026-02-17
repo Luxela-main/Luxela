@@ -104,6 +104,8 @@ export const EnhancedListingGrid: React.FC<EnhancedListingGridProps> = ({
       toastSvc.success("Stock updated successfully!");
       // Invalidate the listings query to trigger a real-time refetch
       queryClient.invalidateQueries({ queryKey: ["listings"] });
+      // Invalidate buyer-side catalog queries to update product pages
+      queryClient.invalidateQueries({ queryKey: ["buyerListingsCatalog"] });
       setShowRestockModal(false);
       setSelectedListing(null);
       setIsRestocking(false);

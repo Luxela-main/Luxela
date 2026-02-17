@@ -282,6 +282,28 @@ export const sellerNotificationsRouter = createTRPCRouter({
         offset: z.number().default(0),
       })
     )
+    .output(
+      z.object({
+        notifications: z.array(
+          z.object({
+            id: z.string(),
+            type: z.string(),
+            title: z.string(),
+            message: z.string(),
+            severity: z.string(),
+            relatedEntityId: z.string().nullable(),
+            relatedEntityType: z.string().nullable(),
+            actionUrl: z.string().nullable(),
+            isRead: z.boolean(),
+            isStarred: z.boolean(),
+            createdAt: z.string(),
+            metadata: z.record(z.string(), z.any()).nullable(),
+          })
+        ),
+        total: z.number(),
+        unreadCount: z.number(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useListings } from "@/context/ListingsContext";
 import ProductImageCarousel from "@/components/buyer/product-display/ProductImageCarousel";
@@ -29,6 +29,7 @@ function ProductDetailPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isApproved, setIsApproved] = useState(false);
   const [brandProducts, setBrandProducts] = useState<any[]>([]);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   
   useEffect(() => {
@@ -69,6 +70,13 @@ function ProductDetailPage({
     };
 
     fetchProduct();
+    
+    // Polling to refresh product data every 3 seconds for real-time restock updates
+    pollIntervalRef.current = setInterval(fetchProduct, 3000);
+
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
   }, [id, getApprovedListingById]);
 
   if (isLoading || loading) {

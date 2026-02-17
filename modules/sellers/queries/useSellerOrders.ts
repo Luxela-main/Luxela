@@ -21,18 +21,27 @@ export const useSellerOrders = ({
   return useQuery<Sale[]>({
     queryKey: sellersKeys.sales(status),
     queryFn: async () => {
-      const client: any = getTRPCClient()
-      const params: any = { limit, offset }
-      if (status) {
-        params.status = status
+      try {
+        const client: any = getTRPCClient()
+        const params: any = { limit, offset }
+        if (status) {
+          params.status = status
+        }
+        const result = await ((client.sales as any).getAllSales as any).query(params)
+        return result
+      } catch (error: any) {
+        console.error('[useSellerOrders] Query failed:', error?.message || error)
+        console.error('[useSellerOrders] Full error:', error)
+        throw error
       }
-      return await ((client.sales as any).getAllSales as any).query(params)
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: enablePolling ? pollingInterval : undefined,
     refetchIntervalInBackground: enablePolling,
     refetchOnWindowFocus: false,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 }
 

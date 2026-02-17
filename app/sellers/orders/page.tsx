@@ -71,13 +71,26 @@ export default function SellerOrdersHub() {
   }, [orders, search, selectedStatus])
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const isDatabaseError = errorMessage.includes('Database') || errorMessage.includes('Failed to fetch')
+    
     return (
       <div className="px-4 md:px-6 mt-4 md:mt-0">
-        <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 flex items-center gap-3 text-red-200">
-          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+        <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 flex items-start gap-3 text-red-200">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-1" />
           <div>
             <h3 className="font-semibold">Failed to load orders</h3>
-            <p className="text-sm text-red-200/80 mt-1">Please try refreshing the page or contact support.</p>
+            <p className="text-sm text-red-200/80 mt-1">
+              {isDatabaseError 
+                ? 'There is a temporary issue connecting to our database. ' 
+                : 'Please try refreshing the page or contact support. '}
+            </p>
+            {isDatabaseError && (
+              <div className="text-xs text-red-200/70 mt-2 bg-red-950/50 p-2 rounded">
+                <p>Error details: {errorMessage}</p>
+                <p className="mt-1">Check the browser console (F12) for debugging information.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
