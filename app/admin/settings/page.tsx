@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import {
   Settings,
   Bell,
@@ -269,14 +269,14 @@ export default function AdminSettingsPage() {
       }
 
       toast.success('Settings saved successfully', {
-        duration: 4000,
+        autoClose: 4000,
         position: 'top-right'
       });
       setIsEditMode(false);
     } catch (error) {
       console.error("Error saving settings:", error);
       toast.error('Failed to save settings. Please try again.', {
-        duration: 4000,
+        autoClose: 4000,
         position: 'top-right'
       });
     } finally {
