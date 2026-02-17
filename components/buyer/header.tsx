@@ -7,7 +7,7 @@ import { Bell, ChevronDown, Search, ShoppingCart, Menu, X, ShoppingBag, Heart, P
 import Image from "next/image";
 import Link from "next/link";
 import { useSearch } from "@/context/SearchContext";
-import { useNotificationsCount, useFavoritesCount } from "@/modules/buyer";
+import { useBuyerNotificationsCount, useFavoritesCount } from "@/modules/buyer";
 import { useRealtimeFavorites } from "@/hooks/useRealtimeFavorites";
 import { NotificationBell } from "@/modules/buyer/components/NotificationBell";
 import {
@@ -55,13 +55,15 @@ const BuyerHeader = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isProfileHovered, setIsProfileHovered] = useState(false);
   const [mobileLogoutOpen, setMobileLogoutOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { profile, loading } = useProfile();
   const { itemCount } = useCartState();
   const { searchQuery, setSearchQuery, clearSearch } = useSearch();
-  const notificationCount = useNotificationsCount();
+  const { data: notificationCount = 0 } = useBuyerNotificationsCount();
   const favoritesCount = useFavoritesCount();
   const isCreateProfileRoute = pathname?.includes('/buyer/profile/create');
 
@@ -249,9 +251,13 @@ const BuyerHeader = () => {
 
             {/* User Dropdown or Sign In */}
             {mounted && user ? (
-              <DropdownMenu modal={false}>
+              <DropdownMenu modal={false} open={isProfileMenuOpen || isProfileHovered} onOpenChange={setIsProfileMenuOpen}>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex cursor-pointer items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] px-2 lg:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] flex-shrink-0">
+                  <div
+                    onMouseEnter={() => setIsProfileHovered(true)}
+                    onMouseLeave={() => setIsProfileHovered(false)}
+                  >
+                    <button className="flex cursor-pointer items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] px-2 lg:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] flex-shrink-0">
                     <div className="size-7 lg:size-8 overflow-hidden rounded-full flex-shrink-0">
                       <Image
                         src={userPicture}
@@ -270,12 +276,15 @@ const BuyerHeader = () => {
                       className="hidden xl:block flex-shrink-0"
                     />
                   </button>
+                  </div>
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent
                   align="end"
                   sideOffset={8}
                   className="w-56 z-[101] bg-[#0E0E0E] border border-[#2B2B2B]"
+                  onMouseEnter={() => setIsProfileHovered(true)}
+                  onMouseLeave={() => setIsProfileHovered(false)}
                 >
                   <DropdownMenuGroup>
                     {USER_DROPDOWN.map((item) => (
@@ -394,7 +403,14 @@ const BuyerHeader = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 text-[#DCDCDC] text-sm py-2 hover:text-[#8451E1] transition-colors"
                   >
-                    <Bell className="w-4 h-4" />
+                    <div className="relative">
+                      <Bell className="w-4 h-4" />
+                      {notificationCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full">
+                          {notificationCount > 99 ? '99+' : notificationCount}
+                        </span>
+                      )}
+                    </div>
                     Notifications
                   </Link>
                   <Link

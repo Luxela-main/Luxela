@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Listing } from '@/types/listing';
 import {
   ShoppingCart,
@@ -21,7 +21,7 @@ import { useCartState } from '@/modules/cart/context';
 import { useAuth } from '@/context/AuthContext';
 import { toastSvc } from '@/services/toast';
 import { useRouter } from 'next/navigation';
-import { addToFavorites, removeFromFavorites } from '@/server/actions/favorites';
+import { addToFavorites, removeFromFavorites, isFavorite } from '@/server/actions/favorites';
 import { useListings } from '@/context/ListingsContext';
 import { ApprovalBadge } from '../ApprovalBadge';
 import HorizontalImageScroller from '@/components/HorizontalImageScroller';
@@ -76,6 +76,30 @@ export default function EnhancedProductCard({
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [showQuickPreview, setShowQuickPreview] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize favorite status from database on component mount
+  useEffect(() => {
+    if (!user) {
+      setIsInitialized(true);
+      return;
+    }
+
+    const checkFavoriteStatus = async () => {
+      try {
+        const result = await isFavorite(product.id);
+        if (result.isFavorite) {
+          setIsWishlisted(true);
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [product.id, user]);
 
   const business = product.sellers?.seller_business?.[0];
   const isSellerVerified = product.is_verified || false;

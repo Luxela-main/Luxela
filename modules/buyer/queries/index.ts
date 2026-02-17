@@ -194,6 +194,13 @@ export {
   useDeleteAllNotifications,
 } from "./useNotifications";
 
+// Buyer Notifications Count Hooks
+export {
+  useBuyerNotificationsCount,
+  useBuyerNotificationsCountLightweight,
+  useBuyerNotificationsCountAggressive,
+} from "./useBuyerNotificationsCount";
+
 // Query Keys
 export {
   buyerQueryKeys,

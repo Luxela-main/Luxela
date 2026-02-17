@@ -72,7 +72,7 @@ export function NotificationBell() {
         
         {/* Badge Count */}
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1 -translate-y-1 bg-red-600 rounded-full animate-pulse">
+          <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-[#0E0E0E] animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

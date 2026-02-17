@@ -25,6 +25,7 @@ import Logo from "@/public/luxela.svg";
 
 export default function SellerNavbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isProfileHovered, setIsProfileHovered] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const { logout } = useAuth();
@@ -125,7 +126,11 @@ export default function SellerNavbar() {
 
           {/* User Menu */}
           {user && (
-            <div className="relative">
+            <div 
+              className="relative"
+              onMouseEnter={() => setIsProfileHovered(true)}
+              onMouseLeave={() => setIsProfileHovered(false)}
+            >
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg hover:bg-[#1e1e1e] transition-colors group cursor-pointer"
@@ -152,7 +157,7 @@ export default function SellerNavbar() {
               </button>
 
               {/* User Dropdown Menu */}
-              {isUserMenuOpen && (
+              {(isUserMenuOpen || isProfileHovered) && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-[#1a1a1a] rounded-lg shadow-xl border border-[#2B2B2B] overflow-hidden">
                   {/* User Info Section */}
                   <div className="px-4 py-3 border-b border-[#2B2B2B]">

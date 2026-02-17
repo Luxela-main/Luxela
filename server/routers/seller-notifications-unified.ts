@@ -10,6 +10,7 @@ import {
 } from '../db/schema';
 import { and, eq, gt, lt, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import type { SellerNotification } from '../db/types';
 import { TRPCError } from '@trpc/server';
 
 // Cache to prevent excessive notification generation
@@ -348,7 +349,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
         const unreadCount = unreadResult[0]?.count ?? 0;
 
         // Get paginated notifications
-        const notifs = await db
+        const notifs: SellerNotification[] = await db
           .select()
           .from(sellerNotifications)
           .where(and(...conditions))
@@ -357,7 +358,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
           .offset(input.offset);
 
         // Transform to JSON-serializable format
-        const transformedNotifications = notifs.map((n) => ({
+        const transformedNotifications = notifs.map((n: SellerNotification) => ({
           id: n.id,
           type: n.type,
           title: n.title,

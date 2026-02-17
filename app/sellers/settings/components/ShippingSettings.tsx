@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Truck, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { trpc } from '@/app/_trpc/client';
 
 interface ShippingRate {
@@ -448,4 +448,4 @@ export default function ShippingSettings() {
       </div>
     </div>
   );
-}
+}

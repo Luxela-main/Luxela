@@ -13,11 +13,11 @@ const CustomCloseButton = ({ closeToast }: CloseButtonProps) => (
 );
 
 const baseOptions: ToastOptions = {
-  position: 'top-center',
-  autoClose: 4000,
+  position: 'top-right',
+  autoClose: 3000,
   hideProgressBar: false,
   closeOnClick: true,
-  pauseOnHover: true,
+  pauseOnHover: false,
   draggable: true,
   closeButton: CustomCloseButton,
   className:
@@ -30,7 +30,7 @@ export const useToast = () => {
     try {
       toast.success(msg, {
         ...baseOptions,
-        className: 'border-l-green-500',
+        className: `${baseOptions.className} border-l-green-500`,
       });
     } catch (e) {
       console.log('Success:', msg);
@@ -41,7 +41,7 @@ export const useToast = () => {
     try {
       toast.error(msg, {
         ...baseOptions,
-        className: 'border-l-red-500',
+        className: `${baseOptions.className} border-l-red-500`,
       });
     } catch (e) {
       console.error('Error:', msg);
@@ -52,7 +52,7 @@ export const useToast = () => {
     try {
       toast.info(msg, {
         ...baseOptions,
-        className: 'border-l-blue-500',
+        className: `${baseOptions.className} border-l-blue-500`,
       });
     } catch (e) {
       console.info('Info:', msg);
@@ -63,7 +63,7 @@ export const useToast = () => {
     try {
       toast.warning(msg, {
         ...baseOptions,
-        className: 'border-l-yellow-500',
+        className: `${baseOptions.className} border-l-yellow-500`,
       });
     } catch (e) {
       console.warn('Warning:', msg);

@@ -39,11 +39,16 @@ export const useNotifications = () => {
 /**
  * Get real-time unread notification count
  * Uses unified notifications endpoint for accurate count
+ * Returns the full query object to maintain React Query's polling lifecycle
  */
 export const useNotificationsCount = () => {
-  const { data } = useUnifiedNotifications();
-  // unreadCount comes directly from the API response
-  return data?.unreadCount ?? 0;
+  const query = useUnifiedNotifications();
+  const count = query.data?.unreadCount ?? 0;
+  
+  return {
+    ...query,
+    data: count,
+  };
 };
 
 export const useMarkNotificationAsRead = () => {

@@ -70,7 +70,6 @@ interface ClientProvidersProps {
 export default function ClientProviders({ children }: ClientProvidersProps) {
   const [queryClient] = useState(() => createQueryClient());
   const sessionTokenRef = useRef<string | null>(null);
-  const [isToastReady, setIsToastReady] = useState(false);
 
   // Update session token once when component mounts
   useEffect(() => {
@@ -81,14 +80,8 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
       }
     });
     
-    // Defer toast initialization to avoid blocking render
-    const toastTimer = setTimeout(() => {
-      if (isMounted) setIsToastReady(true);
-    }, 2000);
-    
     return () => { 
       isMounted = false;
-      clearTimeout(toastTimer);
     };
   }, []);
 
@@ -127,19 +120,17 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
                 <CartProvider>
                   <PendingToastHandler />
                   {children}
-                  {isToastReady && (
-                    <ToastContainer
-                      position="top-right"
-                      autoClose={3000}      
-                      hideProgressBar={false}
-                      newestOnTop
-                      closeOnClick
-                      pauseOnHover={false}   
-                      pauseOnFocusLoss={false}
-                      draggable
-                      theme="colored"
-                    />
-                  )}
+                  <ToastContainer
+                    position="top-right"
+                    autoClose={3000}      
+                    hideProgressBar={false}
+                    newestOnTop
+                    closeOnClick
+                    pauseOnHover={false}   
+                    pauseOnFocusLoss={false}
+                    draggable
+                    theme="colored"
+                  />
                 </CartProvider>
               </ListingsProvider>
             </ProfileProvider>

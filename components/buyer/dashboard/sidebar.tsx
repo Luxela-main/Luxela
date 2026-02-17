@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/context/ProfileContext';
-import { useNotificationsCount } from '@/modules/buyer';
+import { useBuyerNotificationsCount } from '@/modules/buyer';
 
 interface SidebarProps {
   activeItem?: string;
@@ -29,7 +29,7 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { logout } = useAuth();
   const { profile } = useProfile();
-  const notificationCount = useNotificationsCount();
+  const { data: notificationCount = 0 } = useBuyerNotificationsCount();
 
   const handleLogout = useCallback(async () => {
     try {
@@ -69,7 +69,13 @@ export function Sidebar({ activeItem = 'my-account', hideMobileMenu = false }: S
     { id: 'account', label: 'Account Details', icon: User, href: '/buyer/dashboard/account' },
     { id: 'orders', label: 'Orders', icon: ShoppingBag, href: '/buyer/dashboard/orders' },
     { id: 'favorite-items', label: 'Favorite Items', icon: Heart, href: '/buyer/dashboard/favorite-items' },
-    { id: 'notifications', label: 'Notifications', icon: Bell, href: '/buyer/dashboard/notifications', badge: notificationCount },
+    { 
+      id: 'notifications', 
+      label: 'Notifications', 
+      icon: Bell, 
+      href: '/buyer/dashboard/notifications',
+      badge: notificationCount > 0 ? notificationCount : undefined
+    },
     { id: 'returns', label: 'Returns & Refunds', icon: Package, href: '/buyer/dashboard/returns' },
     { id: 'support-tickets', label: 'Support Tickets', icon: Ticket, href: '/buyer/dashboard/support-tickets' },
     { id: 'help', label: 'Help Center', icon: HelpCircle, href: '/buyer/dashboard/help' },
