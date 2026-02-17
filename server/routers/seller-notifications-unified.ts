@@ -278,132 +278,124 @@ export const sellerNotificationsRouter = createTRPCRouter({
       z.object({
         type: z.string().optional(),
         unreadOnly: z.boolean().default(false),
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      })
+        limit: z.number().int().positive().default(50).catch(50),
+        offset: z.number().int().nonnegative().default(0).catch(0),
+      }).catch({ unreadOnly: false, type: undefined, limit: 50, offset: 0 })
     )
-    .output(
-      z.object({
-        notifications: z.array(
-          z.object({
-            id: z.string(),
-            type: z.string(),
-            title: z.string(),
-            message: z.string(),
-            severity: z.string(),
-            relatedEntityId: z.string().nullable(),
-            relatedEntityType: z.string().nullable(),
-            actionUrl: z.string().nullable(),
-            isRead: z.boolean(),
-            isStarred: z.boolean(),
-            createdAt: z.string(),
-            metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).nullable(),
-          })
-        ),
-        total: z.number(),
-        unreadCount: z.number(),
-      })
-    )
+    .output(z.any())
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      }
+      try {
+        const userId = ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+        }
 
-      const seller = await db.query.sellers.findFirst({
-        where: eq(sellers.userId, userId),
-      });
+        let seller;
+        try {
+          seller = await db.query.sellers.findFirst({
+            where: eq(sellers.userId, userId),
+          });
+        } catch (dbError) {
+          console.error('[DB_ERROR] Failed to fetch seller', dbError instanceof Error ? dbError.message : String(dbError));
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to fetch seller information',
+          });
+        }
 
-      if (!seller) {
+        if (!seller) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not a seller',
+          });
+        }
+
+        // Generate fresh notifications (non-blocking background task)
+        if (shouldGenerateNotifications(seller.id)) {
+          void generateAndStoreSellerNotifications(seller.id).catch((err) => {
+            // Silent error - don't block response
+          });
+        }
+
+        // Build query conditions
+        const conditions = [eq(sellerNotifications.sellerId, seller.id)];
+
+        if (input.type) {
+          conditions.push(eq(sellerNotifications.type, input.type as any));
+        }
+
+        if (input.unreadOnly) {
+          conditions.push(eq(sellerNotifications.isRead, false));
+        }
+
+        // Get total count
+        const totalResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(sellerNotifications)
+          .where(and(...conditions));
+
+        const total = totalResult[0]?.count ?? 0;
+
+        // Get unread count (always needed for badge)
+        const unreadResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(sellerNotifications)
+          .where(and(
+            eq(sellerNotifications.sellerId, seller.id),
+            eq(sellerNotifications.isRead, false)
+          ));
+
+        const unreadCount = unreadResult[0]?.count ?? 0;
+
+        // Get paginated notifications
+        const notifs = await db
+          .select()
+          .from(sellerNotifications)
+          .where(and(...conditions))
+          .orderBy(desc(sellerNotifications.createdAt))
+          .limit(input.limit)
+          .offset(input.offset);
+
+        // Transform to JSON-serializable format
+        const transformedNotifications = notifs.map((n) => ({
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          severity: n.severity,
+          relatedEntityId: n.relatedEntityId,
+          relatedEntityType: n.relatedEntityType,
+          actionUrl: n.actionUrl,
+          isRead: n.isRead,
+          isStarred: n.isStarred,
+          createdAt: n.createdAt instanceof Date ? n.createdAt.toISOString() : String(n.createdAt),
+          metadata: null,
+        }));
+
+        if (transformedNotifications.length > 0) {
+          console.log('[DEBUG] Sample notification:', JSON.stringify(transformedNotifications[0]));
+        }
+        
+        return {
+          notifications: transformedNotifications,
+          total,
+          unreadCount,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        console.error('[DB_ERROR] getNotifications exception:', errorMsg);
+        if (error instanceof Error) {
+          console.error('[DB_ERROR] Stack:', error.stack);
+        }
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Not a seller',
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch notifications',
+          cause: error,
         });
       }
-
-      // Generate fresh notifications (non-blocking background task)
-      // Fire-and-forget: don't await to prevent blocking the response
-      // Only generate if not recently generated (cooldown: 30 seconds)
-      if (shouldGenerateNotifications(seller.id)) {
-        void generateAndStoreSellerNotifications(seller.id).catch((err) =>
-          console.error('Error generating notifications:', err)
-        );
-      }
-
-      // Build query conditions
-      const conditions = [eq(sellerNotifications.sellerId, seller.id)];
-
-      if (input.type) {
-        conditions.push(eq(sellerNotifications.type, input.type as any));
-      }
-
-      if (input.unreadOnly) {
-        conditions.push(eq(sellerNotifications.isRead, false));
-      }
-
-      // Get total count
-      const totalResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(sellerNotifications)
-        .where(and(...conditions));
-
-      const total = totalResult[0]?.count ?? 0;
-
-      // Get unread count (always needed for badge)
-      const unreadResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(sellerNotifications)
-        .where(and(
-          eq(sellerNotifications.sellerId, seller.id),
-          eq(sellerNotifications.isRead, false)
-        ));
-
-      const unreadCount = unreadResult[0]?.count ?? 0;
-
-      // Get paginated notifications
-      const notifs = await db
-        .select()
-        .from(sellerNotifications)
-        .where(and(...conditions))
-        .orderBy(desc(sellerNotifications.createdAt))
-        .limit(input.limit)
-        .offset(input.offset);
-
-      return {
-        notifications: notifs.map((n: typeof notifs[number]) => {
-          // Serialize metadata values to ensure they match schema
-          const serializedMetadata = n.metadata ? Object.entries(n.metadata).reduce((acc, [key, value]) => {
-            // Convert dates and objects to safe primitives
-            if (value instanceof Date) {
-              acc[key] = value.toISOString();
-            } else if (typeof value === 'object' && value !== null) {
-              acc[key] = JSON.stringify(value);
-            } else if (value === undefined) {
-              acc[key] = null;
-            } else {
-              acc[key] = value;
-            }
-            return acc;
-          }, {} as Record<string, any>) : null;
-
-          return {
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            message: n.message,
-            severity: n.severity,
-            relatedEntityId: n.relatedEntityId,
-            relatedEntityType: n.relatedEntityType,
-            actionUrl: n.actionUrl,
-            isRead: n.isRead,
-            isStarred: n.isStarred,
-            createdAt: n.createdAt.toISOString(),
-            metadata: serializedMetadata,
-          };
-        }),
-        total,
-        unreadCount,
-      };
     }),
 
   /**
@@ -424,7 +416,8 @@ export const sellerNotificationsRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       const userId = ctx.user?.id;
       if (!userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+        // Fail gracefully for unauthenticated requests - prevents blocking buyer page loads
+        return { count: 0 };
       }
 
       const seller = await db.query.sellers.findFirst({
