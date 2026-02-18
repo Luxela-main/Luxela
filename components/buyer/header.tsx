@@ -56,7 +56,6 @@ const BuyerHeader = () => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isProfileHovered, setIsProfileHovered] = useState(false);
   const [mobileLogoutOpen, setMobileLogoutOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -251,13 +250,9 @@ const BuyerHeader = () => {
 
             {/* User Dropdown or Sign In */}
             {mounted && user ? (
-              <DropdownMenu modal={false} open={isProfileMenuOpen || isProfileHovered} onOpenChange={setIsProfileMenuOpen}>
+              <DropdownMenu open={isProfileMenuOpen} onOpenChange={setIsProfileMenuOpen}>
                 <DropdownMenuTrigger asChild>
-                  <div
-                    onMouseEnter={() => setIsProfileHovered(true)}
-                    onMouseLeave={() => setIsProfileHovered(false)}
-                  >
-                    <button className="flex cursor-pointer items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] px-2 lg:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] flex-shrink-0">
+                  <button className="flex cursor-pointer items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] px-2 lg:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] flex-shrink-0">
                     <div className="size-7 lg:size-8 overflow-hidden rounded-full flex-shrink-0">
                       <Image
                         src={userPicture}
@@ -276,15 +271,12 @@ const BuyerHeader = () => {
                       className="hidden xl:block flex-shrink-0"
                     />
                   </button>
-                  </div>
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent
                   align="end"
                   sideOffset={8}
                   className="w-56 z-[101] bg-[#0E0E0E] border border-[#2B2B2B]"
-                  onMouseEnter={() => setIsProfileHovered(true)}
-                  onMouseLeave={() => setIsProfileHovered(false)}
                 >
                   <DropdownMenuGroup>
                     {USER_DROPDOWN.map((item) => (
