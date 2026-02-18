@@ -13,24 +13,48 @@ function AuthCallbackCompleteHandler() {
   const { user, loading } = useAuth();
 
   const checkProfile = async (role: 'buyer' | 'seller') => {
-    try {
-      const res = await fetch(`/api/profile/check`, {
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        console.error('[AuthCallbackComplete] Profile check failed:', res.status);
-        return { exists: false, profileComplete: false };
+    const maxRetries = 3;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`/api/profile/check`, {
+          credentials: 'include',
+        });
+        
+        if (!res.ok) {
+          lastError = `HTTP ${res.status}`;
+          
+          if (res.status === 503 || res.status === 504) {
+            console.warn(`[AuthCallbackComplete] Profile check attempt ${attempt}/${maxRetries} failed (${res.status}), retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            continue;
+          }
+          
+          console.error('[AuthCallbackComplete] Profile check failed:', res.status);
+          return { exists: false, profileComplete: false };
+        }
+        
+        const data = await res.json();
+        console.log('[AuthCallbackComplete] Profile check:', data);
+        return {
+          exists: data?.exists === true,
+          profileComplete: data?.profileComplete === true,
+        };
+      } catch (err) {
+        lastError = err;
+        console.warn(`[AuthCallbackComplete] Profile check attempt ${attempt}/${maxRetries} error:`, err);
+        
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
       }
-      const data = await res.json();
-      console.log('[AuthCallbackComplete] Profile check:', data);
-      return {
-        exists: data?.exists === true,
-        profileComplete: data?.profileComplete === true,
-      };
-    } catch (err) {
-      console.error('[AuthCallbackComplete] Profile check error:', err);
-      return { exists: false, profileComplete: false };
     }
+    
+    console.error('[AuthCallbackComplete] Profile check failed after retries:', lastError);
+    router.push('/signin?error=profile_check_failed');
+    return { exists: false, profileComplete: false };
   };
 
   const handleRedirect = async (currentUser: any) => {
