@@ -61,7 +61,7 @@ export const useCreateSupportTicket = () => {
       priority?: SupportTicket["priority"];
     }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.createTicket({
+      return await client.support.createTicket.mutate({
         subject,
         description,
         category,
@@ -92,7 +92,7 @@ export const useUpdateSupportTicket = () => {
       priority?: SupportTicket["priority"];
     }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.updateTicket({
+      return await client.support.updateTicket.mutate({
         ticketId,
         status,
         priority,
@@ -114,7 +114,7 @@ export const useDeleteSupportTicket = () => {
   return useMutation({
     mutationFn: async ({ ticketId }: { ticketId: string }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.deleteTicket({ ticketId });
+      return await client.support.deleteTicket.mutate({ ticketId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.support() });
@@ -132,7 +132,7 @@ export const useCloseTicket = () => {
   return useMutation({
     mutationFn: async ({ ticketId }: { ticketId: string }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.closeTicket({ ticketId });
+      return await client.support.closeTicket.mutate({ ticketId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.support() });
@@ -179,11 +179,38 @@ export const useReplyToTicket = () => {
       attachmentUrl?: string;
     }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.replyToTicket({
+      return await client.support.replyToTicket.mutate({
         ticketId,
         message,
         attachmentUrl,
       });
+    },
+    onMutate: async ({ ticketId, message }) => {
+      await queryClient.cancelQueries({
+        queryKey: [...sellersKeys.support(), ticketId, 'replies'],
+      });
+
+      const previousReplies = queryClient.getQueryData<TicketReply[]>([
+        ...sellersKeys.support(),
+        ticketId,
+        'replies',
+      ]);
+
+      const optimisticReply: TicketReply = {
+        id: `optimistic-${Date.now()}`,
+        ticketId,
+        senderId: 'current-user',
+        senderRole: 'seller',
+        message,
+        createdAt: new Date(),
+      };
+
+      queryClient.setQueryData(
+        [...sellersKeys.support(), ticketId, 'replies'],
+        (old: TicketReply[] = []) => [...old, optimisticReply]
+      );
+
+      return { previousReplies };
     },
     onSuccess: (_, { ticketId }) => {
       queryClient.invalidateQueries({
@@ -192,7 +219,13 @@ export const useReplyToTicket = () => {
       queryClient.invalidateQueries({ queryKey: sellersKeys.support() });
       toastSvc.success("Reply added successfully");
     },
-    onError: (error: any) => {
+    onError: (error: any, { ticketId }, context: any) => {
+      if (context?.previousReplies) {
+        queryClient.setQueryData(
+          [...sellersKeys.support(), ticketId, 'replies'],
+          context.previousReplies
+        );
+      }
       toastSvc.apiError(error);
     },
   });
@@ -204,7 +237,7 @@ export const useDeleteReply = () => {
   return useMutation({
     mutationFn: async ({ replyId, ticketId }: { replyId: string; ticketId: string }) => {
       const client: any = getVanillaTRPCClient();
-      return await client.support.deleteReply({ replyId });
+      return await client.support.deleteReply.mutate({ replyId });
     },
     onSuccess: (_, { ticketId }) => {
       queryClient.invalidateQueries({
