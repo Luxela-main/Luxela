@@ -47,17 +47,10 @@ export async function GET(request: NextRequest) {
       console.log('[OAuth Callback API] Code exchange successful, user:', data.session.user.id);
 
       // At this point, the server client has set the auth cookies in the response
-      // Redirect to the client-side callback handler which will check the session
+      // Redirect to the client-side callback handler which will complete the auth flow
       const response = NextResponse.redirect(
-        new URL('/auth/callback/complete', request.url)
+        new URL('/auth/callback', request.url)
       );
-
-      // Add a flag so the client-side handler knows this was processed server-side
-      response.cookies.set('auth_callback_processed', 'true', {
-        maxAge: 60, // 1 minute
-        path: '/',
-        httpOnly: false, // Needs to be accessible from client
-      });
 
       // Disable caching to ensure fresh session is retrieved
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -91,14 +84,8 @@ export async function GET(request: NextRequest) {
 
       console.log('[OAuth Callback API] OTP verification successful');
       const response = NextResponse.redirect(
-        new URL('/auth/callback/complete', request.url)
+        new URL('/auth/callback', request.url)
       );
-
-      response.cookies.set('auth_callback_processed', 'true', {
-        maxAge: 60,
-        path: '/',
-        httpOnly: false,
-      });
 
       // Disable caching to ensure fresh session is retrieved
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

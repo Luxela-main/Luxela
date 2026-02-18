@@ -77,10 +77,10 @@ function AuthCallbackCompleteHandler() {
     // 15 seconds allows sufficient time for OAuth processing and session retries
     const timeout = setTimeout(() => {
       if (loading) {
-        console.error('[AuthCallbackComplete] Auth loading timeout after 30 seconds');
+        console.error('[AuthCallbackComplete] Auth loading timeout after 15 seconds');
         router.push('/signin?error=auth_timeout');
       }
-    }, 30000);
+    }, 15000);
 
     return () => clearTimeout(timeout);
   }, [loading, router]);
