@@ -162,6 +162,9 @@ export const useTicketReplies = (ticketId: string) => {
       return await client.support.getTicketReplies.query({ ticketId });
     },
     enabled: !!ticketId,
+    staleTime: Infinity, // Replies never go stale until explicitly invalidated
+    gcTime: 30 * 60 * 1000, // Keep cache for 30 minutes to prevent data loss
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 };
 
@@ -212,10 +215,20 @@ export const useReplyToTicket = () => {
 
       return { previousReplies };
     },
-    onSuccess: (_, { ticketId }) => {
-      queryClient.invalidateQueries({
-        queryKey: [...sellersKeys.support(), ticketId, 'replies'],
-      });
+    onSuccess: (newReply, { ticketId }) => {
+      // Instead of invalidating (which removes cache), update the cache directly
+      queryClient.setQueryData(
+        [...sellersKeys.support(), ticketId, 'replies'],
+        (old: TicketReply[] = []) => {
+          // Remove optimistic reply and add the real one
+          const withoutOptimistic = old.filter(
+            (r) => !r.id.startsWith('optimistic-')
+          );
+          return [...withoutOptimistic, newReply];
+        }
+      );
+      
+      // Keep the tickets list in sync but don't invalidate it
       queryClient.invalidateQueries({ queryKey: sellersKeys.support() });
       toastSvc.success("Reply added successfully");
     },

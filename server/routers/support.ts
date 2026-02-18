@@ -1027,19 +1027,23 @@ export const supportRouter = createTRPCRouter({
       const sellerResult = await db.select().from(sellers).where(eq(sellers.userId, userId));
       const seller = sellerResult[0];
       const isAssignedSeller = seller && ticket[0].assignedTo === seller.id;
+      const isTicketCreator = seller && ticket[0].sellerId === seller.id;
       
       // Check if user is an admin
       const adminResult = await db.select().from(users).where(eq(users.id, userId));
       const isAdmin = adminResult[0]?.role === 'admin';
 
-      if (!isBuyer && !isAssignedSeller && !isAdmin) {
+      if (!isBuyer && !isAssignedSeller && !isTicketCreator && !isAdmin) {
         console.error('[Support] getTicketReplies access denied', {
           userId,
           ticketId: input.ticketId,
           ticketBuyerId: ticket[0].buyerId,
+          ticketSellerId: ticket[0].sellerId,
           buyerId: buyer?.id,
+          sellerId: seller?.id,
           isBuyer,
           isAssignedSeller,
+          isTicketCreator,
           isAdmin,
         });
         throw new TRPCError({

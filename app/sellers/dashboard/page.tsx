@@ -130,18 +130,18 @@ export default function DashboardPage() {
             <motion.div
               whileHover={{ y: -8 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="group backdrop-blur-xl bg-gradient-to-br from-[#8451E1]/20 to-[#6d28d9]/10 border border-[#8451E1]/20 rounded-2xl p-6 shadow-xl hover:border-[#8451E1]/40 transition-all duration-300 cursor-pointer"
+              className="group backdrop-blur-xl bg-gradient-to-br from-[#8451E1]/20 to-[#6d28d9]/10 border border-[#8451E1]/20 rounded-2xl p-6 shadow-xl hover:border-[#8451E1]/40 transition-all duration-300 cursor-pointer min-h-[220px] flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[#c084fc] text-sm font-medium mb-2">Total Revenue</p>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-[#8451E1] to-[#a855f7] bg-clip-text text-transparent">{formatCurrency(metrics?.totalRevenue || 0, { truncate: true })}</p>
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#c084fc] text-sm font-medium mb-3">Total Revenue</p>
+                  <p className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-[#8451E1] to-[#a855f7] bg-clip-text text-transparent break-words">{formatCurrency(metrics?.totalRevenue || 0, { truncate: true })}</p>
                 </div>
-                <div className="bg-gradient-to-br from-[#8451E1]/30 to-[#733AD4]/10 p-3 rounded-xl group-hover:from-[#8451E1]/40 transition-all">
-                  <DollarSign className="w-8 h-8 text-[#8451E1]" />
+                <div className="bg-gradient-to-br from-[#8451E1]/30 to-[#733AD4]/10 p-3 rounded-xl flex-shrink-0">
+                  <DollarSign className="w-6 h-6 text-[#8451E1]" />
                 </div>
               </div>
-              <div className="mt-4 flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-4">
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
                 <span className="text-emerald-400 text-sm font-semibold">{(metrics?.revenueChange ?? 0) > 0 ? '+' : ''}{(metrics?.revenueChange ?? 0).toFixed(1)}%</span>
               </div>
@@ -151,18 +151,18 @@ export default function DashboardPage() {
             <motion.div
               whileHover={{ y: -8 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="group backdrop-blur-xl bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:border-blue-500/40 transition-all duration-300 cursor-pointer"
+              className="group backdrop-blur-xl bg-gradient-to-br from-blue-600/20 to-blue-900/10 border border-blue-500/20 rounded-2xl p-6 shadow-xl hover:border-blue-500/40 transition-all duration-300 cursor-pointer min-h-[220px] flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-300 text-sm font-medium mb-2">Total Orders</p>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-blue-200 to-cyan-200 bg-clip-text text-transparent">{metrics?.totalOrders}</p>
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-blue-300 text-sm font-medium mb-3">Total Orders</p>
+                  <p className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-200 to-cyan-200 bg-clip-text text-transparent break-words">{metrics?.totalOrders}</p>
                 </div>
-                <div className="bg-gradient-to-br from-blue-500/30 to-blue-600/10 p-3 rounded-xl group-hover:from-blue-500/40 transition-all">
-                  <ShoppingCart className="w-8 h-8 text-blue-300" />
+                <div className="bg-gradient-to-br from-blue-500/30 to-blue-600/10 p-3 rounded-xl flex-shrink-0">
+                  <ShoppingCart className="w-6 h-6 text-blue-300" />
                 </div>
               </div>
-              <div className="mt-4 flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-4">
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
                 <span className="text-emerald-400 text-sm font-semibold">{(metrics?.ordersChange ?? 0) > 0 ? '+' : ''}{(metrics?.ordersChange ?? 0).toFixed(1)}%</span>
               </div>
@@ -172,36 +172,36 @@ export default function DashboardPage() {
             <motion.div
               whileHover={{ y: -8 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="group backdrop-blur-xl bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer"
+              className="group backdrop-blur-xl bg-gradient-to-br from-amber-600/20 to-amber-900/10 border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer min-h-[220px] flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-amber-300 text-sm font-medium mb-2">Avg Order Value</p>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent">{formatCurrency(metrics?.averageOrderValue || 0, { truncate: true })}</p>
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-amber-300 text-sm font-medium mb-3">Avg Order Value</p>
+                  <p className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-amber-200 to-yellow-200 bg-clip-text text-transparent break-words">{formatCurrency(metrics?.averageOrderValue || 0, { truncate: true })}</p>
                 </div>
-                <div className="bg-gradient-to-br from-amber-500/30 to-amber-600/10 p-3 rounded-xl group-hover:from-amber-500/40 transition-all">
-                  <BarChart3 className="w-8 h-8 text-amber-300" />
+                <div className="bg-gradient-to-br from-amber-500/30 to-amber-600/10 p-3 rounded-xl flex-shrink-0">
+                  <BarChart3 className="w-6 h-6 text-amber-300" />
                 </div>
               </div>
-              <div className="mt-4 text-amber-300/80 text-xs font-medium">Per transaction average</div>
+              <div className="text-amber-300/80 text-xs font-medium mt-4">Per transaction average</div>
             </motion.div>
 
             {/* Customer Satisfaction Card */}
             <motion.div
               whileHover={{ y: -8 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="group backdrop-blur-xl bg-gradient-to-br from-emerald-600/20 to-emerald-900/10 border border-emerald-500/20 rounded-2xl p-6 shadow-xl hover:border-emerald-500/40 transition-all duration-300 cursor-pointer"
+              className="group backdrop-blur-xl bg-gradient-to-br from-emerald-600/20 to-emerald-900/10 border border-emerald-500/20 rounded-2xl p-6 shadow-xl hover:border-emerald-500/40 transition-all duration-300 cursor-pointer min-h-[220px] flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-emerald-300 text-sm font-medium mb-2">Satisfaction Rate</p>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-emerald-200 to-teal-200 bg-clip-text text-transparent">{(metrics?.customerSatisfaction ?? 0).toFixed(1)}%</p>
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-emerald-300 text-sm font-medium mb-3">Satisfaction Rate</p>
+                  <p className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-200 to-teal-200 bg-clip-text text-transparent break-words">{(metrics?.customerSatisfaction ?? 0).toFixed(1)}%</p>
                 </div>
-                <div className="bg-gradient-to-br from-emerald-500/30 to-emerald-600/10 p-3 rounded-xl group-hover:from-emerald-500/40 transition-all">
-                  <Star className="w-8 h-8 text-emerald-300" />
+                <div className="bg-gradient-to-br from-emerald-500/30 to-emerald-600/10 p-3 rounded-xl flex-shrink-0">
+                  <Star className="w-6 h-6 text-emerald-300" />
                 </div>
               </div>
-              <div className="mt-4 text-emerald-300/80 text-xs font-medium">Based on {metrics?.customerReviews.length || 0} reviews</div>
+              <div className="text-emerald-300/80 text-xs font-medium mt-4">Based on {metrics?.customerReviews.length || 0} reviews</div>
             </motion.div>
 
             {/* Funds in Escrow Card */}
@@ -390,26 +390,24 @@ function EscrowBalanceCard() {
     <motion.div
       whileHover={{ y: -8 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="group backdrop-blur-xl bg-gradient-to-br from-amber-600/20 to-orange-900/10 border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer relative overflow-hidden"
+      className="group backdrop-blur-xl bg-gradient-to-br from-amber-600/20 to-orange-900/10 border border-amber-500/20 rounded-2xl p-6 shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer min-h-[220px] flex flex-col justify-between"
     >
-      {/* Background accent */}
-      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full blur-2xl"></div>
-      
-      <div className="relative z-10 flex items-center justify-between">
-        <div>
-          <p className="text-amber-300 text-sm font-medium mb-2">💰 Funds in Escrow</p>
-          <p className="text-4xl font-bold bg-gradient-to-r from-amber-200 to-orange-200 bg-clip-text text-transparent">
+      {/* Header with icon */}
+      <div className="flex justify-between items-start gap-4 mb-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-amber-300 text-sm font-medium mb-3">💰 Funds in Escrow</p>
+          <p className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-amber-200 to-orange-200 bg-clip-text text-transparent break-words">
             {formatCurrency(escrowBalance * 100, { truncate: true })}
           </p>
         </div>
-        <div className="bg-gradient-to-br from-amber-500/30 to-orange-600/10 p-3 rounded-xl group-hover:from-amber-500/40 transition-all">
-          <DollarSign className="w-8 h-8 text-amber-300" />
+        <div className="bg-gradient-to-br from-amber-500/30 to-orange-600/10 p-3 rounded-xl flex-shrink-0">
+          <DollarSign className="w-6 h-6 text-amber-300" />
         </div>
       </div>
 
       {/* Active holds info */}
-      <div className="mt-6 pt-4 border-t border-amber-500/20">
-        <div className="space-y-2 max-h-32 overflow-y-auto">
+      <div className="pt-4 border-t border-amber-500/20">
+        <div className="space-y-2 max-h-24 overflow-y-auto">
           {(!activeHolds || activeHolds.length === 0) ? (
             <p className="text-xs text-amber-300/70">✓ No active escrow holds</p>
           ) : (
@@ -417,7 +415,7 @@ function EscrowBalanceCard() {
               <p className="text-xs font-semibold text-amber-300 mb-2">
                 {activeHolds.length} Active Hold{activeHolds.length !== 1 ? 's' : ''}
               </p>
-              {activeHolds.slice(0, 3).map((hold) => (
+              {activeHolds.slice(0, 2).map((hold) => (
                 <div key={hold.holdId} className="text-xs bg-amber-500/10 p-2 rounded border border-amber-500/20">
                   <div className="flex justify-between items-center">
                     <span className="text-amber-200 font-medium">
@@ -432,9 +430,9 @@ function EscrowBalanceCard() {
                   </p>
                 </div>
               ))}
-              {activeHolds.length > 3 && (
-                <p className="text-xs text-amber-300/70 pt-2 italic">
-                  +{activeHolds.length - 3} more hold{activeHolds.length - 3 !== 1 ? 's' : ''}
+              {activeHolds.length > 2 && (
+                <p className="text-xs text-amber-300/70 pt-1 italic">
+                  +{activeHolds.length - 2} more hold{activeHolds.length - 2 !== 1 ? 's' : ''}
                 </p>
               )}
             </>
