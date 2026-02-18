@@ -148,9 +148,25 @@ export const paymentRouter = createTRPCRouter({
         };
       } catch (error: any) {
         console.error("Payment creation error:", error);
+        
+        const errorMessage = 
+          error?.response?.data?.error?.message || 
+          error?.response?.data?.message || 
+          error?.message || 
+          "Payment creation failed";
+        
+        const errorContext = {
+          originalMessage: error?.message,
+          responseData: error?.response?.data,
+          responseStatus: error?.response?.status,
+          errorCode: error?.code,
+        };
+        console.error("Payment creation error context:", errorContext);
+        
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error?.response?.data?.error?.message || error.message || "Payment creation failed",
+          message: errorMessage,
+          cause: error,
         });
       }
     }),

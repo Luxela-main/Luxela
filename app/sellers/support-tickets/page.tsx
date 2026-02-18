@@ -119,12 +119,17 @@ export default function SellerSupportTicketsPage() {
       return;
     }
 
-    replyMutation.mutate({
-      ticketId: selectedTicketId,
-      message: replyMessage,
-    });
-
+    const messageToSend = replyMessage;
     setReplyMessage('');
+
+    try {
+      await replyMutation.mutateAsync({
+        ticketId: selectedTicketId,
+        message: messageToSend,
+      });
+    } catch (error) {
+      setReplyMessage(messageToSend);
+    }
   };
 
   const tickets = (ticketsQuery.data || []) as SupportTicket[];

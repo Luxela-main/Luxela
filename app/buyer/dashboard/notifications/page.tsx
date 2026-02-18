@@ -9,6 +9,7 @@ import {
   useMarkAllNotificationsAsRead,
   useDeleteNotification,
   useDeleteAllNotifications,
+  useToggleNotificationFavorite,
 } from '@/modules/buyer/queries/useNotifications';
 import {
   Loader2,
@@ -20,9 +21,9 @@ import {
   MessageSquare,
   Trash2,
   Eye,
-  Filter,
   Search,
   Heart,
+  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toastSvc } from '@/services/toast';
@@ -47,17 +48,18 @@ interface Notification {
   title: string;
   message: string;
   isRead: boolean;
+  isStarred: boolean;
   createdAt: Date;
   relatedEntityId?: string | undefined;
   metadata?: Record<string, any>;
 }
 
-type NotificationCategory = 'all' | 'orders' | 'shipping' | 'returns_refunds' | 'products' | 'communication' | 'account_system';
+type NotificationCategory = 'all' | 'orders' | 'shipping' | 'returns_refunds' | 'products' | 'communication' | 'account_system' | 'starred';
 
 // Map specific notification types to generalized categories
 const getCategoryForType = (type: string): string => {
   const lowerType = type?.toLowerCase() || '';
-  
+
   if (lowerType.includes('order') || lowerType.startsWith('order_')) return 'orders';
   if (lowerType.includes('shipment') || lowerType.includes('delivery') || lowerType.includes('transit')) return 'shipping';
   if (lowerType.includes('return') || lowerType.includes('refund')) return 'returns_refunds';
@@ -69,18 +71,18 @@ const getCategoryForType = (type: string): string => {
 export default function NotificationsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
   const [selectedType, setSelectedType] = useState<NotificationCategory>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [optimisticStarred, setOptimisticStarred] = useState<{[key: string]: boolean}>({});
 
-  
-  const { 
-    data: notificationsData, 
+  const {
+    data: notificationsData,
     isLoading: isLoadingNotifications,
-    refetch: refetchNotifications 
+    refetch: refetchNotifications
   } = trpc.buyerNotifications.getNotifications.useQuery(
     {
       limit: 50,
@@ -88,13 +90,12 @@ export default function NotificationsPage() {
     },
     {
       enabled: !!user && !authLoading,
-      staleTime: 1000 * 30, 
+      staleTime: 1000 * 30,
     }
   );
 
-  
   const markAsReadMutation = useMarkNotificationAsRead();
-  
+
   // Handle errors with custom error handling
   const originalMarkAsReadMutate = markAsReadMutation.mutateAsync;
   const wrappedMarkAsReadMutate = useCallback(async (notificationId: string) => {
@@ -106,9 +107,8 @@ export default function NotificationsPage() {
     }
   }, [originalMarkAsReadMutate, refetchNotifications]);
 
-  
   const deleteNotificationMutation = useDeleteNotification();
-  
+
   // Handle errors with custom error handling
   const originalDeleteMutate = deleteNotificationMutation.mutateAsync;
   const wrappedDeleteMutate = useCallback(async (notificationId: string) => {
@@ -121,9 +121,8 @@ export default function NotificationsPage() {
     }
   }, [originalDeleteMutate, refetchNotifications]);
 
-  
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
-  
+
   // Handle success/error with custom logic
   const originalMarkAllMutate = markAllAsReadMutation.mutateAsync;
   const wrappedMarkAllMutate = useCallback(async () => {
@@ -137,7 +136,7 @@ export default function NotificationsPage() {
   }, [originalMarkAllMutate, refetchNotifications]);
 
   const deleteAllMutation = useDeleteAllNotifications();
-  
+
   // Handle success/error for delete all
   const originalDeleteAllMutate = deleteAllMutation.mutateAsync;
   const wrappedDeleteAllMutate = useCallback(async () => {
@@ -157,27 +156,50 @@ export default function NotificationsPage() {
     }
   }, [originalDeleteAllMutate, refetchNotifications]);
 
-  
+  const toggleStarMutation = useToggleNotificationFavorite();
+
+  // Handle starring/unstarring notifications
+  const wrappedToggleStar = useCallback(async (notificationId: string, currentStarred: boolean) => {
+    // Optimistic update
+    setOptimisticStarred((prev) => ({
+      ...prev,
+      [notificationId]: !currentStarred,
+    }));
+
+    try {
+      await toggleStarMutation.mutateAsync({
+        notificationId,
+        starred: !currentStarred,
+      });
+    } catch (error: any) {
+      // Rollback optimistic update on error
+      setOptimisticStarred((prev) => {
+        const updated = { ...prev };
+        delete updated[notificationId];
+        return updated;
+      });
+      refetchNotifications();
+      toastSvc.error(error?.message || 'Failed to update notification');
+    }
+  }, [toggleStarMutation, refetchNotifications]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/signin');
     }
   }, [authLoading, user, router]);
 
-  
   useEffect(() => {
     if (notificationsData?.notifications) {
-      
       const convertedNotifications: Notification[] = notificationsData.notifications.map((notification: any) => {
-        
         const relatedEntityId = notification.relatedEntityId === null ? undefined : notification.relatedEntityId;
-        
         return {
           id: notification.id,
           type: notification.type,
           title: notification.title,
           message: notification.message,
           isRead: notification.isRead,
+          isStarred: notification.isStarred || false,
           createdAt: new Date(notification.createdAt),
           relatedEntityId,
           metadata: notification.metadata,
@@ -188,16 +210,17 @@ export default function NotificationsPage() {
     }
   }, [notificationsData]);
 
-  
   useEffect(() => {
     let filtered = notifications;
 
-    
-    if (selectedType !== 'all') {
+    if (selectedType === 'starred') {
+      filtered = filtered.filter((n) =>
+        optimisticStarred[n.id] !== undefined ? optimisticStarred[n.id] : n.isStarred
+      );
+    } else if (selectedType !== 'all') {
       filtered = filtered.filter((n) => getCategoryForType(n.type) === selectedType);
     }
 
-    
     if (searchTerm) {
       filtered = filtered.filter(
         (n) =>
@@ -207,7 +230,7 @@ export default function NotificationsPage() {
     }
 
     setFilteredNotifications(filtered);
-  }, [notifications, selectedType, searchTerm]);
+  }, [notifications, selectedType, searchTerm, optimisticStarred]);
 
   const handleMarkAsRead = useCallback(
     debounce(async (notificationId: string) => {
@@ -234,7 +257,7 @@ export default function NotificationsPage() {
       // Optimistic update - remove from UI immediately
       const deletedNotification = notifications.find((n) => n.id === notificationId);
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
-      
+
       // Update unread count if the deleted notification was unread
       if (deletedNotification?.isRead === false) {
         setUnreadCount((prev) => Math.max(0, prev - 1));
@@ -256,7 +279,7 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type?: string, metadata?: Record<string, any>) => {
     const lowerType = type?.toLowerCase() || '';
-    
+
     // System alerts - check if it's a brand follow/unfollow (has brand action in metadata)
     if (lowerType.includes('system_alert')) {
       if (metadata?.action === 'brand_followed' || metadata?.action === 'brand_unfollowed') {
@@ -265,7 +288,7 @@ export default function NotificationsPage() {
       // Other system alerts
       return <AlertCircle className="w-5 h-5 text-yellow-400" />;
     }
-    
+
     // Order-related
     if (lowerType.includes('order') || lowerType.includes('shipment') || lowerType.includes('delivery')) {
       if (lowerType.includes('delivered') || lowerType.includes('out_for_delivery')) {
@@ -273,44 +296,44 @@ export default function NotificationsPage() {
       }
       return <Package className="w-5 h-5 text-blue-400" />;
     }
-    
+
     // Price and product
     if (lowerType.includes('price_drop') || lowerType.includes('back_in_stock')) {
       return <TrendingDown className="w-5 h-5 text-orange-400" />;
     }
-    
+
     // Review and communication
     if (lowerType.includes('review') || lowerType.includes('reply')) {
       return <MessageSquare className="w-5 h-5 text-purple-400" />;
     }
-    
+
     // Refunds and returns
     if (lowerType.includes('refund') || lowerType.includes('return')) {
       return <CheckCircle2 className="w-5 h-5 text-yellow-400" />;
     }
-    
+
     // Payment
     if (lowerType.includes('payment')) {
       return <AlertCircle className="w-5 h-5 text-yellow-400" />;
     }
-    
+
     // Dispute
     if (lowerType.includes('dispute') || lowerType.includes('escalation') || lowerType.includes('sla_breach')) {
       return <AlertCircle className="w-5 h-5 text-red-400" />;
     }
-    
+
     // Listing
     if (lowerType.includes('listing')) {
       return <Package className="w-5 h-5 text-cyan-400" />;
     }
-    
+
     // Default
     return <Bell className="w-5 h-5 text-[#8451E1]" />;
   };
 
   const getTypeColor = (type?: string, metadata?: Record<string, any>): string => {
     const lowerType = type?.toLowerCase() || '';
-    
+
     // System alerts - brand follow/unfollow get pink theme
     if (lowerType.includes('system_alert')) {
       if (metadata?.action === 'brand_followed' || metadata?.action === 'brand_unfollowed') {
@@ -319,31 +342,31 @@ export default function NotificationsPage() {
       // Other system alerts
       return 'bg-yellow-500/10 border-yellow-500/30';
     }
-    
+
     // Order-related
     if (lowerType.includes('order') || lowerType.includes('order_confirmed') || lowerType.includes('order_processing') || lowerType.includes('order_pending')) {
       return 'bg-blue-500/10 border-blue-500/30';
     }
-    
+
     if (lowerType.includes('shipment') || lowerType.includes('delivery') || lowerType.includes('transit') || lowerType.includes('in_transit') || lowerType.includes('out_for_delivery')) {
       return 'bg-green-500/10 border-green-500/30';
     }
-    
+
     // Price and product
     if (lowerType.includes('price_drop') || lowerType.includes('back_in_stock') || lowerType.includes('low_inventory')) {
       return 'bg-orange-500/10 border-orange-500/30';
     }
-    
+
     // Review and communication
     if (lowerType.includes('review') || lowerType.includes('reply')) {
       return 'bg-purple-500/10 border-purple-500/30';
     }
-    
+
     // Refunds and returns
     if (lowerType.includes('refund') || lowerType.includes('return')) {
       return 'bg-yellow-500/10 border-yellow-500/30';
     }
-    
+
     // Payment
     if (lowerType.includes('payment')) {
       if (lowerType.includes('failed')) {
@@ -351,17 +374,17 @@ export default function NotificationsPage() {
       }
       return 'bg-yellow-500/10 border-yellow-500/30';
     }
-    
+
     // Dispute
     if (lowerType.includes('dispute') || lowerType.includes('escalation') || lowerType.includes('sla_breach')) {
       return 'bg-red-500/10 border-red-500/30';
     }
-    
+
     // Listing
     if (lowerType.includes('listing')) {
       return 'bg-cyan-500/10 border-cyan-500/30';
     }
-    
+
     // Default
     return 'bg-[#8451E1]/10 border-[#8451E1]/30';
   };
@@ -379,14 +402,14 @@ export default function NotificationsPage() {
 
   return (
     <div className="bg-gradient-to-br from-black via-[#0a0a0a] to-[#0f0a1a] min-h-screen">
-      {}
+      {/* Animated background blobs */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-20 right-1/4 w-80 h-80 bg-[#8451E1]/15 rounded-full blur-3xl opacity-40 animate-blob"></div>
         <div className="absolute bottom-40 left-1/4 w-96 h-96 bg-[#5C2EAF]/10 rounded-full blur-3xl opacity-30 animate-blob animation-delay-2s"></div>
       </div>
 
       <div className="relative z-10">
-        {}
+        {/* Header */}
         <div className="px-6 py-6 border-b border-[#8451E1]/10 sticky top-0 bg-gradient-to-b from-black/98 via-black/95 to-black/80 backdrop-blur-xl z-40 shadow-lg shadow-[#8451E1]/10">
           <div className="max-w-7xl mx-auto">
             <Breadcrumb items={[
@@ -431,41 +454,105 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {}
+        {/* Main content */}
         <div className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto">
-          <div className="flex flex-col gap-4 mb-8">
-            {}
-            <div className="w-full relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666]" />
-              <input
-                type="text"
-                placeholder="Search notifications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#1a1a2e]/80 border border-[#8451E1]/30 rounded-lg text-white placeholder-[#666] focus:border-[#8451E1]/70 focus:outline-none text-sm"
-              />
-            </div>
-
-            {}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#8451E1] flex-shrink-0" />
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value as NotificationCategory)}
-                className="flex-1 md:flex-none px-3 md:px-4 py-2.5 bg-[#1a1a2e]/80 border border-[#8451E1]/30 rounded-lg text-white text-sm focus:border-[#8451E1]/70 focus:outline-none cursor-pointer"
-              >
-                <option value="all">📬 All Notifications</option>
-                <option value="orders">📦 Orders</option>
-                <option value="shipping">🚚 Shipping & Delivery</option>
-                <option value="returns_refunds">↩️ Returns & Refunds</option>
-                <option value="products">🛒 Products & Inventory</option>
-                <option value="communication">💬 Reviews & Messages</option>
-                <option value="account_system">⚙️ Account & System</option>
-              </select>
-            </div>
+          {/* Search bar */}
+          <div className="w-full relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666]" />
+            <input
+              type="text"
+              placeholder="Search notifications..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-[#1a1a2e]/80 border border-[#8451E1]/30 rounded-lg text-white placeholder-[#666] focus:border-[#8451E1]/70 focus:outline-none text-sm"
+            />
           </div>
 
-          {}
+          {/* Tabs Navigation */}
+          <div className="flex gap-2 mb-8 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+            <button
+              onClick={() => setSelectedType('all')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'all'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              📬 All
+            </button>
+            <button
+              onClick={() => setSelectedType('starred')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'starred'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              ⭐ Starred
+            </button>
+            <button
+              onClick={() => setSelectedType('orders')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'orders'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              📦 Orders
+            </button>
+            <button
+              onClick={() => setSelectedType('shipping')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'shipping'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              🚚 Shipping
+            </button>
+            <button
+              onClick={() => setSelectedType('returns_refunds')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'returns_refunds'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              ↩️ Returns
+            </button>
+            <button
+              onClick={() => setSelectedType('products')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'products'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              🛒 Products
+            </button>
+            <button
+              onClick={() => setSelectedType('communication')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'communication'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              💬 Reviews
+            </button>
+            <button
+              onClick={() => setSelectedType('account_system')}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                selectedType === 'account_system'
+                  ? 'bg-gradient-to-r from-[#8451E1] to-[#7240D0] text-white shadow-lg shadow-[#8451E1]/30'
+                  : 'bg-[#1a1a2e]/50 text-[#acacac] hover:bg-[#1a1a2e]/80 hover:text-white'
+              }`}
+            >
+              ⚙️ System
+            </button>
+          </div>
+
+          {/* Notifications list */}
           {isLoadingNotifications ? (
             <div className="text-center py-12">
               <Loader2 className="w-10 h-10 text-[#8451E1] animate-spin mx-auto mb-3" />
@@ -522,7 +609,7 @@ export default function NotificationsPage() {
                       </div>
                     </div>
 
-                    {}
+                    {/* Action buttons */}
                     <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-start">
                       {!notification.isRead && (
                         <button
@@ -534,6 +621,19 @@ export default function NotificationsPage() {
                           <Eye className="w-4 h-4 text-[#8451E1]" />
                         </button>
                       )}
+                      <button
+                        onClick={() => wrappedToggleStar(notification.id, optimisticStarred[notification.id] ?? notification.isStarred)}
+                        className="p-2 hover:bg-yellow-500/20 rounded-lg transition-colors disabled:opacity-50 cursor-pointer hover:scale-110 active:scale-95"
+                        title="Star notification"
+                      >
+                        <Star
+                          className={`w-4 h-4 ${
+                            optimisticStarred[notification.id] ?? notification.isStarred
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-yellow-600'
+                          }`}
+                        />
+                      </button>
                       <button
                         onClick={() => handleDeleteNotification(notification.id)}
                         disabled={deleteNotificationMutation.isPending}

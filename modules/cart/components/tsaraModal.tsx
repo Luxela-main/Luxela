@@ -77,14 +77,53 @@ export function TsaraPaymentModal({
         }
       }
 
-      console.error('[TsaraPaymentModal] Payment error:', {
+      // Prepare error details for logging
+      const errorDetails: Record<string, any> = {
         message: displayMessage,
         code: errorCode,
         buyerId,
         orderId,
         amount: totalAmount,
-        fullError: err,
-      });
+      };
+
+      // Safely serialize error object - handle various error formats
+      if (err) {
+        // Try to extract all properties from the error object
+        try {
+          // For standard Error objects
+          if (err.message) errorDetails.errorMessage = err.message;
+          if (err.code) errorDetails.errorCode = err.code;
+          if (err.data) errorDetails.errorData = err.data;
+          
+          // For tRPC TRPCClientError, check shape
+          if (err.shape) errorDetails.shape = err.shape;
+          
+          // Attempt to stringify the error if it's empty
+          const errStr = err.toString?.();
+          if (errStr && errStr !== '[object Object]') {
+            errorDetails.errorString = errStr;
+          }
+          
+          // Get all enumerable properties
+          const props = Object.getOwnPropertyNames(err);
+          if (props.length > 0) {
+            errorDetails.errorProperties = {};
+            for (const prop of props) {
+              try {
+                errorDetails.errorProperties[prop] = err[prop];
+              } catch (e) {
+                // Skip properties that can't be accessed
+              }
+            }
+          }
+        } catch (serializeErr) {
+          errorDetails.serializationError = 'Failed to serialize error';
+        }
+      }
+
+      // Log as formatted string to avoid object serialization issues
+      console.error(`[TsaraPaymentModal] Payment Error - Message: ${displayMessage}, Code: ${errorCode}, Error Message: ${err?.message || 'N/A'}`);
+      console.error('[TsaraPaymentModal] Raw error:', err);
 
       toastSvc.error(displayMessage);
     },

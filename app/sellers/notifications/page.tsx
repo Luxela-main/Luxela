@@ -192,14 +192,14 @@ export default function NotificationsPage() {
               </div>
 
               {}
-              <div className="hidden md:flex items-center gap-2">
+              <div className="flex flex-col md:flex-row items-center gap-2">
                 {unreadCount > 0 && (
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => markAllAsReadMutation.mutate()}
                     disabled={markAllAsReadMutation.isPending}
-                    className="cursor-pointer"
+                    className="cursor-pointer w-full md:w-auto"
                   >
                     <CheckCheck className="w-4 h-4 mr-2" />
                     Mark All Read
@@ -209,16 +209,16 @@ export default function NotificationsPage() {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => {
-                      // Optimistic update - clear all notifications immediately
-                      setOptimisticNotifications(
-                        notifications.reduce((acc, n) => ({ ...acc, [n.id]: { deleted: true } }), {})
-                      );
-                      // Then send to server
-                      deleteAllMutation.mutate();
+                    onClick={async () => {
+                      try {
+                        await deleteAllMutation.mutateAsync();
+                      } catch (error) {
+                        console.error("Failed to delete all notifications", error);
+                        refetch();
+                      }
                     }}
                     disabled={deleteAllMutation.isPending}
-                    className="cursor-pointer"
+                    className="cursor-pointer w-full md:w-auto"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Clear All

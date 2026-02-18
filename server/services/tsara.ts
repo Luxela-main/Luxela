@@ -100,8 +100,9 @@ export async function createFiatPaymentLink(data: {
     const response = await tsaraApi.post("/payment-links", data);
     return response.data;
   } catch (error: any) {
-    console.error("Create fiat payment link failed:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.error?.message || "Failed to create fiat payment link");
+    const errMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Failed to create fiat payment link";
+    console.error("Create fiat payment link failed:", errMsg);
+    throw new Error(errMsg);
   }
 }
 
@@ -117,8 +118,9 @@ export async function createStablecoinPaymentLink(data: {
     const response = await tsaraApi.post("/stablecoin/payment-links", data);
     return response.data;
   } catch (error: any) {
-    console.error("Create stablecoin payment link failed:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.error?.message || "Failed to create stablecoin payment link");
+    const errMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Failed to create stablecoin payment link";
+    console.error("Create stablecoin payment link failed:", errMsg);
+    throw new Error(errMsg);
   }
 }
 
