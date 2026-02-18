@@ -117,7 +117,10 @@ export const useGoogleSignin = () => {
   return useMutation<AuthResponse, Error, GoogleSigninRequest>({
     mutationFn: async ({ redirect }) => {
       const supabase = createClient();
-      const redirectUrl = redirect || `${window.location.origin}/auth/callback`;
+      // OAuth callback MUST point to the server API route
+      // Google's OAuth server will POST to this endpoint with the auth code
+      const apiCallbackUrl = `${window.location.origin}/api/auth/callback`;
+      const redirectUrl = redirect ? `${apiCallbackUrl}?redirect=${encodeURIComponent(redirect)}` : apiCallbackUrl;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",

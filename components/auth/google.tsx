@@ -14,9 +14,14 @@ export default function GoogleSignInButton({ redirectPath }: GoogleSignInButtonP
 
   const handleGoogleSignIn = async () => {
     try {
-      // Determine the correct callback URL
-      const callbackPath = redirectPath ? `/auth/callback?redirect=${encodeURIComponent(redirectPath)}` : `/auth/callback`;
-      const redirectUrl = `${window.location.origin}${callbackPath}`;
+      // OAuth callback MUST point to the server API route, not the client page
+      // Google's OAuth server will POST to this endpoint with the auth code
+      const redirectUrl = `${window.location.origin}/api/auth/callback`;
+      
+      // Store the custom redirect path in sessionStorage if provided
+      if (redirectPath) {
+        sessionStorage.setItem('authRedirectPath', redirectPath);
+      }
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",

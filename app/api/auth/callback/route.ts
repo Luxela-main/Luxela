@@ -46,10 +46,13 @@ export async function GET(request: NextRequest) {
 
       console.log('[OAuth Callback API] Code exchange successful, user:', data.session.user.id);
 
-      // At this point, the server client has set the auth cookies in the response
+      // Check if there's a custom redirect path in the query params
+      const customRedirect = searchParams.get('redirect');
+      const redirectTarget = customRedirect ? `/auth/callback?redirect=${encodeURIComponent(customRedirect)}` : '/auth/callback';
+
       // Redirect to the client-side callback handler which will complete the auth flow
       const response = NextResponse.redirect(
-        new URL('/auth/callback', request.url)
+        new URL(redirectTarget, request.url)
       );
 
       // Disable caching to ensure fresh session is retrieved

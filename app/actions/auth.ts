@@ -62,7 +62,9 @@ export async function signinAction(email: string, password: string) {
 export async function signinWithGoogleAction() {
   try {
     const supabase = await createClient();
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=google`;
+    // OAuth callback MUST point to the server API route
+    // Google's OAuth server will POST to this endpoint with the auth code
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
