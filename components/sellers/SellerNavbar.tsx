@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bell, LogOut, Settings, User, ChevronDown } from "lucide-react";
@@ -28,8 +28,26 @@ export default function SellerNavbar() {
   const [isProfileHovered, setIsProfileHovered] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [open, setOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { logout } = useAuth();
   const toast = useToast();
+
+  // Close dropdown when clicking outside on mobile
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    // Only add listener when menu is open
+    if (isUserMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [isUserMenuOpen]);
 
   // Enable realtime notifications polling
   useRealtimeSellerNotifications();
@@ -127,6 +145,7 @@ export default function SellerNavbar() {
           {/* User Menu */}
           {user && (
             <div 
+              ref={userMenuRef}
               className="relative"
               onMouseEnter={() => setIsProfileHovered(true)}
               onMouseLeave={() => setIsProfileHovered(false)}

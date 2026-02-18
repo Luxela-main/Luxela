@@ -73,27 +73,21 @@ export const useDeleteAllNotifications = () => {
   return trpc.sellerNotifications.deleteAllNotifications.useMutation({
     onMutate: async () => {
       // Cancel any outgoing queries
-      await utils.sellerNotifications.getNotifications.cancel();
-      await utils.sellerNotifications.getUnreadCount.cancel();
+      await (utils.sellerNotifications as any).getNotifications.cancel();
+      await (utils.sellerNotifications as any).getUnreadCount.cancel();
 
       // Set optimistic data
-      utils.sellerNotifications.getNotifications.setData({}, []);
-      utils.sellerNotifications.getUnreadCount.setData({}, { count: 0 });
-
-      return { previousNotifications: utils.sellerNotifications.getNotifications.getData({}) };
+      (utils.sellerNotifications as any).getNotifications.setData({}, []);
+      (utils.sellerNotifications as any).getUnreadCount.setData({}, { count: 0 });
     },
-    onError: async (err, variables, context) => {
-      // Rollback on error
-      if (context?.previousNotifications) {
-        utils.sellerNotifications.getNotifications.setData({}, context.previousNotifications);
-      }
-      // Refetch to ensure consistency
-      await utils.sellerNotifications.getNotifications.invalidate();
-      await utils.sellerNotifications.getUnreadCount.invalidate();
+    onError: async () => {
+      // Refetch to restore correct state on error
+      await (utils.sellerNotifications as any).getNotifications.invalidate();
+      await (utils.sellerNotifications as any).getUnreadCount.invalidate();
     },
     onSuccess: async () => {
-      await utils.sellerNotifications.getNotifications.invalidate();
-      await utils.sellerNotifications.getUnreadCount.invalidate();
+      await (utils.sellerNotifications as any).getNotifications.invalidate();
+      await (utils.sellerNotifications as any).getUnreadCount.invalidate();
     },
   });
 };
