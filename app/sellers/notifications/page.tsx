@@ -209,7 +209,14 @@ export default function NotificationsPage() {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => deleteAllMutation.mutate()}
+                    onClick={() => {
+                      // Optimistic update - clear all notifications immediately
+                      setOptimisticNotifications(
+                        notifications.reduce((acc, n) => ({ ...acc, [n.id]: { deleted: true } }), {})
+                      );
+                      // Then send to server
+                      deleteAllMutation.mutate();
+                    }}
                     disabled={deleteAllMutation.isPending}
                     className="cursor-pointer"
                   >

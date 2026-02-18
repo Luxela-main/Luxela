@@ -8,6 +8,7 @@ import {
   useMarkNotificationAsRead,
   useMarkAllNotificationsAsRead,
   useDeleteNotification,
+  useDeleteAllNotifications,
 } from '@/modules/buyer/queries/useNotifications';
 import {
   Loader2,
@@ -134,6 +135,27 @@ export default function NotificationsPage() {
       toastSvc.error(error?.message || 'Failed to mark all as read');
     }
   }, [originalMarkAllMutate, refetchNotifications]);
+
+  const deleteAllMutation = useDeleteAllNotifications();
+  
+  // Handle success/error for delete all
+  const originalDeleteAllMutate = deleteAllMutation.mutateAsync;
+  const wrappedDeleteAllMutate = useCallback(async () => {
+    // Optimistic update - clear all notifications immediately
+    setNotifications([]);
+    setFilteredNotifications([]);
+    setUnreadCount(0);
+
+    try {
+      await originalDeleteAllMutate();
+      await refetchNotifications();
+      toastSvc.success('All notifications deleted');
+    } catch (error: any) {
+      // On error, refetch to restore state
+      await refetchNotifications();
+      toastSvc.error(error?.message || 'Failed to delete all notifications');
+    }
+  }, [originalDeleteAllMutate, refetchNotifications]);
 
   
   useEffect(() => {
@@ -382,15 +404,29 @@ export default function NotificationsPage() {
                   {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All notifications read'}
                 </p>
               </div>
-              {unreadCount > 0 && (
-                <button
-                  onClick={() => handleMarkAllAsRead()}
-                  disabled={markAllAsReadMutation.isPending}
-                  className="px-4 py-2 bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 text-white text-sm font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 cursor-pointer"
-                >
-                  Mark All as Read
-                </button>
-              )}
+              <div className="flex gap-3 flex-wrap">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => handleMarkAllAsRead()}
+                    disabled={markAllAsReadMutation.isPending}
+                    className="px-4 py-2 bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 text-white text-sm font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 cursor-pointer"
+                  >
+                    Mark All as Read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    onClick={() => {
+                      wrappedDeleteAllMutate();
+                    }}
+                    disabled={deleteAllMutation.isPending}
+                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:shadow-lg hover:shadow-red-600/30 text-white text-sm font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Clear All
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
