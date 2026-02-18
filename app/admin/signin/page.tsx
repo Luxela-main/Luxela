@@ -13,7 +13,8 @@ import { Label } from '@/components/ui/label';
 import GoogleSignInButton from '@/components/auth/google';
 import { signinAction } from '@/app/actions/auth';
 import { useAuth } from '@/context/AuthContext';
-import { validateAdminPassword } from '@/app/actions/admin';
+import { checkAdminStatus } from '@/app/actions/admin';
+import { createClient } from '@/utils/supabase/client';
 
 type AdminSignInFormValues = {
   email: string;
@@ -44,7 +45,6 @@ function AdminSignInContent() {
     try {
       const { email, adminPassword } = values;
 
-      // Authenticate with email and password
       setIsCheckingAdmin(true);
       const signInResult = await signinAction(email, adminPassword);
       
@@ -62,31 +62,26 @@ function AdminSignInContent() {
         return;
       }
 
-      // Update auth context with signed-in user
       setUser(signInResult.user);
 
-      // Validate admin password via server action (secure)
-      const passwordValidation = await validateAdminPassword(adminPassword);
+      const supabase = createClient();
+      const statusResult = await checkAdminStatus();
       
-      if (!passwordValidation.success) {
-        toast.error(passwordValidation.error || 'Invalid admin password');
-        setIsCheckingAdmin(false);
-        setSubmitting(false);
-        return;
+      if (statusResult.isAdmin) {
+        toast.success('Welcome back, Admin!');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        router.push('/admin/support');
+      } else {
+        toast.success('Credentials verified! Setting up admin access...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        router.push('/admin/setup');
       }
-
-      // Success! Redirect to setup page to complete admin role grant
-      toast.success('Credentials verified! Completing setup...');
-      
-      // Brief delay then redirect to setup
-      await new Promise(resolve => setTimeout(resolve, 800));
-      router.push('/admin/setup');
       
     } catch (err: unknown) {
       if (err instanceof Error) {
-        toast.error(err.message || 'Verification failed unexpectedly');
+        toast.error(err.message || 'Sign in failed');
       } else {
-        toast.error('Verification failed unexpectedly');
+        toast.error('Sign in failed');
       }
       setIsCheckingAdmin(false);
     } finally {
