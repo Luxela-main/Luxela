@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // If OAuth callback, give Supabase time to process and set cookies
         if (hasOAuthToken && retryCount === 0) {
           console.log("[AUTH] OAuth callback detected, waiting for session sync...");
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
         
         const { data, error } = await supabase.auth.getSession();
@@ -70,9 +70,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error) {
           console.warn("[AUTH] Session error:", error.message);
           // Retry up to 3 times on error with backoff (OAuth callbacks need multiple retries)
-          if (retryCount < 3) {
-            const delay = 500 * (retryCount + 1);
-            console.log(`[AUTH] Retrying session initialization (attempt ${retryCount + 2}/4) after ${delay}ms...`);
+          if (retryCount < 5) {
+            const delay = 600 * (retryCount + 1);
+            console.log(`[AUTH] Retrying session initialization (attempt ${retryCount + 2}/6) after ${delay}ms...`);
             setTimeout(() => {
               if (mounted) initAuth(retryCount + 1);
             }, delay);
@@ -136,12 +136,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       } catch (e) {
         console.error("[AUTH] Init error:", e);
-        // Retry once on exception with backoff
-        if (mounted && retryCount < 1) {
-          console.log("[AUTH] Retrying after error...");
+        // Retry on exception with backoff (up to 2 retries)
+        if (mounted && retryCount < 2) {
+          const delay = 600 * (retryCount + 1);
+          console.log(`[AUTH] Retrying after error (attempt ${retryCount + 2}/3) after ${delay}ms...`);
           setTimeout(() => {
             if (mounted) initAuth(retryCount + 1);
-          }, 500);
+          }, delay);
           return;
         }
         if (mounted) setUser(null);

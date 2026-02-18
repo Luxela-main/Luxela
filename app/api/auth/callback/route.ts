@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       response.headers.set('Pragma', 'no-cache');
       response.headers.set('Expires', '0');
+      
+      // Ensure SameSite policy allows cookies to be set in redirect response
+      response.headers.set('Set-Cookie', `auth-established=true; Path=/; SameSite=Lax; Secure; HttpOnly`);
 
       return response;
     }
@@ -91,6 +94,9 @@ export async function GET(request: NextRequest) {
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       response.headers.set('Pragma', 'no-cache');
       response.headers.set('Expires', '0');
+      
+      // Ensure SameSite policy allows cookies to be set in redirect response
+      response.headers.set('Set-Cookie', `auth-established=true; Path=/; SameSite=Lax; Secure; HttpOnly`);
 
       return response;
     }

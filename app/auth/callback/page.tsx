@@ -74,13 +74,13 @@ function AuthCallbackCompleteHandler() {
 
   useEffect(() => {
     // Set timeout to prevent infinite loading
-    // 15 seconds allows sufficient time for OAuth processing and session retries
+    // 25 seconds allows sufficient time for OAuth processing and extended session retries
     const timeout = setTimeout(() => {
       if (loading) {
-        console.error('[AuthCallbackComplete] Auth loading timeout after 15 seconds');
+        console.error('[AuthCallbackComplete] Auth loading timeout after 25 seconds');
         router.push('/signin?error=auth_timeout');
       }
-    }, 15000);
+    }, 25000);
 
     return () => clearTimeout(timeout);
   }, [loading, router]);
