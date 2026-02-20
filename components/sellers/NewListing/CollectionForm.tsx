@@ -204,8 +204,10 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
     updateItem(index, "colors", newColors);
   };
 
-  const convertColorsForSubmission = (): any[] => {
-    return items.map(item => {
+  // Convert items with colors properly formatted before any submission
+  const prepareItemsForSubmission = (itemsToSubmit: CollectionItem[]) => {
+    return itemsToSubmit.map(item => {
+      // Transform color names to colorsAvailable format for the API
       const colorsAvailable = item.colors && item.colors.length > 0
         ? item.colors.map(colorName => {
             const colorObj = AVAILABLE_COLORS.find(c => c.name.toLowerCase() === colorName.toLowerCase());
@@ -214,10 +216,16 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
               colorHex: colorObj?.hex || "#000000",
             };
           })
-        : null;
+        : undefined;
       
       return {
-        ...item,
+        title: item.title,
+        priceCents: item.priceCents,
+        currency: item.currency,
+        description: item.description,
+        category: item.category,
+        images: item.images,
+        sizes: item.sizes,
         colorsAvailable: colorsAvailable,
       };
     });
@@ -722,7 +730,21 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
         {/* Submit Button */}
         <div className="flex justify-end pt-4 border-t border-[#333]">
           <Button
-            onClick={onSubmit}
+            onClick={() => {
+              // Validate all items have required fields
+              const invalidItems = items.filter(item => !item.title || item.priceCents <= 0);
+              if (invalidItems.length > 0) {
+                alert('All items must have a title and price greater than 0');
+                return;
+              }
+              
+              // Prepare items with properly formatted colors before submission
+              const preparedItems = prepareItemsForSubmission(items);
+              // Update items in parent form data before submitting
+              onItemsChange(preparedItems);
+              // Then trigger submission
+              onSubmit();
+            }}
             disabled={!title || items.length === 0 || items.some(item => !item.title || item.priceCents <= 0) || isSubmitting}
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             title={items.some(item => item.priceCents <= 0) ? "All items must have a price greater than 0" : ""}

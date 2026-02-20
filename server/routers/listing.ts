@@ -1212,6 +1212,8 @@ export const listingRouter = createTRPCRouter({
                     sku: product?.sku || null,
                     description: product?.description || null,
                     category: product?.category || null,
+                    sizes: product?.sizes ? JSON.parse(product.sizes) : [],
+                    colors: product?.colors ? JSON.parse(product.colors) : [],
                   };
                 });
                 
@@ -1227,7 +1229,14 @@ export const listingRouter = createTRPCRouter({
               result.itemsJson = [];
             }
           } else if (l.itemsJson) {
-            result.itemsJson = typeof l.itemsJson === 'string' ? JSON.parse(l.itemsJson) : l.itemsJson;
+            try {
+              result.itemsJson = typeof l.itemsJson === 'string' ? JSON.parse(l.itemsJson) : l.itemsJson;
+            } catch (parseErr) {
+              console.error('Error parsing itemsJson for collection listing:', l.id, parseErr);
+              result.itemsJson = [];
+            }
+          } else {
+            result.itemsJson = [];
           }
           
           return result;
@@ -1831,8 +1840,6 @@ export const listingRouter = createTRPCRouter({
               currency: item.currency ?? "SOL",
               sku: uniqueSku,
               inStock: true,
-              sizes: item.sizes && item.sizes.length > 0 ? JSON.stringify(item.sizes) : null,
-              colors: item.colors && item.colors.length > 0 ? JSON.stringify(item.colors) : null,
             });
 
             // Add to collection items
@@ -2184,4 +2191,4 @@ export const listingRouter = createTRPCRouter({
       };
     }),
 });
-
+

@@ -440,12 +440,36 @@ export function ProductForm({ productType }: ProductFormProps) {
               }
             }
             
+            // Return item in the format expected by the API
+            // Note: colorsAvailable should already be set by CollectionForm.prepareItemsForSubmission
             return {
-              ...item,
+              title: item.title,
+              priceCents: item.priceCents,
+              currency: item.currency,
+              description: item.description,
+              category: item.category,
               images: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
+              sizes: item.sizes,
+              colorsAvailable: item.colorsAvailable, // Already formatted by CollectionForm
             };
           })
         );
+        
+        // Validate collection data
+        if (!formData.collectionTitle || !formData.collectionTitle.trim()) {
+          throw new Error('Collection title is required');
+        }
+        if (!itemsWithUploadedImages || itemsWithUploadedImages.length === 0) {
+          throw new Error('Collection must have at least one item');
+        }
+        
+        // Validate all items have required fields
+        const invalidItems = itemsWithUploadedImages.filter(
+          (item: any) => !item.title || !item.title.trim() || (item.priceCents ?? 0) <= 0
+        );
+        if (invalidItems.length > 0) {
+          throw new Error('All collection items must have a title and price greater than 0');
+        }
         
         const collectionInput = {
           title: formData.collectionTitle || '',
