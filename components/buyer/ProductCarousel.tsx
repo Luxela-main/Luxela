@@ -107,7 +107,7 @@ export default function ProductCarousel({
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/60 backdrop-blur-sm border border-[#333] rounded-full p-2 hover:bg-[#8451E1]/20 hover:border-[#8451E1] transition-all opacity-0 group-hover:opacity-100 duration-300"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 sm:-translate-x-14 z-10 bg-black/60 backdrop-blur-sm border border-[#333] rounded-full p-2 hover:bg-[#8451E1]/20 hover:border-[#8451E1] transition-all opacity-0 group-hover:opacity-100 duration-300"
             aria-label="Scroll left"
           >
             <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -117,7 +117,7 @@ export default function ProductCarousel({
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/60 backdrop-blur-sm border border-[#333] rounded-full p-2 hover:bg-[#8451E1]/20 hover:border-[#8451E1] transition-all opacity-0 group-hover:opacity-100 duration-300"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 sm:translate-x-14 z-10 bg-black/60 backdrop-blur-sm border border-[#333] rounded-full p-2 hover:bg-[#8451E1]/20 hover:border-[#8451E1] transition-all opacity-0 group-hover:opacity-100 duration-300"
             aria-label="Scroll right"
           >
             <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />

@@ -19,10 +19,6 @@ const ToastContainer = dynamic(
   { ssr: false, loading: () => null }
 );
 
-// Global session cache to avoid repeated lookups
-let cachedSession: { token: string; expiresAt: number } | null = null;
-const SESSION_CACHE_TTL = 55000; // 55 seconds (tokens typically last 1 hour)
-
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -36,28 +32,29 @@ function createQueryClient() {
   });
 }
 
-// Get cached auth token without repeated API calls
+// Get auth token - fresh on every call to ensure validity
 async function getCachedSessionToken() {
   if (typeof window === "undefined") return null;
-  
-  const now = Date.now();
-  if (cachedSession && cachedSession.expiresAt > now) {
-    return cachedSession.token;
-  }
 
   try {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.access_token) {
-      cachedSession = {
-        token: session.access_token,
-        expiresAt: now + SESSION_CACHE_TTL,
-      };
-      return session.access_token;
+      // Strictly validate and clean token
+      let token = String(session.access_token).trim();
+      
+      // Remove any trailing commas or special characters
+      token = token.replace(/[,\s]+$/, '');
+      
+      // Validate JWT format (should be exactly 3 parts separated by dots)
+      const parts = token.split('.');
+      if (parts.length === 3 && parts.every(part => part.length > 0)) {
+        return token;
+      }
     }
   } catch (error) {
-    console.warn('[TRPC] Session fetch failed:', error instanceof Error ? error.message : String(error));
+    // Silently fail - will use unauthenticated requests
   }
   
   return null;
@@ -71,43 +68,78 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   const [queryClient] = useState(() => createQueryClient());
   const sessionTokenRef = useRef<string | null>(null);
 
-  // Update session token once when component mounts
+  // Update session token on mount and when auth changes
   useEffect(() => {
     let isMounted = true;
-    getCachedSessionToken().then((token) => {
-      if (isMounted) {
+    
+    const updateToken = async () => {
+      if (!isMounted) return;
+      const token = await getCachedSessionToken();
+      if (isMounted && token) {
         sessionTokenRef.current = token;
       }
+    };
+    
+    updateToken();
+    
+    // Listen for auth state changes
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      updateToken();
     });
     
     return () => { 
       isMounted = false;
+      subscription?.unsubscribe();
     };
   }, []);
 
-  const apiUrl = useMemo(() => 
-    process.env.NEXT_PUBLIC_API_URL 
-      ? `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`
-      : '/api/trpc',
-    []
-  );
+  const apiUrl = useMemo(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    if (baseUrl) {
+      return `${baseUrl}/api/trpc`;
+    }
+    return '/api/trpc';
+  }, []);
 
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
+  const [trpcClient] = useState(() => {
+    // Get initial token and update it periodically
+    let cachedToken: string | null = null;
+    
+    const updateToken = async () => {
+      try {
+        const token = await getCachedSessionToken();
+        if (token && typeof token === 'string') {
+          // Validate token has exactly 3 parts
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            cachedToken = token;
+          }
+        }
+      } catch (e) {
+        // Silently fail
+      }
+    };
+    
+    // Update token immediately and then every 30 seconds
+    updateToken();
+    const interval = setInterval(updateToken, 30000);
+    
+    return trpc.createClient({
       links: [
         httpBatchLink({
           url: apiUrl,
-          async headers() {
-            const token = await getCachedSessionToken();
-            if (token) {
-              return { authorization: `Bearer ${token}` };
+          headers() {
+            // Use cached token to avoid async operations in headers
+            if (cachedToken) {
+              return { authorization: `Bearer ${cachedToken}` };
             }
             return {};
           },
         }),
       ],
-    })
-  );
+    });
+  });
 
   // Memoize the provider structure to prevent unnecessary re-renders
   const providers = useMemo(() => (

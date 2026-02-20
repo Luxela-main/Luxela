@@ -92,7 +92,6 @@ function extractSessionFromCookies(req: any): { access_token?: string; refresh_t
 
     return null;
   } catch (err) {
-    console.warn("Error extracting session from cookies:", err);
     return null;
   }
 }
@@ -161,6 +160,19 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
     token = parseBearerToken(rawAuthHeader);
   }
 
+  // Validate and clean token
+  if (token) {
+    token = String(token).trim();
+    // Remove any trailing commas or special characters that shouldn't be in a JWT
+    token = token.replace(/[,\s]+$/, '');
+    
+    // Validate token format before proceeding
+    const parts = token.split('.');
+    if (parts.length !== 3 || !parts.every(part => part.length > 0)) {
+      token = null;
+    }
+  }
+
   const authClient = getAuthClient();
   const adminClient = getAdminClient();
 
@@ -178,8 +190,27 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
       } else if (data?.user) {
         const metadataAdmin = data.user.user_metadata?.admin === true;
         const metadataRole = data.user.user_metadata?.role;
-        const isAdminUser = isAdmin || metadataAdmin;
-        const userRole = isAdminUser ? "admin" : (metadataRole ?? undefined);
+        let isAdminUser = isAdmin || metadataAdmin;
+        let userRole = isAdminUser ? "admin" : (metadataRole ?? undefined);
+        
+        // Fallback: Check database for admin role if not found in metadata
+        // This handles cases where admin role was just set and JWT hasn't been refreshed
+        if (!isAdminUser) {
+          try {
+            const { data: userData, error: dbError } = await adminClient
+              .from("users")
+              .select("role")
+              .eq("id", data.user.id)
+              .single();
+            
+            if (!dbError && userData?.role === "admin") {
+              isAdminUser = true;
+              userRole = "admin";
+            }
+          } catch (dbErr) {
+            // Silently fail, continue without DB fallback
+          }
+        }
         
         user = {
           id: data.user.id,

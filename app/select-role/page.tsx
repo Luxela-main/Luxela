@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
-import { Store, ShoppingBag } from "lucide-react";
+import { Store, ShoppingBag, Shield } from "lucide-react";
 
 export default function SelectRolePage() {
   const [selectedRole, setSelectedRole] =
-    useState<"buyer" | "seller" | null>(null);
+    useState<"buyer" | "seller" | "admin" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -50,11 +50,13 @@ export default function SelectRolePage() {
 
       if (error) throw error;
 
-      router.replace(
-        selectedRole === "seller"
-          ? "/sellersAccountSetup"
-        : "/buyer/profile/create"
-      );
+      if (selectedRole === "seller") {
+        router.replace("/sellersAccountSetup");
+      } else if (selectedRole === "admin") {
+        router.replace("/admin/setup");
+      } else {
+        router.replace("/buyer/profile/create");
+      }
     } catch (error) {
       console.error("Error setting role:", error);
       alert("Failed to set role. Please try again.");
@@ -78,7 +80,7 @@ export default function SelectRolePage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
           <button
             onClick={() => setSelectedRole("buyer")}
             className={`p-8 rounded-xl border-2 transition-all ${selectedRole === "buyer"
@@ -106,6 +108,21 @@ export default function SelectRolePage() {
                 <Store className="w-8 h-8" />
               </div>
               <h3 className="text-xl font-semibold">I want to sell</h3>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setSelectedRole("admin")}
+            className={`p-8 rounded-xl border-2 transition-all ${selectedRole === "admin"
+                ? "border-purple-500 bg-purple-500/10"
+                : "border-[#D1D5DB] hover:border-purple-500"
+              }`}
+          >
+            <div className="flex flex-col items-center space-y-4">
+              <div className="p-4 rounded-full bg-zinc-800">
+                <Shield className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-semibold">Admin</h3>
             </div>
           </button>
         </div>

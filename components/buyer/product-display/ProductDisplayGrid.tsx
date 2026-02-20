@@ -154,27 +154,25 @@ export default function ProductDisplayGrid({
               {/* Desktop Carousel with Scroll Buttons */}
               {enableHorizontalScroll && products.length > (columns.desktop || 4) && (
                 <>
-                  {/* Left Scroll Button */}
-                  {canScrollLeft && (
-                    <button
-                      onClick={() => scroll('left')}
-                      className="absolute -left-4 top-1/2 -translate-y-1/2 p-2 bg-[#8451E1] hover:bg-[#9468F2] text-white rounded-full shadow-lg z-10 transition-all hover:scale-110 active:scale-95"
-                      aria-label="Scroll left"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                  )}
+                  {/* Left Scroll Button - Always Visible */}
+                  <button
+                    onClick={() => scroll('left')}
+                    disabled={!canScrollLeft}
+                    className={canScrollLeft ? "absolute -left-5 top-1/2 -translate-y-1/2 p-3 bg-[#8451E1] hover:bg-[#9468F2] text-white rounded-full shadow-xl z-10 transition-all hover:scale-110 active:scale-95 cursor-pointer" : "absolute -left-5 top-1/2 -translate-y-1/2 p-3 bg-[#6B5BA8] text-white/40 rounded-full shadow-xl z-10 transition-all opacity-50 cursor-not-allowed"}
+                    aria-label="Scroll left"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
                   
-                  {/* Right Scroll Button */}
-                  {canScrollRight && (
-                    <button
-                      onClick={() => scroll('right')}
-                      className="absolute -right-4 top-1/2 -translate-y-1/2 p-2 bg-[#8451E1] hover:bg-[#9468F2] text-white rounded-full shadow-lg z-10 transition-all hover:scale-110 active:scale-95"
-                      aria-label="Scroll right"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  )}
+                  {/* Right Scroll Button - Always Visible */}
+                  <button
+                    onClick={() => scroll('right')}
+                    disabled={!canScrollRight}
+                    className={canScrollRight ? "absolute -right-5 top-1/2 -translate-y-1/2 p-3 bg-[#8451E1] hover:bg-[#9468F2] text-white rounded-full shadow-xl z-10 transition-all hover:scale-110 active:scale-95 cursor-pointer" : "absolute -right-5 top-1/2 -translate-y-1/2 p-3 bg-[#6B5BA8] text-white/40 rounded-full shadow-xl z-10 transition-all opacity-50 cursor-not-allowed"}
+                    aria-label="Scroll right"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
 
                   {/* Scrollable Grid Container */}
                   <div

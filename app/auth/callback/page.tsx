@@ -58,7 +58,7 @@ function AuthCallbackCompleteHandler() {
   };
 
   const handleRedirect = async (currentUser: any) => {
-    const role = currentUser?.user_metadata?.role as 'buyer' | 'seller' | undefined;
+    const role = currentUser?.user_metadata?.role as 'buyer' | 'seller' | 'admin' | undefined;
     const customRedirect = searchParams.get('redirect');
 
     console.log('[AuthCallbackComplete] Redirecting user with role:', role);
@@ -70,6 +70,11 @@ function AuthCallbackCompleteHandler() {
 
     if (!role) {
       router.push('/select-role');
+      return;
+    }
+
+    if (role === 'admin') {
+      router.push('/admin/setup');
       return;
     }
 

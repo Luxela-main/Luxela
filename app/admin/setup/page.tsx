@@ -53,21 +53,50 @@ export default function AdminSetupPage() {
       if (result.success) {
         setSuccess(true);
         console.log("✅ Admin role granted successfully");
+        console.log("[SETUP] Refreshing session and verifying admin status...");
         
-        // Refresh Supabase session to get updated JWT with admin flag
-        try {
-          const supabase = createClient();
-          console.log("[SETUP] Refreshing Supabase session...");
-          await supabase.auth.refreshSession();
-          console.log("[SETUP] Session refreshed, redirecting to dashboard...");
-        } catch (err) {
-          console.warn("[SETUP] Session refresh failed (may be okay):", err);
-        }
-        
-        // Wait for JWT to be updated, then redirect
-        setTimeout(() => {
-          window.location.href = "/admin/support";
-        }, 1500);
+        // Force refresh the Supabase session to get the updated JWT with admin metadata
+        setTimeout(async () => {
+          try {
+            const supabase = createClient();
+            console.log("[SETUP] Refreshing auth session...");
+            
+            // Explicitly refresh the session to get new token with updated metadata
+            const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError) {
+              console.warn("[SETUP] Session refresh error:", refreshError.message);
+            } else if (session) {
+              console.log("✅ Session refreshed, new token obtained");
+              console.log("[SETUP] New token metadata:", {
+                admin: (session.user?.user_metadata as any)?.admin,
+                role: (session.user?.user_metadata as any)?.role,
+              });
+            }
+            
+            // Now verify admin status is persisted in the database
+            let isAdminVerified = false;
+            for (let attempt = 0; attempt < 5; attempt++) {
+              const statusResult = await checkAdminStatus();
+              if (statusResult.success && statusResult.isAdmin) {
+                isAdminVerified = true;
+                console.log("✅ Admin status verified from database");
+                break;
+              }
+              if (attempt < 4) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            }
+
+            // Navigate to dashboard with a hard refresh to ensure new TRPC context is created
+            console.log("[SETUP] Admin verified, navigating to dashboard...");
+            window.location.href = "/admin/support";
+          } catch (err) {
+            console.error("[SETUP] Error during setup:", err);
+            // Still try to navigate
+            window.location.href = "/admin/support";
+          }
+        }, 800);
       } else {
         setError(result.error || "Failed to set admin role");
       }
@@ -167,7 +196,7 @@ export default function AdminSetupPage() {
                 <div>
                   <p className="text-sm font-medium text-green-400">Success!</p>
                   <p className="text-xs text-green-300 mt-1">
-                    Admin role granted. Redirecting to dashboard...
+                    Admin role granted. Refreshing session...
                   </p>
                 </div>
               </div>
