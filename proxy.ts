@@ -139,12 +139,12 @@ export async function proxy(request: NextRequest) {
       console.log(`[PROXY] No user token for admin route: ${pathname}`);
       return NextResponse.redirect(new URL("/admin/signin", request.url));
     }
-    // Redirect /admin/support to /admin (main dashboard)
-    if (pathname === '/admin/support') {
-      return NextResponse.redirect(new URL('/admin', request.url));
+    if (!isAdmin) {
+      console.log(`[PROXY] Non-admin user denied access to admin route: ${pathname}`);
+      return NextResponse.redirect(new URL("/admin/signin", request.url));
     }
     console.log(
-      `[PROXY] User authenticated for admin route: user=${user?.email}, role=${role}, isAdmin=${isAdmin}, pathname=${pathname}`
+      `[PROXY] Admin user authenticated for admin route: user=${user?.email}, role=${role}, isAdmin=${isAdmin}, pathname=${pathname}`
     );
   }
 

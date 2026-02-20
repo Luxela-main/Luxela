@@ -28,7 +28,7 @@ export default function AdminSetupPage() {
             // Already an admin, redirect immediately
             setIsAdmin(true);
             setTimeout(() => {
-              router.push("/admin/support");
+              router.push("/admin");
             }, 1000);
             return;
           }
@@ -90,7 +90,7 @@ export default function AdminSetupPage() {
 
             // Navigate to dashboard with a hard refresh to ensure new TRPC context is created
             console.log("[SETUP] Admin verified, navigating to dashboard...");
-            window.location.href = "/admin/support";
+            window.location.href = "/admin";
           } catch (err) {
             console.error("[SETUP] Error during setup:", err);
             // Still try to navigate

@@ -70,7 +70,7 @@ function AdminSignInContent() {
       if (statusResult.isAdmin) {
         toast.success('Welcome back, Admin!');
         await new Promise(resolve => setTimeout(resolve, 500));
-        router.push('/admin/support');
+        router.push('/admin');
       } else {
         toast.success('Credentials verified! Setting up admin access...');
         await new Promise(resolve => setTimeout(resolve, 500));
