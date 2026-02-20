@@ -430,6 +430,36 @@ export const listingRouter = createTRPCRouter({
         console.log('[LISTING.createSingle] No images provided, relying on imagesJson fallback');
       }
 
+      // Create product variants from colors and sizes
+      if (input.colorsAvailable && input.colorsAvailable.length > 0 && input.sizes && input.sizes.length > 0) {
+        const variantsToCreate: any[] = [];
+        for (const color of input.colorsAvailable) {
+          for (const size of input.sizes) {
+            variantsToCreate.push({
+              productId: productInserted[0].id,
+              colorName: color.colorName,
+              colorHex: color.colorHex,
+              size: size,
+            });
+          }
+        }
+        console.log('[LISTING.createSingle] Creating product variants:', {
+          productId: productInserted[0].id,
+          colorCount: input.colorsAvailable.length,
+          sizeCount: input.sizes.length,
+          totalVariants: variantsToCreate.length,
+        });
+        try {
+          await db.insert(productVariants).values(variantsToCreate);
+          console.log('[LISTING.createSingle] Product variants created successfully');
+        } catch (variantError) {
+          console.error('[LISTING.createSingle] Failed to create product variants:', variantError);
+          throw variantError;
+        }
+      } else {
+        console.log('[LISTING.createSingle] No variants to create - missing colors or sizes');
+      }
+
       const created = listingInserted[0];
 
       console.log('[LISTING.createSingle] Listing created successfully:', {
@@ -2191,4 +2221,4 @@ export const listingRouter = createTRPCRouter({
       };
     }),
 });
-
+
