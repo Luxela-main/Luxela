@@ -168,7 +168,7 @@ export default function AdminSidebar() {
 
           {/* Footer */}
           <div className="border-t border-[#2B2B2B] p-4">
-            <div className="text-xs text-[#6B7280] text-center">Enterprise Admin v1.0</div>
+            <div className="text-xs text-[#6B7280] text-center">Luxela Admin v1.0</div>
           </div>
         </div>
       </aside>
@@ -234,7 +234,7 @@ export default function AdminSidebar() {
 
             {/* Footer */}
             <div className="border-t border-[#2B2B2B] p-4">
-              <div className="text-xs text-[#6B7280] text-center">Enterprise Admin v1.0</div>
+              <div className="text-xs text-[#6B7280] text-center">Luxela Admin v1.0</div>
             </div>
           </div>
         </aside>
