@@ -10,7 +10,7 @@ import {
   notifyTicketReplied,
   notifyTicketStatusChanged,
 } from '../services/buyerNotificationService';
-import { createSellerNotification } from '../services/notificationManager';
+import { createSellerNotification, createAdminNotification } from '../services/notificationManager';
 
 const TicketStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'closed']);
 const TicketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
@@ -157,8 +157,8 @@ export const supportRouter = createTRPCRouter({
           const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
           
           for (const admin of adminUsers) {
-            await createSellerNotification({
-              sellerId: 'admin-' + admin.id,
+            await createAdminNotification({
+              adminId: admin.id,
               type: 'ticket_created',
               title: 'New Support Ticket',
               message: `New support ticket: "${input.subject}" (${input.priority || 'medium'} priority)`,

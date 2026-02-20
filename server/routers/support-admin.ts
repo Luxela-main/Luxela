@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
+import { createTRPCRouter, protectedProcedure, adminProcedure } from '../trpc/trpc';
 import { db } from '../db';
 import { 
   supportTickets, 
@@ -26,35 +26,14 @@ import { v4 as uuidv4 } from 'uuid';
  * - Team member management
  * - Analytics and metrics
  * - Audit logging
+ *
+ * All endpoints use adminProcedure which enforces admin role verification via tRPC middleware.
  */
-
-async function ensureAdmin(userId: string, userRole?: string, isAdminFlag?: boolean): Promise<boolean> {
-  // Check admin flag first (from context.user.admin)
-  if (isAdminFlag === true) {
-    return true;
-  }
-  
-  // Check auth metadata role
-  if (userRole === 'admin') {
-    return true;
-  }
-  
-  // Fallback: check database role if auth metadata doesn't have it
-  const userData = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
-  if (userData[0]?.role === 'admin') {
-    return true;
-  }
-  
-  throw new TRPCError({
-    code: 'FORBIDDEN',
-    message: 'Admin access required. Only administrators can access this resource.',
-  });
-}
 
 export const supportAdminRouter = createTRPCRouter({
   // ============ TICKET LISTING ============
   
-  getAllTickets: protectedProcedure
+  getAllTickets: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -80,12 +59,6 @@ export const supportAdminRouter = createTRPCRouter({
     })))
     .query(async ({ ctx }) => {
       try {
-        const userId = ctx.user?.id;
-        if (!userId) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
-        }
-        
-        await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
 
         const allTickets = await db.select().from(supportTickets).orderBy(desc(supportTickets.createdAt));
         
@@ -113,7 +86,7 @@ export const supportAdminRouter = createTRPCRouter({
       }
     }),
 
-  getTicketDetails: protectedProcedure
+  getTicketDetails: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -140,13 +113,6 @@ export const supportAdminRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       try {
-        const userId = ctx.user?.id;
-        if (!userId) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
-        }
-        
-        await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
         const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
         
         if (!ticket[0]) {
@@ -183,7 +149,7 @@ export const supportAdminRouter = createTRPCRouter({
 
   // ============ ADMIN DASHBOARD ============
   
-  getDashboardMetrics: protectedProcedure
+  getDashboardMetrics: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -213,11 +179,6 @@ export const supportAdminRouter = createTRPCRouter({
       })),
     }))
     .query(async ({ ctx }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       // Get all tickets
       const allTickets = await db.select().from(supportTickets);
       
@@ -286,7 +247,7 @@ export const supportAdminRouter = createTRPCRouter({
 
   // ============ TICKET ASSIGNMENT ============
 
-  assignTicket: protectedProcedure
+  assignTicket: adminProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -301,11 +262,10 @@ export const supportAdminRouter = createTRPCRouter({
     }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
+      if (!ctx.user) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+      }
+      const userId = ctx.user.id;
       // Verify ticket exists
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
       if (!ticket[0]) {
@@ -344,7 +304,7 @@ export const supportAdminRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  unassignTicket: protectedProcedure
+  unassignTicket: adminProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -356,11 +316,10 @@ export const supportAdminRouter = createTRPCRouter({
     .input(z.object({ ticketId: z.string().uuid() }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
+      if (!ctx.user) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+      }
+      const userId = ctx.user.id;
       // Get ticket to find assigned member
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
       if (!ticket[0]) {
@@ -397,7 +356,7 @@ export const supportAdminRouter = createTRPCRouter({
 
   // ============ SLA MANAGEMENT ============
 
-  setSLAPolicy: protectedProcedure
+  setSLAPolicy: adminProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -415,11 +374,6 @@ export const supportAdminRouter = createTRPCRouter({
     }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       const existing = await db.select().from(slaMetrics)
         .where(and(
           eq(slaMetrics.policyName, input.policyName),
@@ -448,7 +402,7 @@ export const supportAdminRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getSLAPolicies: protectedProcedure
+  getSLAPolicies: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -465,11 +419,6 @@ export const supportAdminRouter = createTRPCRouter({
       resolutionTimeMinutes: z.number(),
     })))
     .query(async ({ ctx }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       const policies = await db.select().from(slaMetrics);
       return policies.map((p: any) => ({
         id: p.id,
@@ -482,7 +431,7 @@ export const supportAdminRouter = createTRPCRouter({
 
   // ============ ESCALATION RULES ============
 
-  setEscalationRule: protectedProcedure
+  setEscalationRule: adminProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -499,11 +448,6 @@ export const supportAdminRouter = createTRPCRouter({
     }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       await db.insert(escalationRules).values({
         name: input.name,
         trigger: input.trigger,
@@ -514,7 +458,7 @@ export const supportAdminRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getEscalationRules: protectedProcedure
+  getEscalationRules: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -530,11 +474,6 @@ export const supportAdminRouter = createTRPCRouter({
       action: z.string(),
     })))
     .query(async ({ ctx }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       const rules = await db.select().from(escalationRules);
       return rules.map((r: any) => ({
         id: r.id,
@@ -546,7 +485,7 @@ export const supportAdminRouter = createTRPCRouter({
 
   // ============ TEAM MANAGEMENT ============
 
-  addTeamMember: protectedProcedure
+  addTeamMember: adminProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -565,11 +504,6 @@ export const supportAdminRouter = createTRPCRouter({
     }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       const existing = await db.select().from(supportTeamMembers)
         .where(eq(supportTeamMembers.userId, input.userId));
 
@@ -591,7 +525,7 @@ export const supportAdminRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getTeamMembers: protectedProcedure
+  getTeamMembers: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -612,11 +546,6 @@ export const supportAdminRouter = createTRPCRouter({
       responseTimeAverage: z.number().nullable(),
     })))
     .query(async ({ ctx }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       const members = await db.select().from(supportTeamMembers);
       return members.map((m: any) => ({
         id: m.id,
@@ -633,7 +562,7 @@ export const supportAdminRouter = createTRPCRouter({
 
   // ============ AUDIT LOGS ============
 
-  getAuditLogs: protectedProcedure
+  getAuditLogs: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -655,11 +584,6 @@ export const supportAdminRouter = createTRPCRouter({
       createdAt: z.date(),
     })))
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       let query = db.select().from(supportAuditLogs);
       if (input.ticketId) {
         query = query.where(eq(supportAuditLogs.ticketId, input.ticketId)) as any;
@@ -678,7 +602,7 @@ export const supportAdminRouter = createTRPCRouter({
 
   // ============ TICKET UPDATES ============
 
-  updateTicketStatus: protectedProcedure
+  updateTicketStatus: adminProcedure
     .meta({
       openapi: {
         method: 'PATCH',
@@ -709,11 +633,6 @@ export const supportAdminRouter = createTRPCRouter({
       resolvedAt: z.date().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user?.id;
-      if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
-      
-      await ensureAdmin(userId, ctx.user?.role, ctx.user?.admin);
-
       const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, input.ticketId));
       if (!ticket[0]) {
         throw new TRPCError({
