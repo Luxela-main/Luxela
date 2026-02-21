@@ -498,7 +498,7 @@ export function ProductForm({ productType }: ProductFormProps) {
           shippingOption: (formData.shippingOption as any) || 'both',
           etaDomestic: mapEtaValue(formData.domesticDays),
           etaInternational: mapEtaValue(formData.internationalDays),
-          refundPolicy: (formData.refundPolicy as any) || null,
+          refundPolicy: (formData.collectionRefundPolicy as any) || null,
           sku: formData.collectionSku || undefined,
           slug: formData.collectionSlug || undefined,
           metaDescription: formData.collectionMetaDescription || undefined,
