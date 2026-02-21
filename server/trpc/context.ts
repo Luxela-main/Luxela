@@ -19,7 +19,8 @@ function getAuthClient(): SupabaseClient {
     global: {
       fetch: ((url: string | Request, options?: RequestInit) => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // Increased timeout to 30s for auth operations - auth calls can be slower
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         return fetch(url, { ...options, signal: controller.signal })
           .finally(() => clearTimeout(timeoutId));
       }) as any,

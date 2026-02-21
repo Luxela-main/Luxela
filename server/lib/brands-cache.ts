@@ -123,11 +123,11 @@ async function fetchBrandsFromDatabase(input: {
 
   console.log(`✓ Fetched ${allBrands.length} brands`);
 
-  // Prepare IDs for batch queries
+  // Only fetch follower counts if needed for sorting
+  const brandIds: string[] = allBrands.map((b: any) => b.id) as string[];
   const sellerIds: string[] = Array.from(
     new Set(allBrands.map((b: any) => b.sellerId))
   ) as string[];
-  const brandIds: string[] = allBrands.map((b: any) => b.id) as string[];
 
   // Execute product and follower count queries IN PARALLEL (optimization!)
   console.log(`Fetching counts for ${allBrands.length} brands...`);
