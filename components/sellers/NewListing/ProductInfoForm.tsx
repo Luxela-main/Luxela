@@ -25,7 +25,17 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
   videos,
   onVideosChange,
 }) => {
-  const sizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
+  // Generate size options based on category
+  const getSizes = (): string[] => {
+    if (formData.category === "men_shoes" || formData.category === "women_shoes") {
+      // Numeric sizes 1-70 for shoes
+      return Array.from({ length: 70 }, (_, i) => String(i + 1));
+    }
+    // Standard sizes for clothing
+    return ["S", "M", "L", "XL", "XXL", "XXXL"];
+  };
+
+  const sizes = getSizes();
 
   const toggleSize = (size: string): void => {
     const currentSizes = formData.sizes || [];
@@ -113,13 +123,17 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({
         {/* Sizes Available */}
         <div>
           <label className="block text-sm mb-3">Sizes available</label>
-          <div className="flex gap-3">
+          <div className={`${
+            formData.category === "men_shoes" || formData.category === "women_shoes"
+              ? "grid grid-cols-6 gap-2 max-h-64 overflow-y-auto p-2 border border-[#333] rounded-lg"
+              : "flex gap-3"
+          }`}>
             {sizes.map((size) => (
               <button
                 key={size}
                 type="button"
                 onClick={() => toggleSize(size)}
-                className={`px-6 py-2 rounded-lg border transition cursor-pointer hover:border-purple-500 ${
+                className={`px-3 py-2 rounded-lg border transition cursor-pointer hover:border-purple-500 text-sm ${
                   formData.sizes?.includes(size)
                     ? "bg-purple-600 border-[#333] text-white"
                     : "bg-transparent border-[#333] text-gray-500"

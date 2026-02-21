@@ -53,7 +53,15 @@ interface CollectionFormProps {
   isSubmitting: boolean;
 }
 
-const AVAILABLE_SIZES = ["S", "M", "L", "XL", "XXL", "XXXL"];
+// Generate size options based on category
+const getSizes = (category?: string): string[] => {
+  if (category === "men_shoes" || category === "women_shoes") {
+    // Numeric sizes 1-70 for shoes
+    return Array.from({ length: 70 }, (_, i) => String(i + 1));
+  }
+  // Standard sizes for clothing
+  return ["S", "M", "L", "XL", "XXL", "XXXL"];
+};
 const AVAILABLE_COLORS = [
   { name: "Black", hex: "#000000" },
   { name: "White", hex: "#FFFFFF" },
@@ -663,8 +671,12 @@ const CollectionForm: React.FC<CollectionFormProps> = ({
                         <label className="block text-xs text-gray-400 mb-2">
                           Available Sizes
                         </label>
-                        <div className="flex flex-wrap gap-2">
-                          {AVAILABLE_SIZES.map((size) => (
+                        <div className={`${
+                          item.category === "men_shoes" || item.category === "women_shoes"
+                            ? "grid grid-cols-6 gap-2 max-h-40 overflow-y-auto p-2 border border-[#333] rounded-lg"
+                            : "flex flex-wrap gap-2"
+                        }`}>
+                          {getSizes(item.category).map((size) => (
                             <button
                               key={size}
                               type="button"

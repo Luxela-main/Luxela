@@ -368,7 +368,7 @@ export default function ProductInfo({ product, business }: ProductInfoProps) {
               <span className="w-2 h-2 rounded-full bg-[#8451E1]"></span>
               Select Sizes ({selectedSizes.length})
             </h3>
-            <div className="grid grid-cols-5 gap-3 mb-4">
+            <div className={`grid gap-3 mb-4 ${sizes.length > 20 ? 'grid-cols-6 md:grid-cols-8' : 'grid-cols-5'}`}>
               {sizes.map((size: string) => (
                 <button
                   key={size}

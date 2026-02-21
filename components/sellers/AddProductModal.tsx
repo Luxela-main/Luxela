@@ -24,7 +24,15 @@ const CATEGORIES = [
   { value: "others", label: "Others" },
 ]
 
-const SIZES = ["S", "M", "L", "XL", "XXL", "XXXL"]
+// Generate size options based on category
+const getSizes = (category?: string): string[] => {
+  if (category === "men_shoes" || category === "women_shoes") {
+    // Numeric sizes 1-70 for shoes
+    return Array.from({ length: 70 }, (_, i) => String(i + 1));
+  }
+  // Standard sizes for clothing
+  return ["S", "M", "L", "XL", "XXL", "XXXL"];
+}
 
 const SHIPPING_OPTIONS = [
   { value: "local", label: "Local Only" },
@@ -320,13 +328,17 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 <label className="block text-sm mb-2 font-medium">
                   Sizes Available <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-2 flex-wrap">
-                  {SIZES.map((size) => (
+                <div className={`${
+                  formData.category === "men_shoes" || formData.category === "women_shoes"
+                    ? "grid grid-cols-6 gap-2 max-h-48 overflow-y-auto p-2 border border-[#333] rounded-lg"
+                    : "flex gap-2 flex-wrap"
+                }`}>
+                  {getSizes(formData.category).map((size) => (
                     <button
                       key={size}
                       type="button"
                       onClick={() => toggleSize(size)}
-                      className={`px-4 py-2 rounded-md border transition ${
+                      className={`px-4 py-2 rounded-md border transition text-sm ${
                         formData.sizes.includes(size)
                           ? "bg-purple-600 border-purple-600 text-white"
                           : "bg-[#0f0f0f] border-[#333] text-gray-400 hover:border-purple-600"
