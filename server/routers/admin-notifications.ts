@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from '../trpc/trpc';
+import { createTRPCRouter, protectedProcedure, adminProcedure } from '../trpc/trpc';
 import { db } from '../db';
 import {
   adminNotifications,
@@ -18,17 +18,7 @@ import { and, eq, gt, desc, sql, count } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
-/**
- * Verify user has admin access from proxy headers
- */
-function ensureAdminAccess(admin?: boolean): void {
-  if (!admin) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Admin access required. Only administrators can access this resource.',
-    });
-  }
-}
+
 
 /**
  * Generate fresh notifications from system data and persist to database
@@ -463,7 +453,7 @@ export const adminNotificationsRouter = createTRPCRouter({
   /**
    * Get all notifications for admin with real-time support via polling
    */
-  getNotifications: protectedProcedure
+  getNotifications: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -486,9 +476,6 @@ export const adminNotificationsRouter = createTRPCRouter({
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
-
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
 
       // Generate fresh notifications (non-blocking background task)
       generateAndStoreNotifications(userId).catch(err => 
@@ -591,9 +578,6 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
-
       // Generate fresh notifications
       await generateAndStoreNotifications(userId).catch(err =>
         console.error('Error generating notifications:', err)
@@ -630,7 +614,7 @@ export const adminNotificationsRouter = createTRPCRouter({
   /**
    * Get unread notification count for badge
    */
-  getUnreadCount: protectedProcedure
+  getUnreadCount: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -645,9 +629,6 @@ export const adminNotificationsRouter = createTRPCRouter({
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
-
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
 
       const result = await db
         .select({ unreadCount: count() })
@@ -664,7 +645,7 @@ export const adminNotificationsRouter = createTRPCRouter({
   /**
    * Mark notification as read with ownership validation
    */
-  markAsRead: protectedProcedure
+  markAsRead: adminProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -680,9 +661,6 @@ export const adminNotificationsRouter = createTRPCRouter({
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
-
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
 
       // Verify ownership before updating
       const notif = await db
@@ -717,7 +695,7 @@ export const adminNotificationsRouter = createTRPCRouter({
   /**
    * Mark all notifications as read
    */
-  markAllAsRead: protectedProcedure
+  markAllAsRead: adminProcedure
     .meta({
       openapi: {
         method: 'POST',
@@ -733,9 +711,6 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
-
       await db
         .update(adminNotifications)
         .set({ isRead: true, updatedAt: new Date() })
@@ -747,7 +722,7 @@ export const adminNotificationsRouter = createTRPCRouter({
   /**
    * Get notification details
    */
-  getNotificationDetail: protectedProcedure
+  getNotificationDetail: adminProcedure
     .meta({
       openapi: {
         method: 'GET',
@@ -778,9 +753,6 @@ export const adminNotificationsRouter = createTRPCRouter({
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
-
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
 
       const notif = await db
         .select()
@@ -818,7 +790,7 @@ export const adminNotificationsRouter = createTRPCRouter({
   /**
    * Star/unstar a notification
    */
-  toggleStar: protectedProcedure
+  toggleStar: adminProcedure
     .input(z.object({ 
       notificationId: z.string(),
       starred: z.boolean(),
@@ -829,9 +801,6 @@ export const adminNotificationsRouter = createTRPCRouter({
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
-
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
 
       // Verify ownership
       const notif = await db
@@ -865,7 +834,7 @@ export const adminNotificationsRouter = createTRPCRouter({
   /**
    * Delete a notification
    */
-  deleteNotification: protectedProcedure
+  deleteNotification: adminProcedure
     .input(z.object({ notificationId: z.string() }))
     .output(z.object({ success: z.literal(true) }))
     .mutation(async ({ ctx, input }) => {
@@ -873,9 +842,6 @@ export const adminNotificationsRouter = createTRPCRouter({
       if (!userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
-
-      // Verify admin access from proxy headers
-      ensureAdminAccess(ctx.user?.admin);
 
       // Verify ownership
       const notif = await db
