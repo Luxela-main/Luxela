@@ -295,6 +295,25 @@ export function ProductForm({ productType }: ProductFormProps) {
 
   const mapEtaValue = (value: string): string | null => {
     if (!value) return null;
+    
+    // List of valid ETA enum values
+    const validEtaValues = [
+      'same_day',
+      'next_day',
+      '48hrs',
+      '72hrs',
+      '5_working_days',
+      '1_2_weeks',
+      '2_3_weeks',
+      'custom',
+    ];
+    
+    // If the value is already a valid enum, return it as-is
+    if (validEtaValues.includes(value)) {
+      return value;
+    }
+    
+    // Otherwise, try to parse as days and map accordingly
     const days = parseInt(value);
     
     // Map days to shipping ETA enum values
