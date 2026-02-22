@@ -626,7 +626,9 @@ export const supportRouter = createTRPCRouter({
       const seller = sellerResult[0];
       const isAssignedSeller = seller && ticket[0].assignedTo === seller.id;
 
-      if (!isBuyer && !isAssignedSeller) {
+      const isTicketSeller = seller && ticket[0].sellerId === seller.id;
+
+      if (!isBuyer && !isAssignedSeller && !isTicketSeller) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Not authorized to close this ticket',

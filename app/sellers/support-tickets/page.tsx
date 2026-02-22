@@ -13,6 +13,7 @@ import {
   Send,
   Trash2,
   Edit,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -236,9 +237,18 @@ export default function SellerSupportTicketsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {}
+      {/* Top Navigation with Back Button */}
       <div className="bg-gradient-to-r from-[#1a1a1a] to-black border-b border-[#333] p-6">
         <div className="max-w-7xl mx-auto">
+          {selectedTicketId && (
+            <button
+              onClick={() => setSelectedTicketId(null)}
+              className="flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm font-medium mb-4 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Tickets
+            </button>
+          )}
           <h1 className="text-3xl font-bold mb-2">Support Tickets</h1>
           <p className="text-gray-400">Create and manage your support tickets</p>
         </div>
@@ -296,22 +306,56 @@ export default function SellerSupportTicketsPage() {
               ) : (
                 <div className="divide-y divide-[#333]">
                   {filteredTickets.map(ticket => (
-                    <button
+                    <div
                       key={ticket.id}
-                      onClick={() => setSelectedTicketId(ticket.id)}
-                      className={`w-full text-left p-4 hover:bg-[#0a0a0a] transition-all duration-200 border-l-2 cursor-pointer hover:border-purple-500/50 ${
+                      className={`text-left p-4 hover:bg-[#0a0a0a] transition-all duration-200 border-l-2 cursor-pointer hover:border-purple-500/50 ${
                         selectedTicketId === ticket.id
                           ? 'border-purple-600 bg-[#0a0a0a]'
                           : 'border-transparent'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="text-sm font-medium text-white line-clamp-2 flex-1">
+                        <button
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className="text-sm font-medium text-white line-clamp-2 flex-1 text-left hover:text-purple-400 transition-colors"
+                        >
                           {ticket.subject}
-                        </h3>
-                        <span className={`text-xs px-2 py-1 rounded whitespace-nowrap cursor-pointer transition-opacity duration-200 hover:opacity-80 ${PRIORITY_COLORS[ticket.priority]}`}>
-                          {ticket.priority}
-                        </span>
+                        </button>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTicketId(ticket.id);
+                              setEditFormData({
+                                subject: ticket.subject,
+                                description: ticket.description,
+                                category: ticket.category,
+                                priority: ticket.priority,
+                              });
+                              setEditDialogOpen(true);
+                            }}
+                            className="p-1 hover:bg-purple-600/20 rounded transition-colors cursor-pointer text-purple-400 hover:text-purple-300"
+                            title="Edit ticket"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          {ticket.status !== 'closed' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTicketId(ticket.id);
+                                setCloseDialogOpen(true);
+                              }}
+                              className="p-1 hover:bg-red-600/20 rounded transition-colors cursor-pointer text-red-400 hover:text-red-300"
+                              title="Close ticket"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                          <span className={`text-xs px-2 py-1 rounded whitespace-nowrap cursor-pointer transition-opacity duration-200 hover:opacity-80 ${PRIORITY_COLORS[ticket.priority]}`}>
+                            {ticket.priority}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-xs text-gray-600 mb-2 line-clamp-1">
                         {ticket.description}
@@ -322,7 +366,7 @@ export default function SellerSupportTicketsPage() {
                         </span>
                         <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -334,28 +378,11 @@ export default function SellerSupportTicketsPage() {
             <div className="lg:col-span-3 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
               {}
               <div className="p-6 border-b border-[#333] space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-white mb-2">
-                      {selectedTicket.subject}
-                    </h2>
-                    <p className="text-gray-400">{selectedTicket.description}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleOpenEditDialog}
-                      className="p-2 hover:bg-[#0a0a0a] rounded transition-colors cursor-pointer hover:text-blue-400"
-                      title="Edit ticket"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setSelectedTicketId(null)}
-                      className="p-2 hover:bg-[#0a0a0a] rounded transition-colors cursor-pointer hover:text-red-400"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    {selectedTicket.subject}
+                  </h2>
+                  <p className="text-gray-400">{selectedTicket.description}</p>
                 </div>
 
                 {}
@@ -387,23 +414,23 @@ export default function SellerSupportTicketsPage() {
                 </div>
 
                 {selectedTicket.status !== 'closed' && (
-                  <div className="border-t border-[#333] mt-4 pt-4 flex gap-3 justify-end">
-                    <Button
+                  <div className="border-t border-[#333] mt-6 pt-6 flex gap-3 justify-end">
+                    <button
                       onClick={() => setCloseDialogOpen(true)}
-                      className="bg-red-600 hover:bg-red-700 text-white"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors font-medium flex items-center gap-2"
                     >
-                      <X className="w-4 h-4 mr-2" />
+                      <X className="w-4 h-4" />
                       Close Ticket
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
 
               {}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={chatContainerRef}>
+              <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-b from-black to-[#0a0a0a] min-h-[400px]" ref={chatContainerRef}>
                 {repliesQuery.isLoading ? (
-                  <div className="text-center text-gray-600 py-8">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                  <div className="text-center text-gray-600 py-12">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto" />
                   </div>
                 ) : replies && replies.length > 0 ? (
                   <>
@@ -427,31 +454,31 @@ export default function SellerSupportTicketsPage() {
                       }
                       
                       return (
-                      <div key={`${reply.id}-${idx}`} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                      <div key={`${reply.id}-${idx}`} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-4`}>
                         <div
-                          className={`max-w-xs px-4 py-3 rounded-lg ${
+                          className={`max-w-2xl px-5 py-4 rounded-xl ${
                             isCurrentUser
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-[#0a0a0a] text-gray-300 border border-[#333]'
+                              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
+                              : 'bg-[#0a0a0a] text-gray-200 border border-[#444] shadow-md'
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <p className="text-xs font-semibold opacity-75">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-sm font-bold opacity-90">
                               {senderLabel}
                             </p>
                             {isCurrentUser && (
                               <button
                                 onClick={() => handleDeleteReply(reply.id)}
-                                className="p-1 hover:opacity-75 transition-opacity"
+                                className="p-1 hover:opacity-60 transition-opacity"
                                 title="Delete message"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
                           </div>
-                          <p className="text-sm">{reply.message}</p>
-                          <p className="text-xs opacity-50 mt-2">
-                            {new Date(reply.createdAt).toLocaleTimeString()}
+                          <p className="text-base leading-relaxed break-words">{reply.message}</p>
+                          <p className="text-sm opacity-60 mt-3">
+                            {new Date(reply.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
                       </div>
@@ -460,9 +487,10 @@ export default function SellerSupportTicketsPage() {
                     <div ref={messagesEndRef} />
                   </>
                 ) : (
-                  <div className="text-center text-gray-600 py-8">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No replies yet. Await a response from the customer.</p>
+                  <div className="text-center text-gray-500 py-16 flex flex-col items-center justify-center h-full">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-40" />
+                    <p className="text-lg font-medium">No replies yet</p>
+                    <p className="text-sm opacity-60 mt-1">Await a response from the customer.</p>
                     <div ref={messagesEndRef} />
                   </div>
                 )}
