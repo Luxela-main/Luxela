@@ -17,7 +17,9 @@ function mapAuthError(error: any): string {
 export async function signupAction(email: string, password: string, role: "buyer" | "seller") {
   try {
     const supabase = await createClient();
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+    // IMPORTANT: Email verification must redirect to API route, not page component
+    // The API route handles OTP verification and session cookie persistence
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -82,7 +84,8 @@ export async function signinWithGoogleAction() {
 export async function resendVerificationAction(email: string) {
   try {
     const supabase = await createClient();
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+    // IMPORTANT: Email verification must redirect to API route, not page component
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`;
 
     const { error } = await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: redirectUrl } });
 
