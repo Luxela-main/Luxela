@@ -35,92 +35,88 @@ function SignUpContent() {
   const searchParams = useSearchParams();
 
   const handleSignUp = async (
-  values: SignUpFormValues,
-  { setSubmitting, resetForm }: any
-) => {
-  
-  if (!values.role) {
-    toast.error("Please select a role before signing up.");
-    setSubmitting(false);
-    return;
-  }
-
-  if (!values.agreeTerms) {
-    toast.error("You must agree to the Terms and Conditions.");
-    setSubmitting(false);
-    return;
-  }
-
-  if (values.password !== values.confirmPassword) {
-    toast.error("Passwords do not match.");
-    setSubmitting(false);
-    return;
-  }
-
-  try {
-    const { email, password, role } = values;
-
-    
-    const { success, error } = await authActions.signupAction(
-      email,
-      password,
-      role as "buyer" | "seller"
-    );
-
-    if (success) {
-      setUserEmail(email);
-      setDialogOpen(true);
-      toast.success("Signup successful! Please verify your email.");
-      resetForm();
+    values: SignUpFormValues,
+    { setSubmitting, resetForm }: any
+  ) => {
+    if (!values.role) {
+      toast.error("Please select a role before signing up.");
+      setSubmitting(false);
       return;
     }
 
-    
-    if (error?.toLowerCase().includes("already registered")) {
-      toast.error("Email already registered. Please sign in instead.");
-    } else if (error?.toLowerCase().includes("weak password")) {
-      toast.error("Password too weak. Please choose a stronger password.");
-    } else {
-      toast.error(error || "Signup failed. Please try again.");
+    if (!values.agreeTerms) {
+      toast.error("You must agree to the Terms and Conditions.");
+      setSubmitting(false);
+      return;
     }
-  } catch (err: unknown) {
-    if (err instanceof Error) toast.error(err.message || "Signup failed unexpectedly.");
-    else toast.error("Signup failed unexpectedly.");
-  } finally {
-    setSubmitting(false);
-  }
-};
 
-const handleResendVerification = async () => {
-  if (!userEmail) return;
-
-  setIsResending(true);
-  try {
-    const { success, error } = await authActions.resendVerificationAction(userEmail);
-
-    if (success) {
-      toast.success("Verification email resent! Check your inbox.");
-      setDialogOpen(false);
-    } else {
-      toast.error(error || "Failed to resend verification email.");
+    if (values.password !== values.confirmPassword) {
+      toast.error("Passwords do not match.");
+      setSubmitting(false);
+      return;
     }
-  } catch (err: unknown) {
-    if (err instanceof Error) toast.error(err.message || "Failed to resend verification email.");
-    else toast.error("Failed to resend verification email.");
-  } finally {
-    setIsResending(false);
-  }
-};
+
+    try {
+      const { email, password, role } = values;
+
+      const { success, error, isNewSignup } = await authActions.signupAction(
+        email,
+        password,
+        role as "buyer" | "seller"
+      );
+
+      // ONLY show modal if signup succeeded AND email is new
+      // If email already exists, signup action returns success: false with error message
+      if (success && isNewSignup) {
+        setUserEmail(email);
+        setDialogOpen(true);
+        toast.success("Signup successful! Please verify your email.");
+        resetForm();
+        return;
+      }
+
+      // Any failure (including duplicate email) shows error toast only
+      if (!success) {
+        toast.error(error || "Signup failed. Please try again.");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) toast.error(err.message || "Signup failed unexpectedly.");
+      else toast.error("Signup failed unexpectedly.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!userEmail) return;
+
+    setIsResending(true);
+    try {
+      const { success, error } = await authActions.resendVerificationAction(userEmail);
+
+      if (success) {
+        toast.success("Verification email resent! Check your inbox.");
+        setDialogOpen(false);
+      } else {
+        toast.error(error || "Failed to resend verification email.");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) toast.error(err.message || "Failed to resend verification email.");
+      else toast.error("Failed to resend verification email.");
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <>
       <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
-        {}
+        {/* Left side - Branding */}
         <div className="relative md:flex items-center justify-center p-10 hidden overflow-hidden">
           <div className="absolute inset-0 bg-[url('/images/auth.webp')] bg-cover bg-center rounded-tr-3xl rounded-br-3xl" />
-          {}
+          {/* Gradient overlay */}
           <div className="absolute inset-0 rounded-tr-3xl rounded-br-3xl bg-gradient-to-br from-[#D1D5DB]/25 via-[#8451E1]/10 to-[#9CA3AF]/25" />
-          {}
+          {/* Background accents */}
           <div className="absolute top-0 left-0 w-40 h-40 bg-[#E5E7EB]/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-0 w-32 h-32 bg-[#D1D5DB]/10 rounded-full blur-3xl" />
           

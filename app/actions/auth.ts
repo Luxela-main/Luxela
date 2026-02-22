@@ -8,30 +8,61 @@ function mapAuthError(error: any): string {
 
   if (msg.includes("invalid login credentials")) return "Incorrect email or password.";
   if (msg.includes("email not confirmed")) return "Email not verified. Please check your inbox.";
-  if (msg.includes("user already registered")) return "Email already registered. Please sign in instead.";
+  if (msg.includes("user already registered") || msg.includes("already registered") || msg.includes("duplicate") || msg.includes("user already exists")) {
+    return "Email already registered. Please sign in instead.";
+  }
   if (msg.includes("weak password")) return "Password too weak. Please choose a stronger password.";
 
   return error.message;
 }
 
+// Check if an email already exists in Supabase Auth
+async function checkEmailExists(email: string): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    // Try to sign in with the email and a dummy password
+    // If error is "Invalid login credentials", the email exists (wrong password)
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: "check-only-dummy-password",
+    });
+
+    // "Invalid login credentials" = user exists but wrong password
+    if (error?.message?.includes("Invalid login credentials")) {
+      return true;
+    }
+
+    return false;
+  } catch (err: any) {
+    return false;
+  }
+}
+
 export async function signupAction(email: string, password: string, role: "buyer" | "seller") {
   try {
     const supabase = await createClient();
-    // IMPORTANT: Email verification must redirect to API route, not page component
-    // The API route handles OTP verification and session cookie persistence
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`;
 
-    const { error } = await supabase.auth.signUp({
+    // CRITICAL: Check if email already exists BEFORE attempting signup
+    // This prevents the modal from showing for duplicate emails
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      return { success: false, error: "Email already registered. Please sign in instead.", isNewSignup: false };
+    }
+
+    // Now proceed with signup
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { role }, emailRedirectTo: redirectUrl },
     });
 
-    if (error) return { success: false, error: mapAuthError(error) };
+    if (error) return { success: false, error: mapAuthError(error), isNewSignup: false };
 
-    return { success: true, message: "Signup successful. Please check your email to verify." };
+    // If we got here, it's definitely a new signup (we already checked email doesn't exist)
+    return { success: true, message: "Signup successful. Please check your email to verify.", isNewSignup: true };
   } catch (err: any) {
-    return { success: false, error: mapAuthError(err) };
+    return { success: false, error: mapAuthError(err), isNewSignup: false };
   }
 }
 
@@ -64,8 +95,6 @@ export async function signinAction(email: string, password: string) {
 export async function signinWithGoogleAction() {
   try {
     const supabase = await createClient();
-    // OAuth callback MUST point to the server API route
-    // Google's OAuth server will POST to this endpoint with the auth code
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -84,7 +113,6 @@ export async function signinWithGoogleAction() {
 export async function resendVerificationAction(email: string) {
   try {
     const supabase = await createClient();
-    // IMPORTANT: Email verification must redirect to API route, not page component
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`;
 
     const { error } = await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: redirectUrl } });
@@ -145,41 +173,5 @@ export async function signoutAction() {
     return { success: true };
   } catch (err: any) {
     return { success: false, error: mapAuthError(err) };
-  }
-}
-
-export async function checkEmailRegistration(email: string) {
-  try {
-    const supabase = await createClient();
-    const normalizedEmail = email.toLowerCase().trim();
-
-    const {
-      data: { users },
-      error: authError,
-    } = await supabase.auth.admin.listUsers();
-
-    if (!authError && users) {
-      const existingUser = users.find(
-        (u: any) => u.email?.toLowerCase() === normalizedEmail
-      );
-
-      if (existingUser) {
-        const role = existingUser.user_metadata?.role as
-          | "buyer"
-          | "seller"
-          | undefined;
-
-        return {
-          exists: true,
-          role: role || "user",
-          message: `This email is already registered as a ${role || "user"}. Please sign in instead.`,
-        };
-      }
-    }
-
-    return { exists: false };
-  } catch (err: any) {
-    console.error("Email registration check error:", err);
-    return { exists: null, error: "Failed to check email availability" };
   }
 }
