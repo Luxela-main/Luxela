@@ -93,17 +93,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const fragment = typeof window !== 'undefined' ? window.location.hash : '';
         const hasOAuthToken = fragment.includes('access_token') || fragment.includes('code');
         
-        // Check if we're in email verification callback (token_hash in query params)
+        // Check if we're in email verification callback (token_hash in query params or in auth/callback path)
         const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
         const isEmailVerificationCallback = searchParams?.get('token_hash') !== null && searchParams?.get('type') === 'signup';
+        const isAuthCallbackPage = pathname === '/auth/callback';
         
         // If OAuth callback or email verification callback, give Supabase time to process and set cookies
         if ((hasOAuthToken || isEmailVerificationCallback) && retryCount === 0) {
           const callbackType = isEmailVerificationCallback ? 'email verification' : 'OAuth';
           console.log(`[AUTH] ${callbackType} callback detected, waiting for session sync...`);
-          // Wait longer for email verification (server-side processing takes time)
-          const waitTime = isEmailVerificationCallback ? 2000 : 1500;
+          // Wait for cookies to be set (email verification happens server-side, so shorter wait is fine)
+          const waitTime = isEmailVerificationCallback ? 500 : 1500;
           await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else if (isAuthCallbackPage && retryCount === 0) {
+          // If we're on /auth/callback page but without token_hash (means we were redirected from the API route)
+          // Give a brief moment for cookies to sync
+          console.log('[AUTH] Auth callback page detected, allowing cookie sync...');
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
         
         const { data, error } = await supabase.auth.getSession();
@@ -160,6 +167,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } catch (e) {
               console.warn("[AUTH] Failed to store session in localStorage:", e);
             }
+          }
+        } else if (isAuthCallbackPage && retryCount < 2) {
+          // On auth callback page with no session yet, retry a few times
+          // This handles the case where cookies haven't been set yet
+          console.log(`[AUTH] On /auth/callback with no session, retrying (${retryCount + 1}/2)...`);
+          const delay = 800 * (retryCount + 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          if (mounted) {
+            initAuth(retryCount + 1);
+            return;
           }
         } else {
           // Secondary fallback: Check localStorage for persisted session

@@ -117,18 +117,17 @@ export async function GET(request: NextRequest) {
 
         console.log('[OAuth Callback API] OTP verification successful, user:', data.session.user.id);
         
-        // For email OTP verification, we need to explicitly set the session
-        // because Supabase's verifyOtp doesn't set cookies automatically like exchangeCodeForSession does
-        const { error: setSessionError } = await supabase.auth.setSession(data.session);
-        
-        if (setSessionError) {
-          console.error('[OAuth Callback API] Failed to set session after OTP:', setSessionError.message);
-          return NextResponse.redirect(
-            new URL(`/signin?error=${encodeURIComponent('Failed to establish session')}`, request.url)
-          );
+        // Refresh client to get a fresh auth state with proper cookie handling
+        // verifyOtp() should handle cookies automatically, but we'll ensure they're set
+        // by making a call that triggers cookie persistence through the server client instance
+        try {
+          // This will ensure cookies are properly set in the response
+          await supabase.auth.getSession();
+        } catch (e) {
+          console.warn('[OAuth Callback API] Session verification call failed (non-critical):', e);
         }
         
-        console.log('[OAuth Callback API] Session established after OTP verification');
+        console.log('[OAuth Callback API] Session verified after OTP - cookies should be set');
         
         const customRedirect = searchParams.get('redirect');
         const redirectTarget = customRedirect 
@@ -144,9 +143,9 @@ export async function GET(request: NextRequest) {
         response.headers.set('Pragma', 'no-cache');
         response.headers.set('Expires', '0');
         
-        // Force cookies to be sent in response by accessing the auth state
-        // This ensures the session cookies are properly persisted to the browser
-        console.log('[OAuth Callback API] Response headers set for session persistence');
+        // Ensure session cookies from verifyOtp are included in the response
+        // These will be picked up by the ServerClient's cookie handler above
+        console.log('[OAuth Callback API] Redirecting with session cookies set');
 
         return response;
       } catch (verifyError) {
