@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -27,7 +27,30 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = await createClient();
+    // Create a supabase client with proper cookie handling in response
+    let supabaseResponse = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set(name, value);
+              supabaseResponse.cookies.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
 
     if (code) {
       console.log('[OAuth Callback API] Exchanging code for session server-side');
@@ -78,6 +101,11 @@ export async function GET(request: NextRequest) {
         response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
         response.headers.set('Pragma', 'no-cache');
         response.headers.set('Expires', '0');
+        
+        // Copy cookies from supabaseResponse to ensure session is persisted
+        supabaseResponse.cookies.getAll().forEach(({ name, value }) => {
+          response.cookies.set(name, value);
+        });
 
         return response;
       } catch (exchangeError) {
@@ -117,18 +145,6 @@ export async function GET(request: NextRequest) {
 
         console.log('[OAuth Callback API] OTP verification successful, user:', data.session.user.id);
         
-        // Refresh client to get a fresh auth state with proper cookie handling
-        // verifyOtp() should handle cookies automatically, but we'll ensure they're set
-        // by making a call that triggers cookie persistence through the server client instance
-        try {
-          // This will ensure cookies are properly set in the response
-          await supabase.auth.getSession();
-        } catch (e) {
-          console.warn('[OAuth Callback API] Session verification call failed (non-critical):', e);
-        }
-        
-        console.log('[OAuth Callback API] Session verified after OTP - cookies should be set');
-        
         const customRedirect = searchParams.get('redirect');
         const redirectTarget = customRedirect 
           ? `/auth/callback?redirect=${encodeURIComponent(customRedirect)}` 
@@ -143,9 +159,13 @@ export async function GET(request: NextRequest) {
         response.headers.set('Pragma', 'no-cache');
         response.headers.set('Expires', '0');
         
-        // Ensure session cookies from verifyOtp are included in the response
-        // These will be picked up by the ServerClient's cookie handler above
-        console.log('[OAuth Callback API] Redirecting with session cookies set');
+        // Copy cookies from supabaseResponse to ensure session cookies (from verifyOtp) are persisted
+        // This is critical for email OTP verification to work properly
+        supabaseResponse.cookies.getAll().forEach(({ name, value }) => {
+          response.cookies.set(name, value);
+        });
+        
+        console.log('[OAuth Callback API] Redirecting with session cookies persisted in response');
 
         return response;
       } catch (verifyError) {
