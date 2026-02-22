@@ -16,9 +16,40 @@ export const useMarkNotificationAsRead = () => {
   const utils = trpc.useUtils();
 
   return trpc.sellerNotifications.markAsRead.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await utils.sellerNotifications.getNotifications.cancel();
+
+      // Get current data
+      const previousData = utils.sellerNotifications.getNotifications.getData({});
+
+      // Optimistically update the data
+      if (previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          {
+            notifications: previousData.notifications.map((notif: any) =>
+              notif.id === variables.notificationId
+                ? { ...notif, isRead: true }
+                : notif
+            ),
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
     onSuccess: async () => {
-      // Invalidate the cache - refetch happens automatically
-      await utils.sellerNotifications.getNotifications.invalidate();
+      // Invalidate counts but not the full list - we already have optimistic data
       await utils.sellerNotifications.getUnreadCount.invalidate();
     },
   });
@@ -39,9 +70,44 @@ export const useToggleNotificationStar = () => {
   const utils = trpc.useUtils();
 
   return trpc.sellerNotifications.toggleStar.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await utils.sellerNotifications.getNotifications.cancel();
+
+      // Get current data
+      const previousData = utils.sellerNotifications.getNotifications.getData({});
+
+      // Optimistically update the data
+      if (previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          {
+            notifications: previousData.notifications.map((notif: any) =>
+              notif.id === variables.notificationId
+                ? { ...notif, isStarred: variables.starred }
+                : notif
+            ),
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
     onSuccess: async () => {
-      await utils.sellerNotifications.getNotifications.invalidate();
-      await utils.sellerNotifications.getUnreadCount.invalidate();
+      // Revalidate after a short delay to ensure server has processed the mutation
+      // This ensures the next refetch gets the latest data from the server
+      setTimeout(() => {
+        utils.sellerNotifications.getNotifications.invalidate();
+      }, 500);
     },
   });
 };
@@ -60,8 +126,38 @@ export const useDeleteNotification = () => {
   const utils = trpc.useUtils();
 
   return trpc.sellerNotifications.deleteNotification.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await utils.sellerNotifications.getNotifications.cancel();
+
+      // Get current data
+      const previousData = utils.sellerNotifications.getNotifications.getData({});
+
+      // Optimistically remove the notification
+      if (previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          {
+            notifications: previousData.notifications.filter(
+              (notif: any) => notif.id !== variables.notificationId
+            ),
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
     onSuccess: async () => {
-      await utils.sellerNotifications.getNotifications.invalidate();
+      // Invalidate counts
       await utils.sellerNotifications.getUnreadCount.invalidate();
     },
   });
