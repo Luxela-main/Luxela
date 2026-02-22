@@ -11,6 +11,7 @@ import {
   X,
   Loader2,
   Send,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,8 @@ import {
   useCreateSupportTicket,
   useTicketReplies,
   useReplyToTicket,
+  useCloseTicket,
+  useDeleteReply,
 } from '@/modules/sellers/queries/useSupportTickets';
 
 interface SupportTicket {
@@ -78,6 +81,7 @@ export default function SellerSupportTicketsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [replyMessage, setReplyMessage] = useState('');
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +99,8 @@ export default function SellerSupportTicketsPage() {
 
   const createMutation = useCreateSupportTicket();
   const replyMutation = useReplyToTicket();
+  const closeTicketMutation = useCloseTicket();
+  const deleteReplyMutation = useDeleteReply();
 
   // Get replies and sort chronologically (oldest to newest)
   const rawReplies = (repliesQuery.data || []) as any[];
@@ -156,6 +162,28 @@ export default function SellerSupportTicketsPage() {
       });
     } catch (error) {
       setReplyMessage(messageToSend);
+    }
+  };
+
+  const handleCloseTicket = async () => {
+    if (!selectedTicketId) return;
+
+    try {
+      await closeTicketMutation.mutateAsync({ ticketId: selectedTicketId });
+      setCloseDialogOpen(false);
+      setSelectedTicketId(null);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleDeleteReply = async (replyId: string) => {
+    if (!selectedTicketId) return;
+
+    try {
+      await deleteReplyMutation.mutateAsync({ replyId, ticketId: selectedTicketId });
+    } catch (error) {
+      // Error handled by mutation
     }
   };
 
@@ -312,6 +340,18 @@ export default function SellerSupportTicketsPage() {
                     </p>
                   </div>
                 </div>
+
+                {selectedTicket.status !== 'closed' && (
+                  <div className="border-t border-[#333] mt-4 pt-4 flex gap-3 justify-end">
+                    <Button
+                      onClick={() => setCloseDialogOpen(true)}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Close Ticket
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {}
@@ -350,9 +390,20 @@ export default function SellerSupportTicketsPage() {
                               : 'bg-[#0a0a0a] text-gray-300 border border-[#333]'
                           }`}
                         >
-                          <p className="text-xs font-semibold mb-1 opacity-75">
-                            {senderLabel}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-xs font-semibold opacity-75">
+                              {senderLabel}
+                            </p>
+                            {isCurrentUser && (
+                              <button
+                                onClick={() => handleDeleteReply(reply.id)}
+                                className="p-1 hover:opacity-75 transition-opacity"
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                           <p className="text-sm">{reply.message}</p>
                           <p className="text-xs opacity-50 mt-2">
                             {new Date(reply.createdAt).toLocaleTimeString()}
@@ -414,6 +465,34 @@ export default function SellerSupportTicketsPage() {
           )}
         </div>
       </div>
+
+      {/* Close Ticket Dialog */}
+      {closeDialogOpen && selectedTicket && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg max-w-md w-full p-6 space-y-4">
+            <h2 className="text-xl font-bold text-white">Close Support Ticket</h2>
+            <p className="text-gray-400 text-sm">
+              Are you sure you want to close this ticket? Closed tickets cannot be reopened.
+            </p>
+            <div className="flex gap-3 justify-end pt-4">
+              <Button
+                onClick={() => setCloseDialogOpen(false)}
+                variant="outline"
+                className="border-[#333] text-white hover:bg-[#1a1a1a]"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCloseTicket}
+                disabled={closeTicketMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {closeTicketMutation.isPending ? 'Closing...' : 'Close Ticket'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {}
       {isCreateModalOpen && (
