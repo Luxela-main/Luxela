@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { toastSvc } from '@/services/toast';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -78,6 +79,7 @@ const PRIORITY_COLORS = {
 };
 
 export default function SellerSupportTicketsPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -240,15 +242,13 @@ export default function SellerSupportTicketsPage() {
       {/* Top Navigation with Back Button */}
       <div className="bg-gradient-to-r from-[#1a1a1a] to-black border-b border-[#333] p-6">
         <div className="max-w-7xl mx-auto">
-          {selectedTicketId && (
-            <button
-              onClick={() => setSelectedTicketId(null)}
-              className="flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm font-medium mb-4 transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Tickets
-            </button>
-          )}
+          <button
+            onClick={() => router.push('/sellers/support')}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover:text-purple-200 text-sm font-medium mb-4 transition-all duration-200 cursor-pointer border border-purple-600/30 hover:border-purple-600/50"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Support
+          </button>
           <h1 className="text-3xl font-bold mb-2">Support Tickets</h1>
           <p className="text-gray-400">Create and manage your support tickets</p>
         </div>
