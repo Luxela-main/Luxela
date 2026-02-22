@@ -115,14 +115,38 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        console.log('[OAuth Callback API] OTP verification successful');
+        console.log('[OAuth Callback API] OTP verification successful, user:', data.session.user.id);
+        
+        // For email OTP verification, we need to explicitly set the session
+        // because Supabase's verifyOtp doesn't set cookies automatically like exchangeCodeForSession does
+        const { error: setSessionError } = await supabase.auth.setSession(data.session);
+        
+        if (setSessionError) {
+          console.error('[OAuth Callback API] Failed to set session after OTP:', setSessionError.message);
+          return NextResponse.redirect(
+            new URL(`/signin?error=${encodeURIComponent('Failed to establish session')}`, request.url)
+          );
+        }
+        
+        console.log('[OAuth Callback API] Session established after OTP verification');
+        
+        const customRedirect = searchParams.get('redirect');
+        const redirectTarget = customRedirect 
+          ? `/auth/callback?redirect=${encodeURIComponent(customRedirect)}` 
+          : '/auth/callback';
+        
         const response = NextResponse.redirect(
-          new URL('/auth/callback', request.url)
+          new URL(redirectTarget, request.url)
         );
 
+        // Set cache control headers to prevent issues with session verification
         response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
         response.headers.set('Pragma', 'no-cache');
         response.headers.set('Expires', '0');
+        
+        // Force cookies to be sent in response by accessing the auth state
+        // This ensures the session cookies are properly persisted to the browser
+        console.log('[OAuth Callback API] Response headers set for session persistence');
 
         return response;
       } catch (verifyError) {

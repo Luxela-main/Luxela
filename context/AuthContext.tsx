@@ -93,10 +93,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const fragment = typeof window !== 'undefined' ? window.location.hash : '';
         const hasOAuthToken = fragment.includes('access_token') || fragment.includes('code');
         
-        // If OAuth callback, give Supabase time to process and set cookies
-        if (hasOAuthToken && retryCount === 0) {
-          console.log("[AUTH] OAuth callback detected, waiting for session sync...");
-          await new Promise(resolve => setTimeout(resolve, 1500));
+        // Check if we're in email verification callback (token_hash in query params)
+        const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const isEmailVerificationCallback = searchParams?.get('token_hash') !== null && searchParams?.get('type') === 'signup';
+        
+        // If OAuth callback or email verification callback, give Supabase time to process and set cookies
+        if ((hasOAuthToken || isEmailVerificationCallback) && retryCount === 0) {
+          const callbackType = isEmailVerificationCallback ? 'email verification' : 'OAuth';
+          console.log(`[AUTH] ${callbackType} callback detected, waiting for session sync...`);
+          // Wait longer for email verification (server-side processing takes time)
+          const waitTime = isEmailVerificationCallback ? 2000 : 1500;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
         
         const { data, error } = await supabase.auth.getSession();
