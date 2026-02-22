@@ -127,7 +127,7 @@ export function useCollectionsCached(options: {
 
         // Handle tRPC response format
         // tRPC returns: { result: { data: { collections: [...], total: number } } }
-        let collectionsData = null;
+        let collectionsData: any = null;
 
         if (Array.isArray(result) && result.length > 0) {
           // Response wrapped in array [{ result: { data: { ... } } }]

@@ -37,14 +37,10 @@ export function useBrandsCached(options: {
     setIsLoading(true);
     setError(null);
 
-    const MAX_RETRIES = 2;
-    const BASE_TIMEOUT = 30000; // Increased from 15s to 30s
-
-    const attemptFetch = async (retryAttempt: number = 0): Promise<any> => {
-      const controller = new AbortController();
-      // Use exponential backoff: 30s, 45s, 60s for retries
-      const timeoutMs = BASE_TIMEOUT + (retryAttempt * 15000);
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    // Attempt fetch with exponential backoff retry on timeout
+    const attemptFetch = async (retryCount = 0): Promise<any> => {
+      const baseTimeoutMs = 30000; // 30 seconds base timeout
+      const timeoutMs = baseTimeoutMs + retryCount * 15000; // Escalate: 30s, 45s, 60s
 
       try {
         const cacheParams = { page, limit, search, sortBy };
@@ -59,7 +55,6 @@ export function useBrandsCached(options: {
             setIsLoading(false);
             setIsFromCache(true);
           }
-          clearTimeout(timeout);
           return;
         }
 
@@ -73,6 +68,9 @@ export function useBrandsCached(options: {
             sortBy: sortBy || undefined,
           })
         );
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
         const response = await fetch(`/api/trpc/brands.getAllBrands?${queryParams.toString()}`, {
           method: 'GET',
@@ -159,54 +157,51 @@ export function useBrandsCached(options: {
           setIsFromCache(false);
         }
       } catch (err: any) {
-        clearTimeout(timeout);
-        
-        // Retry on timeout if we haven't exhausted retries
-        if (err.name === 'AbortError' && retryAttempt < MAX_RETRIES) {
-          console.warn(`[useBrandsCached] Request timeout, retrying... (attempt ${retryAttempt + 1}/${MAX_RETRIES})`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryAttempt)));
-          return attemptFetch(retryAttempt + 1);
+        // Check if it's a timeout error and we have retries left
+        if (err.name === 'AbortError' && retryCount < 2) {
+          const delayMs = (retryCount + 1) * 1000; // 1s, 2s delay between retries
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          return attemptFetch(retryCount + 1);
         }
-        throw err;
+
+        let errorMsg = 'Failed to fetch brands';
+
+        if (err.name === 'AbortError') {
+          errorMsg = 'Request timeout';
+        } else if (err instanceof Error) {
+          errorMsg = err.message;
+        }
+
+        const localStorageCached = await buyerPageCache.getFromLocalStorage<any>(
+          cacheKeys.BRANDS,
+          cacheParamsRef.current
+        );
+
+        if (localStorageCached && isMountedRef.current) {
+          setBrands(localStorageCached.brands || []);
+          setTotal(localStorageCached.total || 0);
+          setTotalPages(localStorageCached.totalPages || 0);
+          setError(null);
+          setIsFromCache(true);
+          setIsLoading(false);
+          console.warn('[useBrandsCached] Using stale localStorage cache as fallback');
+        } else {
+          if (isMountedRef.current) {
+            setError(errorMsg);
+            setIsLoading(false);
+          }
+          console.error('[useBrandsCached] Error:', errorMsg, {
+            name: err?.name,
+            stack: err?.stack,
+            status: err?.status,
+            retryAttempt: retryCount,
+          });
+        }
       }
     };
 
-    try {
-      await attemptFetch();
-    } catch (err: any) {
-      let errorMsg = 'Failed to fetch brands';
-
-      if (err.name === 'AbortError') {
-        errorMsg = `Request timeout after ${MAX_RETRIES + 1} attempts (30-60 seconds)`;
-      } else if (err instanceof Error) {
-        errorMsg = err.message;
-      }
-
-      const localStorageCached = await buyerPageCache.getFromLocalStorage<any>(
-        cacheKeys.BRANDS,
-        cacheParamsRef.current
-      );
-
-      if (localStorageCached && isMountedRef.current) {
-        setBrands(localStorageCached.brands || []);
-        setTotal(localStorageCached.total || 0);
-        setTotalPages(localStorageCached.totalPages || 0);
-        setError(null);
-        setIsFromCache(true);
-        setIsLoading(false);
-        console.warn('[useBrandsCached] Using stale localStorage cache as fallback');
-      } else {
-        if (isMountedRef.current) {
-          setError(errorMsg);
-          setIsLoading(false);
-        }
-        console.error('[useBrandsCached] Error:', errorMsg, {
-          name: err?.name,
-          stack: err?.stack,
-          status: err?.status,
-        });
-      }
-    }
+    // Start the fetch with retry logic
+    await attemptFetch();
   }, [page, limit, search, sortBy]);
 
   useEffect(() => {
