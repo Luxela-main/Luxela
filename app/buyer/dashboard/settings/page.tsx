@@ -87,7 +87,7 @@ function SettingsPageContent() {
   });
 
   // Helper function to format date to YYYY-MM-DD for HTML date input
-  const formatDateForInput = (dateString: string | undefined) => {
+  const formatDateForInput = (dateString: string | null | undefined) => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
