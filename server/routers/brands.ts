@@ -100,8 +100,8 @@ export const brandsRouter = createTRPCRouter({
           orderByClause = desc(brands.rating);
         }
 
-        // Fetch paginated brands with seller info in single query
-        console.log("Fetching paginated brands with seller info...");
+        // Fetch paginated brands (without expensive join)
+        console.log("Fetching paginated brands...");
         let brandsQuery = db
           .select({
             id: brands.id,
@@ -112,13 +112,8 @@ export const brandsRouter = createTRPCRouter({
             heroImage: brands.heroImage,
             rating: brands.rating,
             sellerId: brands.sellerId,
-            storeLogo: sellerBusiness.storeLogo,
-            storeBanner: sellerBusiness.storeBanner,
-            storeDescription: sellerBusiness.storeDescription,
-            brandName: sellerBusiness.brandName,
           })
-          .from(brands)
-          .leftJoin(sellerBusiness, eq(brands.sellerId, sellerBusiness.sellerId));
+          .from(brands);
 
         if (whereCondition) {
           brandsQuery = brandsQuery.where(whereCondition) as any;
@@ -140,8 +135,7 @@ export const brandsRouter = createTRPCRouter({
         // Execute product and follower count queries IN PARALLEL (optimization!)
         console.log(`Fetching counts for ${allBrands.length} brands...`);
 
-        const [productCountsResult, followerCountsResult] = await Promise.all([
-          // Product counts (only for this page's sellers)
+        const [productCountsResult, followerCountsResult, sellerDataResult] = await Promise.all([
           db
             .select({ sellerId: listings.sellerId, count: count() })
             .from(listings)
@@ -152,7 +146,6 @@ export const brandsRouter = createTRPCRouter({
               )
             )
             .groupBy(listings.sellerId),
-          // Follower counts (only for this page's brands)
           db
             .select({
               brandId: buyerBrandFollows.brandId,
@@ -161,11 +154,20 @@ export const brandsRouter = createTRPCRouter({
             .from(buyerBrandFollows)
             .where(inArray(buyerBrandFollows.brandId, brandIds))
             .groupBy(buyerBrandFollows.brandId),
+          db
+            .select({
+              sellerId: sellerBusiness.sellerId,
+              storeLogo: sellerBusiness.storeLogo,
+              storeBanner: sellerBusiness.storeBanner,
+              storeDescription: sellerBusiness.storeDescription,
+              brandName: sellerBusiness.brandName,
+            })
+            .from(sellerBusiness)
+            .where(inArray(sellerBusiness.sellerId, sellerIds)),
         ]);
 
         console.log(`✓ Product and follower counts fetched in parallel`);
 
-        // Build maps for O(1) lookup
         const productCountsMap = new Map(
           (productCountsResult || []).map((r: any) => [
             r.sellerId,
@@ -178,28 +180,34 @@ export const brandsRouter = createTRPCRouter({
             Number(r.count ?? 0),
           ])
         );
+        const sellerDataMap = new Map(
+          (sellerDataResult || []).map((r: any) => [
+            r.sellerId,
+            r,
+          ])
+        );
 
-        // Build final result
         console.log(`Building final result...`);
         let brandsWithCounts = allBrands.map((item: any) => {
           const productCount = productCountsMap.get(item.sellerId) ?? 0;
           const followersCount = followerCountsMap.get(item.id) ?? 0;
+          const sellerData = sellerDataMap.get(item.sellerId) || {};
 
           return {
             id: item.id,
             name: item.name,
             slug: item.slug,
             description: item.description,
-            logoImage: item.logoImage || item.storeLogo,
-            heroImage: item.heroImage || item.storeBanner,
+            logoImage: item.logoImage || sellerData.storeLogo,
+            heroImage: item.heroImage || sellerData.storeBanner,
             rating: item.rating ? String(item.rating) : "0",
             totalProducts: productCount,
             followersCount,
             sellerId: item.sellerId,
-            storeLogo: item.storeLogo,
-            storeBanner: item.storeBanner,
-            storeDescription: item.storeDescription,
-            brandName: item.brandName,
+            storeLogo: sellerData.storeLogo,
+            storeBanner: sellerData.storeBanner,
+            storeDescription: sellerData.storeDescription,
+            brandName: sellerData.brandName,
           };
         });
 

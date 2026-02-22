@@ -4,7 +4,10 @@ import { useSearch } from '@/context/SearchContext';
 import { useListings } from '@/context/ListingsContext';
 import { useMemo, useEffect, useState } from 'react';
 import { logListingsDebug } from '@/lib/debug/listings-debug';
-import { useBrands, type Brand, useCollections } from '@/modules/buyer/queries';
+import { useBrands, type Brand } from '@/modules/buyer/queries';
+import { useCollectionsCached } from '@/modules/buyer/queries/useCollections-cached';
+import { useBrandsCached } from '@/modules/buyer/queries/useBrands-cached';
+import { prefetchBuyerPageData } from '@/utils/cache/buyer-page-cache';
 import {
   BrandShowcase,
   CollectionShowcase,
@@ -17,9 +20,13 @@ import ScrollToTopButton from '@/components/buyer/ScrollToTopButton';
 const Homepage = () => {
   const { searchQuery } = useSearch();
   const { listings, loading, error } = useListings();
-  const { brands: brandsArray, isLoading: brandsLoading, total: totalBrands } = useBrands({ limit: 8 });
-  const { data: collectionsData = [], isLoading: collectionsLoading } = useCollections({ limit: 8 });
+  const { brands: brandsArray, isLoading: brandsLoading, total: totalBrands, isFromCache: brandsFromCache } = useBrandsCached({ limit: 8 });
+  const { data: collectionsData = [], isLoading: collectionsLoading, isFromCache: collectionsFromCache } = useCollectionsCached({ limit: 8 });
   const [showNewArrivals, setShowNewArrivals] = useState(true);
+  
+  useEffect(() => {
+    prefetchBuyerPageData(8);
+  }, []);
   
   useEffect(() => {
     if (listings.length > 0) {

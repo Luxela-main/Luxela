@@ -994,7 +994,6 @@ export const collectionRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       try {
-        // OPTIMIZATION: Simplified query - fetch only essential fields
         const approvedListings = await db
           .select({
             id: listings.id,
@@ -1025,53 +1024,45 @@ export const collectionRouter = createTRPCRouter({
           return { collections: [], total: 0 };
         }
 
-        // Get total count with sql.raw to avoid parameter binding issues
         const countResult = await db.execute(
           sql`SELECT COUNT(*) as count FROM listings WHERE type = 'collection' AND status = 'approved'`
         );
         const totalCount = Number(countResult.rows[0]?.count || 0);
 
         const collectionIds: string[] = approvedListings
-          .filter((l: typeof approvedListings[number]) => l.collectionId)
-          .map((l: typeof approvedListings[number]) => l.collectionId as string);
+          .filter((l: any) => l.collectionId)
+          .map((l: any) => l.collectionId as string);
         const sellerIds: string[] = Array.from(
           new Set(
             approvedListings
-              .filter((l: typeof approvedListings[number]) => l.sellerId)
-              .map((l: typeof approvedListings[number]) => l.sellerId as string)
+              .filter((l: any) => l.sellerId)
+              .map((l: any) => l.sellerId as string)
           )
         );
 
-        // OPTIMIZATION: Batch fetch with chunking for large result sets
-        const BATCH_SIZE = 50; // Process in chunks to avoid timeout
-        const allCollectionItems: any[] = [];
-        
-        // Process collection items in batches
-        for (let i = 0; i < collectionIds.length; i += BATCH_SIZE) {
-          const batchIds = collectionIds.slice(i, i + BATCH_SIZE);
-          const batchItems = await db.select({
-            collectionId: collectionItems.collectionId,
-            itemId: collectionItems.id,
-            position: collectionItems.position,
-            productId: collectionItems.productId,
-          })
-          .from(collectionItems)
-          .where(inArray(collectionItems.collectionId, batchIds))
-          .orderBy(collectionItems.position);
-          allCollectionItems.push(...batchItems);
+        if (collectionIds.length === 0) {
+          return { collections: [], total: 0 };
         }
-        
-        // OPTIMIZATION: Only fetch first 3 items per collection for display (rest available on demand)
-        const itemsByCollectionId = new Map<string, typeof allCollectionItems>();
+
+        const allCollectionItems = await db.select({
+          collectionId: collectionItems.collectionId,
+          itemId: collectionItems.id,
+          position: collectionItems.position,
+          productId: collectionItems.productId,
+        })
+        .from(collectionItems)
+        .where(inArray(collectionItems.collectionId, collectionIds))
+        .orderBy(collectionItems.position);
+
+        const itemsByCollectionId = new Map<string, any[]>();
         const MAX_PREVIEW_ITEMS = 3;
         const allProductIdsSet = new Set<string>();
         
-        allCollectionItems.forEach((item: typeof allCollectionItems[number]) => {
+        allCollectionItems.forEach((item: any) => {
           const collId = item.collectionId;
           if (!itemsByCollectionId.has(collId)) {
             itemsByCollectionId.set(collId, []);
           }
-          // Only keep preview items
           if (itemsByCollectionId.get(collId)!.length < MAX_PREVIEW_ITEMS) {
             itemsByCollectionId.get(collId)!.push(item);
             allProductIdsSet.add(item.productId);
@@ -1080,64 +1071,27 @@ export const collectionRouter = createTRPCRouter({
         
         const productIds: string[] = Array.from(allProductIdsSet);
         
-        console.log(`[getApprovedCollections] Found ${allCollectionItems.length} items, fetching data for ${productIds.length} unique products`);
+        console.log(`[getApprovedCollections] Found ${allCollectionItems.length} items, fetching ${productIds.length} products for ${collectionIds.length} collections`);
 
-        // Now batch fetch all related data in separate sequential queries to avoid parameter binding issues
-        let allCollectionDetails: any[] = [];
-        let allSellers: any[] = [];
-        let allProducts: any[] = [];
-        let allProductImages: any[] = [];
-        let allListings: any[] = [];
-        
-        // Fetch collections in batches
-        for (let i = 0; i < collectionIds.length; i += BATCH_SIZE) {
-          const batchIds = collectionIds.slice(i, i + BATCH_SIZE);
-          const batchDetails = await db.select().from(collections).where(inArray(collections.id, batchIds));
-          allCollectionDetails.push(...batchDetails);
-        }
-        
-        // Fetch sellers in batches
-        for (let i = 0; i < sellerIds.length; i += BATCH_SIZE) {
-          const batchIds = sellerIds.slice(i, i + BATCH_SIZE);
-          const batchSellers = await db.select({ id: sellers.id }).from(sellers).where(inArray(sellers.id, batchIds));
-          allSellers.push(...batchSellers);
-        }
-        
-        // Fetch products in batches
-        for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
-          const batchIds = productIds.slice(i, i + BATCH_SIZE);
-          const batchProducts = await db.select({
+        const [allCollectionDetails, allSellers, allProducts, allProductImages, allListings] = await Promise.all([
+          collectionIds.length > 0 ? db.select().from(collections).where(inArray(collections.id, collectionIds)) : Promise.resolve([]),
+          sellerIds.length > 0 ? db.select({ id: sellers.id }).from(sellers).where(inArray(sellers.id, sellerIds as string[])) : Promise.resolve([]),
+          productIds.length > 0 ? db.select({
             id: products.id,
             name: products.name,
             slug: products.slug,
             description: products.description,
           })
           .from(products)
-          .where(inArray(products.id, batchIds));
-          allProducts.push(...batchProducts);
-        }
-        
-        // Fetch product images in batches - with explicit error handling
-        for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
-          const batchIds = productIds.slice(i, i + BATCH_SIZE);
-          try {
-            const batchImages = await db.select({
-              productId: productImages.productId,
-              imageUrl: productImages.imageUrl,
-              position: productImages.position,
-            })
-            .from(productImages)
-            .where(inArray(productImages.productId, batchIds));
-            allProductImages.push(...batchImages);
-          } catch (imageError: any) {
-            console.warn('[getApprovedCollections] Error fetching images for batch', i, ':', imageError?.message);
-          }
-        }
-        
-        // Fetch listings in batches
-        for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
-          const batchIds = productIds.slice(i, i + BATCH_SIZE);
-          const batchListings = await db.select({
+          .where(inArray(products.id, productIds as string[])) : Promise.resolve([]),
+          productIds.length > 0 ? db.select({
+            productId: productImages.productId,
+            imageUrl: productImages.imageUrl,
+            position: productImages.position,
+          })
+          .from(productImages)
+          .where(inArray(productImages.productId, productIds as string[])) : Promise.resolve([]),
+          productIds.length > 0 ? db.select({
             id: listings.id,
             productId: listings.productId,
             title: listings.title,
@@ -1162,9 +1116,8 @@ export const collectionRouter = createTRPCRouter({
             refundPolicy: listings.refundPolicy,
           })
           .from(listings)
-          .where(and(inArray(listings.productId, batchIds), inArray(listings.status, ['approved', 'pending_review'])));
-          allListings.push(...batchListings);
-        }
+          .where(and(inArray(listings.productId, productIds as string[]), inArray(listings.status, ['approved', 'pending_review']))) : Promise.resolve([]),
+        ]);
         
         console.log('[getApprovedCollections] Batch fetch complete. Processing...');
         
