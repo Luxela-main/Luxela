@@ -52,6 +52,7 @@ export interface OrderLineItem {
   listingId: string;
   productTitle: string;
   productImage?: string;
+  productImages?: string[];
   productCategory: ProductCategory;
   quantity: number;
   priceCents: number;
@@ -70,6 +71,7 @@ export interface Order {
   // Product Information
   productTitle: string;
   productImage?: string;
+  productImages?: string[];
   productCategory: ProductCategory;
   quantity?: number;
   sizes?: string[];

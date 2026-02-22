@@ -27,6 +27,7 @@ import {
   brands,
   users,
   sellers,
+  productImages,
 } from "../db/schema";
 import { notificationTypeEnum } from "../db/zodSchemas";
 import { and, eq, desc, sql, isNull, count } from "drizzle-orm";
@@ -1285,6 +1286,7 @@ return {
             listingId: z.string(),
             productTitle: z.string(),
             productImage: z.string().optional(),
+            productImages: z.array(z.string()).optional(),
             productCategory: z.string(),
             customerName: z.string(),
             customerEmail: z.string(),
@@ -1408,6 +1410,7 @@ return {
             listingId: o.listingId,
             productTitle: o.productTitle,
             productImage: o.productImage || undefined,
+            productImages: o.productImage ? [o.productImage] : undefined,
             productCategory: o.productCategory,
             customerName: o.customerName,
             customerEmail: o.customerEmail,

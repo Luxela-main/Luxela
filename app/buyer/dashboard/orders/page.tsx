@@ -30,6 +30,7 @@ export default function OrdersPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price-high' | 'price-low'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const itemsPerPage = 12;
@@ -179,12 +180,23 @@ export default function OrdersPage() {
               <p className="text-gray-400 text-sm">{filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}</p>
             </div>
             <button
-              onClick={() => refetch()}
-              disabled={isLoading}
+              onClick={async () => {
+                setIsRefreshing(true);
+                try {
+                  await refetch();
+                  toastHandler.success('Orders refreshed successfully');
+                } catch (err) {
+                  toastHandler.error('Failed to refresh orders');
+                } finally {
+                  setIsRefreshing(false);
+                }
+              }}
+              disabled={isRefreshing}
               aria-label="Refresh orders"
+              title="Refresh orders"
               className="p-2.5 rounded-lg bg-[#8451E1]/10 hover:bg-[#8451E1]/20 border border-[#8451E1]/30 hover:border-[#8451E1]/60 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`w-5 h-5 text-[#8451E1] ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 text-[#8451E1] ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

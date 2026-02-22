@@ -63,13 +63,19 @@ export function OrderCard({ order, onViewDetails }: OrderCardProps) {
 
         {/* Product Image and Info */}
         <div className="flex gap-4 mb-4">
-          {order.productImage && (
+          {(order.productImages?.[0] || order.productImage) && (
             <div className="relative w-16 h-20 sm:w-20 sm:h-24 flex-shrink-0 overflow-hidden rounded-lg bg-[#1a1a1a] border border-[#8451E1]/20">
               <img
-                src={order.productImage}
+                src={order.productImages?.[0] || order.productImage || ''}
                 alt={order.productTitle}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
               />
+            </div>
+          )}
+          
+          {(order.productImages?.length || 0) > 1 && (
+            <div className="absolute top-3 right-3 bg-black/70 px-2 py-1 rounded text-xs font-semibold text-white">
+              +{(order.productImages?.length || 0) - 1}
             </div>
           )}
           
