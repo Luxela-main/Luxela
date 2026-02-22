@@ -116,7 +116,7 @@ class BuyerPageCache {
 
       if (error || !data) return null;
 
-      const cached = data.data;
+      const cached = (data as { data: any; created_at: number }).data;
       if (this.isExpired(data.created_at, CACHE_TTL.SUPABASE)) {
         await this.supabase
           .from(table)
