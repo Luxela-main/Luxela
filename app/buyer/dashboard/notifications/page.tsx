@@ -28,6 +28,7 @@ import {
 import Link from 'next/link';
 import { toastSvc } from '@/services/toast';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
+import { Button } from '@/components/ui/button';
 
 // Debounce utility
 const debounce = (func: Function, wait: number) => {
@@ -427,27 +428,32 @@ export default function NotificationsPage() {
                   {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'All notifications read'}
                 </p>
               </div>
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
                 {unreadCount > 0 && (
-                  <button
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleMarkAllAsRead()}
                     disabled={markAllAsReadMutation.isPending}
-                    className="px-4 py-2 bg-gradient-to-r from-[#8451E1] to-[#7240D0] hover:shadow-lg hover:shadow-[#8451E1]/30 text-white text-sm font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 cursor-pointer"
+                    className="cursor-pointer w-full md:w-auto"
                   >
-                    Mark All as Read
-                  </button>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Mark All Read
+                  </Button>
                 )}
                 {notifications.length > 0 && (
-                  <button
+                  <Button
+                    size="sm"
+                    variant="destructive"
                     onClick={() => {
                       wrappedDeleteAllMutate();
                     }}
                     disabled={deleteAllMutation.isPending}
-                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:shadow-lg hover:shadow-red-600/30 text-white text-sm font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                    className="cursor-pointer w-full md:w-auto"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 mr-2" />
                     Clear All
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

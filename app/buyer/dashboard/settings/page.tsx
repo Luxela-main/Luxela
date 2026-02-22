@@ -51,6 +51,9 @@ function SettingsPageContent() {
     fullName: '',
     email: '',
     phoneNumber: '',
+    country: '',
+    state: '',
+    dateOfBirth: '',
   });
 
   
@@ -83,6 +86,20 @@ function SettingsPageContent() {
     securityAlerts: true,
   });
 
+  // Helper function to format date to YYYY-MM-DD for HTML date input
+  const formatDateForInput = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return '';
+    }
+  };
+
   
   useEffect(() => {
     if (profile) {
@@ -90,6 +107,9 @@ function SettingsPageContent() {
         fullName: profile.fullName || '',
         email: profile.email || '',
         phoneNumber: profile.phoneNumber || '',
+        country: profile.country || '',
+        state: profile.state || '',
+        dateOfBirth: formatDateForInput(profile.dateOfBirth),
       });
     }
   }, [profile]);
@@ -139,6 +159,9 @@ function SettingsPageContent() {
         fullName: profile.fullName || '',
         email: profile.email || '',
         phoneNumber: profile.phoneNumber || '',
+        country: profile.country || '',
+        state: profile.state || '',
+        dateOfBirth: profile.dateOfBirth || '',
       });
     }
     setIsEditingAccount(false);
@@ -177,10 +200,13 @@ function SettingsPageContent() {
     e.preventDefault();
 
     try {
-      // Call tRPC to update profile
+      // Call tRPC to update profile (dateOfBirth sent as ISO string, backend will coerce to Date)
       await updateAccountMutation.mutateAsync({
         fullName: accountData.fullName,
         phoneNumber: accountData.phoneNumber,
+        country: accountData.country,
+        state: accountData.state,
+        dateOfBirth: accountData.dateOfBirth || undefined,
       });
 
       // Show success message
@@ -314,6 +340,50 @@ function SettingsPageContent() {
                       onChange={handleAccountChange}
                       disabled={!isEditingAccount}
                       placeholder="+1 (555) 000-0000"
+                      className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666] disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Country
+                    </label>
+                    <Input
+                      type="text"
+                      name="country"
+                      value={accountData.country}
+                      onChange={handleAccountChange}
+                      disabled={!isEditingAccount}
+                      placeholder="Enter country"
+                      className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666] disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      State/Province
+                    </label>
+                    <Input
+                      type="text"
+                      name="state"
+                      value={accountData.state}
+                      onChange={handleAccountChange}
+                      disabled={!isEditingAccount}
+                      placeholder="Enter state or province"
+                      className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666] disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Date of Birth
+                    </label>
+                    <Input
+                      type="date"
+                      name="dateOfBirth"
+                      value={accountData.dateOfBirth}
+                      onChange={handleAccountChange}
+                      disabled={!isEditingAccount}
                       className="bg-[#0e0e0e] border-[#212121] text-white placeholder-[#666] disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>

@@ -506,7 +506,7 @@ export const buyerRouter = createTRPCRouter({
       z.object({
         username: z.string().min(3).max(100).optional(),
         fullName: z.string().min(1).optional(),
-        dateOfBirth: z.date().optional(),
+        dateOfBirth: z.string().pipe(z.coerce.date()).optional(),
         phoneNumber: z.string().optional(),
         country: z.string().optional(),
         state: z.string().optional(),
@@ -884,12 +884,14 @@ return {
         try {
           await notifyAddressUpdated(
             buyer.id,
-            JSON.stringify({
+            'billing',
+            'Billing Address',
+            {
               houseAddress: input.houseAddress,
               city: input.city,
               postalCode: input.postalCode,
               isDefault: input.isDefault,
-            })
+            }
           );
         } catch (notifErr) {
           console.warn('Failed to send address update notification:', notifErr);

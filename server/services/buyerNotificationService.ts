@@ -383,7 +383,13 @@ export async function notifyAddressAdded(
 export async function notifyAddressUpdated(
   buyerId: string,
   addressType: string,
-  addressLabel?: string
+  addressLabel?: string,
+  addressDetails?: {
+    houseAddress?: string;
+    city?: string;
+    postalCode?: string;
+    isDefault?: boolean;
+  }
 ): Promise<string> {
   return createBuyerNotification({
     buyerId,
@@ -394,6 +400,10 @@ export async function notifyAddressUpdated(
     metadata: {
       addressType,
       addressLabel,
+      houseAddress: addressDetails?.houseAddress,
+      city: addressDetails?.city,
+      postalCode: addressDetails?.postalCode,
+      isDefault: addressDetails?.isDefault,
       action: 'address_updated',
     },
   });

@@ -18,6 +18,15 @@ export default function SettingsPageContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    fullName: profile?.fullName || '',
+    email: profile?.email || user?.email || '',
+    phoneNumber: profile?.phoneNumber || '',
+    country: profile?.country || '',
+    state: profile?.state || '',
+    dateOfBirth: profile?.dateOfBirth || ''
+  });
   const [addressForm, setAddressForm] = useState({
     houseAddress: '',
     city: '',
@@ -63,72 +72,148 @@ export default function SettingsPageContent() {
           <div className="space-y-6">
             {/* Name */}
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <label className="block text-[#acacac] text-sm mb-2">Name</label>
-                <div className="text-white font-medium capitalize">{profile?.fullName || 'N/A'}</div>
+                {editingField === 'fullName' ? (
+                  <Input
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                    className="bg-[#141414] border-[#212121] text-white placeholder:text-[#595959]"
+                  />
+                ) : (
+                  <div className="text-white font-medium capitalize">{profile?.fullName || 'N/A'}</div>
+                )}
               </div>
-              <Button variant="ghost" className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm">
-                Edit
+              <Button 
+                onClick={() => setEditingField(editingField === 'fullName' ? null : 'fullName')}
+                variant="ghost" 
+                className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm ml-4"
+              >
+                {editingField === 'fullName' ? 'Save' : 'Edit'}
               </Button>
             </div>
 
             {/* Email */}
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <label className="block text-[#acacac] text-sm mb-2">Email</label>
-                <div className="text-white">{profile?.email || user?.email || 'N/A'}</div>
+                {editingField === 'email' ? (
+                  <Input
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="bg-[#141414] border-[#212121] text-white placeholder:text-[#595959]"
+                  />
+                ) : (
+                  <div className="text-white">{profile?.email || user?.email || 'N/A'}</div>
+                )}
               </div>
-              <Button variant="ghost" className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm">
-                Edit
+              <Button 
+                onClick={() => setEditingField(editingField === 'email' ? null : 'email')}
+                variant="ghost" 
+                className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm ml-4"
+              >
+                {editingField === 'email' ? 'Save' : 'Edit'}
               </Button>
             </div>
 
             {/* Mobile Phone Number */}
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <label className="block text-[#acacac] text-sm mb-2">Mobile Phone Number</label>
-                {profile?.phoneNumber && (
-                  <div className="text-white">{profile.phoneNumber}</div>
+                {editingField === 'phoneNumber' ? (
+                  <Input
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                    className="bg-[#141414] border-[#212121] text-white placeholder:text-[#595959]"
+                  />
+                ) : (
+                  profile?.phoneNumber && (
+                    <div className="text-white">{profile.phoneNumber}</div>
+                  )
                 )}
               </div>
-              <Button variant="ghost" className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm">
-                {profile?.phoneNumber ? 'Edit' : 'Add Number'}
+              <Button 
+                onClick={() => setEditingField(editingField === 'phoneNumber' ? null : 'phoneNumber')}
+                variant="ghost" 
+                className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm ml-4"
+              >
+                {editingField === 'phoneNumber' ? 'Save' : (profile?.phoneNumber ? 'Edit' : 'Add Number')}
               </Button>
             </div>
 
             {/* Country */}
-            <div>
-              <label className="block text-[#acacac] text-sm mb-2">Country</label>
-              <div className="text-[#7e7e7e]">{profile?.country || 'Not set'}</div>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <label className="block text-[#acacac] text-sm mb-2">Country</label>
+                {editingField === 'country' ? (
+                  <Input
+                    value={formData.country}
+                    onChange={(e) => setFormData({...formData, country: e.target.value})}
+                    className="bg-[#141414] border-[#212121] text-white placeholder:text-[#595959]"
+                    placeholder="Enter country"
+                  />
+                ) : (
+                  <div className="text-white">{profile?.country || 'Not set'}</div>
+                )}
+              </div>
+              <Button 
+                onClick={() => setEditingField(editingField === 'country' ? null : 'country')}
+                variant="ghost" 
+                className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm ml-4"
+              >
+                {editingField === 'country' ? 'Save' : 'Edit'}
+              </Button>
             </div>
 
             {/* State of residence */}
-            <div>
-              <label className="block text-[#acacac] text-sm mb-2">State of residence</label>
-              <select 
-                className="w-full bg-[#141414] border border-[#212121] rounded-lg p-3 text-[#7e7e7e] focus:outline-none focus:border-[#8451e1]"
-                defaultValue={profile?.state || ''}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <label className="block text-[#acacac] text-sm mb-2">State of residence</label>
+                {editingField === 'state' ? (
+                  <select 
+                    className="w-full bg-[#141414] border border-[#212121] rounded-lg p-3 text-white focus:outline-none focus:border-[#8451e1]"
+                    value={formData.state}
+                    onChange={(e) => setFormData({...formData, state: e.target.value})}
+                  >
+                    <option value="">Select state/city</option>
+                    <option value="Lagos">Lagos</option>
+                    <option value="Abuja">Abuja</option>
+                    <option value="Kano">Kano</option>
+                  </select>
+                ) : (
+                  <div className="text-white">{profile?.state || 'Not set'}</div>
+                )}
+              </div>
+              <Button 
+                onClick={() => setEditingField(editingField === 'state' ? null : 'state')}
+                variant="ghost" 
+                className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm ml-4"
               >
-                <option value="">Select city/town</option>
-                <option value="Lagos">Lagos</option>
-                <option value="Abuja">Abuja</option>
-                <option value="Kano">Kano</option>
-              </select>
+                {editingField === 'state' ? 'Save' : 'Edit'}
+              </Button>
             </div>
 
             {/* Date of birth */}
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <label className="block text-[#acacac] text-sm mb-2">Date of birth</label>
-                <Input
-                  type="text"
-                  placeholder="mm/dd/yyyy"
-                  defaultValue={formattedDOB}
-                  className="bg-[#141414] border-[#212121] text-white placeholder:text-[#595959]"
-                />
+                {editingField === 'dateOfBirth' ? (
+                  <Input
+                    type="date"
+                    value={formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString().split('T')[0] : ''}
+                    onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+                    className="bg-[#141414] border-[#212121] text-white placeholder:text-[#595959]"
+                  />
+                ) : (
+                  <div className="text-white">{formattedDOB || 'Not set'}</div>
+                )}
               </div>
-              <Button variant="ghost" className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm ml-4">
-                {profile?.dateOfBirth ? 'Edit' : 'Add'}
+              <Button 
+                onClick={() => setEditingField(editingField === 'dateOfBirth' ? null : 'dateOfBirth')}
+                variant="ghost" 
+                className="text-[#8451e1] hover:text-[#7041c7] hover:bg-transparent text-sm ml-4"
+              >
+                {editingField === 'dateOfBirth' ? 'Save' : (profile?.dateOfBirth ? 'Edit' : 'Add')}
               </Button>
             </div>
           </div>
