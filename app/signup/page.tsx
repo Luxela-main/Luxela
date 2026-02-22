@@ -29,23 +29,10 @@ function SignUpContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [isResending, setIsResending] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
   const router = useRouter();
   const toast = useToast();
   const searchParams = useSearchParams();
-
-  
-  const checkEmailExists = async (email: string) => {
-    try {
-      const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Email check failed:", error);
-      return { exists: null, error: "Failed to check email" };
-    }
-  };
 
   const handleSignUp = async (
   values: SignUpFormValues,
@@ -74,25 +61,6 @@ function SignUpContent() {
     const { email, password, role } = values;
 
     
-    setIsCheckingEmail(true);
-    const emailCheckResult = await checkEmailExists(email);
-    setIsCheckingEmail(false);
-
-    if (emailCheckResult.exists) {
-      toast.error(
-        emailCheckResult.message ||
-          `This email is already registered as a ${emailCheckResult.role}. Please sign in instead.`
-      );
-      setSubmitting(false);
-      return;
-    }
-
-    if (emailCheckResult.error) {
-      toast.error("Failed to verify email. Please try again.");
-      setSubmitting(false);
-      return;
-    }
-
     const { success, error } = await authActions.signupAction(
       email,
       password,
@@ -297,9 +265,9 @@ const handleResendVerification = async () => {
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-b from-[#8451E1] to-[#7240D0] hover:from-[#9468F2] hover:to-[#8451E1] text-white font-semibold py-6 mt-6 transition-all duration-300 hover:shadow-lg hover:shadow-[#8451E1]/50 cursor-pointer"
-                    disabled={isSubmitting || isCheckingEmail}
+                    disabled={isSubmitting}
                   >
-                    {isCheckingEmail ? "Checking email..." : isSubmitting ? "Signing Up..." : "Sign up"}
+                    {isSubmitting ? "Signing Up..." : "Sign up"}
                   </Button>
                 </Form>
               )}
