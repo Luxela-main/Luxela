@@ -1024,10 +1024,18 @@ export const collectionRouter = createTRPCRouter({
           return { collections: [], total: 0 };
         }
 
-        const countResult = await db.execute(
-          sql`SELECT COUNT(*) as count FROM listings WHERE type = 'collection' AND status = 'approved'`
-        );
-        const totalCount = Number(countResult.rows[0]?.count || 0);
+        let totalCount = 0;
+        try {
+          const countResult = await Promise.race([
+            db.execute(
+              sql`SELECT COUNT(*) as count FROM listings WHERE type = 'collection' AND status = 'approved'`
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Count timeout')), 5000))
+          ]) as any;
+          totalCount = Number(countResult.rows[0]?.count || 0);
+        } catch (countErr) {
+          totalCount = input.offset + approvedListings.length + (approvedListings.length === input.limit ? 100 : 0);
+        }
 
         const collectionIds: string[] = approvedListings
           .filter((l: any) => l.collectionId)

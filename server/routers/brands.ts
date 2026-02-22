@@ -191,23 +191,30 @@ export const brandsRouter = createTRPCRouter({
         let brandsWithCounts = allBrands.map((item: any) => {
           const productCount = productCountsMap.get(item.sellerId) ?? 0;
           const followersCount = followerCountsMap.get(item.id) ?? 0;
-          const sellerData = sellerDataMap.get(item.sellerId) || {};
+          const sellerData = sellerDataMap.get(item.sellerId) || {
+            storeLogo: null,
+            storeBanner: null,
+            storeDescription: null,
+            brandName: null,
+          } as { storeLogo: string | null; storeBanner: string | null; storeDescription: string | null; brandName: string | null };
+
+          const typedSellerData = sellerData as { storeLogo: string | null; storeBanner: string | null; storeDescription: string | null; brandName: string | null };
 
           return {
             id: item.id,
             name: item.name,
             slug: item.slug,
             description: item.description,
-            logoImage: item.logoImage || sellerData.storeLogo,
-            heroImage: item.heroImage || sellerData.storeBanner,
+            logoImage: item.logoImage || typedSellerData.storeLogo,
+            heroImage: item.heroImage || typedSellerData.storeBanner,
             rating: item.rating ? String(item.rating) : "0",
             totalProducts: productCount,
             followersCount,
             sellerId: item.sellerId,
-            storeLogo: sellerData.storeLogo,
-            storeBanner: sellerData.storeBanner,
-            storeDescription: sellerData.storeDescription,
-            brandName: sellerData.brandName,
+            storeLogo: typedSellerData.storeLogo,
+            storeBanner: typedSellerData.storeBanner,
+            storeDescription: typedSellerData.storeDescription,
+            brandName: typedSellerData.brandName,
           };
         });
 

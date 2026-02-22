@@ -662,53 +662,23 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const offset = (input.page - 1) * input.limit;
 
-      // Get all product IDs that belong to collections
-      const productsInCollections = await db
-        .selectDistinct({ productId: collectionItems.productId })
-        .from(collectionItems);
-
-      const productIdsInCollections = productsInCollections.map((item: any) => item.productId);
-      
-      console.log('[DEBUG getApprovedListingsCatalog] Collection filter:', {
-        collectionCount: productIdsInCollections.length,
-        productIdsInCollections: productIdsInCollections.slice(0, 5),
-      });
-
-      // Count approved listings that are NOT in collections and NOT collection type
-      const countResult = await db
+      const countPromise = db
         .select({ count: countFn() })
         .from(listings)
         .where(
           and(
             eq(listings.status, 'approved'),
-            eq(listings.type, 'single'), // Only individual products (NOT collection type)
-            sql`${listings.collectionId} IS NULL`, // Exclude any listing linked to a collection
-            productIdsInCollections.length > 0
-              ? and(
-                  sql`${listings.productId} IS NOT NULL`, // Must have a productId
-                  sql`${listings.productId} NOT IN (${sql.join(productIdsInCollections, sql`, `)})`  // And NOT in collections
-                )
-              : sql`${listings.productId} IS NOT NULL` // Must have a productId
+            eq(listings.type, 'single')
           )
         );
 
-      const total = Number(countResult[0]?.count ?? 0);
-
-      // Fetch approved listings that are NOT in collections
-      const approvedListings = await db
+      const dataPromise = db
         .select()
         .from(listings)
         .where(
           and(
             eq(listings.status, 'approved'),
-            eq(listings.type, 'single'), // Only individual products (NOT collection type)
-            sql`${listings.collectionId} IS NULL`, // Exclude any listing linked to a collection
-            productIdsInCollections.length > 0
-              ? and(
-                  sql`${listings.productId} IS NOT NULL`, // Must have a productId
-                  sql`${listings.productId} NOT IN (${sql.join(productIdsInCollections, sql`, `)})`  // And NOT in collections
-                )
-              : sql`${listings.productId} IS NOT NULL` // Must have a productId
+            eq(listings.type, 'single')
           )
         )
         .orderBy(
@@ -718,6 +688,21 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         )
         .limit(input.limit)
         .offset(offset);
+
+      let total = 0;
+      const countTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Count timeout')), 3000)
+      );
+      
+      try {
+        const countResult = await Promise.race([countPromise, countTimeout]);
+        total = Number((countResult as any)[0]?.count ?? 0);
+      } catch (e) {
+        console.warn('[BUYER_CATALOG] Count query timed out, using paginated results');
+        total = -1;
+      }
+
+      const approvedListings = await dataPromise;
       
       console.log('[DEBUG getApprovedListingsCatalog] Listings query result:', {
         fetchedCount: approvedListings.length,
@@ -851,11 +836,14 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         total,
       });
 
+      const estimatedTotal = total === -1 ? input.page * input.limit : total;
+      const estimatedPages = total === -1 ? input.page + 1 : Math.ceil(total / input.limit);
+
       return {
         listings: listingsWithSeller,
-        total,
+        total: estimatedTotal,
         page: input.page,
-        totalPages: Math.ceil(total / input.limit),
+        totalPages: estimatedPages,
       };
     }),
 
