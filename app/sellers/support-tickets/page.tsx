@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toastSvc } from '@/services/toast';
+import { useAuth } from '@/context/AuthContext';
 import {
   AlertCircle,
   Plus,
@@ -71,11 +72,14 @@ const PRIORITY_COLORS = {
 };
 
 export default function SellerSupportTicketsPage() {
+  const { user } = useAuth();
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [replyMessage, setReplyMessage] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   
   const [formData, setFormData] = useState({
@@ -85,14 +89,37 @@ export default function SellerSupportTicketsPage() {
     priority: 'medium',
   });
 
-  
   const ticketsQuery = useSupportTickets();
   const selectedTicketQuery = useSupportTicketById(selectedTicketId || '');
   const repliesQuery = useTicketReplies(selectedTicketId || '');
 
-  
   const createMutation = useCreateSupportTicket();
   const replyMutation = useReplyToTicket();
+
+  // Get replies and sort chronologically (oldest to newest)
+  const rawReplies = (repliesQuery.data || []) as any[];
+  const replies = rawReplies && rawReplies.length > 0 
+    ? [...rawReplies].sort((a, b) => {
+        const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        return timeA - timeB;
+      })
+    : [];
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      // Use setTimeout to ensure DOM is updated before scrolling
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    // Auto-scroll when replies change or ticket selection changes
+    scrollToBottom();
+  }, [replies.length, selectedTicketId, scrollToBottom]);
 
   const handleCreateTicket = async () => {
     if (!formData.subject.trim() || !formData.description.trim()) {
@@ -134,7 +161,6 @@ export default function SellerSupportTicketsPage() {
 
   const tickets = (ticketsQuery.data || []) as SupportTicket[];
   const selectedTicket = selectedTicketQuery.data as SupportTicket | undefined;
-  const replies = (repliesQuery.data || []) as any[];
 
   const filteredTickets = tickets.filter(t => {
     const matchesSearch =
@@ -289,35 +315,59 @@ export default function SellerSupportTicketsPage() {
               </div>
 
               {}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={chatContainerRef}>
                 {repliesQuery.isLoading ? (
                   <div className="text-center text-gray-600 py-8">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                   </div>
                 ) : replies && replies.length > 0 ? (
-                  replies.map((reply, idx) => (
-                    <div key={idx} className={`flex ${reply.senderRole === 'seller' ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`max-w-xs px-4 py-3 rounded-lg ${
-                          reply.senderRole === 'seller'
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-[#0a0a0a] text-gray-300 border border-[#333]'
-                        }`}
-                      >
-                        <p className="text-xs font-semibold mb-1 opacity-75">
-                          {reply.senderRole === 'seller' ? 'You' : reply.senderRole === 'admin' ? 'Admin' : 'Customer'}
-                        </p>
-                        <p className="text-sm">{reply.message}</p>
-                        <p className="text-xs opacity-50 mt-2">
-                          {new Date(reply.createdAt).toLocaleTimeString()}
-                        </p>
+                  <>
+                    {replies.map((reply, idx) => {
+                      // Determine if this is the current user's message
+                      const isCurrentUser = user?.id && reply.senderId === user.id;
+                      const isAdmin = reply.senderRole === 'admin';
+                      const isBuyer = reply.senderRole === 'buyer';
+                      const isSeller = reply.senderRole === 'seller';
+                      
+                      // Determine sender label
+                      let senderLabel = 'Unknown';
+                      if (isCurrentUser) {
+                        senderLabel = 'You';
+                      } else if (isAdmin) {
+                        senderLabel = 'Support Admin';
+                      } else if (isBuyer) {
+                        senderLabel = 'Buyer';
+                      } else if (isSeller) {
+                        senderLabel = 'Seller';
+                      }
+                      
+                      return (
+                      <div key={`${reply.id}-${idx}`} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`max-w-xs px-4 py-3 rounded-lg ${
+                            isCurrentUser
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-[#0a0a0a] text-gray-300 border border-[#333]'
+                          }`}
+                        >
+                          <p className="text-xs font-semibold mb-1 opacity-75">
+                            {senderLabel}
+                          </p>
+                          <p className="text-sm">{reply.message}</p>
+                          <p className="text-xs opacity-50 mt-2">
+                            {new Date(reply.createdAt).toLocaleTimeString()}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                    })},
+                    <div ref={messagesEndRef} />
+                  </>
                 ) : (
                   <div className="text-center text-gray-600 py-8">
                     <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p>No replies yet. Await a response from the customer.</p>
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
               </div>

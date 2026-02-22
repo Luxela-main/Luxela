@@ -162,9 +162,11 @@ export const useTicketReplies = (ticketId: string) => {
       return await client.support.getTicketReplies.query({ ticketId });
     },
     enabled: !!ticketId,
-    staleTime: Infinity, // Replies never go stale until explicitly invalidated
-    gcTime: 30 * 60 * 1000, // Keep cache for 30 minutes to prevent data loss
+    staleTime: 10 * 1000, // Mark stale after 10 seconds to trigger polling
+    gcTime: 60 * 60 * 1000, // Keep cache for 60 minutes to prevent data loss
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: 'stale', // Only refetch if data is marked stale
+    refetchInterval: 3000, // Poll every 3 seconds for new messages (real-time feel)
   });
 };
 
@@ -216,20 +218,25 @@ export const useReplyToTicket = () => {
       return { previousReplies };
     },
     onSuccess: (newReply, { ticketId }) => {
-      // Instead of invalidating (which removes cache), update the cache directly
+      // Update the replies cache directly to maintain message history
       queryClient.setQueryData(
         [...sellersKeys.support(), ticketId, 'replies'],
         (old: TicketReply[] = []) => {
-          // Remove optimistic reply and add the real one
+          // Remove optimistic reply (if it exists) and add the real one
           const withoutOptimistic = old.filter(
             (r) => !r.id.startsWith('optimistic-')
           );
-          return [...withoutOptimistic, newReply];
+          // Remove any duplicate of the new reply and append it
+          const filtered = withoutOptimistic.filter(r => r.id !== newReply.id);
+          return [...filtered, newReply];
         }
       );
       
-      // Keep the tickets list in sync but don't invalidate it
-      queryClient.invalidateQueries({ queryKey: sellersKeys.support() });
+      // Refetch tickets list only, don't invalidate replies cache
+      queryClient.invalidateQueries({ 
+        queryKey: sellersKeys.support(),
+        exact: true,
+      });
       toastSvc.success("Reply added successfully");
     },
     onError: (error: any, { ticketId }, context: any) => {
