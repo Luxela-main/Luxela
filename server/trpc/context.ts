@@ -207,10 +207,15 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
             if (!dbError && userData?.role === "admin") {
               isAdminUser = true;
               userRole = "admin";
+              console.log('[createTRPCContext] Admin role verified from database for user:', data.user.id);
+            } else if (dbError) {
+              console.log('[createTRPCContext] Database query error checking admin role:', dbError.message);
             }
           } catch (dbErr) {
-            // Silently fail, continue without DB fallback
+            console.log('[createTRPCContext] Exception checking database for admin role:', dbErr instanceof Error ? dbErr.message : String(dbErr));
           }
+        } else {
+          console.log('[createTRPCContext] Admin status determined from metadata or x-admin-flag header');
         }
         
         user = {
@@ -221,6 +226,9 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
           admin: isAdminUser,
         };
+        if (isAdminUser) {
+          console.log('[createTRPCContext] User successfully authenticated as admin:', data.user.id);
+        }
       } else {
         user = decodeJWTToken(token);
       }

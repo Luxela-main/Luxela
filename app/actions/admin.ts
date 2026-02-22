@@ -56,11 +56,18 @@ export async function setAdminRole(email: string, adminPassword: string) {
     if (dbUpdateError) {
       console.warn('Warning: Failed to update users table role:', dbUpdateError.message);
     }
-    console.log("Admin role updated on server, client will verify");
+    
+    // Refresh the session to update the JWT with the new admin metadata
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      console.warn('Warning: Failed to refresh session after admin role update:', refreshError.message);
+    } else {
+      console.log("Admin role updated and session refreshed on server");
+    }
 
     return {
       success: true,
-      message: "Admin role has been set successfully",
+      message: "Admin role has been set successfully. Please refresh the page or wait a moment for your dashboard to appear.",
       isAdmin: true,
     };
   } catch (error: any) {
@@ -118,7 +125,7 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
     }
 
     const { error: updateError } = await adminClient.auth.admin.updateUserById(targetUser.id, {
-      user_metadata: { admin: true },
+      user_metadata: { admin: true, role: 'admin' },
     });
 
     if (updateError) {
@@ -127,10 +134,20 @@ export async function grantAdminRole(targetEmail: string, adminPassword: string)
         error: updateError.message,
       };
     }
+    
+    // Also update the database role for consistency
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({ role: 'admin' })
+      .eq('id', targetUser.id);
+      
+    if (dbError) {
+      console.warn('Warning: Failed to update target user role in database:', dbError.message);
+    }
 
     return {
       success: true,
-      message: `Admin role granted to ${targetEmail}`,
+      message: `Admin role granted to ${targetEmail}. They will see the admin dashboard after their next login or refresh.`,
     };
   } catch (error: any) {
     return {

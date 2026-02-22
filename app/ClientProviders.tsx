@@ -67,29 +67,41 @@ interface ClientProvidersProps {
 export default function ClientProviders({ children }: ClientProvidersProps) {
   const [queryClient] = useState(() => createQueryClient());
   const sessionTokenRef = useRef<string | null>(null);
+  const [, setTokenUpdate] = useState(0); // Force re-render on token refresh
 
-  // Update session token on mount and when auth changes
+  // Update session token periodically and on auth state changes
   useEffect(() => {
     let isMounted = true;
-    
+
     const updateToken = async () => {
       if (!isMounted) return;
-      const token = await getCachedSessionToken();
-      if (isMounted && token) {
-        sessionTokenRef.current = token;
+      try {
+        const token = await getCachedSessionToken();
+        if (isMounted) {
+          sessionTokenRef.current = token;
+          // Trigger a small re-render to ensure new requests use updated token
+          setTokenUpdate(prev => prev + 1);
+        }
+      } catch (error) {
+        console.error('Failed to update session token:', error);
       }
     };
-    
+
+    // Update token immediately on mount
     updateToken();
-    
+
+    // Refresh token every 10 seconds to catch admin role changes
+    const refreshInterval = setInterval(updateToken, 10000);
+
     // Listen for auth state changes
     const supabase = createClient();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       updateToken();
     });
-    
-    return () => { 
+
+    return () => {
       isMounted = false;
+      clearInterval(refreshInterval);
       subscription?.unsubscribe();
     };
   }, []);
@@ -103,36 +115,15 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   }, []);
 
   const [trpcClient] = useState(() => {
-    // Get initial token and update it periodically
-    let cachedToken: string | null = null;
-    
-    const updateToken = async () => {
-      try {
-        const token = await getCachedSessionToken();
-        if (token && typeof token === 'string') {
-          // Validate token has exactly 3 parts
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            cachedToken = token;
-          }
-        }
-      } catch (e) {
-        // Silently fail
-      }
-    };
-    
-    // Update token immediately and then every 30 seconds
-    updateToken();
-    const interval = setInterval(updateToken, 30000);
-    
     return trpc.createClient({
       links: [
         httpBatchLink({
           url: apiUrl,
           headers() {
-            // Use cached token to avoid async operations in headers
-            if (cachedToken) {
-              return { authorization: `Bearer ${cachedToken}` };
+            // Use the cached token from the ref
+            // This is updated every 10 seconds by the effect above
+            if (sessionTokenRef.current) {
+              return { authorization: `Bearer ${sessionTokenRef.current}` };
             }
             return {};
           },
@@ -142,6 +133,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   });
 
   // Memoize the provider structure to prevent unnecessary re-renders
+  // Include tokenUpdate in dependency to ensure new client is created when token changes
   const providers = useMemo(() => (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
