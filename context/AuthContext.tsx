@@ -51,9 +51,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
+    /**
+     * Attempts to recover session from localStorage backup
+     * Used when cookies are cleared but we have a valid backup
+     */
+    const recoverFromLocalStorage = async () => {
+      try {
+        const storedSession = localStorage.getItem("sb-auth-session");
+        if (storedSession) {
+          const session = JSON.parse(storedSession);
+          const isValid = session.created_at && 
+            (Date.now() - session.created_at < 24 * 60 * 60 * 1000); // 24 hours
+          
+          if (isValid && session.access_token && session.user) {
+            console.log("[AUTH] Recovering session from localStorage backup");
+            // Try to refresh the token with Supabase
+            try {
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+              if (refreshData?.session && !refreshError) {
+                console.log("[AUTH] Token refreshed from backup session");
+                return refreshData.session;
+              }
+            } catch (e) {
+              console.warn("[AUTH] Token refresh failed, using cached session", e);
+              // Return cached session even if refresh fails
+              return session;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[AUTH] Error recovering from localStorage:", e);
+      }
+      return null;
+    };
+
     const initAuth = async (retryCount = 0) => {
       try {
-        console.log("[AUTH] Initializing session from server cookies...");
+        console.log("[AUTH] Initializing session from cookies...");
         
         // Check if we're in OAuth callback (has fragment tokens)
         const fragment = typeof window !== 'undefined' ? window.location.hash : '';
@@ -69,7 +103,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (error) {
           console.warn("[AUTH] Session error:", error.message);
-          // Retry up to 3 times on error with backoff (OAuth callbacks need multiple retries)
+          // Try to recover from localStorage before retrying
+          if (retryCount === 0) {
+            const recoveredSession = await recoverFromLocalStorage();
+            if (recoveredSession?.user && mounted) {
+              setUser(recoveredSession.user);
+              if (recoveredSession.access_token) {
+                setToken(recoveredSession.access_token);
+              }
+              setLoading(false);
+              return;
+            }
+          }
+          
+          // Retry up to 5 times on error with backoff (OAuth callbacks need multiple retries)
           if (retryCount < 5) {
             const delay = 600 * (retryCount + 1);
             console.log(`[AUTH] Retrying session initialization (attempt ${retryCount + 2}/6) after ${delay}ms...`);
@@ -80,7 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }
 
-        // If session found from cookies, use it
+        // If session found from cookies, use it (primary source)
         if (data?.session?.user) {
           if (mounted) {
             setUser(data.session.user);
@@ -90,49 +137,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               console.log("[AUTH] Token stored for request injection");
             }
             console.log(
-              "[AUTH] Session initialized from cookies, user:",
+              "[AUTH] Session initialized from cookies (primary), user:",
               data.session.user.id
             );
             // Store session in localStorage as backup
             try {
               localStorage.setItem("sb-auth-session", JSON.stringify({
-                ...data.session,
+                user: data.session.user,
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token,
+                expires_at: data.session.expires_at,
                 created_at: Date.now()
               }));
+              console.log("[AUTH] Session backed up to localStorage");
             } catch (e) {
               console.warn("[AUTH] Failed to store session in localStorage:", e);
             }
           }
         } else {
-          // Fallback: Check localStorage for persisted session
-          try {
-            const storedSession = localStorage.getItem("sb-auth-session");
-            if (storedSession) {
-              const session = JSON.parse(storedSession);
-              const isSessionValid = session.created_at && 
-                (Date.now() - session.created_at < 24 * 60 * 60 * 1000); // 24 hours
-              
-              if (isSessionValid && session.user) {
-                console.log(
-                  "[AUTH] Session restored from localStorage, user:",
-                  session.user.id
-                );
-                if (mounted) {
-                  setUser(session.user);
-                  // Restore token from localStorage session
-                  if (session.access_token) {
-                    setToken(session.access_token);
-                    console.log("[AUTH] Token restored from localStorage");
-                  }
-                }
-                return;
-              }
-            }
-          } catch (e) {
-            console.warn("[AUTH] Error reading localStorage:", e);
-          }
+          // Secondary fallback: Check localStorage for persisted session
+          console.log("[AUTH] No session in cookies, checking localStorage backup...");
+          const recoveredSession = await recoverFromLocalStorage();
           
-          if (mounted) setUser(null);
+          if (recoveredSession?.user && mounted) {
+            setUser(recoveredSession.user);
+            if (recoveredSession.access_token) {
+              setToken(recoveredSession.access_token);
+              console.log("[AUTH] Token restored from localStorage backup");
+            }
+            console.log(
+              "[AUTH] Session recovered from localStorage backup, user:",
+              recoveredSession.user.id
+            );
+          } else {
+            if (mounted) setUser(null);
+          }
         }
       } catch (e) {
         console.error("[AUTH] Init error:", e);
@@ -156,15 +195,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event: any, session: any) => {
         if (!mounted) return;
-        console.log("[AUTH] State changed:", event);
+        console.log("[AUTH] Auth state changed:", event);
         setUser(session?.user ?? null);
         
         // Update token whenever auth state changes
         if (session?.access_token) {
           setToken(session.access_token);
+          // Also backup to localStorage when token updates
+          try {
+            localStorage.setItem("sb-auth-session", JSON.stringify({
+              user: session.user,
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_at: session.expires_at,
+              created_at: Date.now()
+            }));
+          } catch (e) {
+            console.warn("[AUTH] Failed to backup session to localStorage:", e);
+          }
           console.log("[AUTH] Token updated from auth state change:", event);
         } else {
           setToken(null);
+          // Clear localStorage on logout
+          try {
+            localStorage.removeItem("sb-auth-session");
+            localStorage.removeItem("sb-auth-user");
+          } catch (e) {
+            console.warn("[AUTH] Failed to clear localStorage:", e);
+          }
         }
       }
     );
