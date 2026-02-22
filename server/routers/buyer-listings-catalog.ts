@@ -724,47 +724,28 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         types: approvedListings.map((l: any) => ({ id: l.id.slice(0, 8), type: l.type, productId: l.productId?.slice(0, 8) })),
       });
 
-      const listingsWithSeller = await Promise.all(
-        approvedListings.map(async (listing: any) => {
-          let seller: any = null;
-          let sellerBiz: any = null;
-          
-          try {
-            const sellerData = await db
-              .select()
-              .from(sellers)
-              .where(eq(sellers.id, listing.sellerId))
-              .limit(1);
-            seller = sellerData;
+      const sellerIds = [...new Set(approvedListings.map((l: any) => l.sellerId))];
+      const productIds = [...new Set(approvedListings.map((l: any) => l.productId).filter(Boolean))];
 
-            if (seller && seller.length > 0) {
-              try {
-                const sellerBizData = await db
-                  .select()
-                  .from(sellerBusiness)
-                  .where(eq(sellerBusiness.sellerId, seller[0].id))
-                  .limit(1);
-                sellerBiz = sellerBizData;
-              } catch (err: any) {
-                console.warn('[BUYER_CATALOG] Failed to fetch sellerBusiness for seller:', seller[0].id, err?.message);
-                sellerBiz = null;
-              }
-            }
-          } catch (err: any) {
-            console.warn('[BUYER_CATALOG] Failed to fetch seller:', listing.sellerId, err?.message);
-            seller = null;
-            sellerBiz = null;
-          }
+      const [sellersData, sellerBusinessData, imagesData] = await Promise.all([
+        sellerIds.length > 0 ? db.select().from(sellers).where(inArray(sellers.id, sellerIds as string[])) : Promise.resolve([]),
+        sellerIds.length > 0 ? db.select().from(sellerBusiness).where(inArray(sellerBusiness.sellerId, sellerIds as string[])) : Promise.resolve([]),
+        productIds.length > 0 ? db.select().from(productImages).where(inArray(productImages.productId, productIds as string[])).orderBy(productImages.position) : Promise.resolve([]),
+      ]);
 
-          // Fetch images - ALWAYS from productImages table for complete image data
-          let listingImages: any[] = [];
-          if (listing.productId) {
-            listingImages = await db
-              .select()
-              .from(productImages)
-              .where(eq(productImages.productId, listing.productId))
-              .orderBy(productImages.position);
-          }
+      const sellerMap = new Map(sellersData.map((s: any) => [s.id, s]));
+      const sellerBizMap = new Map(sellerBusinessData.map((sb: any) => [sb.sellerId, sb]));
+      const imagesMap = new Map<string, any[]>();
+      imagesData.forEach((img: any) => {
+        if (!imagesMap.has(img.productId)) imagesMap.set(img.productId, []);
+        imagesMap.get(img.productId)!.push(img);
+      });
+
+      const listingsWithSeller = approvedListings.map((listing: any) => {
+          const seller = sellerMap.get(listing.sellerId);
+          const sellerBiz = sellerBizMap.get(listing.sellerId);
+
+          let listingImages = imagesMap.get(listing.productId) || [];
           
           // If no images found in productImages table, fallback to parsing imagesJson
           if (listingImages.length === 0 && listing.imagesJson) {
@@ -830,8 +811,8 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
             category: listing.category,
             type: (listing.type ?? 'single') as 'single' | 'collection',
             seller: {
-              id: seller && seller.length > 0 ? seller[0].id : listing.sellerId,
-              brandName: (sellerBiz && sellerBiz.length > 0) ? sellerBiz[0]?.brandName ?? null : null,
+              id: (seller as any)?.id ?? listing.sellerId,
+              brandName: (sellerBiz as any)?.brandName ?? null,
             },
             status,
             createdAt: listing.createdAt,
@@ -856,8 +837,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
             slug: listing.slug || null,
             metaDescription: listing.metaDescription || null,
           };
-        })
-      );
+      });
 
       console.log(
         '[BUYER_CATALOG] Returning response with',

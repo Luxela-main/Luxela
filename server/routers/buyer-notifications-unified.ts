@@ -81,7 +81,7 @@ async function generateAndStoreBuyerNotifications(
         .where(and(
           eq(buyerNotifications.buyerId, buyerId),
           eq(buyerNotifications.relatedEntityId, order.id),
-          sql`${buyerNotifications.metadata}->>'notificationType' = ${notifType}`
+          sql`cast(${buyerNotifications.metadata}->>'notificationType' as text) = ${notifType}`
         ))
         .limit(1);
 
