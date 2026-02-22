@@ -8,35 +8,6 @@ const supabaseKey =
 
 let cachedClient: ReturnType<typeof createBrowserClient> | null = null;
 
-/**
- * Recovers session from localStorage if cookies are cleared
- * This ensures users can remain authenticated even after clearing browser cache
- */
-function recoverSessionFromLocalStorage() {
-  // Only run in browser environment
-  if (typeof window === "undefined" || typeof localStorage === "undefined") {
-    return null;
-  }
-
-  try {
-    const storedSession = localStorage.getItem("sb-auth-session");
-    if (storedSession) {
-      const session = JSON.parse(storedSession);
-      // Validate session is less than 24 hours old
-      const isValid = session.created_at && 
-        (Date.now() - session.created_at < 24 * 60 * 60 * 1000);
-      
-      if (isValid && session.access_token && session.user) {
-        console.log("[Supabase] Recovered session from localStorage backup");
-        return session;
-      }
-    }
-  } catch (e) {
-    console.warn("[Supabase] Failed to recover session from localStorage:", e);
-  }
-  return null;
-}
-
 export const createClient = () => {
   if (cachedClient) {
     return cachedClient;
@@ -60,50 +31,13 @@ export const createClient = () => {
   }
 
   try {
-    cachedClient = createBrowserClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          if (typeof document === "undefined") return [];
-
-          return document.cookie.split(";").map((cookie) => {
-            const [name, value] = cookie.trim().split("=");
-            return {
-              name: decodeURIComponent(name),
-              value: decodeURIComponent(value),
-            };
-          });
-        },
-        setAll(cookies) {
-          if (typeof document === "undefined") return;
-
-          cookies.forEach(({ name, value, options }) => {
-            const sameSite = options?.sameSite || "Lax";
-            const secure =
-              options?.secure || window.location.protocol === "https:";
-            const maxAge = options?.maxAge || 7 * 24 * 60 * 60; // 7 days instead of 1 hour
-
-            try {
-              const cookieStr = `${encodeURIComponent(name)}=${encodeURIComponent(
-                value
-              )}; Max-Age=${maxAge}; Path=/; SameSite=${sameSite}${
-                secure ? "; Secure" : ""
-              }`;
-              document.cookie = cookieStr;
-            } catch (e) {
-              console.warn("[Supabase] Error setting cookie:", e);
-            }
-          });
-        },
-      },
-    });
+    cachedClient = createBrowserClient(supabaseUrl, supabaseKey);
 
     try {
       cachedClient.auth.onAuthStateChange(async (event: any, session: any) => {
         try {
-          // Only persist to localStorage in browser environment
           if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
             if (session?.user) {
-              // Store in localStorage as backup (survives cache clearing if cookies fail)
               localStorage.setItem("sb-auth-user", JSON.stringify(session.user));
               localStorage.setItem(
                 "sb-auth-session",
@@ -115,12 +49,9 @@ export const createClient = () => {
                   created_at: Date.now(),
                 })
               );
-              console.log("[Supabase] Session stored in localStorage backup");
             } else if (event === "SIGNED_OUT") {
               localStorage.removeItem("sb-auth-user");
               localStorage.removeItem("sb-auth-session");
-              localStorage.removeItem("sb-auth-token-backup");
-              console.log("[Supabase] Session cleared from localStorage");
             }
           }
         } catch (e) {
@@ -129,17 +60,6 @@ export const createClient = () => {
       });
     } catch (e) {
       console.warn("[Supabase] Could not set up session listener:", e);
-    }
-
-    // Recovery mechanism: If cookies are cleared, try to restore from localStorage
-    try {
-      const recoveredSession = recoverSessionFromLocalStorage();
-      if (recoveredSession && !cachedClient) {
-        console.log("[Supabase] Attempting to restore session from localStorage backup...");
-        // The recovered session will be used by AuthContext as fallback
-      }
-    } catch (e) {
-      console.warn("[Supabase] Could not set up recovery mechanism:", e);
     }
 
     return cachedClient;

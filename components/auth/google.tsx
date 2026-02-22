@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/hooks/useToast";
 
 interface GoogleSignInButtonProps {
-  redirectPath?: string; // Optional custom redirect path
+  redirectPath?: string;
 }
 
 export default function GoogleSignInButton({ redirectPath }: GoogleSignInButtonProps = {}) {
@@ -14,32 +14,48 @@ export default function GoogleSignInButton({ redirectPath }: GoogleSignInButtonP
 
   const handleGoogleSignIn = async () => {
     try {
-      // OAuth callback MUST point to the server API route, not the client page
-      // Google's OAuth server will POST to this endpoint with the auth code
-      const redirectUrl = `${window.location.origin}/api/auth/callback`;
-      
-      // Store the custom redirect path in sessionStorage if provided
       if (redirectPath) {
         sessionStorage.setItem('authRedirectPath', redirectPath);
       }
+
+      const redirectUrl = `${window.location.origin}/api/auth/callback`;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: redirectUrl,
-          queryParams: { access_type: "offline", prompt: "consent" },
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+          skipBrowserRedirect: false,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("[GoogleSignIn] OAuth error:", error);
+        throw error;
+      }
 
-      // If Supabase provides a URL, redirect
       if (data?.url) {
+        console.log("[GoogleSignIn] Redirecting to Google OAuth URL");
         window.location.href = data.url;
+      } else {
+        throw new Error("No OAuth URL returned from Supabase");
       }
     } catch (err: any) {
       console.error("Google sign-in error:", err);
-      toast.error("Failed to sign in with Google. Try again.");
+      
+      const errorMessage = err?.message || "Failed to sign in with Google";
+      if (errorMessage.includes("PKCE") || errorMessage.includes("code_verifier")) {
+        toast.error(
+          "Session expired. Please try signing in again. If you cleared your browser cache, this is expected."
+        );
+      } else if (errorMessage.includes("code") || errorMessage.includes("OAuth")) {
+        toast.error("OAuth authentication failed. Please try again.");
+      } else {
+        toast.error("Failed to sign in with Google. Try again.");
+      }
     }
   };
 
