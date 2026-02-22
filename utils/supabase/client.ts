@@ -13,6 +13,11 @@ let cachedClient: ReturnType<typeof createBrowserClient> | null = null;
  * This ensures users can remain authenticated even after clearing browser cache
  */
 function recoverSessionFromLocalStorage() {
+  // Only run in browser environment
+  if (typeof window === "undefined" || typeof localStorage === "undefined") {
+    return null;
+  }
+
   try {
     const storedSession = localStorage.getItem("sb-auth-session");
     if (storedSession) {
@@ -95,25 +100,28 @@ export const createClient = () => {
     try {
       cachedClient.auth.onAuthStateChange(async (event: any, session: any) => {
         try {
-          if (session?.user) {
-            // Store in localStorage as backup (survives cache clearing if cookies fail)
-            localStorage.setItem("sb-auth-user", JSON.stringify(session.user));
-            localStorage.setItem(
-              "sb-auth-session",
-              JSON.stringify({
-                user: session.user,
-                access_token: session.access_token,
-                refresh_token: session.refresh_token,
-                expires_at: session.expires_at,
-                created_at: Date.now(),
-              })
-            );
-            console.log("[Supabase] Session stored in localStorage backup");
-          } else if (event === "SIGNED_OUT") {
-            localStorage.removeItem("sb-auth-user");
-            localStorage.removeItem("sb-auth-session");
-            localStorage.removeItem("sb-auth-token-backup");
-            console.log("[Supabase] Session cleared from localStorage");
+          // Only persist to localStorage in browser environment
+          if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+            if (session?.user) {
+              // Store in localStorage as backup (survives cache clearing if cookies fail)
+              localStorage.setItem("sb-auth-user", JSON.stringify(session.user));
+              localStorage.setItem(
+                "sb-auth-session",
+                JSON.stringify({
+                  user: session.user,
+                  access_token: session.access_token,
+                  refresh_token: session.refresh_token,
+                  expires_at: session.expires_at,
+                  created_at: Date.now(),
+                })
+              );
+              console.log("[Supabase] Session stored in localStorage backup");
+            } else if (event === "SIGNED_OUT") {
+              localStorage.removeItem("sb-auth-user");
+              localStorage.removeItem("sb-auth-session");
+              localStorage.removeItem("sb-auth-token-backup");
+              console.log("[Supabase] Session cleared from localStorage");
+            }
           }
         } catch (e) {
           console.warn("[Supabase] Error persisting session:", e);
