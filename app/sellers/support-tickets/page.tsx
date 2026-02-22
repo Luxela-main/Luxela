@@ -12,12 +12,14 @@ import {
   Loader2,
   Send,
   Trash2,
+  Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   useSupportTickets,
   useSupportTicketById,
   useCreateSupportTicket,
+  useUpdateSupportTicket,
   useTicketReplies,
   useReplyToTicket,
   useCloseTicket,
@@ -82,6 +84,13 @@ export default function SellerSupportTicketsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [replyMessage, setReplyMessage] = useState('');
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    subject: '',
+    description: '',
+    category: 'general_inquiry',
+    priority: 'medium',
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -98,6 +107,7 @@ export default function SellerSupportTicketsPage() {
   const repliesQuery = useTicketReplies(selectedTicketId || '');
 
   const createMutation = useCreateSupportTicket();
+  const updateMutation = useUpdateSupportTicket();
   const replyMutation = useReplyToTicket();
   const closeTicketMutation = useCloseTicket();
   const deleteReplyMutation = useDeleteReply();
@@ -187,6 +197,32 @@ export default function SellerSupportTicketsPage() {
     }
   };
 
+  const handleOpenEditDialog = () => {
+    if (selectedTicket) {
+      setEditFormData({
+        subject: selectedTicket.subject,
+        description: selectedTicket.description,
+        category: selectedTicket.category,
+        priority: selectedTicket.priority,
+      });
+      setEditDialogOpen(true);
+    }
+  };
+
+  const handleUpdateTicket = async () => {
+    if (!selectedTicketId) return;
+
+    try {
+      await updateMutation.mutateAsync({
+        ticketId: selectedTicketId,
+        priority: editFormData.priority as any,
+      });
+      setEditDialogOpen(false);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
   const tickets = (ticketsQuery.data || []) as SupportTicket[];
   const selectedTicket = selectedTicketQuery.data as SupportTicket | undefined;
 
@@ -209,7 +245,7 @@ export default function SellerSupportTicketsPage() {
       </div>
 
       <div className="p-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {}
           <div className="lg:col-span-1 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
             {}
@@ -295,7 +331,7 @@ export default function SellerSupportTicketsPage() {
 
           {}
           {selectedTicket ? (
-            <div className="lg:col-span-2 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="lg:col-span-3 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden flex flex-col max-h-[80vh]">
               {}
               <div className="p-6 border-b border-[#333] space-y-4">
                 <div className="flex items-start justify-between">
@@ -305,12 +341,21 @@ export default function SellerSupportTicketsPage() {
                     </h2>
                     <p className="text-gray-400">{selectedTicket.description}</p>
                   </div>
-                  <button
-                    onClick={() => setSelectedTicketId(null)}
-                    className="p-2 hover:bg-[#0a0a0a] rounded transition-colors cursor-pointer hover:text-red-400"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleOpenEditDialog}
+                      className="p-2 hover:bg-[#0a0a0a] rounded transition-colors cursor-pointer hover:text-blue-400"
+                      title="Edit ticket"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedTicketId(null)}
+                      className="p-2 hover:bg-[#0a0a0a] rounded transition-colors cursor-pointer hover:text-red-400"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {}
@@ -456,7 +501,7 @@ export default function SellerSupportTicketsPage() {
               )}
             </div>
           ) : (
-            <div className="lg:col-span-2 bg-[#1a1a1a] border border-[#333] rounded-lg flex items-center justify-center h-80">
+            <div className="lg:col-span-3 bg-[#1a1a1a] border border-[#333] rounded-lg flex items-center justify-center h-80">
               <div className="text-center">
                 <AlertCircle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <p className="text-gray-600">Select a ticket to view details and respond</p>
@@ -584,6 +629,100 @@ export default function SellerSupportTicketsPage() {
                 className="flex-1 bg-purple-600 hover:bg-purple-700"
               >
                 {createMutation.isPending ? 'Creating...' : 'Create Ticket'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Ticket Dialog */}
+      {editDialogOpen && selectedTicket && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Edit Support Ticket</h2>
+              <button
+                onClick={() => setEditDialogOpen(false)}
+                className="p-1 hover:bg-[#0a0a0a] rounded transition-colors cursor-pointer hover:text-red-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-400 block mb-1">
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.subject}
+                  onChange={e => setEditFormData({ ...editFormData, subject: e.target.value })}
+                  className="w-full px-3 py-2 bg-black border border-[#333] rounded text-white placeholder-gray-600 focus:outline-none focus:border-purple-600 cursor-text transition-colors duration-200 hover:border-purple-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-400 block mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={e => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-black border border-[#333] rounded text-white placeholder-gray-600 focus:outline-none focus:border-purple-600 resize-none cursor-text transition-colors duration-200 hover:border-purple-500/50"
+                  rows={4}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-400 block mb-1">
+                  Category
+                </label>
+                <select
+                  value={editFormData.category}
+                  onChange={e => setEditFormData({ ...editFormData, category: e.target.value })}
+                  className="w-full px-3 py-2 bg-black border border-[#333] rounded text-white focus:outline-none focus:border-purple-600 cursor-pointer transition-colors duration-200 hover:border-purple-500/50"
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>
+                      {cat.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-400 block mb-1">
+                  Priority
+                </label>
+                <select
+                  value={editFormData.priority}
+                  onChange={e => setEditFormData({ ...editFormData, priority: e.target.value })}
+                  className="w-full px-3 py-2 bg-black border border-[#333] rounded text-white focus:outline-none focus:border-purple-600 cursor-pointer transition-colors duration-200 hover:border-purple-500/50"
+                >
+                  {PRIORITIES.map(priority => (
+                    <option key={priority} value={priority}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={() => setEditDialogOpen(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateTicket}
+                disabled={updateMutation.isPending}
+                className="flex-1 bg-purple-600 hover:bg-purple-700"
+              >
+                {updateMutation.isPending ? 'Updating...' : 'Update Ticket'}
               </Button>
             </div>
           </div>
