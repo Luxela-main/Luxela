@@ -1,10 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
+export interface CacheEntry<T = any> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
 
 export interface CacheLayer {
-  memory: Map<string, { data: any; ttl: number; timestamp: number }>;
+  memory: Map<string, CacheEntry>;
   localStorage: Storage | null;
-  supabase: ReturnType<typeof createClient> | null;
-  redis: any;
 }
 
 const CACHE_KEYS = {
@@ -19,25 +21,16 @@ const CACHE_KEYS = {
 const CACHE_TTL = {
   MEMORY: 5 * 60 * 1000,
   LOCAL_STORAGE: 30 * 60 * 1000,
-  SUPABASE: 1 * 60 * 60 * 1000,
-  REDIS: 24 * 60 * 60 * 1000,
 } as const;
 
 class BuyerPageCache {
-  private memoryCache: Map<string, { data: any; ttl: number; timestamp: number }> = new Map();
+  private memoryCache: Map<string, CacheEntry> = new Map();
   private localStorage: Storage | null = null;
-  private supabase: ReturnType<typeof createClient> | null = null;
   private isInitialized = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.localStorage = window.localStorage;
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (supabaseUrl && supabaseKey) {
-      this.supabase = createClient(supabaseUrl, supabaseKey);
     }
 
     this.isInitialized = true;
@@ -100,43 +93,13 @@ class BuyerPageCache {
     }
   }
 
-  async getFromSupabase<T = any>(
-    table: string,
-    key: string,
-    params?: any
-  ): Promise<T | null> {
-    if (!this.supabase) return null;
 
-    try {
-      const { data, error } = await this.supabase
-        .from(table)
-        .select('*')
-        .eq('cache_key', this.encodeKey(key, params))
-        .single();
-
-      if (error || !data) return null;
-
-      const cached = (data as { data: any; created_at: number }).data;
-      if (this.isExpired(data.created_at, CACHE_TTL.SUPABASE)) {
-        await this.supabase
-          .from(table)
-          .delete()
-          .eq('cache_key', this.encodeKey(key, params));
-        return null;
-      }
-
-      return cached;
-    } catch (err) {
-      console.warn(`[Cache] Supabase read error for ${key}:`, err);
-      return null;
-    }
-  }
 
   async set<T = any>(
     key: string,
     data: T,
     params?: any,
-    options?: { skipMemory?: boolean; skipLocalStorage?: boolean; skipSupabase?: boolean }
+    options?: { skipMemory?: boolean; skipLocalStorage?: boolean }
   ): Promise<void> {
     const encodedKey = this.encodeKey(key, params);
     const timestamp = Date.now();
@@ -160,18 +123,6 @@ class BuyerPageCache {
         );
       } catch (err) {
         console.warn(`[Cache] localStorage write error for ${key}:`, err);
-      }
-    }
-
-    if (!options?.skipSupabase && this.supabase) {
-      try {
-        await this.supabase.from('cache_store').upsert({
-          cache_key: encodedKey,
-          data,
-          created_at: new Date().toISOString(),
-        });
-      } catch (err) {
-        console.warn(`[Cache] Supabase write error for ${key}:`, err);
       }
     }
   }

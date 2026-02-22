@@ -1,27 +1,52 @@
-import { Redis } from '@upstash/redis';
+let redis: any = null;
+let redisInitialized = false;
 
-let redis: Redis | null = null;
+interface RedisClient {
+  get: (key: string) => Promise<any>;
+  setex: (key: string, ttl: number, value: any) => Promise<any>;
+  del: (key: string) => Promise<any>;
+  keys: (pattern: string) => Promise<string[]>;
+}
 
-function getRedis(): Redis | null {
-  if (redis) return redis;
+function getRedis(): RedisClient | null {
+  if (redisInitialized) return redis;
 
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
     console.warn('[Redis] Upstash credentials not configured');
+    redisInitialized = true;
     return null;
   }
 
   try {
+    const Redis = (() => {
+      try {
+        // eslint-disable-next-line global-require
+        const module = require('@upstash/redis');
+        return module.Redis || module.default;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (!Redis) {
+      console.warn('[Redis] @upstash/redis package not installed, using memory cache fallback');
+      redisInitialized = true;
+      return null;
+    }
+
     redis = new Redis({
       url,
       token,
     });
     console.log('[Redis] Connected successfully');
+    redisInitialized = true;
     return redis;
   } catch (err) {
     console.error('[Redis] Connection error:', err);
+    redisInitialized = true;
     return null;
   }
 }
