@@ -109,20 +109,46 @@ export function useCollectionsCached(options: {
 
       clearTimeout(timeout);
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[useCollectionsCached] HTTP error:', { status: response.status, statusText: response.statusText, body: errorText });
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const result = await response.json();
+      console.log('[useCollectionsCached] API response received:', { responseType: typeof result, isArray: Array.isArray(result) });
 
-      let collectionsData = result;
+      // Handle tRPC response format
+      // tRPC returns: { result: { data: { collections: [...], total: number } } }
+      let collectionsData = null;
+
       if (Array.isArray(result) && result.length > 0) {
-        collectionsData = result[0]?.result?.data || result[0];
+        // Response wrapped in array [{ result: { data: { ... } } }]
+        const firstResult = result[0];
+        if (firstResult?.result?.data) {
+          collectionsData = firstResult.result.data;
+        } else if (firstResult?.result) {
+          collectionsData = firstResult.result;
+        } else {
+          collectionsData = firstResult;
+        }
       } else if (result?.result?.data) {
+        // Response as { result: { data: { ... } } }
         collectionsData = result.result.data;
+      } else if (result?.result) {
+        // Response as { result: { ... } }
+        collectionsData = result.result;
+      } else if (result?.collections) {
+        // Response directly contains collections
+        collectionsData = result;
       }
 
-      if (!response.ok || !collectionsData) {
-        throw new Error('Failed to fetch collections');
+      if (!collectionsData || !collectionsData.collections) {
+        console.error('[useCollectionsCached] Invalid response structure:', { collectionsData, result });
+        throw new Error('Invalid collections data in response');
       }
 
-      let collections: Collection[] = (collectionsData.collections || []).map((item: any) => {
+      let collections: Collection[] = (Array.isArray(collectionsData.collections) ? collectionsData.collections : []).map((item: any) => {
         let images: string[] = [];
         if (item.imagesJson) {
           try {
@@ -239,7 +265,11 @@ export function useCollectionsCached(options: {
         errorMsg = 'Request timeout';
       } else if (err instanceof Error) {
         errorMsg = err.message;
+      } else {
+        errorMsg = String(err);
       }
+
+      console.error('[useCollectionsCached] Fetch error details:', { errorMsg, errorName: err?.name, errorStack: err?.stack });
 
       const localStorageCached = await buyerPageCache.getFromLocalStorage<any>(
         cacheKeys.COLLECTIONS,
@@ -255,13 +285,13 @@ export function useCollectionsCached(options: {
         setError(null);
         setIsFromCache(true);
         setIsLoading(false);
-        console.warn('[useCollectionsCached] Using stale localStorage cache as fallback');
+        console.warn('[useCollectionsCached] Using stale localStorage cache as fallback', { collectionsCount: collections.length });
       } else {
         if (isMountedRef.current) {
           setError(errorMsg);
           setIsLoading(false);
         }
-        console.error('[useCollectionsCached] Error:', errorMsg);
+        console.error('[useCollectionsCached] Error: Could not fetch collections and no fallback cache available', errorMsg);
       }
     }
   }, [limit, search, category]);

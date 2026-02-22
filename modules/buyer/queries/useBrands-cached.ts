@@ -75,17 +75,36 @@ export function useBrandsCached(options: {
 
       clearTimeout(timeout);
 
-      const result = await response.json();
-
-      let brandsData = result;
-      if (Array.isArray(result) && result.length > 0) {
-        brandsData = result[0]?.result?.data || result[0];
-      } else if (result?.result?.data) {
-        brandsData = result.result.data;
+      // Check HTTP status first before parsing JSON
+      if (!response.ok) {
+        let errorDetails = `HTTP ${response.status}`;
+        try {
+          const errorBody = await response.json();
+          errorDetails += `: ${JSON.stringify(errorBody)}`;
+        } catch {
+          errorDetails += `: ${response.statusText}`;
+        }
+        throw new Error(`Failed to fetch brands (${errorDetails})`);
       }
 
-      if (!response.ok || !brandsData) {
-        throw new Error('Failed to fetch brands');
+      const result = await response.json();
+
+      // Handle multiple tRPC response formats:
+      // Array with wrapped result: [{ result: { data: { brands: [...] } } }]
+      // Direct result object: { result: { data: { brands: [...] } } }
+      // Just result: { result: { brands: [...] } }
+      // Direct data: { brands: [...] }
+      let brandsData = result;
+      if (Array.isArray(result) && result.length > 0) {
+        brandsData = result[0]?.result?.data || result[0]?.result || result[0];
+      } else if (result?.result?.data) {
+        brandsData = result.result.data;
+      } else if (result?.result) {
+        brandsData = result.result;
+      }
+
+      if (!brandsData || typeof brandsData !== 'object') {
+        throw new Error('Failed to fetch brands: Invalid response format');
       }
 
       const transformedBrands = (brandsData.brands || []).map((brand: any) => {
@@ -159,7 +178,11 @@ export function useBrandsCached(options: {
           setError(errorMsg);
           setIsLoading(false);
         }
-        console.error('[useBrandsCached] Error:', errorMsg);
+        console.error('[useBrandsCached] Error:', errorMsg, {
+          name: err?.name,
+          stack: err?.stack,
+          status: err?.status,
+        });
       }
     }
   }, [page, limit, search, sortBy]);
