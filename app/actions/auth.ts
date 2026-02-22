@@ -16,50 +16,28 @@ function mapAuthError(error: any): string {
   return error.message;
 }
 
-// Check if an email already exists in Supabase Auth
-async function checkEmailExists(email: string): Promise<boolean> {
-  try {
-    const supabase = await createClient();
-    // Try to sign in with the email and a dummy password
-    // If error is "Invalid login credentials", the email exists (wrong password)
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: "check-only-dummy-password",
-    });
-
-    // "Invalid login credentials" = user exists but wrong password
-    if (error?.message?.includes("Invalid login credentials")) {
-      return true;
-    }
-
-    return false;
-  } catch (err: any) {
-    return false;
-  }
-}
 
 export async function signupAction(email: string, password: string, role: "buyer" | "seller") {
   try {
     const supabase = await createClient();
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/callback`;
 
-    // CRITICAL: Check if email already exists BEFORE attempting signup
-    // This prevents the modal from showing for duplicate emails
-    const emailExists = await checkEmailExists(email);
-    if (emailExists) {
-      return { success: false, error: "Email already registered. Please sign in instead.", isNewSignup: false };
-    }
-
-    // Now proceed with signup
+    // Proceed with signup - Supabase will validate if email already exists
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { role }, emailRedirectTo: redirectUrl },
     });
 
-    if (error) return { success: false, error: mapAuthError(error), isNewSignup: false };
+    // Handle any signup errors
+    if (error) {
+      // Determine if this is a duplicate email error
+      const mappedError = mapAuthError(error);
+      const isNewSignup = !mappedError.includes("already registered");
+      return { success: false, error: mappedError, isNewSignup };
+    }
 
-    // If we got here, it's definitely a new signup (we already checked email doesn't exist)
+    // If we got here, signup was successful
     return { success: true, message: "Signup successful. Please check your email to verify.", isNewSignup: true };
   } catch (err: any) {
     return { success: false, error: mapAuthError(err), isNewSignup: false };
