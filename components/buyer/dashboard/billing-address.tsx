@@ -192,16 +192,6 @@ export function BillingAddress() {
               <p className="text-white">{billingAddress?.postalCode || 'N/A'}</p>
             )}
           </div>
-
-          <div>
-            <label className="text-[#7e7e7e] text-sm block mb-1">Phone Number</label>
-            <p className="text-white">{profile?.phoneNumber || 'N/A'}</p>
-          </div>
-
-          <div>
-            <label className="text-[#7e7e7e] text-sm block mb-1">Email Address</label>
-            <p className="text-white break-all">{profile?.email || user?.email || 'N/A'}</p>
-          </div>
         </div>
       </div>
     </Card>
