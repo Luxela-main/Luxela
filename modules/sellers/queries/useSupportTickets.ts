@@ -165,7 +165,7 @@ export const useTicketReplies = (ticketId: string) => {
     staleTime: 10 * 1000, // Mark stale after 10 seconds to trigger polling
     gcTime: 60 * 60 * 1000, // Keep cache for 60 minutes to prevent data loss
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnReconnect: 'stale', // Only refetch if data is marked stale
+    refetchOnReconnect: true, // Refetch on reconnect to sync latest messages
     refetchInterval: 3000, // Poll every 3 seconds for new messages (real-time feel)
   });
 };
