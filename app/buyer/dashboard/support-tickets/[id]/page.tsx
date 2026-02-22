@@ -44,10 +44,11 @@ interface Ticket {
 interface Reply {
   id: string;
   ticketId: string;
+  senderId: string;
+  senderRole: 'buyer' | 'seller' | 'admin';
   message: string;
-  createdBy: string;
+  attachmentUrl?: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 const STATUS_CONFIG = {
@@ -78,6 +79,7 @@ export default function TicketDetailPage() {
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState("");
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   
   const ticketQuery = trpc.support.getTicket.useQuery(
@@ -92,7 +94,11 @@ export default function TicketDetailPage() {
     { ticketId },
     {
       enabled: !!user?.id && !!ticketId,
-      refetchInterval: 15000, 
+      staleTime: 10 * 1000, // 10 seconds - enables polling
+      refetchInterval: 3000, // Poll every 3 seconds for real-time updates
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true, // Refetch when reconnecting to network
+      gcTime: 60 * 60 * 1000, // 60 minute cache retention to prevent message loss
     }
   );
 
@@ -125,12 +131,31 @@ export default function TicketDetailPage() {
     if (repliesQuery.data) {
       const convertedReplies = (repliesQuery.data as any[]).map((reply) => ({
         ...reply,
-        createdAt: new Date(reply.createdAt),
-        updatedAt: new Date(reply.updatedAt),
+        createdAt: typeof reply.createdAt === 'string' ? new Date(reply.createdAt) : reply.createdAt,
+        updatedAt: typeof reply.updatedAt === 'string' ? new Date(reply.updatedAt) : reply.updatedAt,
       })) as Reply[];
-      setReplies(convertedReplies);
+      
+      // Sort by createdAt timestamp (chronological order: oldest to newest)
+      const sorted = convertedReplies.sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      
+      setReplies(sorted);
     }
   }, [repliesQuery.data]);
+
+  // Auto-scroll to bottom when new replies arrive using useCallback for consistency
+  const scrollToBottom = React.useCallback(() => {
+    if (messagesEndRef.current) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [replies.length, scrollToBottom]);
 
   useEffect(() => {
     if (ticketQuery.error || repliesQuery.error) {
@@ -308,37 +333,61 @@ export default function TicketDetailPage() {
                 No replies yet. Be the first to reply!
               </p>
             ) : (
-              replies.map((reply) => (
-                <div
-                  key={reply.id}
-                  className="bg-[#0E0E0E] rounded p-4 border border-[#2B2B2B]"
-                >
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div>
-                      <p className="text-[#DCDCDC] font-medium">
-                        {reply.createdBy}
+              replies.map((reply) => {
+                // Determine sender role by comparing senderId with current user's id
+                const isCurrentUser = user?.id && reply.senderId === user.id;
+                
+                // Determine sender label - 'You' for current buyer, then check role
+                let senderLabel = 'Unknown';
+                if (isCurrentUser) {
+                  senderLabel = 'You';
+                } else if (reply.senderRole === 'admin') {
+                  senderLabel = 'Support Admin';
+                } else if (reply.senderRole === 'seller') {
+                  senderLabel = 'Seller';
+                } else {
+                  senderLabel = 'Buyer';
+                }
+                
+                return (
+                  <div
+                    key={reply.id}
+                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-xs rounded-lg p-4 ${
+                        isCurrentUser
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-[#1a1a1a] text-[#DCDCDC] border border-[#2B2B2B]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="font-medium text-sm">
+                          {senderLabel}
+                        </p>
+                        {isCurrentUser && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteReply(reply.id)}
+                            className="text-red-200 hover:text-red-100 h-6 w-6 p-0"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap mb-2">
+                        {reply.message}
                       </p>
-                      <p className="text-[#808080] text-xs">
-                        {new Date(reply.createdAt).toLocaleString()}
+                      <p className={`text-xs ${isCurrentUser ? 'text-purple-200' : 'text-[#808080]'}`}>
+                        {new Date(reply.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
-                    {reply.createdBy === user?.email && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteReply(reply.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
                   </div>
-                  <p className="text-white whitespace-pre-wrap">
-                    {reply.message}
-                  </p>
-                </div>
-              ))
+                );
+              })
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {}
@@ -350,6 +399,12 @@ export default function TicketDetailPage() {
                   value={replyMessage}
                   onChange={(e) => setReplyMessage(e.target.value)}
                   className="bg-[#0E0E0E] border-[#2B2B2B] text-white min-h-[100px]"
+                  onKeyDown={(e) => {
+                    // Optional: Allow Ctrl+Enter to send
+                    if (e.ctrlKey && e.key === 'Enter' && replyMessage.trim()) {
+                      handleReplySubmit();
+                    }
+                  }}
                 />
                 <div className="flex justify-end">
                   <Button

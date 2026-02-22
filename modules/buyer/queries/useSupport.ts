@@ -212,13 +212,19 @@ export function useReplyToTicket(): UseMutationResult<
 export function useGetTicketReplies(
   ticketId: string
 ): UseQueryResult<TicketReply[], Error> {
+  const queryClient = useQueryClient();
+  
   return useQuery({
     queryKey: supportKeys.replies(ticketId),
     queryFn: async () => {
       const result = await (trpc.support as any).getTicketReplies.query({ ticketId });
       return result as TicketReply[];
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 10 * 1000, // 10 seconds - quick staleness for real-time feel
+    gcTime: 60 * 60 * 1000, // 60 minutes - retain data in cache for 1 hour
+    refetchInterval: 3000, // Poll every 3 seconds for live updates
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     enabled: !!ticketId,
   });
 }
