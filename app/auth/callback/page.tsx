@@ -25,13 +25,13 @@ function AuthCallbackCompleteHandler() {
         if (!res.ok) {
           lastError = `HTTP ${res.status}`;
           
-          if (res.status === 503 || res.status === 504) {
+          if (res.status === 503 || res.status === 504 || res.status === 500) {
             console.warn(`[AuthCallbackComplete] Profile check attempt ${attempt}/${maxRetries} failed (${res.status}), retrying...`);
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
             continue;
           }
           
-          console.error('[AuthCallbackComplete] Profile check failed:', res.status);
+          console.error('[AuthCallbackComplete] Profile check failed with status:', res.status);
           return { exists: false, profileComplete: false };
         }
         

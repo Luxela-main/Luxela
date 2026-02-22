@@ -237,7 +237,12 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[Profile Check] Server error:", errorMessage, error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('[Profile Check] Unexpected error:', {
+      message: errorMessage,
+      stack: errorStack,
+      type: error?.constructor?.name,
+    });
     return NextResponse.json(
       {
         error: "Server error",
