@@ -14,63 +14,74 @@ export async function setAdminRole(email: string, adminPassword: string) {
       return { success: false, error: "Not authenticated" };
     }
 
-    const { data: adminUsers, error: adminCheckError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("role", "admin")
-      .limit(1);
+    // ALWAYS verify admin password before granting admin role
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-    const hasExistingAdmin = adminUsers && adminUsers.length > 0;
-
-    if (hasExistingAdmin) {
-      const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-      if (!ADMIN_PASSWORD || adminPassword !== ADMIN_PASSWORD) {
-        return {
-          success: false,
-          error: "Invalid admin password. Contact your system administrator.",
-        };
-      }
-
-      if (currentUser.user_metadata?.admin !== true) {
-        return {
-          success: false,
-          error: "Only existing admins can grant admin role to others",
-        };
-      }
+    if (!ADMIN_PASSWORD) {
+      return {
+        success: false,
+        error: "Admin password not configured in system. Contact your administrator.",
+      };
     }
 
-    const { data: updatedUser, error: updateError } = await supabase.auth.updateUser({
-      data: { admin: true, role: 'admin' },
+    if (adminPassword !== ADMIN_PASSWORD) {
+      return {
+        success: false,
+        error: "Invalid admin password. Please check and try again.",
+      };
+    }
+
+    // Update Supabase Auth user metadata
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: { 
+        admin: true, 
+        role: 'admin',
+        adminSignupPending: false,
+      },
     });
 
     if (updateError) {
       return { success: false, error: updateError.message };
     }
 
-    const { error: dbUpdateError } = await supabase
-      .from('users')
-      .update({ role: 'admin' })
-      .eq('id', currentUser.id);
+    console.log('[setAdminRole] Auth metadata updated for user:', currentUser.id);
 
-    if (dbUpdateError) {
-      console.warn('Warning: Failed to update users table role:', dbUpdateError.message);
+    // Create or update user record in database with admin role
+    const { error: dbError } = await supabase
+      .from('users')
+      .upsert(
+        {
+          id: currentUser.id,
+          email: currentUser.email,
+          role: 'admin',
+          created_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+
+    if (dbError) {
+      console.warn('[setAdminRole] Warning: Failed to update users table:', dbError.message);
+      // Don't fail the entire operation if database update fails
+      // The auth metadata is what matters
+    } else {
+      console.log('[setAdminRole] User record updated in database with admin role');
     }
     
     // Refresh the session to update the JWT with the new admin metadata
     const { error: refreshError } = await supabase.auth.refreshSession();
     if (refreshError) {
-      console.warn('Warning: Failed to refresh session after admin role update:', refreshError.message);
+      console.warn('[setAdminRole] Warning: Failed to refresh session:', refreshError.message);
     } else {
-      console.log("Admin role updated and session refreshed on server");
+      console.log('[setAdminRole] ✅ Session refreshed with new admin metadata');
     }
 
     return {
       success: true,
-      message: "Admin role has been set successfully. Please refresh the page or wait a moment for your dashboard to appear.",
+      message: "Admin role has been set successfully.",
       isAdmin: true,
     };
   } catch (error: any) {
+    console.error('[setAdminRole] Unexpected error:', error);
     return {
       success: false,
       error: error?.message || "Failed to set admin role",

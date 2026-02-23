@@ -1,94 +1,63 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
-import { useToast } from '@/components/hooks/useToast';
-import { useRouter } from 'next/navigation';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import GoogleSignInButton from '@/components/auth/google';
-import { signinAction } from '@/app/actions/auth';
-import { useAuth } from '@/context/AuthContext';
-import { checkAdminStatus } from '@/app/actions/admin';
+import Image from 'next/image';
+import { Shield, ArrowRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { useToast } from '@/components/hooks/useToast';
 
-type AdminSignInFormValues = {
-  email: string;
-  adminPassword: string;
-};
-
-const adminSigninSchema = Yup.object().shape({
-  email: Yup.string().email('Invalid email address').required('Email is required'),
-  adminPassword: Yup.string().required('Admin password is required'),
-});
-
-const adminSigninInitialValues: AdminSignInFormValues = {
-  email: '',
-  adminPassword: '',
-};
-
-function AdminSignInContent() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
-  const { setUser } = useAuth();
-  const router = useRouter();
+function AdminGoogleSignUpButton() {
   const toast = useToast();
+  const supabase = createClient();
 
-  const handleAdminSignIn = async (
-    values: AdminSignInFormValues,
-    { setSubmitting }: any
-  ) => {
+  const handleAdminGoogleSignUp = async () => {
     try {
-      const { email, adminPassword } = values;
+      // Include admin=true parameter to signal admin signup to the callback
+      const redirectUrl = `${window.location.origin}/api/auth/callback?admin=true`;
 
-      setIsCheckingAdmin(true);
-      const signInResult = await signinAction(email, adminPassword);
-      
-      if (!signInResult.success) {
-        toast.error(signInResult.error || 'Invalid email or password');
-        setIsCheckingAdmin(false);
-        setSubmitting(false);
-        return;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          skipBrowserRedirect: false,
+        },
+      });
+
+      if (error) {
+        console.error('[AdminGoogleSignUp] OAuth error:', error);
+        throw error;
       }
 
-      if (!signInResult.user) {
-        toast.error('User not found');
-        setIsCheckingAdmin(false);
-        setSubmitting(false);
-        return;
-      }
-
-      setUser(signInResult.user);
-
-      const supabase = createClient();
-      const statusResult = await checkAdminStatus();
-      
-      if (statusResult.isAdmin) {
-        toast.success('Welcome back, Admin!');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        router.push('/admin');
+      if (data?.url) {
+        console.log('[AdminGoogleSignUp] Redirecting to Google OAuth URL');
+        window.location.href = data.url;
       } else {
-        toast.success('Credentials verified! Setting up admin access...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        router.push('/admin/setup');
+        throw new Error('No OAuth URL returned from Supabase');
       }
-      
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        toast.error(err.message || 'Sign in failed');
-      } else {
-        toast.error('Sign in failed');
-      }
-      setIsCheckingAdmin(false);
-    } finally {
-      setSubmitting(false);
+    } catch (err: any) {
+      console.error('[AdminGoogleSignUp] Error:', err);
+      const errorMessage = err?.message || 'Failed to sign up with Google';
+      toast.error(errorMessage);
     }
   };
 
+  return (
+    <button
+      onClick={handleAdminGoogleSignUp}
+      className="w-full flex items-center justify-center gap-3 bg-gradient-to-b from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 py-2 rounded text-sm text-white font-semibold transition-colors cursor-pointer"
+    >
+      <Image src="/google.svg" alt="Google" width={16} height={16} />
+      Sign up with Google for Admin
+    </button>
+  );
+}
+
+function AdminSignInContent() {
   return (
     <div className="grid md:grid-cols-2 min-h-screen bg-[#1a1a1a] text-white">
       {/* Left side - Branding */}
@@ -108,108 +77,52 @@ function AdminSignInContent() {
         </div>
       </div>
 
-      {/* Right side - Form */}
+      {/* Right side - OAuth Only */}
       <div className="flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-2 mb-6">
             <Shield className="w-8 h-8 text-amber-500" />
             <img src="/luxela.svg" alt="Luxela Logo" className="w-24" />
           </div>
-          <h2 className="text-2xl font-semibold border-b-2 border-[#E5E7EB] pb-3 inline-block">Admin Access</h2>
-          <p className="text-sm text-[#6B7280] mb-6 mt-3">
-            Sign in to access the admin dashboard and support tools
+          
+          <h2 className="text-2xl font-semibold border-b-2 border-[#E5E7EB] pb-3 inline-block">
+            Admin Setup
+          </h2>
+          
+          <p className="text-sm text-[#6B7280] mb-8 mt-3">
+            Sign up with Google to become an admin. You'll then need to verify with the admin password to complete setup.
           </p>
 
-          <Formik
-            initialValues={adminSigninInitialValues}
-            validationSchema={adminSigninSchema}
-            onSubmit={handleAdminSignIn}
-          >
-            {({ errors, touched, isSubmitting }) => (
-              <Form className="space-y-3 sm:space-y-4">
-                {/* Email Field */}
-                <div>
-                  <Label htmlFor="email" className="mb-1">
-                    Email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                    <Field
-                      as={Input}
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      autoComplete="email"
-                      className={`pl-10 ${errors.email && touched.email ? 'border-destructive' : ''}`}
-                    />
-                  </div>
-                  <ErrorMessage name="email" component="div" className="text-sm text-destructive mt-1" />
-                </div>
+          <div className="space-y-4">
+            {/* Google OAuth Button */}
+            <AdminGoogleSignUpButton />
 
-                {/* Password Field */}
-                <div>
-                  <Label htmlFor="adminPassword" className="mb-1">
-                    Admin Password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                    <Field
-                      as={Input}
-                      id="adminPassword"
-                      name="adminPassword"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter admin password"
-                      autoComplete="current-password"
-                      className={`pl-10 pr-10 ${errors.adminPassword && touched.adminPassword ? 'border-destructive' : ''}`}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <ErrorMessage name="adminPassword" component="div" className="text-sm text-destructive mt-1" />
-                </div>
+            {/* Divider */}
+            <div className="flex items-center">
+              <div className="flex-grow border-t border-zinc-700" />
+              <span className="px-2 text-zinc-500 text-sm">or</span>
+              <div className="flex-grow border-t border-zinc-700" />
+            </div>
 
-                {/* Remember Me */}
-                <div className="flex items-center">
-                  <input type="checkbox" id="rememberMe" name="rememberMe" className="mr-2 accent-amber-600" />
-                  <label htmlFor="rememberMe" className="text-sm font-medium cursor-pointer">Remember me</label>
-                </div>
+            {/* Link to regular signin */}
+            <p className="text-center text-zinc-500 text-sm">
+              Want to signin as buyer or seller?{' '}
+              <Link href="/signin" className="text-amber-400 underline cursor-pointer hover:text-amber-300">
+                Sign In Here <ArrowRight className="h-4 w-4 inline-block" />
+              </Link>
+            </p>
 
-                {/* Sign In Button */}
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-b from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Processing...' : 'Sign In to Admin'}
-                </Button>
-              </Form>
-            )}
-          </Formik>
-
-          {/* Divider */}
-          <div className="flex items-center my-4">
-            <div className="flex-grow border-t border-zinc-700" />
-            <span className="px-2 text-zinc-500 text-sm">Or</span>
-            <div className="flex-grow border-t border-zinc-700" />
+            {/* Info Box */}
+            <div className="mt-8 p-4 bg-amber-900/20 border border-amber-700/50 rounded-lg">
+              <h3 className="text-sm font-semibold text-amber-400 mb-2">How admin setup works:</h3>
+              <ol className="text-xs text-amber-300 space-y-1">
+                <li>1. Sign up with your Google account</li>
+                <li>2. You'll be taken to the admin setup page</li>
+                <li>3. Enter the admin password to complete setup</li>
+                <li>4. Access the admin dashboard</li>
+              </ol>
+            </div>
           </div>
-
-          <GoogleSignInButton redirectPath="/admin/setup" />
-
-          {/* Fallback Link */}
-          <p className="text-center text-zinc-500 text-sm mt-4">
-            Not an admin?{' '}
-            <Link href="/signin" className="text-amber-400 underline cursor-pointer">
-              Sign In as Buyer/Seller <ArrowRight className="h-4 w-4 inline-block" />
-            </Link>
-          </p>
         </div>
       </div>
     </div>

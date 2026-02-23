@@ -72,6 +72,60 @@ export async function signinAction(email: string, password: string) {
   }
 }
 
+export async function adminSigninAction(email: string, adminPassword: string) {
+  try {
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+    
+    if (!ADMIN_PASSWORD) {
+      return { success: false, error: "Admin password not configured on server" };
+    }
+    
+    // Verify admin password
+    if (adminPassword !== ADMIN_PASSWORD) {
+      return { success: false, error: "Invalid admin password" };
+    }
+    
+    const supabase = await createClient();
+    
+    // Check if email exists and get user role
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, role, email')
+      .eq('email', email.toLowerCase())
+      .single();
+    
+    // Email doesn't exist in users table
+    if (userError || !userData) {
+      return { 
+        success: false, 
+        error: "Email not found. Please sign up first or check your email address." 
+      };
+    }
+    
+    // Check if user is an admin
+    const isAdmin = userData.role === 'admin';
+    
+    if (!isAdmin) {
+      return { 
+        success: false, 
+        error: "This email does not have admin privileges." 
+      };
+    }
+    
+    // Get the current session for the authenticated user
+    const { data: authData } = await supabase.auth.getUser();
+    
+    return { 
+      success: true, 
+      user: authData.user ?? null,
+      isAdmin: true,
+      message: "Admin verified successfully"
+    };
+  } catch (err: any) {
+    return { success: false, error: mapAuthError(err) };
+  }
+}
+
 export async function signinWithGoogleAction() {
   try {
     const supabase = await createClient();

@@ -59,22 +59,25 @@ function AuthCallbackCompleteHandler() {
 
   const handleRedirect = async (currentUser: any) => {
     const role = currentUser?.user_metadata?.role as 'buyer' | 'seller' | 'admin' | undefined;
+    const adminSignupPending = currentUser?.user_metadata?.adminSignupPending === true;
     const customRedirect = searchParams.get('redirect');
 
-    console.log('[AuthCallbackComplete] Redirecting user with role:', role);
+    console.log('[AuthCallbackComplete] Redirecting user with role:', role, 'adminSignupPending:', adminSignupPending);
 
     if (customRedirect) {
       window.location.href = customRedirect;
       return;
     }
 
-    if (!role) {
-      router.push('/select-role');
+    // Check if this is a new admin signup from OAuth
+    if (role === 'admin' || adminSignupPending) {
+      console.log('[AuthCallbackComplete] Admin signup detected, routing to setup');
+      router.push('/admin/setup');
       return;
     }
 
-    if (role === 'admin') {
-      router.push('/admin/setup');
+    if (!role) {
+      router.push('/select-role');
       return;
     }
 

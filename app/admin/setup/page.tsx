@@ -1,107 +1,112 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { setAdminRole, checkAdminStatus } from "@/app/actions/admin";
-import { AlertCircle, CheckCircle, Loader } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { setAdminRole, checkAdminStatus } from '@/app/actions/admin';
+import { AlertCircle, CheckCircle, Loader, Eye, EyeOff } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+import { useToast } from '@/components/hooks/useToast';
 
 export default function AdminSetupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [error, setError] = useState("");
+  const [userEmail, setUserEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const toast = useToast();
 
-  // Only check admin status on initial load
+  // Check if user is authenticated and not already admin
   useEffect(() => {
-    const checkStatus = async () => {
+    const checkAuth = async () => {
       try {
-        const result = await checkAdminStatus();
-        if (result.success) {
-          setUserEmail(result.userEmail || "");
-          if (result.isAdmin) {
-            // Already an admin, redirect immediately
-            setIsAdmin(true);
-            setTimeout(() => {
-              router.push("/admin");
-            }, 1000);
-            return;
-          }
+        const supabase = createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          console.error('[AdminSetup] Not authenticated');
+          router.push('/admin/signin');
+          return;
         }
+
+        setUserEmail(user.email || '');
+
+        // Check if already admin
+        const result = await checkAdminStatus();
+        if (result.success && result.isAdmin) {
+          setIsAdmin(true);
+          // Redirect after showing message
+          setTimeout(() => {
+            router.push('/admin');
+          }, 2000);
+          return;
+        }
+
+        setIsLoading(false);
       } catch (err) {
-        console.error("Failed to check status:", err);
+        console.error('[AdminSetup] Error checking auth:', err);
+        router.push('/admin/signin');
       }
-      setIsLoading(false);
     };
 
-    checkStatus();
+    checkAuth();
   }, [router]);
 
-  const handleSetAdmin = async () => {
+  const handleSetupAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
-    setError("");
+    setError('');
     setSuccess(false);
 
     try {
+      if (!adminPassword) {
+        setError('Admin password is required');
+        setIsSubmitting(false);
+        return;
+      }
+
       const result = await setAdminRole(userEmail, adminPassword);
 
       if (result.success) {
         setSuccess(true);
-        console.log("✅ Admin role granted successfully");
-        console.log("[SETUP] Refreshing session and verifying admin status...");
-        
-        // Force refresh the Supabase session to get the updated JWT with admin metadata
+        toast.success('Admin setup complete! Redirecting to dashboard...');
+        console.log('[AdminSetup] ✅ Admin role granted successfully');
+
+        // Wait for session refresh and redirect
         setTimeout(async () => {
           try {
             const supabase = createClient();
-            console.log("[SETUP] Refreshing auth session...");
             
-            // Explicitly refresh the session to get new token with updated metadata
-            const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-            
+            // Refresh session to get updated JWT with admin metadata
+            console.log('[AdminSetup] Refreshing session...');
+            const { error: refreshError } = await supabase.auth.refreshSession();
+
             if (refreshError) {
-              console.warn("[SETUP] Session refresh error:", refreshError.message);
-            } else if (session) {
-              console.log("✅ Session refreshed, new token obtained");
-              console.log("[SETUP] New token metadata:", {
-                admin: (session.user?.user_metadata as any)?.admin,
-                role: (session.user?.user_metadata as any)?.role,
-              });
-            }
-            
-            // Now verify admin status is persisted in the database
-            let isAdminVerified = false;
-            for (let attempt = 0; attempt < 5; attempt++) {
-              const statusResult = await checkAdminStatus();
-              if (statusResult.success && statusResult.isAdmin) {
-                isAdminVerified = true;
-                console.log("✅ Admin status verified from database");
-                break;
-              }
-              if (attempt < 4) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
+              console.warn('[AdminSetup] Session refresh warning:', refreshError.message);
+            } else {
+              console.log('[AdminSetup] ✅ Session refreshed');
             }
 
-            // Navigate to dashboard with a hard refresh to ensure new TRPC context is created
-            console.log("[SETUP] Admin verified, navigating to dashboard...");
-            window.location.href = "/admin";
+            // Navigate to admin dashboard
+            window.location.href = '/admin';
           } catch (err) {
-            console.error("[SETUP] Error during setup:", err);
-            // Still try to navigate
-            window.location.href = "/admin/support";
+            console.error('[AdminSetup] Error during setup completion:', err);
+            window.location.href = '/admin';
           }
-        }, 800);
+        }, 1000);
       } else {
-        setError(result.error || "Failed to set admin role");
+        const errorMsg = result.error || 'Failed to setup admin';
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred");
+      const errorMsg = err?.message || 'An unexpected error occurred';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
 
     setIsSubmitting(false);
@@ -111,7 +116,7 @@ export default function AdminSetupPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
+          <Loader className="w-12 h-12 animate-spin text-amber-500 mx-auto mb-4" />
           <p className="text-white text-lg">Checking authentication...</p>
           <p className="text-gray-400 text-sm mt-2">Syncing with server...</p>
         </div>
@@ -143,11 +148,12 @@ export default function AdminSetupPage() {
             />
             <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">Admin Setup</h1>
             <p className="text-xs sm:text-sm text-[#D1D5DB]">
-              Grant yourself admin access to the support dashboard
+              Complete your admin account setup by verifying the admin password
             </p>
           </div>
 
-          <div className="space-y-4 sm:space-y-6">
+          <form onSubmit={handleSetupAdmin} className="space-y-4 sm:space-y-6">
+            {/* Email Display */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                 Your Email
@@ -159,27 +165,38 @@ export default function AdminSetupPage() {
                 className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white disabled:opacity-50"
               />
               <p className="text-xs text-gray-500 mt-1">
-                This is the email associated with your account
+                Logged in with this email
               </p>
             </div>
 
+            {/* Admin Password */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">
                 Admin Password
               </label>
-              <input
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Enter admin password"
-                disabled={success}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder:text-gray-500 focus:border-purple-500 focus:outline-none disabled:opacity-50"
-              />
-              <p className="text-xs text-gray-500 mt-1 text-[0.65rem] sm:text-xs">
-                Required only if there are existing admins in the system
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  disabled={success}
+                  className="w-full px-4 py-2 pr-10 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder:text-gray-500 focus:border-amber-500 focus:outline-none disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                The admin password from your environment configuration
               </p>
             </div>
 
+            {/* Error Message */}
             {error && (
               <div className="flex items-start space-x-3 p-4 bg-red-900/20 border border-red-700/50 rounded-lg">
                 <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -190,30 +207,32 @@ export default function AdminSetupPage() {
               </div>
             )}
 
+            {/* Success Message */}
             {success && (
               <div className="flex items-start space-x-3 p-4 bg-green-900/20 border border-green-700/50 rounded-lg">
                 <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-green-400">Success!</p>
                   <p className="text-xs text-green-300 mt-1">
-                    Admin role granted. Refreshing session...
+                    Admin setup complete. Refreshing session...
                   </p>
                 </div>
               </div>
             )}
 
+            {/* Submit Button */}
             <Button
-              onClick={handleSetAdmin}
+              type="submit"
               disabled={isSubmitting || success}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition-colors cursor-pointer"
+              className="w-full bg-gradient-to-b from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-semibold py-2 rounded-lg transition-colors cursor-pointer"
             >
-              {isSubmitting ? "Setting up..." : "Grant Admin Access"}
+              {isSubmitting ? 'Verifying...' : 'Complete Admin Setup'}
             </Button>
 
             <p className="text-xs text-center text-gray-500">
-              This will grant you administrator access to the support dashboard
+              This will grant you administrator access to the dashboard
             </p>
-          </div>
+          </form>
         </div>
       </div>
     </div>
