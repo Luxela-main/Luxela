@@ -65,8 +65,7 @@ function SignUpContent() {
         role as "buyer" | "seller"
       );
 
-      // ONLY show modal if signup succeeded AND email is new
-      // If email already exists, signup action returns success: false with error message
+      // If signup succeeded AND email is new, show verification modal
       if (success && isNewSignup) {
         setUserEmail(email);
         setDialogOpen(true);
@@ -75,9 +74,11 @@ function SignUpContent() {
         return;
       }
 
-      // Any failure (including duplicate email) shows error toast only
+      // Any failure (including duplicate email) shows error toast immediately
       if (!success) {
+        // Show error toast immediately for any failure
         toast.error(error || "Signup failed. Please try again.");
+        // Don't return here - let the form submission complete
       }
     } catch (err: unknown) {
       if (err instanceof Error) toast.error(err.message || "Signup failed unexpectedly.");

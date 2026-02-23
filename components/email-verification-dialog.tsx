@@ -8,7 +8,7 @@ import {
   DialogOverlay
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Mail, CheckCircle } from "lucide-react";
+import { Mail, CheckCircle, AlertCircle } from "lucide-react";
 
 interface EmailVerificationDialogProps {
   dialogOpen: boolean;
@@ -36,7 +36,7 @@ export function EmailVerificationDialog({
             </div>
           </div>
           <DialogTitle className="text-center">
-            Check your email
+            Verify your email
           </DialogTitle>
           <DialogDescription className="text-center">
             We've sent a verification link to:
@@ -45,17 +45,35 @@ export function EmailVerificationDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="flex items-start gap-3 text-sm text-muted-foreground">
-            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-            <p>Click the verification link in the email to activate your account</p>
+          {/* Main instruction box */}
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">Next steps:</p>
+            <ol className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+              <li className="flex gap-3">
+                <span className="font-semibold flex-shrink-0">1.</span>
+                <span>Open the email we just sent to <strong>{userEmail}</strong></span>
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold flex-shrink-0">2.</span>
+                <span>Click the <strong>"Verify your email"</strong> button or link</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="font-semibold flex-shrink-0">3.</span>
+                <span>You'll be automatically redirected to complete your registration</span>
+              </li>
+            </ol>
           </div>
-          <div className="flex items-start gap-3 text-sm text-muted-foreground">
-            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-            <p>The link will expire in <strong>1 hour</strong></p>
-          </div>
-          <div className="flex items-start gap-3 text-sm text-muted-foreground">
-            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-            <p>Check your spam folder if you don't see it</p>
+          
+          {/* Additional info */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-3 text-sm text-muted-foreground">
+              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+              <p>The link expires in <strong>1 hour</strong> for security</p>
+            </div>
+            <div className="flex items-start gap-3 text-sm text-muted-foreground">
+              <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+              <p>Can't find it? Check your <strong>spam</strong> or <strong>junk</strong> folder</p>
+            </div>
           </div>
         </div>
 

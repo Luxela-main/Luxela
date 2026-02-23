@@ -24,9 +24,10 @@ export const useAuth = () => {
       password,
       options: {
         data: { role },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
+
 
     if (error) throw new Error(error.message);
     return { success: true, message: "Signup successful! Please verify your email." };
@@ -74,4 +75,4 @@ export const useAuth = () => {
   };
 
   return { signup, signin, resendVerification, signout };
-};
+};

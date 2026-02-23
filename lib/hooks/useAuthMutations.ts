@@ -63,7 +63,7 @@ export const useSignup = () => {
         password,
         options: {
           data: { role },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         },
       });
 
@@ -151,7 +151,7 @@ export const useResendVerification = () => {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
       });
 
       if (error) throw mapAuthError(error);

@@ -33,14 +33,16 @@ export async function signupAction(email: string, password: string, role: "buyer
     if (error) {
       // Determine if this is a duplicate email error
       const mappedError = mapAuthError(error);
-      const isNewSignup = !mappedError.includes("already registered");
-      return { success: false, error: mappedError, isNewSignup };
+      const isDuplicateEmail = mappedError.includes("already registered");
+      return { success: false, error: mappedError, isNewSignup: !isDuplicateEmail };
     }
 
     // If we got here, signup was successful
     return { success: true, message: "Signup successful. Please check your email to verify.", isNewSignup: true };
   } catch (err: any) {
-    return { success: false, error: mapAuthError(err), isNewSignup: false };
+    const mappedError = mapAuthError(err);
+    const isDuplicateEmail = mappedError.includes("already registered");
+    return { success: false, error: mappedError, isNewSignup: !isDuplicateEmail };
   }
 }
 
