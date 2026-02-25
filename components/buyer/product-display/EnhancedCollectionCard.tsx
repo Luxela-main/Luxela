@@ -263,7 +263,7 @@ export default function EnhancedCollectionCard({
     <Link href={`/buyer/collection/${collection.id}`} className="block group">
       <div className="relative rounded-xl overflow-hidden transition-all duration-300 h-full flex flex-col border border-purple-900/30 hover:border-purple-900/60 shadow-lg shadow-black/50 hover:shadow-purple-900/30 bg-gradient-to-br from-[#0f0f0f] to-[#1a1a1a]">
         {/* Image Section */}
-        <div className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] overflow-hidden flex-shrink-0 mb-4" style={{ aspectRatio: '1 / 1', minHeight: '240px' }}>
+        <div className="relative w-full bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] overflow-hidden flex-shrink-0 mb-4 h-56 sm:h-64 md:h-56 lg:h-60">
           <img
             src={collectionImage}
             alt={collection.title}
