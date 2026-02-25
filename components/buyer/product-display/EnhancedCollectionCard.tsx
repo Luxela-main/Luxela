@@ -69,7 +69,7 @@ export default function EnhancedCollectionCard({
     }
   }
 
-  const brand = collection.sellers?.seller_business?.[0] || collection.sellerName;
+  const brandName = collection.sellerName || collection.brandName || 'Featured Brand';
   const avgRating =
     productCount > 0
       ? (
@@ -189,9 +189,7 @@ export default function EnhancedCollectionCard({
   const formattedPrice = totalPrice > 0 ? `NGN ${totalPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Price pending';
 
   const getBadgeText = (collection: any) => {
-    if (collection.limited_edition_badge === 'show_badge')
-      return 'Limited Edition';
-    const createdDate = new Date(collection.created_at);
+    const createdDate = new Date(collection.createdAt);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     if (createdDate > weekAgo) return 'New Drop';
@@ -244,7 +242,7 @@ export default function EnhancedCollectionCard({
               <p className="text-sm text-[#acacac]">
                 by{' '}
                 <span className="font-semibold text-white">
-                  {brand?.brand_name || 'Featured Brand'}
+                  {brandName}
                 </span>
               </p>
             </div>
@@ -311,7 +309,7 @@ export default function EnhancedCollectionCard({
         <div className="flex flex-col flex-1 p-4">
           {/* Brand Name */}
           <p className="text-purple-400/70 text-[10px] font-bold uppercase tracking-wider mb-2">
-            {brand?.brand_name || 'Featured Brand'}
+            {brandName}
           </p>
 
           {/* Title */}

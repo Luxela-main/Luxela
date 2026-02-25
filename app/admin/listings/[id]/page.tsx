@@ -423,6 +423,32 @@ export default function ListingDetailPage() {
                         {product.dimensions && (<div><p className="text-xs font-medium text-[#9CA3AF]">Dimensions</p><p className="text-white">{product.dimensions}</p></div>)}
                         {product.origin && (<div><p className="text-xs font-medium text-[#9CA3AF]">Origin</p><p className="text-white">{product.origin}</p></div>)}
                       </div>
+                      {product.sizes && product.sizes.length > 0 && (
+                        <div className="pt-2 border-t border-[#2B2B2B]">
+                          <p className="text-xs font-medium text-[#9CA3AF] mb-2">Available Sizes</p>
+                          <div className="flex gap-1 flex-wrap">
+                            {product.sizes.map((size: string) => (
+                              <Badge key={size} variant="secondary" className="bg-[#8451e1]/30 text-[#8451e1] text-xs">{size}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {product.colors && product.colors.length > 0 && (
+                        <div className="pt-2 border-t border-[#2B2B2B]">
+                          <p className="text-xs font-medium text-[#9CA3AF] mb-2">Available Colors</p>
+                          <div className="flex gap-2 flex-wrap">
+                            {product.colors.map((color: any, colorIdx: number) => (
+                              <div key={colorIdx} className="flex items-center gap-1">
+                                <div 
+                                  className="w-4 h-4 rounded-full border border-[#2B2B2B]" 
+                                  style={{ backgroundColor: color.colorHex || '#000000' }}
+                                />
+                                <span className="text-xs text-white">{color.colorName || color}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {product.description && (<div className="pt-2 border-t border-[#2B2B2B]"><p className="text-xs font-medium text-[#9CA3AF] mb-1">Description</p><p className="text-white text-xs whitespace-pre-wrap">{product.description}</p></div>)}
                       {product.careInstructions && (<div className="pt-2 border-t border-[#2B2B2B]"><p className="text-xs font-medium text-[#9CA3AF] mb-1">Care Instructions</p><p className="text-white text-xs whitespace-pre-wrap">{product.careInstructions}</p></div>)}
                       {product.tags && product.tags.length > 0 && (<div className="pt-2 border-t border-[#2B2B2B]"><p className="text-xs font-medium text-[#9CA3AF] mb-2">Tags</p><div className="flex gap-1 flex-wrap">{product.tags.map((tag) => (<Badge key={tag} variant="secondary" className="bg-[#8451e1]/30 text-[#8451e1] text-xs">{tag}</Badge>))}</div></div>)}

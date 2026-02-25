@@ -309,6 +309,11 @@ export const adminListingReviewRouter = createTRPCRouter({
           category: z.string().nullable().optional(),
           images: z.array(z.string()),
           imagesJson: z.string().nullable().optional(),
+          sizes: z.array(z.string()).nullable().optional(),
+          colors: z.array(z.object({
+            colorName: z.string(),
+            colorHex: z.string(),
+          })).nullable().optional(),
           material: z.string().nullable().optional(),
           weight: z.string().nullable().optional(),
           dimensions: z.string().nullable().optional(),
@@ -426,6 +431,16 @@ export const adminListingReviewRouter = createTRPCRouter({
             }
           });
 
+          // Parse itemsJson to get sizes and colors for each item
+          let itemsJsonData: any[] = [];
+          if (item.listing.itemsJson) {
+            try {
+              itemsJsonData = JSON.parse(item.listing.itemsJson);
+            } catch (e) {
+              console.log('[AdminListingReview] Failed to parse itemsJson:', e);
+            }
+          }
+
           // Build collection products array
           collectionProducts = collectionItemsList
             .map((collectionItem: any) => {
@@ -447,6 +462,8 @@ export const adminListingReviewRouter = createTRPCRouter({
                 category: product.category,
                 images: productImages,
                 imagesJson: imagesJsonStr,
+                sizes: itemsJsonData.find((i: any) => i.title === product.name)?.sizes || null,
+                colors: itemsJsonData.find((i: any) => i.title === product.name)?.colorsAvailable || null,
                 careInstructions: careInstructionsByProductId[product.id] || null,
               };
             })

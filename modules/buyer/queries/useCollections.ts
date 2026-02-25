@@ -87,6 +87,7 @@ export function useCollections({
 
   // Process tRPC data
   useEffect(() => {
+    console.log('[useCollections] Raw tRPC data:', tRPCData);
     if (!tRPCData || !tRPCData.collections) {
       setData([]);
       return;

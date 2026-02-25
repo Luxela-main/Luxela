@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/trpc";
 import { db } from "../db";
-import { collections, collectionItems, products, productImages, listings, sellers, reviews, buyers, users } from "../db/schema";
+import { collections, collectionItems, products, productImages, listings, sellers, sellerBusiness, reviews, buyers, users } from "../db/schema";
 import { and, eq, inArray, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -917,7 +917,10 @@ export const collectionRouter = createTRPCRouter({
         });
 
         const itemsWithProducts = items.map((item: any) => {
-          // Find the listing for this specific product
+          // Get the product data for this item
+          const product = productsData.find((p: any) => p.id === item.productId);
+          
+          // Find the listing for this specific product (if it has one)
           const productListing = productListings.find(
             (l: any) => l.productId === item.productId
           );
@@ -925,48 +928,74 @@ export const collectionRouter = createTRPCRouter({
           const selectedListing = productListing || listing[0];
           const productReviews = productListing ? reviewsByListingId[productListing.id] || [] : [];
           
-          // Extract colors and sizes from the listing
+          // Extract colors and sizes from the listing or product
           let colors: any[] = [];
           let sizes: any[] = [];
           
-          if (selectedListing) {
-            // Try to parse colors
-            const colorSource = selectedListing.colorsAvailable || selectedListing.colors_available || selectedListing.colors;
-            if (colorSource) {
-              try {
-                colors = typeof colorSource === 'string' ? JSON.parse(colorSource) : Array.isArray(colorSource) ? colorSource : [];
-              } catch (e) {
-                colors = [];
-              }
-            }
-            
-            // Try to parse sizes
-            const sizeSource = selectedListing.sizesJson || selectedListing.sizes;
-            if (sizeSource) {
-              try {
-                sizes = typeof sizeSource === 'string' ? JSON.parse(sizeSource) : Array.isArray(sizeSource) ? sizeSource : [];
-              } catch (e) {
-                sizes = [];
-              }
+          // Try to get colors from listing first, then product
+          const colorSource = selectedListing?.colorsAvailable || selectedListing?.colors_available || product?.colors;
+          if (colorSource) {
+            try {
+              colors = typeof colorSource === 'string' ? JSON.parse(colorSource) : Array.isArray(colorSource) ? colorSource : [];
+            } catch (e) {
+              colors = [];
             }
           }
           
-          if (productListing) {
-            console.log(`[getBuyerCollectionWithProducts] Item productId=${item.productId}, using product listing id=${productListing.id}, priceCents=${productListing.priceCents}`);
-          } else {
-            console.log(`[getBuyerCollectionWithProducts] Item productId=${item.productId}, falling back to collection listing, priceCents=${listing[0].priceCents}`);
+          // Try to get sizes from listing first, then product
+          const sizeSource = selectedListing?.sizesJson || product?.sizes;
+          if (sizeSource) {
+            try {
+              sizes = typeof sizeSource === 'string' ? JSON.parse(sizeSource) : Array.isArray(sizeSource) ? sizeSource : [];
+            } catch (e) {
+              sizes = [];
+            }
           }
+          
+          // Use product price as primary source (collection items don't have individual listings with prices)
+          const priceCents = product?.priceCents || selectedListing?.priceCents || 0;
+          const currency = product?.currency || selectedListing?.currency || 'NGN';
+          
+          // Extract all additional details from the listing or product
+          const careInstructions = selectedListing?.careInstructions || product?.careInstructions || null;
+          const materialComposition = selectedListing?.materialComposition || product?.materialComposition || null;
+          const shippingOption = selectedListing?.shippingOption || product?.shippingOption || null;
+          const etaDomestic = selectedListing?.etaDomestic || product?.etaDomestic || null;
+          const etaInternational = selectedListing?.etaInternational || product?.etaInternational || null;
+          const refundPolicy = selectedListing?.refundPolicy || product?.refundPolicy || null;
+          const videoUrl = selectedListing?.videoUrl || product?.videoUrl || null;
+          const metaDescription = selectedListing?.metaDescription || product?.metaDescription || null;
+          const barcode = selectedListing?.barcode || product?.barcode || null;
+          const category = selectedListing?.category || product?.category || null;
           
           return {
             ...item,
-            product: productsData.find((p: any) => p.id === item.productId),
+            product,
             images: images.filter((img: any) => img.productId === item.productId),
             listing: selectedListing,
-            colors: colors,
-            sizes: sizes,
+            colors,
+            sizes,
             colorsAvailable: colors,
             sizesJson: sizes,
             reviews: productReviews,
+            // Include price info directly on the item for easy access
+            priceCents,
+            price: priceCents / 100,
+            currency,
+            title: product?.name || selectedListing?.title || item.title,
+            description: product?.description || selectedListing?.description || item.description,
+            sku: product?.sku || selectedListing?.sku,
+            // Include all additional product details
+            careInstructions,
+            materialComposition,
+            shippingOption,
+            etaDomestic,
+            etaInternational,
+            refundPolicy,
+            videoUrl,
+            metaDescription,
+            barcode,
+            category,
           };
         });
 
@@ -1083,12 +1112,21 @@ export const collectionRouter = createTRPCRouter({
 
         const [allCollectionDetails, allSellers, allProducts, allProductImages, allListings] = await Promise.all([
           collectionIds.length > 0 ? db.select().from(collections).where(inArray(collections.id, collectionIds)) : Promise.resolve([]),
-          sellerIds.length > 0 ? db.select({ id: sellers.id }).from(sellers).where(inArray(sellers.id, sellerIds as string[])) : Promise.resolve([]),
+          sellerIds.length > 0 ? db.select({ 
+            id: sellers.id,
+            brandName: sellerBusiness.brandName,
+          })
+          .from(sellers)
+          .leftJoin(sellerBusiness, eq(sellers.id, sellerBusiness.sellerId))
+          .where(inArray(sellers.id, sellerIds as string[])) : Promise.resolve([]),
           productIds.length > 0 ? db.select({
             id: products.id,
             name: products.name,
             slug: products.slug,
             description: products.description,
+            priceCents: products.priceCents,
+            currency: products.currency,
+            sku: products.sku,
           })
           .from(products)
           .where(inArray(products.id, productIds as string[])) : Promise.resolve([]),
@@ -1131,7 +1169,9 @@ export const collectionRouter = createTRPCRouter({
         
         // Create maps for O(1) lookup
         const collectionDetailsMap = new Map<string, typeof allCollectionDetails[number]>(allCollectionDetails.map((c: typeof allCollectionDetails[number]) => [c.id, c]));
-        const sellersMap = new Map(allSellers.map((s: typeof allSellers[number]) => [s.id, s]));
+        const sellersMap = new Map<string, { id: string; brandName: string | null }>(
+          allSellers.map((s: { id: string; brandName: string | null }) => [s.id, { id: s.id, brandName: s.brandName }])
+        );
         const productsMap = new Map<string, typeof allProducts[number]>(allProducts.map((p: typeof allProducts[number]) => [p.id, p]));
         const listingsMap = new Map<string, typeof allListings[number]>(allListings.map((l: typeof allListings[number]) => [l.productId, l]));
         
@@ -1161,6 +1201,10 @@ export const collectionRouter = createTRPCRouter({
             const listing = listingsMap.get(item.productId) as typeof allListings[number] | undefined;
             const images = (imagesByProductId.get(item.productId) || []) as Array<typeof allProductImages[number]>;
             
+            // Get price from product (collection items don't have individual listings)
+            const priceCents = product?.priceCents || 0;
+            const currency = product?.currency || listing?.currency || 'NGN';
+            
             itemsByCollection.get(collId)!.push({
               itemId: item.itemId,
               position: item.position,
@@ -1168,6 +1212,9 @@ export const collectionRouter = createTRPCRouter({
               productName: product?.name,
               productSlug: product?.slug,
               productDescription: product?.description,
+              productPriceCents: priceCents,
+              productCurrency: currency,
+              productSku: product?.sku,
               listingId: listing?.id,
               listingTitle: listing?.title,
               listingDescription: listing?.description,
@@ -1214,8 +1261,9 @@ export const collectionRouter = createTRPCRouter({
             images: item.images,
             title: item.listingTitle || item.productName,
             description: item.listingDescription || item.productDescription,
-            priceCents: item.listingPriceCents,
-            currency: item.listingCurrency,
+            // Use product price as primary source (collection items don't have individual listings)
+            priceCents: item.productPriceCents || item.listingPriceCents || 0,
+            currency: item.productCurrency || item.listingCurrency || 'NGN',
             category: item.listingCategory,
             quantityAvailable: item.listingQuantityAvailable,
             listingImage: item.listingImage,
@@ -1229,7 +1277,7 @@ export const collectionRouter = createTRPCRouter({
             etaDomestic: item.listingEtaDomestic,
             etaInternational: item.listingEtaInternational,
             shippingOption: item.listingShippingOption,
-            sku: item.listingSku,
+            sku: item.listingSku || item.productSku,
             barcode: item.listingBarcode,
             metaDescription: item.listingMetaDescription,
             refundPolicy: item.listingRefundPolicy,
@@ -1237,6 +1285,9 @@ export const collectionRouter = createTRPCRouter({
 
           const items = collectionItemsData;
           const collectionDetails = collectionDetailsMap.get(listing.collectionId!);
+          
+          // Calculate total collection price from items
+          const totalPriceCents = items.reduce((sum: number, item: any) => sum + (item.priceCents || 0), 0);
 
           return {
             id: listing.id,
@@ -1250,8 +1301,10 @@ export const collectionRouter = createTRPCRouter({
             collectionDescription: collectionDetails?.description || listing.description,
             itemCount: totalItemsInCollection,
             items: items,
+            totalPriceCents,
+            totalPrice: totalPriceCents / 100,
             sellerId: listing.sellerId,
-            sellerName: sellersMap.has(listing.sellerId) ? "Seller" : "Unknown Seller",
+            sellerName: sellersMap.get(listing.sellerId)?.brandName || "Unknown Seller",
             shippingOption: listing.shippingOption,
             refundPolicy: listing.refundPolicy,
             createdAt: listing.createdAt,
@@ -1259,7 +1312,13 @@ export const collectionRouter = createTRPCRouter({
           };
         });
 
-        console.log('[getApprovedCollections] ✓ Returning', enrichedCollections.length, 'collections');
+        console.log('[getApprovedCollections] ✓ Returning', enrichedCollections.length, 'collections', enrichedCollections.map((c: any) => ({
+          id: c.id,
+          title: c.title,
+          itemCount: c.itemCount,
+          totalPriceCents: c.totalPriceCents,
+          itemsSample: c.items?.slice(0, 2).map((i: any) => ({ priceCents: i.priceCents, productName: i.productName }))
+        })));
         return {
           collections: enrichedCollections,
           total: totalCount,

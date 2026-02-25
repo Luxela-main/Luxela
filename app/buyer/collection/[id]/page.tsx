@@ -83,6 +83,13 @@ const formatShippingEta = (eta: string) => {
 };
 
 
+const formatCategory = (category: string) => {
+  if (!category) return '';
+  return category
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 const formatShippingOption = (option: string) => {
   const options: Record<string, string> = {
     local: "Local Only",
@@ -225,6 +232,37 @@ export default function CollectionDetailPage({
       const listingData = item.listing || item;
       const product = item.product;
       
+      // Support both data structures: nested listing object (getBuyerCollectionWithProducts) 
+      // and flat listing* prefixed fields (getApprovedCollections)
+      const getListingField = (fieldName: string, ...altNames: string[]): any => {
+        // First check nested listing object
+        if (item.listing && item.listing[fieldName] !== undefined) {
+          return item.listing[fieldName];
+        }
+        // Check alternative field names in nested listing
+        for (const altName of altNames) {
+          if (item.listing && item.listing[altName] !== undefined) {
+            return item.listing[altName];
+          }
+        }
+        // Check direct field on item
+        if (item[fieldName] !== undefined) {
+          return item[fieldName];
+        }
+        // Check alternative field names on item
+        for (const altName of altNames) {
+          if (item[altName] !== undefined) {
+            return item[altName];
+          }
+        }
+        // Finally check flat fields with listing* prefix (e.g., listingCareInstructions)
+        const prefixedField = `listing${fieldName.charAt(0).toUpperCase()}${fieldName.slice(1)}`;
+        if (item[prefixedField] !== undefined) {
+          return item[prefixedField];
+        }
+        return undefined;
+      };
+      
       // Use the individual product's listing ID from the backend response
       // Backend now returns listingId at the root level for each collection item
       const itemListingId = item.listingId || item.listing?.id || collectionListingId;
@@ -237,9 +275,9 @@ export default function CollectionDetailPage({
         finalListingId: itemListingId,
       });
       
+      // Get colors using getListingField helper
       let colors_available: any[] = [];
-      
-      const colorSource = listingData?.colorsAvailable || listingData?.colors_available || listingData?.colors || item.listing?.colorsAvailable || item.listing?.colors_available;
+      const colorSource = getListingField('colorsAvailable', 'colors_available', 'colors');
       if (colorSource) {
         try {
           colors_available = typeof colorSource === 'string' 
@@ -252,8 +290,9 @@ export default function CollectionDetailPage({
         }
       }
       
+      // Get sizes using getListingField helper
       let sizes: any[] = [];
-      const sizeSource = listingData?.sizesJson || listingData?.sizes || item.listing?.sizesJson || item.listing?.sizes;
+      const sizeSource = getListingField('sizesJson', 'sizes');
       if (sizeSource) {
         try {
           sizes = typeof sizeSource === 'string' 
@@ -264,14 +303,14 @@ export default function CollectionDetailPage({
         }
       }
       
-      const materialSource = listingData?.material;
+      const materialSource = getListingField('materialComposition', 'material');
       const itemTitle = item.title || item.productName || product?.name || `Item ${idx + 1}`;
       
       // Prepare shipping details for easy access
       const shippingDetails = {
-        option: listingData?.shippingOption,
-        etaDomestic: listingData?.etaDomestic,
-        etaInternational: listingData?.etaInternational
+        option: getListingField('shippingOption'),
+        etaDomestic: getListingField('etaDomestic'),
+        etaInternational: getListingField('etaInternational')
       };
       
       let itemImages: Array<{ imageUrl: string; position?: number }> = [];
@@ -295,28 +334,28 @@ export default function CollectionDetailPage({
         collectionItemListingId: itemListingId, 
         title: itemTitle,
         name: itemTitle,
-        priceCents: listingData?.priceCents || item?.priceCents || 0,
-        price_cents: listingData?.priceCents || item?.priceCents || 0,
-        currency: listingData?.currency || item?.currency || 'NGN',
+        priceCents: getListingField('priceCents') || 0,
+        price_cents: getListingField('priceCents') || 0,
+        currency: getListingField('currency') || 'NGN',
         image: mainImage,
         colors_available: colors_available,
         colors: colors_available,
         sizes: sizes,
         description: listingData?.description || product?.description,
         material_composition: materialSource || product?.description,
-        quantity_available: listingData?.quantityAvailable || 0,
-        inStock: (listingData?.quantityAvailable || 0) > 0,
+        quantity_available: getListingField('quantityAvailable') || 0,
+        inStock: (getListingField('quantityAvailable') || 0) > 0,
         images: itemImages,
-        careInstructions: listingData?.careInstructions,
-        refundPolicy: listingData?.refundPolicy,
-        videoUrl: listingData?.videoUrl,
-        shippingOption: listingData?.shippingOption,
-        etaDomestic: listingData?.etaDomestic,
-        etaInternational: listingData?.etaInternational,
-        sku: listingData?.sku,
-        barcode: listingData?.barcode,
-        metaDescription: listingData?.metaDescription,
-        category: listingData?.category,
+        careInstructions: getListingField('careInstructions'),
+        refundPolicy: getListingField('refundPolicy'),
+        videoUrl: getListingField('videoUrl'),
+        shippingOption: getListingField('shippingOption'),
+        etaDomestic: getListingField('etaDomestic'),
+        etaInternational: getListingField('etaInternational'),
+        sku: getListingField('sku'),
+        barcode: getListingField('barcode'),
+        metaDescription: getListingField('metaDescription'),
+        category: getListingField('category'),
         shippingDetails: shippingDetails,
         rating: 4.5,
         reviewCount: 12,
@@ -875,10 +914,12 @@ function CollectionItemCard({
 
   let colors: Array<{ colorName: string; colorHex: string }> = [];
   try {
-    if (item.colors_available) {
-      colors = Array.isArray(item.colors_available)
-        ? item.colors_available
-        : typeof item.colors_available === 'string' ? JSON.parse(item.colors_available) : [];
+    // Check both colors and colors_available fields (mapped items use 'colors')
+    const colorSource = item.colors || item.colors_available;
+    if (colorSource) {
+      colors = Array.isArray(colorSource)
+        ? colorSource
+        : typeof colorSource === 'string' ? JSON.parse(colorSource) : [];
     }
   } catch (e) {
     console.error('[CollectionItemCard] Color parsing error:', e);
@@ -946,9 +987,25 @@ function CollectionItemCard({
               {brandName ?? "Exclusive"}
             </p>
 
-            <h3 className="text-[#f2f2f2] capitalize font-semibold text-sm line-clamp-2 leading-snug mb-3 h-10 flex-grow">
+            <h3 className="text-[#f2f2f2] capitalize font-semibold text-sm line-clamp-2 leading-snug mb-2">
               {item.title || item.name || `Item ${itemNumber}`}
             </h3>
+
+            {/* Category Badge */}
+            {item.category && (
+              <div className="mb-2">
+                <span className="inline-block px-2 py-0.5 rounded bg-[#8451E1]/20 text-[#8451E1] text-[8px] font-semibold uppercase tracking-wide">
+                  {formatCategory(item.category)}
+                </span>
+              </div>
+            )}
+
+            {/* Description Preview */}
+            {item.description && (
+              <p className="text-[#666] text-[9px] line-clamp-2 mb-2 italic">
+                {item.description}
+              </p>
+            )}
 
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-[#8451E1]/20 text-[10px]">
               {colors.length > 0 && (
@@ -997,11 +1054,27 @@ function CollectionItemCard({
                   {item.etaInternational ? formatShippingEta(item.etaInternational) : ''}
                 </p>
               )}
+              {item.shippingOption && (
+                <p className="text-[#999] line-clamp-1">
+                  <span className="text-[#8451E1] font-semibold">Shipping:</span> {formatShippingOption(item.shippingOption)}
+                </p>
+              )}
               {item.sku && (
                 <p className="text-[#999] line-clamp-1">
                   <span className="text-[#8451E1] font-semibold">SKU:</span> {item.sku}
                 </p>
               )}
+              {item.barcode && (
+                <p className="text-[#999] line-clamp-1">
+                  <span className="text-[#8451E1] font-semibold">Barcode:</span> {item.barcode}
+                </p>
+              )}
+            </div>
+
+            {/* Click indicator */}
+            <div className="flex items-center justify-center gap-1 text-[8px] text-[#8451E1]/70 mb-2">
+              <span>Click for full details</span>
+              <ChevronRight className="w-3 h-3" />
             </div>
 
             {(item.videoUrl || item.metaDescription) && (
@@ -1160,10 +1233,12 @@ function ItemDetailModal({
 
   let colors: Array<{ colorName: string; colorHex: string }> = [];
   try {
-    if (item.colors_available) {
-      let parsedColors = Array.isArray(item.colors_available)
-        ? item.colors_available
-        : typeof item.colors_available === 'string' ? JSON.parse(item.colors_available) : [];
+    // Check both colors and colors_available fields (mapped items use 'colors')
+    const colorSource = item.colors || item.colors_available;
+    if (colorSource) {
+      let parsedColors = Array.isArray(colorSource)
+        ? colorSource
+        : typeof colorSource === 'string' ? JSON.parse(colorSource) : [];
       
       // Normalize color format to { colorName, colorHex }
       colors = parsedColors.map((color: any) => ({
@@ -1171,7 +1246,7 @@ function ItemDetailModal({
         colorHex: color.colorHex || color.hex || '#000000',
       })).filter((c: any) => c.colorName && c.colorHex);
     }
-    console.log('[ItemDetailModal] Colors parsed:', { colors, itemTitle: item.title });
+    console.log('[ItemDetailModal] Colors parsed:', { colors, itemTitle: item.title, colorSource });
   } catch (e) {
     console.error('[ItemDetailModal] Color parsing error:', e);
   }
@@ -1432,13 +1507,36 @@ function ItemDetailModal({
               </div>
             )}
 
-            {item.material_composition && (
-              <div>
-                <p className="text-[#666] text-xs uppercase tracking-wider mb-1 font-semibold">
-                  Material
+            {item.description && (
+              <div className="bg-[#1a1a2e]/30 rounded-lg p-3 border border-[#8451E1]/20">
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-2">
+                  <Info className="w-4 h-4" /> Description
                 </p>
-                <p className="text-[#acacac]">{item.material_composition}</p>
+                <p className="text-[#acacac] text-sm whitespace-pre-wrap">{item.description}</p>
               </div>
+            )}
+
+            {item.category && (
+              <div className="flex items-center gap-2">
+                <span className="text-[#666] text-xs uppercase tracking-wider font-semibold">Category:</span>
+                <span className="text-[#8451E1] text-sm font-medium">{formatCategory(item.category)}</span>
+              </div>
+            )}
+
+            {item.material_composition && (
+
+              <div className="bg-[#1a1a2e]/30 rounded-lg p-3 border border-[#8451E1]/20">
+
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-2">
+
+                  <Package className="w-4 h-4" /> Material Composition
+
+                </p>
+
+                <p className="text-[#acacac] text-sm">{item.material_composition}</p>
+
+              </div>
+
             )}
 
             {item.careInstructions && (
@@ -1480,8 +1578,8 @@ function ItemDetailModal({
 
             {(item.sku || item.barcode) && (
               <div className="bg-gray-500/10 rounded-lg p-3 border border-gray-500/30">
-                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
-                  Product IDs
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-2">
+                  <Barcode className="w-4 h-4" /> Product IDs
                 </p>
                 <div className="space-y-1 text-gray-300 text-xs font-mono">
                   {item.sku && <p><span className="font-semibold">SKU:</span> {item.sku}</p>}
@@ -1495,9 +1593,23 @@ function ItemDetailModal({
                 <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold flex items-center gap-2">
                   <Film className="w-4 h-4" /> Product Video
                 </p>
-                <a href={item.videoUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 text-xs break-all">
+                <a 
+                  href={item.videoUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-cyan-400 hover:text-cyan-300 text-xs break-all hover:underline"
+                >
                   {item.videoUrl}
                 </a>
+              </div>
+            )}
+
+            {item.metaDescription && (
+              <div className="bg-[#1a1a2e]/30 rounded-lg p-3 border border-[#8451E1]/20">
+                <p className="text-[#666] text-xs uppercase tracking-wider mb-2 font-semibold">
+                  Meta Description
+                </p>
+                <p className="text-[#666] text-xs italic">{item.metaDescription}</p>
               </div>
             )}
           </div>
