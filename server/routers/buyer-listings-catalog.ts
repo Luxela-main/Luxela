@@ -306,7 +306,24 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       }
 
       // Determine stock status
-      const qty = listingData.quantityAvailable || 0;
+      let qty = listingData.quantityAvailable || 0;
+      
+      // For collections, calculate quantity from collection items
+      if (listingData.type === 'collection' && listingData.collectionId) {
+        const collectionItemsList = await db
+          .select()
+          .from(collectionItems)
+          .where(eq(collectionItems.collectionId, listingData.collectionId));
+        
+        // Sum up quantities from all items in the collection
+        qty = collectionItemsList.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        console.log('[BUYER_CATALOG] getListingDetailsComplete - Collection quantity calculated:', {
+          collectionId: listingData.collectionId,
+          itemCount: collectionItemsList.length,
+          totalQuantity: qty,
+        });
+      }
+      
       let status: 'in_stock' | 'low_stock' | 'sold_out' = 'in_stock';
       if (qty === 0) {
         status = 'sold_out';
@@ -539,7 +556,24 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       }
 
       // Determine stock status
-      const qty = listingData.quantityAvailable || 0;
+      let qty = listingData.quantityAvailable || 0;
+      
+      // For collections, calculate quantity from collection items
+      if (listingData.type === 'collection' && listingData.collectionId) {
+        const collectionItemsList = await db
+          .select()
+          .from(collectionItems)
+          .where(eq(collectionItems.collectionId, listingData.collectionId));
+        
+        // Sum up quantities from all items in the collection
+        qty = collectionItemsList.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        console.log('[BUYER_CATALOG] Collection quantity calculated:', {
+          collectionId: listingData.collectionId,
+          itemCount: collectionItemsList.length,
+          totalQuantity: qty,
+        });
+      }
+      
       let status: 'in_stock' | 'low_stock' | 'sold_out' = 'in_stock';
       if (qty === 0) {
         status = 'sold_out';

@@ -121,8 +121,16 @@ export function ProductForm({ productType }: ProductFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load saved form data from localStorage
+  // Load saved form data from localStorage (only when creating new, not editing)
   useEffect(() => {
+    // Skip localStorage when editing an existing listing
+    if (editId) {
+      // Clear any existing localStorage for this product type to prevent interference
+      const storageKey = `product_form_${productType}`;
+      localStorage.removeItem(storageKey);
+      return;
+    }
+    
     const storageKey = `product_form_${productType}`;
     const saved = localStorage.getItem(storageKey);
     if (saved) {
@@ -132,12 +140,18 @@ export function ProductForm({ productType }: ProductFormProps) {
         console.error('Failed to load saved form data:', error);
       }
     }
-  }, [productType]);
+  }, [productType, editId]);
 
   // Load existing listing data when editing
   useEffect(() => {
-    if (!editId || listings.length === 0) {
+    if (!editId) {
       setIsLoadingExisting(false);
+      return;
+    }
+    
+    // Wait for listings to load
+    if (listings.length === 0) {
+      // Keep loading state true while waiting for data
       return;
     }
 
