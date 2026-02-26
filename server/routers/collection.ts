@@ -978,11 +978,18 @@ export const collectionRouter = createTRPCRouter({
           const barcode = selectedListing?.barcode || product?.barcode || null;
           const category = selectedListing?.category || product?.category || null;
           
+          // Get quantity from the collection listing (not individual product listings)
+          // Collection items share the same quantity as the parent collection
+          const collectionQuantity = listing[0]?.quantityAvailable || 0;
+          
           return {
             ...item,
             product,
             images: images.filter((img: any) => img.productId === item.productId),
-            listing: selectedListing,
+            listing: selectedListing ? {
+              ...selectedListing,
+              quantityAvailable: collectionQuantity, // Use collection listing's quantity for all items
+            } : undefined,
             colors,
             sizes,
             colorsAvailable: colors,
@@ -1275,7 +1282,7 @@ export const collectionRouter = createTRPCRouter({
             priceCents: item.productPriceCents || item.listingPriceCents || 0,
             currency: item.productCurrency || item.listingCurrency || 'NGN',
             category: item.listingCategory,
-            quantityAvailable: item.listingQuantityAvailable,
+            quantityAvailable: item.quantity || item.listingQuantityAvailable || 0,
             listingImage: item.listingImage,
             listingImagesJson: item.listingImagesJson,
             listingId: item.listingId,
@@ -1298,6 +1305,16 @@ export const collectionRouter = createTRPCRouter({
           
           // Calculate total collection price from items
           const totalPriceCents = items.reduce((sum: number, item: any) => sum + (item.priceCents || 0), 0);
+          
+          // Use collection listing's quantityAvailable for all items (items don't have individual quantities)
+          const collectionQuantityAvailable = listing.quantityAvailable || 0;
+          
+          // Update each item with the collection's quantity
+          const itemsWithCollectionQuantity = items.map((item: any) => ({
+            ...item,
+            quantityAvailable: collectionQuantityAvailable,
+            listingQuantityAvailable: collectionQuantityAvailable,
+          }));
 
           return {
             id: listing.id,
@@ -1310,7 +1327,7 @@ export const collectionRouter = createTRPCRouter({
             collectionName: collectionDetails?.name || listing.title,
             collectionDescription: collectionDetails?.description || listing.description,
             itemCount: totalItemsInCollection,
-            items: items,
+            items: itemsWithCollectionQuantity,
             totalPriceCents,
             totalPrice: totalPriceCents / 100,
             sellerId: listing.sellerId,
