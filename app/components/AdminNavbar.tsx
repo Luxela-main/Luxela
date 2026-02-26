@@ -147,9 +147,9 @@ export default function AdminNavbar({ userEmail: initialUserEmail, currentPath =
               <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[#2B2B2B]">Notifications</span>
             </button>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/admin')}
               className="flex items-center gap-2 px-3 lg:px-4 py-2 text-[#DCDCDC] hover:bg-[#2B2B2B] rounded-lg transition-colors text-sm lg:text-base"
-              title="Back to Home"
+              title="Back to Dashboard"
             >
               <Home className="w-4 h-4 lg:w-5 lg:h-5" />
               <span className="hidden lg:inline">Home</span>
@@ -246,7 +246,7 @@ export default function AdminNavbar({ userEmail: initialUserEmail, currentPath =
             {/* Home Button - Mobile */}
             <button
               onClick={() => {
-                router.push('/');
+                router.push('/admin');
                 setIsOpen(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 text-[#DCDCDC] hover:bg-[#2B2B2B] rounded-lg transition-colors"

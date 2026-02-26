@@ -170,11 +170,15 @@ async function generateAndStoreSellerNotifications(
       }
     }
 
-    // Check for new reviews on listings
+    // Check for new reviews on listings (only last 7 days to prevent duplicates)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentReviews = await db
       .select()
       .from(listingReviews)
-      .where(eq(listingReviews.sellerId, sellerId))
+      .where(and(
+        eq(listingReviews.sellerId, sellerId),
+        gt(listingReviews.createdAt, sevenDaysAgo)
+      ))
       .limit(50);
 
     for (const review of recentReviews) {

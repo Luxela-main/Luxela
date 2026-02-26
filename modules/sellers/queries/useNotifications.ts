@@ -49,7 +49,7 @@ export const useMarkNotificationAsRead = () => {
       }
     },
     onSuccess: async () => {
-      // Invalidate counts but not the full list - we already have optimistic data
+      // Only invalidate the unread count to update badge
       await utils.sellerNotifications.getUnreadCount.invalidate();
     },
   });
@@ -59,9 +59,45 @@ export const useMarkAllNotificationsAsRead = () => {
   const utils = trpc.useUtils();
 
   return trpc.sellerNotifications.markAllAsRead.useMutation({
-    onSuccess: async () => {
-      await utils.sellerNotifications.getNotifications.invalidate();
-      await utils.sellerNotifications.getUnreadCount.invalidate();
+    onMutate: async () => {
+      // Cancel outgoing queries
+      await utils.sellerNotifications.getNotifications.cancel();
+
+      // Get current data
+      const previousData = utils.sellerNotifications.getNotifications.getData({});
+
+      // Optimistically mark all as read
+      if (previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          {
+            notifications: previousData.notifications.map((notif: any) =>
+              notif.isRead ? notif : { ...notif, isRead: true }
+            ),
+          }
+        );
+      }
+
+      // Also update unread count optimistically
+      const previousCount = utils.sellerNotifications.getUnreadCount.getData(undefined);
+      utils.sellerNotifications.getUnreadCount.setData(undefined, { count: 0 });
+
+      return { previousData, previousCount };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        utils.sellerNotifications.getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+      if (context?.previousCount) {
+        utils.sellerNotifications.getUnreadCount.setData(
+          undefined,
+          context.previousCount
+        );
+      }
     },
   });
 };
@@ -101,13 +137,6 @@ export const useToggleNotificationStar = () => {
           context.previousData
         );
       }
-    },
-    onSuccess: async () => {
-      // Revalidate after a short delay to ensure server has processed the mutation
-      // This ensures the next refetch gets the latest data from the server
-      setTimeout(() => {
-        utils.sellerNotifications.getNotifications.invalidate();
-      }, 500);
     },
   });
 };
@@ -157,7 +186,7 @@ export const useDeleteNotification = () => {
       }
     },
     onSuccess: async () => {
-      // Invalidate counts
+      // Only invalidate the unread count to update badge
       await utils.sellerNotifications.getUnreadCount.invalidate();
     },
   });
@@ -173,15 +202,11 @@ export const useDeleteAllNotifications = () => {
       await (utils.sellerNotifications as any).getUnreadCount.cancel();
 
       // Set optimistic data
-      (utils.sellerNotifications as any).getNotifications.setData({}, []);
+      (utils.sellerNotifications as any).getNotifications.setData({}, { notifications: [] });
       (utils.sellerNotifications as any).getUnreadCount.setData({}, { count: 0 });
     },
     onError: async () => {
       // Refetch to restore correct state on error
-      await (utils.sellerNotifications as any).getNotifications.invalidate();
-      await (utils.sellerNotifications as any).getUnreadCount.invalidate();
-    },
-    onSuccess: async () => {
       await (utils.sellerNotifications as any).getNotifications.invalidate();
       await (utils.sellerNotifications as any).getUnreadCount.invalidate();
     },

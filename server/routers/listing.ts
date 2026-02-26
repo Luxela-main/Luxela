@@ -1434,9 +1434,44 @@ export const listingRouter = createTRPCRouter({
     .output(RestockOutput)
     .mutation(async ({ ctx, input }) => {
       const seller = await fetchSeller(ctx);
-      await db.update(listings).set({ quantityAvailable: input.quantityAvailable }).where(
+      
+      // Fetch the current listing to check its type
+      const currentListing = await db.select().from(listings).where(
+        and(eq(listings.id, input.id), eq(listings.sellerId, seller.id))
+      ).limit(1);
+      
+      if (currentListing.length === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Listing not found',
+        });
+      }
+      
+      const listing = currentListing[0];
+      let newQuantityAvailable = input.quantityAvailable;
+      
+      // For collections, sync quantityAvailable with itemsJson length
+      if (listing.type === 'collection') {
+        let itemCount = 0;
+        if (listing.itemsJson) {
+          try {
+            const items = typeof listing.itemsJson === 'string' 
+              ? JSON.parse(listing.itemsJson) 
+              : listing.itemsJson;
+            itemCount = Array.isArray(items) ? items.length : 0;
+          } catch {
+            itemCount = 0;
+          }
+        }
+        // For collections, use the item count as the quantity
+        // If restocking adds items, the input.quantityAvailable represents the target count
+        newQuantityAvailable = Math.max(itemCount, input.quantityAvailable);
+      }
+      
+      await db.update(listings).set({ quantityAvailable: newQuantityAvailable }).where(
         and(eq(listings.id, input.id), eq(listings.sellerId, seller.id))
       );
+      
       const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
       return {
         id: updated.id,
@@ -1613,32 +1648,38 @@ export const listingRouter = createTRPCRouter({
           .where(eq(listingReviews.listingId, input.id));
       }
       
-      // Handle new images if provided
-      console.log('[LISTING.updateListing] Image insertion check:', {
+      // Handle images update - delete existing and insert new ones
+      console.log('[LISTING.updateListing] Image update check:', {
         hasImages: !!input.images,
         imagesLength: input.images?.length || 0,
         hasProductId: !!listing.productId,
       });
-      if (input.images && input.images.length > 0 && listing.productId) {
-        const imageValues = input.images.map((imageUrl, index) => ({
-          productId: listing.productId!,
-          imageUrl,
-          position: index,
-        }));
-        console.log('[LISTING.updateListing] Inserting images:', {
-          imageCount: imageValues.length,
-          productId: listing.productId,
-          imageUrls: imageValues.map((img: any) => img.imageUrl),
-        });
+      if (listing.productId) {
         try {
-          await db.insert(productImages).values(imageValues);
-          console.log('[LISTING.updateListing] Images inserted successfully');
+          // First, delete all existing product images
+          await db.delete(productImages).where(eq(productImages.productId, listing.productId));
+          console.log('[LISTING.updateListing] Existing images deleted');
+          
+          // Then insert new images if provided
+          if (input.images && input.images.length > 0) {
+            const imageValues = input.images.map((imageUrl, index) => ({
+              productId: listing.productId!,
+              imageUrl,
+              position: index,
+            }));
+            console.log('[LISTING.updateListing] Inserting new images:', {
+              imageCount: imageValues.length,
+              productId: listing.productId,
+              imageUrls: imageValues.map((img: any) => img.imageUrl),
+            });
+            await db.insert(productImages).values(imageValues);
+            console.log('[LISTING.updateListing] New images inserted successfully');
+          }
         } catch (imgError) {
-          console.error('[LISTING.updateListing] Failed to insert images:', imgError);
+          console.error('[LISTING.updateListing] Failed to update images:', imgError);
           throw imgError;
         }
       }
-      
       // Fetch updated listing
       const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
       

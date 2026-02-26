@@ -212,7 +212,12 @@ export const collectionRouter = createTRPCRouter({
             .limit(1);
 
           if (listing.length > 0) {
-            await db.update(listings).set({ itemsJson }).where(eq(listings.id, listing[0].id));
+            // Sync quantityAvailable with the number of items in the collection
+            const itemCount = itemsWithDetails.filter((item) => item !== null).length;
+            await db.update(listings).set({ 
+              itemsJson,
+              quantityAvailable: itemCount,
+            }).where(eq(listings.id, listing[0].id));
           }
         } catch (err) {
           console.error('Error rebuilding itemsJson after adding product to collection:', err);
@@ -310,7 +315,12 @@ export const collectionRouter = createTRPCRouter({
             .limit(1);
 
           if (listing.length > 0) {
-            await db.update(listings).set({ itemsJson }).where(eq(listings.id, listing[0].id));
+            // Sync quantityAvailable with the number of items in the collection
+            const itemCount = itemsWithDetails.filter((item) => item !== null).length;
+            await db.update(listings).set({ 
+              itemsJson,
+              quantityAvailable: itemCount,
+            }).where(eq(listings.id, listing[0].id));
           }
         } catch (err) {
           console.error('Error rebuilding itemsJson after removing product from collection:', err);

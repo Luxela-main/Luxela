@@ -292,7 +292,7 @@ export async function getCached<T>(
   const instance = actualRedis;
 
   try {
-    if (!instance) {
+    if (!instance || instance.status !== "ready") {
       return await fetchFn();
     }
     const cached = await instance.get(cacheKey);
