@@ -4,6 +4,7 @@ import { listings, sellers, sellerBusiness, listingReviews, products, productIma
 import type { CollectionItem } from '../db/types';
 import { and, eq, desc, asc, sql, count as countFn, ilike, inArray } from 'drizzle-orm';
 import { z } from 'zod';
+import { getCached, invalidateCache } from '../lib/redis';
 
 export const buyerListingsCatalogRouter = createTRPCRouter({
   // NEW: Complete listing details with ALL images and specifications (mirrors admin method)
@@ -440,14 +441,19 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      console.log('[BUYER_CATALOG] getListingById called for:', input.listingId);
+      const cacheKey = `buyer:listing:${input.listingId}`;
+      
+      return await getCached(
+        cacheKey,
+        async () => {
+          console.log('[BUYER_CATALOG] getListingById called for:', input.listingId);
 
-      // Fetch the listing - try direct approved listing first
-      let listing = await db
-        .select()
-        .from(listings)
-        .where(and(eq(listings.id, input.listingId), eq(listings.status, 'approved')))
-        .limit(1);
+          // Fetch the listing - try direct approved listing first
+          let listing = await db
+            .select()
+            .from(listings)
+            .where(and(eq(listings.id, input.listingId), eq(listings.status, 'approved')))
+            .limit(1);
 
       // If not found, check if it's part of an approved collection
       if (listing.length === 0) {
@@ -626,7 +632,10 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         additionalTargetAudience: listingData.additionalTargetAudience || null,
         slug: listingData.slug || null,
         metaDescription: listingData.metaDescription || null,
-      };
+          };
+        },
+        { ttl: 600 }
+      );
     }),
 
   getApprovedListingsCatalog: publicProcedure
@@ -695,10 +704,15 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       })
     )
     .query(async ({ input }) => {
-      const offset = (input.page - 1) * input.limit;
+      const cacheKey = `buyer:catalog:page:${input.page}:limit:${input.limit}:sort:${input.sortBy}`;
+      
+      return await getCached(
+        cacheKey,
+        async () => {
+          const offset = (input.page - 1) * input.limit;
 
-      const countPromise = db
-        .select({ count: countFn() })
+          const countPromise = db
+            .select({ count: countFn() })
         .from(listings)
         .where(
           and(
@@ -874,12 +888,15 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       const estimatedTotal = total === -1 ? input.page * input.limit : total;
       const estimatedPages = total === -1 ? input.page + 1 : Math.ceil(total / input.limit);
 
-      return {
-        listings: listingsWithSeller,
-        total: estimatedTotal,
-        page: input.page,
-        totalPages: estimatedPages,
-      };
+          return {
+            listings: listingsWithSeller,
+            total: estimatedTotal,
+            page: input.page,
+            totalPages: estimatedPages,
+          };
+        },
+        { ttl: 300 }
+      );
     }),
 
   getApprovedCollectionById: publicProcedure

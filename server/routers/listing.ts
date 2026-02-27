@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
 import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews, productVariants, users } from "../db/schema";
 import { createAdminNotification } from "../services/notificationManager";
+import { invalidateCache } from "../lib/redis";
 import { and, eq, sql, inArray, asc } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -494,6 +495,10 @@ export const listingRouter = createTRPCRouter({
         title: created.title,
         hasImagesJson: !!created.imagesJson,
       });
+
+      // Invalidate buyer catalog cache when new listing is created
+      await invalidateCache('buyer:catalog:*');
+      console.log('[LISTING.createSingle] Invalidated buyer catalog cache');
 
       return {
         id: created.id,

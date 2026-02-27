@@ -22,6 +22,7 @@ import {
   notifyListingRejected,
   notifyListingRevisionRequest,
 } from "../services/listingNotificationService";
+import { invalidateCache } from "../lib/redis";
 
 async function verifyAdminRole(ctx: TRPCContext) {
   if (!ctx.user) {
@@ -732,6 +733,11 @@ export const adminListingReviewRouter = createTRPCRouter({
         performedBy: ctx.user?.id,
         performedByRole: (ctx.user?.role as 'admin' | 'seller' | 'buyer' | undefined),
       });
+
+      // Invalidate buyer catalog cache when listing is approved
+      await invalidateCache('buyer:catalog:*');
+      await invalidateCache(`buyer:listing:${input.listingId}`);
+      console.log('[ADMIN_REVIEW] Invalidated buyer cache after listing approval');
 
       // Send notifications to seller (email + polling)
       try {
