@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     "Shop trendy and affordable African fashion for men and women. Premium clothing, fast delivery, and flexible payments across Africa.",
   keywords: SITE.keywords,
   alternates: {
-    canonical: SITE.url,
+    canonical: "/",
   },
   robots: {
     index: true,

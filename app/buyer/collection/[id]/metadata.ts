@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { db } from "@/server/db";
-import { collections, collectionItems, productImages, listings } from "@/server/db/schema";
+import { collections, collectionItems, productImages } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { SITE } from "@/lib/seo/config";
 
@@ -10,36 +10,11 @@ export async function generateMetadata(
   try {
     const { id } = await params;
 
-    // First, resolve the listing ID to get the collection ID
-    const listingData = await db
-      .select()
-      .from(listings)
-      .where(eq(listings.id, id))
-      .limit(1);
-
-    if (listingData.length === 0) {
-      return {
-        title: "Collection Not Found",
-        description: "The collection you're looking for doesn't exist",
-      };
-    }
-
-    const collectionId = listingData[0].collectionId;
-    const listing = listingData[0];
-
-    // Check if collectionId exists
-    if (!collectionId) {
-      return {
-        title: "Collection Not Found",
-        description: "The collection you're looking for doesn't exist",
-      };
-    }
-
-    // Now get the collection data using the resolved collection ID
+    // Query the collection directly - id is the collection ID
     const collectionData = await db
       .select()
       .from(collections)
-      .where(eq(collections.id, collectionId))
+      .where(eq(collections.id, id))
       .limit(1);
 
     if (collectionData.length === 0) {
@@ -50,6 +25,7 @@ export async function generateMetadata(
     }
 
     const collection = collectionData[0];
+    const collectionId = collection.id;
 
     // Get product count in collection
     const itemsData = await db

@@ -218,6 +218,13 @@
       "when": 1771339881372,
       "tag": "0031_messy_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1772199076417,
+      "tag": "0032_black_micromacro",
+      "breakpoints": true
     }
   ]
 }

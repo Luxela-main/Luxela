@@ -341,6 +341,10 @@ export const listings = pgTable('listings', {
   productIdIdx: index('idx_listings_product_id').on(t.productId),
   statusTypeCreatedIdx: index('idx_listings_status_type_created').on(t.status, t.type, t.createdAt),
   statusCreatedIdx: index('idx_listings_status_created').on(t.status, t.createdAt),
+  // Optimized for getApprovedCollections query: WHERE type='collection' AND status='approved' ORDER BY created_at DESC
+  typeStatusCreatedIdx: index('idx_listings_type_status_created').on(t.type, t.status, t.createdAt),
+  // Partial index for approved collections - highly efficient for common query pattern
+  approvedCollectionsIdx: index('idx_listings_approved_collections').on(t.type, t.createdAt).where(sql`${t.status} = 'approved'`),
 })
 );
 
