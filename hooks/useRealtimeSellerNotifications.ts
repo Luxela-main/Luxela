@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { trpc } from '@/lib/trpc';
 
 interface UseRealtimeSellerNotificationsOptions {
   enabled?: boolean;
@@ -15,12 +15,15 @@ interface UseRealtimeSellerNotificationsOptions {
  * - Resumes immediately when user returns to tab
  * - Debounces rapid refetch calls (1 second minimum)
  * - Exponential backoff on errors (stops after 5 consecutive errors)
+ * 
+ * FIXED: Now uses TRPC utils for proper cache invalidation instead of
+ * incorrect raw query keys that didn't match TRPC's internal key format.
  */
 export function useRealtimeSellerNotifications({
   enabled = true,
   interval = 30000, // 30 seconds
 }: UseRealtimeSellerNotificationsOptions = {}) {
-  const queryClient = useQueryClient();
+  const utils = trpc.useUtils();
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
   const lastRefetchRef = useRef<number>(0);
   const errorCountRef = useRef<number>(0);
@@ -35,10 +38,11 @@ export function useRealtimeSellerNotifications({
     lastRefetchRef.current = now;
 
     try {
-      // Invalidate and refetch seller notifications
-      await queryClient.invalidateQueries({
-        queryKey: ['seller', 'notifications'],
-      });
+      // FIXED: Use TRPC utils to properly invalidate seller notifications
+      // This ensures the cache is invalidated with the correct query key format
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
+      
       // Reset error count on successful refetch
       errorCountRef.current = 0;
     } catch (error) {
@@ -59,7 +63,7 @@ export function useRealtimeSellerNotifications({
         }
       }
     }
-  }, [queryClient]);
+  }, [utils]);
 
   const startPolling = useCallback(() => {
     if (!enabled || intervalIdRef.current) return;
