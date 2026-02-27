@@ -183,6 +183,48 @@ export default function EnhancedCollectionCard({
     return extractedColors;
   }, [collectionItems]);
 
+  // Extract unique sizes from collection items
+  const collectionSizes = useMemo(() => {
+    const sizeSet = new Set<string>();
+    console.log('[EnhancedCollectionCard] Extracting sizes from items:', collectionItems);
+    collectionItems.forEach((item: any, idx: number) => {
+      try {
+        // Try multiple possible field names for sizes
+        const sizesSource = item.sizesJson || item.sizes || item.sizes_available || item.listingSizesJson;
+        console.log(`[EnhancedCollectionCard] Item ${idx} sizesSource:`, sizesSource);
+        if (!sizesSource) return;
+        
+        // Parse if it's a string (JSON)
+        let sizes = sizesSource;
+        if (typeof sizesSource === 'string') {
+          try {
+            sizes = JSON.parse(sizesSource);
+          } catch (e) {
+            // If JSON parsing fails, treat it as a plain string size
+            sizes = [sizesSource];
+          }
+        }
+        
+        // Handle array of sizes
+        if (Array.isArray(sizes)) {
+          sizes.forEach((size: any) => {
+            // Handle both object format and string format
+            const sizeValue = typeof size === 'string' ? size : (size.size || size.name || size.label || JSON.stringify(size));
+            if (sizeValue && !sizeSet.has(sizeValue)) {
+              sizeSet.add(sizeValue);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Error extracting sizes from item:', e);
+        // Skip sizes that can't be parsed
+      }
+    });
+    const extractedSizes = Array.from(sizeSet).slice(0, 5);
+    console.log('[EnhancedCollectionCard] Extracted sizes:', extractedSizes);
+    return extractedSizes;
+  }, [collectionItems]);
+
   // Calculate total price from collection
   const totalPriceCents = collection.totalPriceCents || collection.totalPrice || 0;
   const totalPrice = totalPriceCents / 100; // Convert from cents to decimal
@@ -359,6 +401,28 @@ export default function EnhancedCollectionCard({
                 {collectionColors.length > 4 && (
                   <span className="text-[8px] text-gray-500 pl-1.5 flex items-center">
                     +{collectionColors.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          
+          {/* Size Badges */}
+          {collectionSizes.length > 0 && (
+            <div className="mb-3 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-600/10 to-pink-600/10 border border-purple-500/20">
+              <div className="flex items-center gap-1 flex-wrap">
+                {collectionSizes.slice(0, 4).map((size: string, i: number) => (
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 rounded bg-purple-900/40 text-white text-[9px] font-medium border border-purple-500/30"
+                  >
+                    {size}
+                  </span>
+                ))}
+                {collectionSizes.length > 4 && (
+                  <span className="text-[8px] text-gray-500 flex items-center">
+                    +{collectionSizes.length - 4}
                   </span>
                 )}
               </div>

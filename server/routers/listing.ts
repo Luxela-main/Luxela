@@ -659,7 +659,7 @@ export const listingRouter = createTRPCRouter({
       // Generate unique SKU using UUID
       const uniqueSku = `SKU-${uuidv4().slice(0, 8).toUpperCase()}`;
 
-      // Insert product into database - DO NOT set type to 'collection'
+      // Insert product into database with sizes and colors - DO NOT set type to 'collection'
       const productInserted = await db.insert(products).values({
         id: productId,
         brandId: brandId,
@@ -672,6 +672,8 @@ export const listingRouter = createTRPCRouter({
         currency: item.currency ?? "SOL",
         sku: uniqueSku,
         inStock: true,
+        sizes: item.sizes && item.sizes.length > 0 ? JSON.stringify(item.sizes) : null,
+        colors: item.colors && item.colors.length > 0 ? JSON.stringify(item.colors) : null,
       }).returning({ id: products.id });
       
       if (!productInserted[0]?.id) {
@@ -1898,7 +1900,7 @@ export const listingRouter = createTRPCRouter({
             // Generate unique SKU using UUID
             const uniqueSku = `SKU-${uuidv4().slice(0, 8).toUpperCase()}`;
 
-            // Insert product
+            // Insert product with sizes and colors
             await db.insert(products).values({
               id: productId,
               brandId: brandId,
@@ -1911,6 +1913,8 @@ export const listingRouter = createTRPCRouter({
               currency: item.currency ?? "SOL",
               sku: uniqueSku,
               inStock: true,
+              sizes: item.sizes && item.sizes.length > 0 ? JSON.stringify(item.sizes) : null,
+              colors: item.colors && item.colors.length > 0 ? JSON.stringify(item.colors) : null,
             });
 
             // Add to collection items

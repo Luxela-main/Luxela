@@ -850,7 +850,32 @@ export const collectionRouter = createTRPCRouter({
         const productListings =
           productIds.length > 0
             ? await db
-                .select()
+                .select({
+                  id: listings.id,
+                  productId: listings.productId,
+                  title: listings.title,
+                  description: listings.description,
+                  priceCents: listings.priceCents,
+                  currency: listings.currency,
+                  category: listings.category,
+                  quantityAvailable: listings.quantityAvailable,
+                  image: listings.image,
+                  imagesJson: listings.imagesJson,
+                  colorsAvailable: listings.colorsAvailable,
+                  sizesJson: listings.sizesJson,
+                  materialComposition: listings.materialComposition,
+                  careInstructions: listings.careInstructions,
+                  videoUrl: listings.videoUrl,
+                  etaDomestic: listings.etaDomestic,
+                  etaInternational: listings.etaInternational,
+                  shippingOption: listings.shippingOption,
+                  sku: listings.sku,
+                  barcode: listings.barcode,
+                  metaDescription: listings.metaDescription,
+                  refundPolicy: listings.refundPolicy,
+                  status: listings.status,
+                  type: listings.type,
+                })
                 .from(listings)
                 .where(
                   productIds.length === 1
@@ -868,8 +893,9 @@ export const collectionRouter = createTRPCRouter({
             : [];
         
         console.log('[getBuyerCollectionWithProducts] Product listings found:', productListings.length, 'for', productIds.length, 'products');
-        productListings.forEach((l: any) => {
-          console.log(`  Listing: id=${l.id}, productId=${l.productId}, status=${l.status}, priceCents=${l.priceCents}`);
+        productListings.forEach((l: any, idx: number) => {
+          console.log(`  Listing ${idx}: id=${l.id}, productId=${l.productId}, status=${l.status}, priceCents=${l.priceCents}`);
+          console.log(`    careInstructions=${l.careInstructions ? 'present' : 'missing'}, materialComposition=${l.materialComposition ? 'present' : 'missing'}, videoUrl=${l.videoUrl ? 'present' : 'missing'}`);
         });
 
         const images =
@@ -884,6 +910,20 @@ export const collectionRouter = createTRPCRouter({
                 )
                 .orderBy(productImages.position)
             : [];
+
+        // Parse itemsJson from the collection listing to get colors/sizes for items without individual listings
+        let itemsJsonData: any[] = [];
+        if (listing[0]?.itemsJson) {
+          try {
+            itemsJsonData = typeof listing[0].itemsJson === 'string' 
+              ? JSON.parse(listing[0].itemsJson) 
+              : listing[0].itemsJson;
+            console.log('[getBuyerCollectionWithProducts] Parsed itemsJson:', itemsJsonData.length, 'items');
+          } catch (e) {
+            console.error('[getBuyerCollectionWithProducts] Failed to parse itemsJson:', e);
+            itemsJsonData = [];
+          }
+        }
 
         // Fetch reviews with buyer details for all product listings
         const allListingIds = productListings.map((pl: any) => pl.id).filter(Boolean);
@@ -1241,8 +1281,8 @@ export const collectionRouter = createTRPCRouter({
               listingQuantityAvailable: listing?.quantityAvailable,
               listingImage: listing?.image,
               listingImagesJson: listing?.imagesJson,
-              listingColorsAvailable: listing?.colorsAvailable,
-              listingSizesJson: listing?.sizesJson,
+              colorsAvailable: listing?.colorsAvailable,
+              sizesJson: listing?.sizesJson,
               listingMaterial: listing?.materialComposition,
               listingCareInstructions: listing?.careInstructions,
               listingVideoUrl: listing?.videoUrl,
@@ -1286,8 +1326,8 @@ export const collectionRouter = createTRPCRouter({
             listingImage: item.listingImage,
             listingImagesJson: item.listingImagesJson,
             listingId: item.listingId,
-            colorsAvailable: item.listingColorsAvailable,
-            sizesJson: item.listingSizesJson,
+            colorsAvailable: item.colorsAvailable,
+            sizesJson: item.sizesJson,
             material: item.listingMaterial,
             careInstructions: item.listingCareInstructions,
             videoUrl: item.listingVideoUrl,

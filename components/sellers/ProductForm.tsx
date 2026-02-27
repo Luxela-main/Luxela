@@ -164,6 +164,10 @@ export function ProductForm({ productType }: ProductFormProps) {
       }
 
       console.log('[ProductForm] Loading existing listing for edit:', existingListing);
+      console.log('[ProductForm] Raw sizesJson:', existingListing.sizesJson);
+      console.log('[ProductForm] Raw colorsAvailable:', existingListing.colorsAvailable);
+      console.log('[ProductForm] Raw limitedEditionBadge:', existingListing.limitedEditionBadge);
+      console.log('[ProductForm] Raw supplyCapacity:', existingListing.supplyCapacity);
 
       // Convert colors array back to comma-separated string
       const colorsString = existingListing.colorsAvailable
@@ -202,12 +206,13 @@ export function ProductForm({ productType }: ProductFormProps) {
         colors: colorsString,
         targetAudience: existingListing.additionalTargetAudience || '',
         refundPolicy: existingListing.refundPolicy || '',
+        collectionRefundPolicy: existingListing.refundPolicy || '',
         shippingOption: existingListing.shippingOption || '',
         domesticDays: existingListing.etaDomestic || '',
         internationalDays: existingListing.etaInternational || '',
         supplyCapacity: existingListing.supplyCapacity || 'no_max',
         quantity: existingListing.quantityAvailable?.toString() || '',
-        showBadge: existingListing.limitedEditionBadge ? 'show_badge' : 'do_not_show',
+        showBadge: existingListing.limitedEditionBadge === 'show_badge' ? 'show_badge' : 'do_not_show',
         releaseDuration: existingListing.releaseDuration || '',
       };
 
@@ -222,7 +227,7 @@ export function ProductForm({ productType }: ProductFormProps) {
         loadedFormData.collectionVideoUrl = existingListing.videoUrl || '';
         loadedFormData.collectionCareInstructions = existingListing.careInstructions || '';
         
-        // Load collection items with their images
+        // Load collection items with their images, sizes, and colors
         const itemsWithImages = collectionItems.map((item: any) => {
           const itemImages = item.imagesJson
             ? Array.isArray(item.imagesJson)
@@ -231,9 +236,46 @@ export function ProductForm({ productType }: ProductFormProps) {
               ? JSON.parse(item.imagesJson)
               : []
             : [];
+          
+          // Ensure sizes is an array
+          let itemSizes: string[] = [];
+          if (item.sizes) {
+            if (Array.isArray(item.sizes)) {
+              itemSizes = item.sizes;
+            } else if (typeof item.sizes === 'string') {
+              try {
+                itemSizes = JSON.parse(item.sizes);
+              } catch {
+                itemSizes = item.sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
+              }
+            }
+          }
+          
+          // Ensure colors is an array
+          let itemColors: string[] = [];
+          if (item.colors) {
+            if (Array.isArray(item.colors)) {
+              itemColors = item.colors;
+            } else if (typeof item.colors === 'string') {
+              try {
+                itemColors = JSON.parse(item.colors);
+              } catch {
+                itemColors = item.colors.split(',').map((c: string) => c.trim()).filter(Boolean);
+              }
+            }
+          }
+          
+          console.log('[ProductForm] Loading collection item:', {
+            title: item.title,
+            sizes: itemSizes,
+            colors: itemColors,
+          });
+          
           return {
             ...item,
-            images: itemImages, // Set images as URLs for display and editing
+            images: itemImages,
+            sizes: itemSizes,
+            colors: itemColors,
           };
         });
         

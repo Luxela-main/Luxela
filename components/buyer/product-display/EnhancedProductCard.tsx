@@ -512,11 +512,11 @@ export default function EnhancedProductCard({
                 onClick={handleQuickAdd}
                 disabled={isAdding || stockStatus === 'out-of-stock'}
                 className={`
-                  w-full relative flex cursor-pointer items-center justify-center p-2.5 rounded-lg transition-all duration-300 font-medium text-sm
+                  w-full relative flex items-center justify-center p-2.5 rounded-lg transition-all duration-300 font-medium text-sm
                   ${
                     added
-                      ? 'bg-green-500 scale-105'
-                      : 'hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
+                      ? 'bg-green-500 scale-105 cursor-pointer'
+                      : 'cursor-pointer hover:cursor-pointer hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
                   }
                 `}
                 style={{

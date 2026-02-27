@@ -1,6 +1,7 @@
 import { createTRPCRouter, publicProcedure } from '../trpc/trpc';
 import { db } from '../db';
 import { listings, sellers, sellerBusiness, listingReviews, products, productImages, collections, collectionItems, brands } from '../db/schema';
+import type { CollectionItem } from '../db/types';
 import { and, eq, desc, asc, sql, count as countFn, ilike, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -316,7 +317,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
           .where(eq(collectionItems.collectionId, listingData.collectionId));
         
         // Sum up quantities from all items in the collection
-        qty = collectionItemsList.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        qty = collectionItemsList.reduce((sum: number, item: CollectionItem) => sum + ((item as any).quantity || 0), 0);
         console.log('[BUYER_CATALOG] getListingDetailsComplete - Collection quantity calculated:', {
           collectionId: listingData.collectionId,
           itemCount: collectionItemsList.length,
@@ -566,7 +567,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
           .where(eq(collectionItems.collectionId, listingData.collectionId));
         
         // Sum up quantities from all items in the collection
-        qty = collectionItemsList.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        qty = collectionItemsList.reduce((sum: number, item: CollectionItem) => sum + ((item as any).quantity || 0), 0);
         console.log('[BUYER_CATALOG] Collection quantity calculated:', {
           collectionId: listingData.collectionId,
           itemCount: collectionItemsList.length,

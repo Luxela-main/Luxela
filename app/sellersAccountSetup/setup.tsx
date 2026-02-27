@@ -893,12 +893,19 @@ const SellerSetupForm: React.FC<SetupProps> = ({ initialData, onPreview }) => {
                 "Refund Period",
                 "periodUntilRefund",
                 [
-                  { value: "24hrs", label: "24 Hours" },
+                  { value: "same_day", label: "Same Day" },
+                  { value: "next_day", label: "Next Day" },
                   { value: "48hrs", label: "48 Hours" },
                   { value: "72hrs", label: "72 Hours" },
                   { value: "5_working_days", label: "5 Working Days" },
+                  { value: "1_2_weeks", label: "1-2 Weeks" },
+                  { value: "2_3_weeks", label: "2-3 Weeks" },
                   { value: "1week", label: "1 Week" },
-                  { value: "2weeks", label: "2 Weeks" },
+                  { value: "14days", label: "14 Days" },
+                  { value: "30days", label: "30 Days" },
+                  { value: "60days", label: "60 Days" },
+                  { value: "store_credit", label: "Store Credit" },
+                  { value: "custom", label: "Custom" },
                 ],
                 true
               )}

@@ -10,7 +10,7 @@ import {
   MasonryGrid,
   EnhancedCollectionCard,
 } from '@/components/buyer/product-display';
-import { ChevronLeft, ChevronRight, Loader2, Images, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Images, LayoutGrid, Search, X } from 'lucide-react';
 
 type SortOption = 'newest' | 'price-low' | 'price-high' | 'name-az' | 'name-za' | 'rating' | 'sales';
 
@@ -331,7 +331,7 @@ export default function CollectionsPage() {
                     title="Grid view"
                     aria-label="Grid view"
                   >
-                    <Images className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                    <LayoutGrid className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
                   </button>
                   <button
                     onClick={() => setLayoutMode('carousel')}

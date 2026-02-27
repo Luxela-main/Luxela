@@ -48,8 +48,13 @@ export const useUpdateListing = () => {
 
   return (trpc.listing as any).updateListing.useMutation({
     onSuccess: () => {
+      // Invalidate seller's listings
       queryClient.invalidateQueries({
         queryKey: sellersKeys.listings(),
+      });
+      // Invalidate buyer's catalog so updates are visible to buyers immediately
+      queryClient.invalidateQueries({
+        queryKey: ["buyerListingsCatalog"],
       });
       toastSvc.success("Listing updated successfully");
     },

@@ -16,6 +16,7 @@ import {
   Share2,
   Eye,
   CheckCircle,
+  ArrowRight,
 } from 'lucide-react';
 import { useCartState } from '@/modules/cart/context';
 import { useAuth } from '@/context/AuthContext';
@@ -262,7 +263,7 @@ export default function UnifiedListingCard({
   return (
     <>
       <div className="group relative h-full flex flex-col">
-        <Link href={destinationUrl} className="block flex-1 pointer-events-none">
+        <Link href={destinationUrl} className="block flex-1 cursor-pointer">
           <div
             className="relative h-full bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-xl overflow-hidden transition-all duration-300 shadow-lg border-2 flex flex-col"
             style={{
@@ -592,37 +593,18 @@ export default function UnifiedListingCard({
                   )}
                 </div>
 
-                {/* Add to Cart Button */}
+                {/* View Product Button */}
                 <button
-                  onClick={handleQuickAdd}
-                  disabled={isAdding || stockStatus === 'out-of-stock'}
-                  className={`
-                    w-full relative flex cursor-pointer items-center justify-center p-2.5 rounded-lg transition-all duration-300 font-medium text-sm
-                    ${
-                      added
-                        ? 'bg-green-500 scale-105'
-                        : 'hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
-                    }
-                  `}
+                  onClick={() => router.push(destinationUrl)}
+                  className="w-full relative flex items-center justify-center p-2.5 rounded-lg transition-all duration-300 font-medium text-sm cursor-pointer hover:brightness-110 active:scale-95"
                   style={{
-                    background: added
-                      ? undefined
-                      : `linear-gradient(180deg, #8451E1 0%, #5C2EAF 100%)`,
-                    boxShadow: added
-                      ? undefined
-                      : `0 0 15px ${borderColor}40, inset 0 0 10px ${borderColor}20`,
+                    background: `linear-gradient(180deg, #8451E1 0%, #5C2EAF 100%)`,
+                    boxShadow: `0 0 15px ${borderColor}40, inset 0 0 10px ${borderColor}20`,
                   }}
                 >
-                  {isAdding ? (
-                    <Loader2 className="w-4 h-4 text-white animate-spin" />
-                  ) : added ? (
-                    <Check className="w-4 h-4 text-white animate-in zoom-in" />
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-4 h-4 text-white mr-2" />
-                      <span className="text-white">Add to Cart</span>
-                    </>
-                  )}
+                  <Eye className="w-4 h-4 text-white mr-2" />
+                  <span className="text-white">View product</span>
+                  <ArrowRight className="w-4 h-4 text-white ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               </div>
             </div>

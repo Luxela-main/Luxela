@@ -191,8 +191,9 @@ export default function CollectionDetailPage({
     return byCollectionId || null;
   }, [collectionData?.collections, collectionId]);
   
-  const collection = collectionProductsData || detailedCollectionData;
-  const products = collectionProductsData?.items || detailedCollectionData?.items || [];
+  // Prioritize detailed data (all items) over preview data (max 3 items)
+  const collection = detailedCollectionData || collectionProductsData;
+  const products = detailedCollectionData?.items || collectionProductsData?.items || [];
 
   // Log the raw data structure to verify all fields are present
   useEffect(() => {
@@ -217,13 +218,22 @@ export default function CollectionDetailPage({
   }, [collectionProductsData?.items]);
 
   const items = useMemo(() => {
-    const sourceItems = collectionProductsData?.items || detailedCollectionData?.items || [];
+    // Prioritize detailed data (all items) over preview data (max 3 items)
+    const sourceItems = detailedCollectionData?.items || collectionProductsData?.items || [];
+    const dataSource = detailedCollectionData?.items ? 'detailed' : (collectionProductsData?.items ? 'preview' : 'none');
     
     if (!sourceItems || sourceItems.length === 0) return [];
 
     
     const collectionListingId = detailedCollectionData?.listing?.id || collection?.id;
-    console.log('[Collection items] collectionListingId:', collectionListingId);
+    console.log('[Collection items] Data source:', dataSource, 'Items count:', sourceItems.length, 'collectionListingId:', collectionListingId);
+    
+    // Debug: Log first item raw data to see what fields are available
+    if (sourceItems.length > 0) {
+      const firstItem = sourceItems[0];
+      console.log('[Collection items] First item raw keys:', Object.keys(firstItem).sort());
+      console.log('[Collection items] First item listing keys:', firstItem.listing ? Object.keys(firstItem.listing).sort() : 'no listing object');
+    }
 
     return sourceItems.map((item: any, idx: number) => {
       
@@ -235,30 +245,46 @@ export default function CollectionDetailPage({
       // Support both data structures: nested listing object (getBuyerCollectionWithProducts) 
       // and flat listing* prefixed fields (getApprovedCollections)
       const getListingField = (fieldName: string, ...altNames: string[]): any => {
-        // First check nested listing object
-        if (item.listing && item.listing[fieldName] !== undefined) {
+        // Generate snake_case version for database fields
+        const snakeCaseName = fieldName.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        
+        // First check nested listing object (camelCase)
+        if (item.listing && item.listing[fieldName] !== undefined && item.listing[fieldName] !== null) {
           return item.listing[fieldName];
+        }
+        // Check snake_case in nested listing
+        if (item.listing && item.listing[snakeCaseName] !== undefined && item.listing[snakeCaseName] !== null) {
+          return item.listing[snakeCaseName];
         }
         // Check alternative field names in nested listing
         for (const altName of altNames) {
-          if (item.listing && item.listing[altName] !== undefined) {
+          if (item.listing && item.listing[altName] !== undefined && item.listing[altName] !== null) {
             return item.listing[altName];
           }
         }
-        // Check direct field on item
-        if (item[fieldName] !== undefined) {
+        // Check direct field on item (camelCase)
+        if (item[fieldName] !== undefined && item[fieldName] !== null) {
           return item[fieldName];
+        }
+        // Check snake_case on item
+        if (item[snakeCaseName] !== undefined && item[snakeCaseName] !== null) {
+          return item[snakeCaseName];
         }
         // Check alternative field names on item
         for (const altName of altNames) {
-          if (item[altName] !== undefined) {
+          if (item[altName] !== undefined && item[altName] !== null) {
             return item[altName];
           }
         }
-        // Finally check flat fields with listing* prefix (e.g., listingCareInstructions)
+        // Check flat fields with listing* prefix (e.g., listingCareInstructions)
         const prefixedField = `listing${fieldName.charAt(0).toUpperCase()}${fieldName.slice(1)}`;
-        if (item[prefixedField] !== undefined) {
+        if (item[prefixedField] !== undefined && item[prefixedField] !== null) {
           return item[prefixedField];
+        }
+        // Check listing* prefix with snake_case (e.g., listing_care_instructions)
+        const prefixedSnakeField = `listing_${snakeCaseName}`;
+        if (item[prefixedSnakeField] !== undefined && item[prefixedSnakeField] !== null) {
+          return item[prefixedSnakeField];
         }
         return undefined;
       };
@@ -292,15 +318,31 @@ export default function CollectionDetailPage({
       
       // Get sizes using getListingField helper
       let sizes: any[] = [];
-      const sizeSource = getListingField('sizesJson', 'sizes');
+      // Check multiple possible field locations for sizes
+      const sizeSource = item.sizes 
+        || item.sizesJson 
+        || item.listing?.sizes 
+        || item.listing?.sizesJson 
+        || getListingField('sizesJson', 'sizes');
       if (sizeSource) {
         try {
           sizes = typeof sizeSource === 'string' 
             ? JSON.parse(sizeSource) 
             : Array.isArray(sizeSource) ? sizeSource : [];
+          if (idx === 0) {
+            console.log('[Collection] Sizes extracted for item', idx, ':', { sizeSource, parsed: sizes });
+          }
         } catch (e) {
+          console.error('[Collection] Size parse error for item', idx, ':', e);
           sizes = [];
         }
+      } else if (idx === 0) {
+        console.log('[Collection] No size source found for item', idx, '- checking fields:', {
+          itemSizes: item.sizes,
+          itemSizesJson: item.sizesJson,
+          listingSizes: item.listing?.sizes,
+          listingSizesJson: item.listing?.sizesJson,
+        });
       }
       
       const materialSource = getListingField('materialComposition', 'material');
@@ -374,6 +416,7 @@ export default function CollectionDetailPage({
           barcode: mappedItem.barcode,
           colors: mappedItem.colors?.length || 0,
           sizes: mappedItem.sizes?.length || 0,
+          sizesData: mappedItem.sizes,
         });
       }
       
@@ -927,10 +970,22 @@ function CollectionItemCard({
 
   let sizes: string[] = [];
   try {
-    if (item.sizes) {
-      sizes = Array.isArray(item.sizes) ? item.sizes : JSON.parse(item.sizes);
+    const sizeSource = item.sizes || item.sizesJson;
+    if (sizeSource) {
+      sizes = Array.isArray(sizeSource) ? sizeSource : JSON.parse(sizeSource);
     }
-  } catch (e) {}
+    // Debug logging for first item
+    if (itemNumber === 1) {
+      console.log('[CollectionItemCard] Sizes parsed:', { 
+        itemTitle: item.title, 
+        sizeSource, 
+        sizes, 
+        sizesLength: sizes.length 
+      });
+    }
+  } catch (e) {
+    console.error('[CollectionItemCard] Size parsing error:', e);
+  }
 
   const stockStatus =
     item.quantity_available === 0 || !item.inStock
@@ -1194,6 +1249,8 @@ function ItemDetailModal({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const { addToCart } = useCartState();
+  const router = useRouter();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [selectedRating, setSelectedRating] = useState(5);
@@ -1201,6 +1258,9 @@ function ItemDetailModal({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedColors, setSelectedColors] = useState<number[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: reviewsData, refetch: refetchReviews } = trpc.products.getProductReviews.useQuery(
     { productId: item.id, limit: 10, offset: 0 },
