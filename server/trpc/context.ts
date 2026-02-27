@@ -189,33 +189,36 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
       if (error) {
         user = decodeJWTToken(token);
       } else if (data?.user) {
-        const metadataAdmin = data.user.user_metadata?.admin === true;
         const metadataRole = data.user.user_metadata?.role;
-        let isAdminUser = isAdmin || metadataAdmin;
-        let userRole = isAdminUser ? "admin" : (metadataRole ?? undefined);
+        const metadataAdmin = data.user.user_metadata?.admin === true;
         
-        // Fallback: Check database for admin role if not found in metadata
-        // This handles cases where admin role was just set and JWT hasn't been refreshed
-        if (!isAdminUser) {
-          try {
-            const { data: userData, error: dbError } = await adminClient
-              .from("users")
-              .select("role")
-              .eq("id", data.user.id)
-              .single();
-            
-            if (!dbError && userData?.role === "admin") {
-              isAdminUser = true;
-              userRole = "admin";
-              console.log('[createTRPCContext] Admin role verified from database for user:', data.user.id);
-            } else if (dbError) {
-              console.log('[createTRPCContext] Database query error checking admin role:', dbError.message);
-            }
-          } catch (dbErr) {
-            console.log('[createTRPCContext] Exception checking database for admin role:', dbErr instanceof Error ? dbErr.message : String(dbErr));
+        // Query database for actual user role first (more secure than metadata)
+        let userRole: string | undefined = metadataRole;
+        let isAdminUser = false;
+        
+        try {
+          const { data: userData, error: dbError } = await adminClient
+            .from("users")
+            .select("role")
+            .eq("id", data.user.id)
+            .single();
+          
+          if (!dbError && userData?.role) {
+            userRole = userData.role;
+            console.log('[createTRPCContext] User role verified from database:', userData.role);
+          } else if (dbError) {
+            console.log('[createTRPCContext] Database query error, using metadata role:', dbError.message);
           }
-        } else {
-          console.log('[createTRPCContext] Admin status determined from metadata or x-admin-flag header');
+        } catch (dbErr) {
+          console.log('[createTRPCContext] Exception checking database for role:', dbErr instanceof Error ? dbErr.message : String(dbErr));
+        }
+        
+        // Admin is determined ONLY by database role or JWT claim, NOT metadata admin flag
+        isAdminUser = isAdmin || userRole === "admin";
+        
+        // Log warning if metadata claims admin but database doesn't confirm it
+        if (metadataAdmin && userRole !== "admin" && !isAdmin) {
+          console.warn(`[createTRPCContext] User ${data.user.id} has admin=true in metadata but role='${userRole}' in database. Using database role.`);
         }
         
         user = {
@@ -226,8 +229,13 @@ export async function createTRPCContext({ req, res }: { req?: any; res?: any }) 
           avatar_url: data.user.user_metadata?.avatar_url as string | undefined,
           admin: isAdminUser,
         };
+        
         if (isAdminUser) {
           console.log('[createTRPCContext] User successfully authenticated as admin:', data.user.id);
+        } else if (userRole) {
+          console.log('[createTRPCContext] User successfully authenticated as', userRole + ':', data.user.id);
+        } else {
+          console.log('[createTRPCContext] User successfully authenticated:', data.user.id);
         }
       } else {
         user = decodeJWTToken(token);
