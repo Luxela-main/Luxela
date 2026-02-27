@@ -55,8 +55,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
         if (existingNotif.length === 0) {
           await db.insert(adminNotifications).values({
             adminId,
-            type: 'listing_pending_review' as any,
-            severity: 'info' as any,
+            type: 'listing_pending_review',
+            severity: 'info',
             title: 'New Listing Awaiting Review',
             message: `\"${listing[0].title}\" from seller needs approval`,
             relatedEntityId: review.listingId,

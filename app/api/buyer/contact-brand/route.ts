@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { db } from '@/server/db';
-import { supportTickets, buyers, sellers, buyerAccountDetails } from '@/server/db/schema';
+import { supportTickets, buyers, sellers, buyerAccountDetails, users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { notifySellerOfMessage } from '@/lib/services/notificationService';
+import { createAdminNotification } from '@/server/services/notificationManager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,6 +89,36 @@ export async function POST(request: NextRequest) {
       // Log error but don't fail the request - notification is non-critical
       console.error('Failed to send seller notification:', err);
     });
+
+    // Send notifications to all admins
+    try {
+      const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+      
+      for (const admin of adminUsers) {
+        await createAdminNotification({
+          adminId: admin.id,
+          type: 'ticket_created',
+          title: 'New Buyer Message to Brand',
+          message: `${buyerDetails[0]?.name || 'Anonymous'} sent a message to a brand: "${subject}"`,
+          severity: 'info',
+          relatedEntityId: ticketId as string,
+          relatedEntityType: 'ticket',
+          actionUrl: `/admin/support/tickets/${ticketId}`,
+          metadata: {
+            ticketId: ticketId,
+            buyerName: buyerDetails[0]?.name || 'Anonymous',
+            buyerEmail: buyerDetails[0]?.email || 'no-email@example.com',
+            sellerId: sellerId,
+            brandId: brandId,
+            subject: subject,
+            category: 'general_inquiry',
+          },
+        });
+      }
+    } catch (adminNotifErr) {
+      // Log error but don't fail the request - notification is non-critical
+      console.error('Failed to send admin notifications:', adminNotifErr);
+    }
 
     return NextResponse.json({
       success: true,

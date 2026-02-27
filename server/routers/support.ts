@@ -132,7 +132,7 @@ export const supportRouter = createTRPCRouter({
           await db.insert(buyerNotifications).values({
             id: uuidv4(),
             buyerId: buyerId,
-            type: 'ticket_created' as any,
+            type: 'ticket_created',
             title: 'Support Ticket Created',
             message: `Your support ticket "${input.subject}" has been created and is awaiting response.`,
             relatedEntityId: ticket.id,
