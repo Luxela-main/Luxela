@@ -4,7 +4,7 @@ export const useNotifications = () => {
   return trpc.sellerNotifications.getNotifications.useQuery({}, {
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
-    refetchInterval: 1000 * 5,
+    refetchInterval: 1000 * 30, // Poll every 30 seconds instead of 5 to prevent race conditions
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: 3,
@@ -49,8 +49,12 @@ export const useMarkNotificationAsRead = () => {
       }
     },
     onSuccess: async () => {
-      // Only invalidate the unread count to update badge
+      // Invalidate the unread count to update badge
       await utils.sellerNotifications.getUnreadCount.invalidate();
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
+      await utils.sellerNotifications.getNotifications.invalidate();
     },
   });
 };
@@ -99,6 +103,11 @@ export const useMarkAllNotificationsAsRead = () => {
         );
       }
     },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
+    },
   });
 };
 
@@ -138,6 +147,10 @@ export const useToggleNotificationStar = () => {
         );
       }
     },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
+      await utils.sellerNotifications.getNotifications.invalidate();
+    },
   });
 };
 
@@ -145,7 +158,7 @@ export const useStarredNotifications = () => {
   return trpc.sellerNotifications.getNotifications.useQuery({}, {
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
-    refetchInterval: 1000 * 5,
+    refetchInterval: 1000 * 30, // Poll every 30 seconds instead of 5 to prevent race conditions
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -186,8 +199,12 @@ export const useDeleteNotification = () => {
       }
     },
     onSuccess: async () => {
-      // Only invalidate the unread count to update badge
+      // Invalidate the unread count to update badge
       await utils.sellerNotifications.getUnreadCount.invalidate();
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
+      await utils.sellerNotifications.getNotifications.invalidate();
     },
   });
 };
@@ -198,17 +215,32 @@ export const useDeleteAllNotifications = () => {
   return trpc.sellerNotifications.deleteAllNotifications.useMutation({
     onMutate: async () => {
       // Cancel any outgoing queries
-      await (utils.sellerNotifications as any).getNotifications.cancel();
-      await (utils.sellerNotifications as any).getUnreadCount.cancel();
+      await utils.sellerNotifications.getNotifications.cancel();
+      await utils.sellerNotifications.getUnreadCount.cancel();
+
+      // Get current data for rollback
+      const previousData = utils.sellerNotifications.getNotifications.getData({});
+      const previousCount = utils.sellerNotifications.getUnreadCount.getData(undefined);
 
       // Set optimistic data
-      (utils.sellerNotifications as any).getNotifications.setData({}, { notifications: [] });
-      (utils.sellerNotifications as any).getUnreadCount.setData({}, { count: 0 });
+      utils.sellerNotifications.getNotifications.setData({}, { notifications: [] });
+      utils.sellerNotifications.getUnreadCount.setData(undefined, { count: 0 });
+
+      return { previousData, previousCount };
     },
-    onError: async () => {
-      // Refetch to restore correct state on error
-      await (utils.sellerNotifications as any).getNotifications.invalidate();
-      await (utils.sellerNotifications as any).getUnreadCount.invalidate();
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        utils.sellerNotifications.getNotifications.setData({}, context.previousData);
+      }
+      if (context?.previousCount) {
+        utils.sellerNotifications.getUnreadCount.setData(undefined, context.previousCount);
+      }
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
+      await utils.sellerNotifications.getNotifications.invalidate();
+      await utils.sellerNotifications.getUnreadCount.invalidate();
     },
   });
 };

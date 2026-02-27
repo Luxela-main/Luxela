@@ -2,6 +2,7 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc/t
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
 import { listings, sellers, brands, collections, products, productImages, collectionItems, listingReviews, productVariants, users } from "../db/schema";
+import { createAdminNotification } from "../services/notificationManager";
 import { and, eq, sql, inArray, asc } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -400,6 +401,32 @@ export const listingRouter = createTRPCRouter({
         status: 'pending',
       });
 
+      // Create admin notifications for new listing submission
+      try {
+        const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+        
+        for (const admin of adminUsers) {
+          await createAdminNotification({
+            adminId: admin.id,
+            type: 'listing_pending_review',
+            title: 'New Listing Awaiting Review',
+            message: `"${input.title}" from seller needs approval`,
+            severity: 'info',
+            relatedEntityId: listingInserted[0].id,
+            relatedEntityType: 'listing',
+            actionUrl: `/admin/listings/review/${listingInserted[0].id}`,
+            metadata: {
+              listingId: listingInserted[0].id,
+              listingTitle: input.title,
+              listingType: 'single',
+              sellerId: seller.id,
+            },
+          });
+        }
+      } catch (adminNotifErr) {
+        console.error('[Listing] Failed to create admin notification for new listing:', adminNotifErr);
+      }
+
       // Insert additional product images if provided
       console.log('[LISTING.createSingle] Image insertion check:', {
         hasImages: !!input.images,
@@ -793,6 +820,32 @@ export const listingRouter = createTRPCRouter({
         sellerId: seller.id,
         status: 'pending',
       });
+
+      // Create admin notifications for new collection listing submission
+      try {
+        const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+        
+        for (const admin of adminUsers) {
+          await createAdminNotification({
+            adminId: admin.id,
+            type: 'listing_pending_review',
+            title: 'New Collection Awaiting Review',
+            message: `"${input.title}" collection from seller needs approval`,
+            severity: 'info',
+            relatedEntityId: result[0].id,
+            relatedEntityType: 'listing',
+            actionUrl: `/admin/listings/review/${result[0].id}`,
+            metadata: {
+              listingId: result[0].id,
+              listingTitle: input.title,
+              listingType: 'collection',
+              sellerId: seller.id,
+            },
+          });
+        }
+      } catch (adminNotifErr) {
+        console.error('[Listing] Failed to create admin notification for new collection:', adminNotifErr);
+      }
     }
     } catch (dbError) {
       console.error('Database error inserting collection:', dbError);

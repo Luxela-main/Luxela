@@ -27,7 +27,7 @@ export const useUnifiedNotifications = () => {
     {
       staleTime: 1000 * 30,
       gcTime: 1000 * 60 * 10,
-      refetchInterval: 1000 * 5,
+      refetchInterval: 1000 * 30, // Poll every 30 seconds instead of 5 to prevent race conditions
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       retry: 3,
