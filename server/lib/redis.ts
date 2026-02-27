@@ -192,7 +192,10 @@ const gracefulShutdown = async () => {
 };
 
 // Only register shutdown handlers outside of build
+// Prevent memory leaks during hot reload by removing existing listeners first
 if (!IS_BUILD_TIME) {
+  process.removeListener("SIGTERM", gracefulShutdown);
+  process.removeListener("SIGINT", gracefulShutdown);
   process.on("SIGTERM", gracefulShutdown);
   process.on("SIGINT", gracefulShutdown);
 }
