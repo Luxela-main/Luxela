@@ -13,6 +13,102 @@ import {
 import { DiscountType, CheckoutRequest, CartItemType } from "./model";
 import { useListings } from "@/context/ListingsContext";
 
+// Helper to serialize error objects for proper console logging
+function serializeErrorForLogging(error: any): Record<string, unknown> {
+  if (!error) return { value: error };
+  
+  const result: Record<string, unknown> = {};
+  
+  // Extract standard Error properties (they're non-enumerable)
+  if (error instanceof Error) {
+    result.name = error.name;
+    result.message = error.message;
+    result.stack = error.stack;
+  }
+  
+  // Extract all enumerable properties
+  for (const key of Object.keys(error)) {
+    const val = error[key];
+    // Avoid circular references and deep nesting
+    if (val === error) {
+      result[key] = '[Circular]';
+    } else if (val instanceof Error) {
+      result[key] = serializeErrorForLogging(val);
+    } else if (typeof val === 'object' && val !== null) {
+      try {
+        result[key] = JSON.parse(JSON.stringify(val));
+      } catch {
+        result[key] = '[Object]';
+      }
+    } else {
+      result[key] = val;
+    }
+  }
+  
+  // Also extract non-enumerable properties via Object.getOwnPropertyNames
+  const allProps = Object.getOwnPropertyNames(error);
+  for (const key of allProps) {
+    if (!(key in result)) {
+      try {
+        const descriptor = Object.getOwnPropertyDescriptor(error, key);
+        if (descriptor && 'value' in descriptor) {
+          const val = descriptor.value;
+          if (typeof val !== 'function') {
+            result[key] = val;
+          }
+        }
+      } catch {
+        // Skip properties we can't access
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Helper to safely extract error message from various error types
+function extractErrorMessage(error: any, fallback: string = "An error occurred"): string {
+  if (!error) return fallback;
+  
+  // Handle TRPC errors (most common structure from tRPC mutations)
+  if (error?.data?.message && typeof error.data.message === 'string') return error.data.message;
+  if (error?.shape?.message && typeof error.shape.message === 'string') return error.shape.message;
+  
+  // Handle standard Error instances and error-like objects
+  if (error?.message && typeof error.message === 'string' && error.message !== '{}') {
+    return error.message;
+  }
+  
+  // Handle string errors
+  if (typeof error === 'string' && error.trim() !== '' && error !== '{}') {
+    return error;
+  }
+  
+  // Handle Error instances
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  
+  // Try to extract from JSON serialization for plain objects
+  try {
+    const jsonStr = JSON.stringify(error);
+    // Only parse if it looks like it might contain useful info
+    if (jsonStr && jsonStr !== '{}' && jsonStr !== 'null' && jsonStr !== 'undefined') {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.message && typeof parsed.message === 'string') return parsed.message;
+      if (parsed.error) return typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+      if (parsed.reason && typeof parsed.reason === 'string') return parsed.reason;
+      // If we got here, object has properties but no message - return JSON for debugging
+      return `${fallback} (${jsonStr})`;
+    }
+  } catch {
+    // Ignore JSON parsing errors
+  }
+  
+  // Final fallback: if error is an empty object or unparseable, return fallback
+  return fallback;
+}
+
 type CartContextType = {
   cart: any;
   items: CartItemType[];
@@ -60,7 +156,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const cart = data?.cart;
 
-  const { listings, approvedListings, validateProductForCart, getApprovedListingById } = useListings();
+  const { listings, approvedListings, validateProductForCart, getApprovedListingById, invalidateCachedListing } = useListings();
 
   const items = useMemo(() => {
     const rawItems = data?.items || [];
@@ -107,23 +203,62 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
 
     if (!validation.valid) {
+      console.log("[CartContext.addToCart] Initial validation failed:", { 
+        listingId, 
+        validationReason: validation.reason,
+        validationListing: validation.listing ? {
+          id: validation.listing.id,
+          title: validation.listing.title,
+          quantityAvailable: validation.listing.quantity_available,
+          source: 'from validateProductForCart'
+        } : null,
+        approvedListingsCount: approvedListings.length 
+      });
+      console.log("[CartContext.addToCart] Fetching fresh listing data with skipCache...");
       try {
-        const listing = await getApprovedListingById(listingId, true);
+        const listing = await getApprovedListingById(listingId, true, true);
         if (!listing) {
-          console.warn("[CartContext.addToCart] Product not found in context, falling back to backend validation:", { listingId });
+          // Product not found in catalog - throw error with clear message
+          console.warn("[CartContext.addToCart] Product not found in catalog:", { listingId });
+          throw new Error(validation.reason || "This product is not available or has been removed from the catalog");
         } else {
+          console.log("[CartContext.addToCart] Fresh listing data fetched:", { 
+            listingId, 
+            quantityAvailable: listing.quantity_available,
+            title: listing.title 
+          });
           if ((listing.quantity_available || 0) <= 0) {
+            console.error("[CartContext.addToCart] Product out of stock:", { 
+              listingId, 
+              quantityAvailable: listing.quantity_available 
+            });
+            // Invalidate cache to ensure fresh data on next attempt
+            invalidateCachedListing(listingId);
             throw new Error("This product is currently out of stock");
           }
           validation.valid = true;
         }
       } catch (error: any) {
-        if (!error.message?.includes("not found") && !error.message?.includes("not available")) {
-          const message = error instanceof Error ? error.message : (validation.reason || "This product cannot be added to your cart");
-          console.error("[CartContext.addToCart] Validation error:", { listingId, message });
-          throw error instanceof Error ? error : new Error(message);
+        // Handle "not found" / "not available" errors silently - allow backend to validate
+        const errorMessage = extractErrorMessage(error, '');
+        const isNotFoundError = 
+          typeof errorMessage === 'string' && 
+          (errorMessage.includes("not found") || errorMessage.includes("not available") || errorMessage.includes("not approved"));
+        
+        if (!isNotFoundError) {
+          // Re-throw actual errors (out of stock, etc.)
+          const message = extractErrorMessage(error, validation.reason || "This product cannot be added to your cart");
+          console.error("[CartContext.addToCart] Validation error:", { 
+            listingId, 
+            message, 
+            errorType: error?.constructor?.name || typeof error,
+            error: serializeErrorForLogging(error)
+          });
+          throw new Error(message);
         }
-        console.warn("[CartContext.addToCart] Allowing backend validation for uncached product:", { listingId });
+        
+        // For "not found" errors, allow backend to do final validation
+        console.warn("[CartContext.addToCart] Allowing backend validation for uncached product:", { listingId, errorMessage });
       }
     }
 
@@ -151,6 +286,11 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       } else if (error && typeof error === 'object') {
         // Last resort: log full error for debugging
         console.warn("[CartContext.addToCart] Unable to extract standard error message from:", error);
+      }
+      
+      // Ensure we always have a valid string message
+      if (!errorMessage || typeof errorMessage !== 'string') {
+        errorMessage = "Failed to add to cart";
       }
       
       console.error("[CartContext.addToCart] Caught error:", {

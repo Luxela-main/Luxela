@@ -5,7 +5,7 @@ import {
   sellerBusiness,
   buyerBrandFollows,
 } from '../db/schema';
-import { eq, desc, asc, countDistinct, count, sql, inArray, and } from 'drizzle-orm';
+import { eq, desc, asc, count, sql, inArray, and } from 'drizzle-orm';
 import { catalogCacheMiddleware } from '../middleware/cache-catalog';
 
 export async function fetchBrandsWithCache(input: {
@@ -72,7 +72,7 @@ async function fetchBrandsFromDatabase(input: {
   // Get total count first
   console.log('Counting total brands...');
   let countQuery = db
-    .select({ count: countDistinct(brands.id) })
+    .select({ count: count() })
     .from(brands);
 
   if (whereCondition) {

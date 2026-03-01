@@ -22,8 +22,8 @@ if (IS_BUILD_TIME) {
 // Vercel-optimized pool configuration with build-time adjustments
 const poolConfig = {
   connectionString: DATABASE_URL,
-  max: IS_BUILD_TIME ? 5 : NODE_ENV === "production" ? 10 : 20,
-  min: IS_BUILD_TIME ? 1 : NODE_ENV === "production" ? 2 : 1,
+  max: IS_BUILD_TIME ? 3 : NODE_ENV === "production" ? 8 : 5,
+  min: IS_BUILD_TIME ? 0 : NODE_ENV === "production" ? 1 : 0,
   idleTimeoutMillis: IS_BUILD_TIME
     ? 15000
     : NODE_ENV === "production"

@@ -17,10 +17,10 @@ interface ListingsContextType {
   error: string | null;
   refetchListings: () => Promise<void>;
   getListingById: (id: string) => Listing | undefined;
-  getApprovedListingById: (id: string, fetchIfMissing?: boolean) => Promise<Listing | undefined>;
+  getApprovedListingById: (id: string, fetchIfMissing?: boolean, skipCache?: boolean) => Promise<Listing | undefined>;
   getListingsByBrand: (brandName: string) => Listing[];
   isListingApproved: (id: string) => boolean;
-  validateProductForCart: (id: string) => { valid: boolean; reason?: string };
+  validateProductForCart: (id: string) => { valid: boolean; reason?: string; listing?: Listing };
   fetchListingDetailsById: (id: string) => Promise<Listing | undefined>;
   invalidateCatalogCache: () => void;
   invalidateCachedListing: (listingId: string) => void;
@@ -163,17 +163,18 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  const fetchListingDetailsById = async (id: string): Promise<Listing | undefined> => {
-    // Check cache first
-    if (cachedListings[id]) {
+  const fetchListingDetailsById = async (id: string, skipCache: boolean = false): Promise<Listing | undefined> => {
+    // Check cache first (unless skipCache is true)
+    if (!skipCache && cachedListings[id]) {
       console.log('[ListingsContext.fetchListingDetailsById] Returning cached listing:', id);
       return cachedListings[id];
     }
 
     try {
-      console.log('[ListingsContext.fetchListingDetailsById] Fetching from server:', id);
+      console.log('[ListingsContext.fetchListingDetailsById] Fetching from server:', { id, skipCache });
       const response = await vanillaTrpc.buyerListingsCatalog.getListingById.query({
         listingId: id,
+        skipCache,
       });
 
       if (!response) {
@@ -415,19 +416,22 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
     return listings.find((listing) => listing.id === id);
   };
 
-  const getApprovedListingById = async (id: string, fetchIfMissing: boolean = true): Promise<Listing | undefined> => {
+  const getApprovedListingById = async (id: string, fetchIfMissing: boolean = true, skipCache: boolean = false): Promise<Listing | undefined> => {
     // First check the secondary cache (for fresh data after restock)
-    let cachedListing = cachedListings[id];
-    if (cachedListing) {
-      console.log('[ListingsContext.getApprovedListingById] Found in secondary cache:', id);
-      return cachedListing;
-    }
+    // Skip if skipCache is true (we want fresh data from server)
+    if (!skipCache) {
+      let cachedListing = cachedListings[id];
+      if (cachedListing) {
+        console.log('[ListingsContext.getApprovedListingById] Found in secondary cache:', id);
+        return cachedListing;
+      }
 
-    // Then check in-memory listings
-    let listing = approvedListings.find((listing) => listing.id === id);
-    if (listing) {
-      console.log('[ListingsContext.getApprovedListingById] Found in memory:', id);
-      return listing;
+      // Then check in-memory listings
+      let listing = approvedListings.find((listing) => listing.id === id);
+      if (listing) {
+        console.log('[ListingsContext.getApprovedListingById] Found in memory:', id);
+        return listing;
+      }
     }
 
     // Check if we should fetch from server
@@ -439,8 +443,8 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
     }
 
     // Fetch complete details from server
-    console.log('[ListingsContext.getApprovedListingById] Not in cache, fetching from server:', id);
-    return await fetchListingDetailsById(id);
+    console.log('[ListingsContext.getApprovedListingById] Not in cache, fetching from server:', { id, skipCache });
+    return await fetchListingDetailsById(id, skipCache);
   };
 
   const getListingsByBrand = (brandName: string) => {
@@ -456,24 +460,55 @@ export function ListingsProvider({ children }: { children: ReactNode }) {
 
   const validateProductForCart = (
     id: string
-  ): { valid: boolean; reason?: string } => {
-    const listing = approvedListings.find((l) => l.id === id);
+  ): { valid: boolean; reason?: string; listing?: Listing } => {
+    // Debug logging to trace the issue
+    console.log('[ListingsContext.validateProductForCart] Validating:', { 
+      id,
+      approvedListingsCount: approvedListings.length,
+      cachedListingsKeys: Object.keys(cachedListings),
+      foundInApproved: approvedListings.find((l) => l.id === id)?.id,
+      foundInCache: cachedListings[id]?.id
+    });
+
+    // Prioritize approvedListings (catalog data) as it has the latest stock from catalog query
+    let listing = approvedListings.find((l) => l.id === id);
+    let source = 'approvedListings';
+    
+    // Fall back to cachedListings only if not found in approvedListings
+    if (!listing) {
+      listing = cachedListings[id];
+      source = 'cachedListings';
+    }
 
     if (!listing) {
+      console.warn('[ListingsContext.validateProductForCart] Listing not found:', id);
       return {
         valid: false,
         reason: 'Product is not available or has been removed from the catalog',
       };
     }
 
+    console.log('[ListingsContext.validateProductForCart] Found listing:', {
+      id,
+      source,
+      quantityAvailable: listing.quantity_available,
+      title: listing.title
+    });
+
     if ((listing.quantity_available || 0) <= 0) {
+      console.warn('[ListingsContext.validateProductForCart] Out of stock:', {
+        id,
+        source,
+        quantityAvailable: listing.quantity_available
+      });
       return {
         valid: false,
         reason: 'This product is currently out of stock',
+        listing, // Return the listing so cart context can see the actual data
       };
     }
 
-    return { valid: true };
+    return { valid: true, listing };
   };
 
   const invalidateCatalogCache = () => {

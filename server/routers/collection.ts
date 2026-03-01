@@ -5,6 +5,10 @@ import { and, eq, inArray, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
+// Helper function to validate UUID format
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const isValidUUID = (id: string): boolean => UUID_REGEX.test(id);
+
 // Helper function to calculate total collection price from items
 const calculateCollectionTotalPrice = async (collectionId: string): Promise<{ totalPrice: number; avgPrice: number }> => {
   try {
@@ -1159,15 +1163,22 @@ export const collectionRouter = createTRPCRouter({
           }
           if (itemsByCollectionId.get(collId)!.length < MAX_PREVIEW_ITEMS) {
             itemsByCollectionId.get(collId)!.push(item);
-            allProductIdsSet.add(item.productId);
+            // Only add valid non-null productIds to prevent SQL errors
+            if (item.productId && typeof item.productId === 'string') {
+              allProductIdsSet.add(item.productId);
+            }
           }
         });
         
-        const productIds: string[] = Array.from(allProductIdsSet);
+        const productIds: string[] = Array.from(allProductIdsSet).filter((id): id is string => 
+          typeof id === 'string' && isValidUUID(id)
+        );
         
         console.log(`[getApprovedCollections] Found ${allCollectionItems.length} items, fetching ${productIds.length} products for ${collectionIds.length} collections`);
 
-        const [allCollectionDetails, allSellers, allProducts, allProductImages, allListings] = await Promise.all([
+        // Serialize queries to reduce connection pool pressure
+        // First batch: collections and sellers (can run in parallel, only 2 queries)
+        const [allCollectionDetails, allSellers] = await Promise.all([
           collectionIds.length > 0 ? db.select().from(collections).where(inArray(collections.id, collectionIds)) : Promise.resolve([]),
           sellerIds.length > 0 ? db.select({ 
             id: sellers.id,
@@ -1176,7 +1187,15 @@ export const collectionRouter = createTRPCRouter({
           .from(sellers)
           .leftJoin(sellerBusiness, eq(sellers.id, sellerBusiness.sellerId))
           .where(inArray(sellers.id, sellerIds as string[])) : Promise.resolve([]),
-          productIds.length > 0 ? db.select({
+        ]);
+        
+        // Sequentially fetch remaining data to reduce connection pool pressure
+        let allProducts: any[] = [];
+        let allProductImages: any[] = [];
+        let allListings: any[] = [];
+        
+        if (productIds.length > 0) {
+          allProducts = await db.select({
             id: products.id,
             name: products.name,
             slug: products.slug,
@@ -1186,15 +1205,17 @@ export const collectionRouter = createTRPCRouter({
             sku: products.sku,
           })
           .from(products)
-          .where(inArray(products.id, productIds as string[])) : Promise.resolve([]),
-          productIds.length > 0 ? db.select({
+          .where(inArray(products.id, productIds as string[]));
+          
+          allProductImages = await db.select({
             productId: productImages.productId,
             imageUrl: productImages.imageUrl,
             position: productImages.position,
           })
           .from(productImages)
-          .where(inArray(productImages.productId, productIds as string[])) : Promise.resolve([]),
-          productIds.length > 0 ? db.select({
+          .where(inArray(productImages.productId, productIds as string[]));
+          
+          allListings = await db.select({
             id: listings.id,
             productId: listings.productId,
             title: listings.title,
@@ -1219,8 +1240,8 @@ export const collectionRouter = createTRPCRouter({
             refundPolicy: listings.refundPolicy,
           })
           .from(listings)
-          .where(and(inArray(listings.productId, productIds as string[]), inArray(listings.status, ['approved', 'pending_review']))) : Promise.resolve([]),
-        ]);
+          .where(and(inArray(listings.productId, productIds as string[]), inArray(listings.status, ['approved', 'pending_review'])));
+        }
         
         console.log('[getApprovedCollections] Batch fetch complete. Processing...');
         

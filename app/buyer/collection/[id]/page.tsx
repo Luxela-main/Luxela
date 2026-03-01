@@ -99,6 +99,59 @@ const formatShippingOption = (option: string) => {
   return options[option] || option;
 };
 
+// Helper to serialize error objects for proper console logging
+function serializeErrorForLogging(error: any): Record<string, unknown> {
+  if (!error) return { value: error };
+  
+  const result: Record<string, unknown> = {};
+  
+  // Extract standard Error properties (they're non-enumerable)
+  if (error instanceof Error) {
+    result.name = error.name;
+    result.message = error.message;
+    result.stack = error.stack;
+  }
+  
+  // Extract all enumerable properties
+  for (const key of Object.keys(error)) {
+    const val = error[key];
+    // Avoid circular references and deep nesting
+    if (val === error) {
+      result[key] = '[Circular]';
+    } else if (val instanceof Error) {
+      result[key] = serializeErrorForLogging(val);
+    } else if (typeof val === 'object' && val !== null) {
+      try {
+        result[key] = JSON.parse(JSON.stringify(val));
+      } catch {
+        result[key] = '[Object]';
+      }
+    } else {
+      result[key] = val;
+    }
+  }
+  
+  // Also extract non-enumerable properties via Object.getOwnPropertyNames
+  const allProps = Object.getOwnPropertyNames(error);
+  for (const key of allProps) {
+    if (!(key in result)) {
+      try {
+        const descriptor = Object.getOwnPropertyDescriptor(error, key);
+        if (descriptor && 'value' in descriptor) {
+          const val = descriptor.value;
+          if (typeof val !== 'function') {
+            result[key] = val;
+          }
+        }
+      } catch {
+        // Skip properties we can't access
+      }
+    }
+  }
+  
+  return result;
+}
+
 export default function CollectionDetailPage({
   params,
 }: {
@@ -922,6 +975,9 @@ function CollectionItemCard({
       itemId: item.id,
       itemTitle: item.title || item.name,
       itemListingId: item.listingId,
+      itemQuantityAvailable: item.quantity_available,
+      itemStockQty: item.stockQty,
+      itemQty: item.qty,
       itemData: item,
     });
 
@@ -942,7 +998,7 @@ function CollectionItemCard({
         itemListingId: item.listingId,
         message: errorMessage,
         code: err?.data?.code,
-        fullError: err,
+        error: serializeErrorForLogging(err),
       });
       toastSvc.error(errorMessage);
     } finally {

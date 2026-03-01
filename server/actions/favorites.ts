@@ -1,9 +1,9 @@
 'use server';
 
 import { db } from '@/server/db';
-import { buyerFavorites, listings, buyers, buyerNotifications } from '@/server/db/schema';
+import { buyerFavorites, listings, buyers, buyerNotifications, collectionItems, products } from '@/server/db/schema';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/utils/getCurrentUser';
 
 export async function addToFavorites(listingId: string) {
@@ -202,20 +202,67 @@ export async function getBuyerFavorites() {
 
     console.log('[FAVORITES] Found', favoritesList.length, 'favorites');
 
+    // Get collection IDs from favorites that are collections
+    const collectionListingIds = favoritesList
+      .filter((fav: any) => fav.listing?.type === 'collection' && fav.listing?.collectionId)
+      .map((fav: any) => fav.listing.collectionId);
+
+    // Fetch collection items with product prices if there are any collection favorites
+    let collectionItemsData: any[] = [];
+    if (collectionListingIds.length > 0) {
+      collectionItemsData = await db
+        .select({
+          collectionId: collectionItems.collectionId,
+          priceCents: products.priceCents,
+          productId: products.id,
+        })
+        .from(collectionItems)
+        .innerJoin(products, eq(collectionItems.productId, products.id))
+        .where(inArray(collectionItems.collectionId, collectionListingIds));
+    }
+
+    // Group collection items by collectionId for easy lookup
+    const collectionItemsByCollectionId = collectionItemsData.reduce((acc, item) => {
+      if (!acc[item.collectionId]) {
+        acc[item.collectionId] = [];
+      }
+      acc[item.collectionId].push(item);
+      return acc;
+    }, {} as Record<string, typeof collectionItemsData>);
+
     // Transform the data to match the expected frontend structure
     const transformedFavorites = favoritesList
       .filter((fav: any): fav is typeof fav & { listing: NonNullable<typeof fav.listing> } => fav.listing !== null)
-      .map((fav: any) => ({
-        id: fav.id,
-        listing: {
-          id: fav.listing.id,
-          title: fav.listing.title,
-          image: fav.listing.image || '',
-          price_cents: fav.listing.priceCents,
-          currency: fav.listing.currency,
-          quantity_available: fav.listing.quantityAvailable,
-        },
-      }));
+      .map((fav: any) => {
+        const listing = fav.listing;
+        let priceCents = listing.priceCents;
+        let quantityAvailable = listing.quantityAvailable;
+
+        // For collections, calculate total price from items
+        if (listing.type === 'collection' && listing.collectionId) {
+          const items = collectionItemsByCollectionId[listing.collectionId] || [];
+          
+          if (items.length > 0) {
+            // Sum up all item prices
+            priceCents = items.reduce((sum: number, item: { priceCents: number | null }) => sum + (item.priceCents || 0), 0);
+            // For collections, show total quantity as number of items
+            quantityAvailable = items.length;
+          }
+        }
+
+        return {
+          id: fav.id,
+          listing: {
+            id: listing.id,
+            title: listing.title,
+            image: listing.image || '',
+            price_cents: priceCents,
+            currency: listing.currency,
+            quantity_available: quantityAvailable,
+            type: listing.type,
+          },
+        };
+      });
 
     console.log('[FAVORITES] Successfully returning', transformedFavorites.length, 'favorites');
     return { success: true, favorites: transformedFavorites };

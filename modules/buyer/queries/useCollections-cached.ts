@@ -117,9 +117,41 @@ export function useCollectionsCached(options: {
         clearTimeout(timeout);
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[useCollectionsCached] HTTP error:', { status: response.status, statusText: response.statusText, body: errorText });
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          let errorMessage = `HTTP ${response.status}: ${response.statusText || 'Unknown error'}`;
+          let errorDetails: any = null;
+          
+          try {
+            const errorText = await response.text();
+            // Try to parse tRPC error format
+            if (errorText) {
+              try {
+                errorDetails = JSON.parse(errorText);
+                // Extract tRPC error message if present
+                if (errorDetails?.error?.json?.message) {
+                  errorMessage = errorDetails.error.json.message;
+                } else if (errorDetails?.message) {
+                  errorMessage = errorDetails.message;
+                } else if (typeof errorDetails === 'string') {
+                  errorMessage = errorDetails;
+                }
+              } catch {
+                // Not JSON, use raw text
+                errorMessage = errorText;
+              }
+            }
+            console.error('[useCollectionsCached] HTTP error:', { 
+              status: response.status, 
+              statusText: response.statusText,
+              errorDetails 
+            });
+          } catch (parseErr) {
+            console.error('[useCollectionsCached] HTTP error (failed to parse body):', { 
+              status: response.status, 
+              statusText: response.statusText 
+            });
+          }
+          
+          throw new Error(errorMessage);
         }
 
         const result = await response.json();

@@ -6,6 +6,208 @@ import { and, eq, desc, asc, sql, count as countFn, ilike, inArray } from 'drizz
 import { z } from 'zod';
 import { getCached, invalidateCache } from '../lib/redis';
 
+// Helper function to fetch listing directly from database
+async function fetchListingById(listingId: string) {
+  console.log('[BUYER_CATALOG] fetchListingById - fetching from DB:', listingId);
+  
+  // Direct quantity check from DB for debugging
+  const directCheck = await db
+    .select({ quantityAvailable: listings.quantityAvailable })
+    .from(listings)
+    .where(eq(listings.id, listingId))
+    .limit(1);
+  console.log('[BUYER_CATALOG] Direct DB quantity check:', {
+    listingId,
+    quantityAvailable: directCheck[0]?.quantityAvailable ?? 'NOT_FOUND'
+  });
+
+  // Fetch the listing - try direct approved listing first
+  let listing = await db
+    .select()
+    .from(listings)
+    .where(and(eq(listings.id, listingId), eq(listings.status, 'approved')))
+    .limit(1);
+
+  // If not found, check if it's part of an approved collection
+  if (listing.length === 0) {
+    const item = await db
+      .select()
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    
+    if (item.length > 0 && item[0].collectionId) {
+      const parent = await db
+        .select()
+        .from(listings)
+        .where(and(
+          eq(listings.id, item[0].collectionId),
+          eq(listings.status, 'approved')
+        ))
+        .limit(1);
+      
+      if (parent.length > 0) {
+        listing = item;
+      }
+    }
+  }
+
+  if (listing.length === 0) {
+    throw new Error('Listing not found or not approved');
+  }
+
+  const listingData = listing[0];
+
+  // Fetch seller info
+  const seller = await db
+    .select()
+    .from(sellers)
+    .where(eq(sellers.id, listingData.sellerId))
+    .limit(1);
+
+  const sellerBiz = seller.length > 0
+    ? await db
+        .select()
+        .from(sellerBusiness)
+        .where(eq(sellerBusiness.sellerId, seller[0].id))
+        .limit(1)
+    : null;
+
+  // Fetch brand info to get the slug
+  const brandInfo = seller.length > 0
+    ? await db
+        .select()
+        .from(brands)
+        .where(eq(brands.sellerId, seller[0].id))
+        .limit(1)
+    : null;
+
+  // Fetch images - ALWAYS from productImages table for complete image data
+  let listingImages: any[] = [];
+  if (listingData.productId) {
+    listingImages = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, listingData.productId))
+      .orderBy(productImages.position);
+  }
+
+  // If no images found in productImages table, fallback to parsing imagesJson
+  if (listingImages.length === 0 && listingData.imagesJson) {
+    try {
+      const parsedImages = JSON.parse(listingData.imagesJson);
+      if (Array.isArray(parsedImages)) {
+        listingImages = parsedImages.map((img: any, index: number) => ({
+          imageUrl: typeof img === 'string' ? img : img.imageUrl || img.url,
+          position: index,
+        }));
+      }
+    } catch (e) {
+      console.warn('[BUYER_CATALOG] Failed to parse imagesJson for listing:', listingData.id);
+    }
+  }
+
+  // Extract just the URLs from image objects for cleaner JSON format
+  let imageUrls = listingImages
+    .map((img) => img.imageUrl || img.url || (typeof img === 'string' ? img : ''))
+    .filter((url) => url && typeof url === 'string' && url.trim() !== '');
+
+  // If no images found through product images, ensure we have at least the primary image
+  if (imageUrls.length === 0 && listingData.image) {
+    imageUrls = [listingData.image];
+  }
+
+  // Parse colors and sizes
+  let colors = null;
+  let sizes = null;
+  if (listingData.colorsAvailable) {
+    try {
+      colors = JSON.parse(listingData.colorsAvailable);
+    } catch (e) {
+      colors = null;
+    }
+  }
+  if (listingData.sizesJson) {
+    try {
+      sizes = JSON.parse(listingData.sizesJson);
+    } catch (e) {
+      sizes = null;
+    }
+  }
+
+  // Determine stock status
+  let qty = listingData.quantityAvailable || 0;
+  
+  // For collections, calculate quantity from collection items
+  if (listingData.type === 'collection' && listingData.collectionId) {
+    const collectionItemsList = await db
+      .select()
+      .from(collectionItems)
+      .where(eq(collectionItems.collectionId, listingData.collectionId));
+    
+    // Sum up quantities from all items in the collection
+    qty = collectionItemsList.reduce((sum: number, item: CollectionItem) => sum + ((item as any).quantity || 0), 0);
+    console.log('[BUYER_CATALOG] Collection quantity calculated:', {
+      collectionId: listingData.collectionId,
+      itemCount: collectionItemsList.length,
+      totalQuantity: qty,
+    });
+  }
+  
+  let status: 'in_stock' | 'low_stock' | 'sold_out' = 'in_stock';
+  if (qty === 0) {
+    status = 'sold_out';
+  } else if (qty <= 5) {
+    status = 'low_stock';
+  }
+
+  console.log('[BUYER_CATALOG] fetchListingById result:', {
+    listingId: listingData.id,
+    title: listingData.title,
+    quantityAvailable: qty,
+    status,
+  });
+
+  return {
+    id: listingData.id,
+    title: listingData.title,
+    description: listingData.description,
+    image: listingData.image,
+    imagesJson: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
+    price: (listingData.priceCents ?? 0) / 100,
+    price_cents: listingData.priceCents ?? 0,
+    quantity_available: qty,
+    category: listingData.category,
+    type: (listingData.type ?? 'single') as 'single' | 'collection',
+    seller: {
+      id: seller[0].id,
+      brandName: sellerBiz?.[0]?.brandName ?? null,
+      brandSlug: brandInfo?.[0]?.slug ?? null,
+    },
+    status,
+    createdAt: listingData.createdAt,
+    sku: listingData.sku || null,
+    barcode: listingData.barcode || null,
+    currency: listingData.currency || null,
+    supplyCapacity: listingData.supplyCapacity || null,
+    sizes: sizes || null,
+    colors: colors || null,
+    materialComposition: listingData.materialComposition || null,
+    shippingOption: listingData.shippingOption || null,
+    etaDomestic: listingData.etaDomestic || null,
+    etaInternational: listingData.etaInternational || null,
+    refundPolicy: listingData.refundPolicy || null,
+    localPricing: listingData.localPricing || null,
+    videoUrl: listingData.videoUrl || null,
+    careInstructions: listingData.careInstructions || null,
+    limitedEditionBadge: listingData.limitedEditionBadge || null,
+    releaseDuration: listingData.releaseDuration || null,
+    additionalTargetAudience: listingData.additionalTargetAudience || null,
+    slug: listingData.slug || null,
+    metaDescription: listingData.metaDescription || null,
+  };
+}
+
 export const buyerListingsCatalogRouter = createTRPCRouter({
   // NEW: Complete listing details with ALL images and specifications (mirrors admin method)
   getListingDetailsComplete: publicProcedure
@@ -308,7 +510,16 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
       }
 
       // Determine stock status
-      let qty = listingData.quantityAvailable || 0;
+      const rawQty = listingData.quantityAvailable;
+      let qty = rawQty || 0;
+      
+      console.log('[BUYER_CATALOG] getListingById - Quantity check:', {
+        listingId: input.listingId,
+        rawQuantityAvailable: rawQty,
+        calculatedQty: qty,
+        type: listingData.type,
+        hasCollectionId: !!listingData.collectionId,
+      });
       
       // For collections, calculate quantity from collection items
       if (listingData.type === 'collection' && listingData.collectionId) {
@@ -396,7 +607,7 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         summary: 'Get a single approved listing by ID with complete details and all images',
       },
     })
-    .input(z.object({ listingId: z.string().uuid() }))
+    .input(z.object({ listingId: z.string().uuid(), skipCache: z.boolean().optional().default(false) }))
     .output(
       z.object({
         id: z.string().uuid(),
@@ -443,10 +654,28 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const cacheKey = `buyer:listing:${input.listingId}`;
       
+      // If skipCache is true, bypass cache and fetch directly from DB
+      if (input.skipCache) {
+        console.log('[BUYER_CATALOG] getListingById CACHE BYPASS requested:', input.listingId);
+        return await fetchListingById(input.listingId);
+      }
+      
       return await getCached(
         cacheKey,
         async () => {
-          console.log('[BUYER_CATALOG] getListingById called for:', input.listingId);
+          console.log('[BUYER_CATALOG] getListingById CACHE MISS - fetching from DB:', input.listingId);
+          console.log('[BUYER_CATALOG] getListingById CACHE MISS - fetching from DB:', input.listingId);
+          
+          // TEMP: Direct quantity check from DB for debugging
+          const directCheck = await db
+            .select({ quantityAvailable: listings.quantityAvailable })
+            .from(listings)
+            .where(eq(listings.id, input.listingId))
+            .limit(1);
+          console.log('[BUYER_CATALOG] Direct DB quantity check:', {
+            listingId: input.listingId,
+            quantityAvailable: directCheck[0]?.quantityAvailable ?? 'NOT_FOUND'
+          });
 
           // Fetch the listing - try direct approved listing first
           let listing = await db

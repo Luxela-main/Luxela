@@ -1532,6 +1532,11 @@ export const listingRouter = createTRPCRouter({
         and(eq(listings.id, input.id), eq(listings.sellerId, seller.id))
       );
       
+      // Invalidate buyer cache for this listing to ensure fresh stock data
+      const cacheKey = `buyer:listing:${input.id}`;
+      await invalidateCache(cacheKey);
+      console.log(`[updateStockQuantity] Invalidated cache for listing: ${input.id}, new quantity: ${newQuantityAvailable}`);
+      
       const updated = (await db.select().from(listings).where(eq(listings.id, input.id)))[0];
       return {
         id: updated.id,

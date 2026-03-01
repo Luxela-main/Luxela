@@ -1,4 +1,7 @@
 import { tsaraApi, TsaraResponse } from './tsara';
+import { db } from '../db';
+import { buyers } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 export interface Customer {
   id: string;
@@ -7,6 +10,7 @@ export interface Customer {
   phone?: string;
   metadata?: Record<string, any>;
   created_at: string;
+  updated_at?: string;
 }
 
 export async function createCustomer(data: {
@@ -83,4 +87,89 @@ export async function updateCustomer(customerId: string, data: {
     console.error("Update customer failed:", error.response?.data || error.message);
     throw new Error(error.response?.data?.error?.message || "Failed to update customer");
   }
+}
+
+/**
+ * Get or create a Tsara customer for a buyer
+ * This ensures the buyer has a valid Tsara customer ID stored in the database
+ */
+export async function getOrCreateTsaraCustomer(
+  buyerId: string,
+  buyerInfo: {
+    email: string;
+    name?: string;
+    phone?: string;
+  }
+): Promise<string> {
+  try {
+    // First check if buyer already has a Tsara customer ID
+    const [buyer] = await db
+      .select()
+      .from(buyers)
+      .where(eq(buyers.id, buyerId));
+
+    if (buyer?.tsaraCustomerId) {
+      // Verify the customer still exists in Tsara
+      try {
+        await getCustomer(buyer.tsaraCustomerId);
+        console.log('[Tsara Customer] Using existing customer ID:', buyer.tsaraCustomerId);
+        return buyer.tsaraCustomerId;
+      } catch (err) {
+        console.warn('[Tsara Customer] Existing customer not found in Tsara, creating new one');
+        // Continue to create new customer
+      }
+    }
+
+    // Create new customer in Tsara
+    const response = await createCustomer({
+      email: buyerInfo.email,
+      name: buyerInfo.name,
+      phone: buyerInfo.phone,
+      metadata: {
+        buyer_id: buyerId,
+        platform: 'luxela',
+      },
+    });
+
+    const customerId = response.data?.id || (response.data as any)?.id;
+    
+    if (!customerId) {
+      throw new Error('Tsara did not return a customer ID');
+    }
+
+    // Store the Tsara customer ID in our database
+    await db
+      .update(buyers)
+      .set({
+        tsaraCustomerId: customerId,
+        updatedAt: new Date(),
+      })
+      .where(eq(buyers.id, buyerId));
+
+    console.log('[Tsara Customer] Stored new customer ID in database:', customerId);
+    return customerId;
+  } catch (error: any) {
+    console.error('[Tsara Customer] Get or create error:', {
+      buyerId,
+      message: error.message,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Ensure buyer has a Tsara customer ID before payment
+ * Call this during checkout initialization
+ */
+export async function ensureTsaraCustomerId(
+  buyerId: string,
+  customerEmail: string,
+  customerName?: string,
+  customerPhone?: string
+): Promise<string> {
+  return getOrCreateTsaraCustomer(buyerId, {
+    email: customerEmail,
+    name: customerName,
+    phone: customerPhone,
+  });
 }
