@@ -520,6 +520,37 @@ export const checkoutRouter = createTRPCRouter({
           })
           .returning();
 
+        // Create the order record now that payment is initialized
+        try {
+          await createOrderFromCart(
+            buyer.id,
+            sellerId,
+            items.map((item: any) => ({
+              listingId: item.listingId,
+              quantity: item.quantity,
+              unitPriceCents: item.unitPriceCents,
+              currency: item.currency,
+              selectedSize: item.selectedSize,
+              selectedColor: item.selectedColor,
+              selectedColorHex: item.selectedColorHex,
+            })),
+            input.customerName,
+            input.customerEmail,
+            input.paymentMethod,
+            actualOrderId, // Use the pre-generated orderId
+            shippingCents
+          );
+          console.log(`Order ${actualOrderId} created for payment ${paymentId}`);
+        } catch (orderErr: any) {
+          console.error('Failed to create order after payment initialization:', orderErr);
+          // Clean up the payment record if order creation fails
+          await db.delete(payments).where(eq(payments.id, paymentId));
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to initialize order. Please try again.',
+          });
+        }
+
         // Extract payment URL from response
         let paymentUrl: string;
         if (typeof paymentResponse === 'string') {

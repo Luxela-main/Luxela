@@ -45,7 +45,8 @@ export function TsaraPaymentModal({
         console.log('[TsaraPaymentModal] Redirecting to payment URL:', data.paymentUrl);
         // Store payment reference in session storage for verification after return
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('pendingPaymentRef', data.paymentId);
+          sessionStorage.setItem('pendingPaymentRef', data.payment.id); // Use internal payment ID
+          sessionStorage.setItem('pendingTransactionRef', data.paymentId); // Store Tsara payment ID as transaction ref
           sessionStorage.setItem('checkoutOrderId', orderId);
         }
         // Redirect to Tsara payment page

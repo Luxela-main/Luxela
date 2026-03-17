@@ -79,6 +79,15 @@ export async function handlePaymentSuccess(paymentData: PaymentWebhookData): Pro
     })
     .where(eq(payments.id, payment.id));
 
+  // Update order status to confirmed
+  await db
+    .update(orders)
+    .set({
+      orderStatus: 'confirmed',
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, order.id));
+
   // Send seller notification
   await createNotification(
     order.sellerId,

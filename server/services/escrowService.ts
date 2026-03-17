@@ -200,6 +200,30 @@ export async function createPaymentHold(
     });
   }
 
+  // Check if hold already exists for this payment
+  const existingHold = await db
+    .select()
+    .from(paymentHolds)
+    .where(eq(paymentHolds.paymentId, paymentId))
+    .limit(1);
+
+  if (existingHold.length > 0) {
+    console.log(`Payment hold already exists for payment ${paymentId}, skipping creation`);
+    return {
+      id: existingHold[0].id,
+      paymentId: existingHold[0].paymentId,
+      orderId: existingHold[0].orderId,
+      amountCents: existingHold[0].amountCents,
+      currency: existingHold[0].currency,
+      holdStatus: existingHold[0].holdStatus,
+      reason: existingHold[0].reason || '',
+      refundedAt: existingHold[0].refundedAt,
+      releasedAt: existingHold[0].releasedAt,
+      createdAt: existingHold[0].createdAt,
+      updatedAt: existingHold[0].updatedAt || new Date(),
+    };
+  }
+
   // Validate order exists and matches amount/currency
   const [order] = await db
     .select()
@@ -419,6 +443,15 @@ export async function confirmPayment(
         message: 'Order not found',
       });
     }
+
+    // Update order status to confirmed now that payment is verified
+    await db
+      .update(orders)
+      .set({
+        orderStatus: 'confirmed',
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId));
 
     console.info('confirmPayment: Successfully confirmed payment', {
       paymentId,
