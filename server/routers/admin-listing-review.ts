@@ -737,6 +737,8 @@ export const adminListingReviewRouter = createTRPCRouter({
       // Invalidate buyer catalog cache when listing is approved
       await invalidateCache('buyer:catalog:*');
       await invalidateCache(`buyer:listing:${input.listingId}`);
+      // Invalidate brands cache since product count changed
+      await invalidateCache('catalog:brands:*');
       console.log('[ADMIN_REVIEW] Invalidated buyer cache after listing approval');
 
       // Send notifications to seller (email + polling)

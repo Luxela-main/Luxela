@@ -498,6 +498,8 @@ export const listingRouter = createTRPCRouter({
 
       // Invalidate buyer catalog cache when new listing is created
       await invalidateCache('buyer:catalog:*');
+      // Invalidate brands cache since product count changed
+      await invalidateCache('catalog:brands:*');
       console.log('[LISTING.createSingle] Invalidated buyer catalog cache');
 
       return {
@@ -2329,4 +2331,4 @@ export const listingRouter = createTRPCRouter({
       };
     }),
 });
-
+

@@ -254,7 +254,9 @@ export function useOptimizedPolling<T>(
 
     // Don't poll during circuit break
     if (metrics.isCircuitBroken) {
-      state.intervalId = setInterval(performRefetch, mergedConfig.circuitBreakerTimeout);
+      state.intervalId = setTimeout(() => {
+        performRefetch();
+      }, mergedConfig.circuitBreakerTimeout) as any;
       return;
     }
 

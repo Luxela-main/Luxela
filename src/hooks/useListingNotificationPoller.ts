@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { trpc as api } from '@/app/_trpc/client';
+import { env } from '@/env';
 
 interface ListingNotification {
   id: string;
@@ -41,7 +42,7 @@ export function useListingNotificationPoller(
 ) {
   const {
     enabled = true,
-    pollIntervalSeconds = 10,
+    pollIntervalSeconds = Math.floor(env.NOTIFICATION_POLL_INTERVAL / 1000), // Convert ms to seconds
     onNewNotification,
     onNotificationsUpdate,
   } = options;

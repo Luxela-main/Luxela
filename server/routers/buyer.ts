@@ -4,6 +4,7 @@ import {
   publicProcedure,
 } from "../trpc/trpc";
 import { db } from "../db";
+import { invalidateCache } from "../lib/redis";
 import {
   buyers,
   buyerAccountDetails,
@@ -2412,6 +2413,9 @@ return {
         
         const followersCount = Number(followersCountResult[0]?.count ?? 0);
 
+        // Invalidate brands cache since follower count changed
+        await invalidateCache('catalog:brands:*');
+
         return { success: true, isFollowing, followersCount };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -2477,4 +2481,4 @@ return {
       return [];
     }
   }),
-});
+});

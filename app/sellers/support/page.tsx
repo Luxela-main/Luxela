@@ -42,7 +42,7 @@ export default function SellerSupportPage() {
 
   
   useOptimizedPolling(faqQuery, {
-    initialInterval: 30000, 
+    initialInterval: parseInt(process.env.NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL || '30000', 10), 
     maxInterval: 120000, 
     minInterval: 15000, 
     enableBackoff: true,

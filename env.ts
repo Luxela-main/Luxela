@@ -24,6 +24,7 @@ export const env = {
   
   // Polling Configuration
   NOTIFICATION_POLL_INTERVAL: parseInt(process.env.NOTIFICATION_POLL_INTERVAL || '5000', 10), // 5 seconds
+  NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL: parseInt(process.env.NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL || '5000', 10), // 5 seconds
   NOTIFICATION_RETENTION_DAYS: parseInt(process.env.NOTIFICATION_RETENTION_DAYS || '30', 10),
   
   // Tsara Payment Configuration
