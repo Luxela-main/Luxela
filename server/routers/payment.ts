@@ -17,6 +17,7 @@ import {
 } from "../services/tsara";
 import { getOrCreateTsaraCustomer } from "../services/paymentCustomerHelper";
 import { runTsaraDiagnostics, isTsaraConfigured } from "../services/tsaraDiagnostic";
+import { env } from "@/env";
 
 
 export const paymentRouter = createTRPCRouter({
