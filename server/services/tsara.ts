@@ -1,7 +1,7 @@
 import axios from "axios";
 import { env } from "@/env";
 
-const TSARA_BASE_URL = env.TSARA_BASE_URL;
+const TSARA_BASE_URL = "https://api.tsara.ng/v1";
 const TSARA_SANDBOX_URL = "https://sandbox.tsara.ng/v1";
 const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY;
 export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
@@ -16,7 +16,7 @@ const BASE_URL = process.env.NODE_ENV === "production" ? TSARA_BASE_URL : TSARA_
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    "Authorization": `Bearer ${TSARA_SECRET_KEY}`,
+    "x_tsara_signature": TSARA_SECRET_KEY || "",
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
@@ -26,11 +26,12 @@ export const tsaraApi = axios.create({
 tsaraApi.interceptors.request.use((config) => {
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
-  console.log('[Tsara API] Auth header present:', config.headers.Authorization ? 'Yes (Bearer token)' : 'NO AUTH HEADER - API CALL WILL FAIL');
+  console.log('[Tsara API] Base URL:', config.baseURL);
+  console.log('[Tsara API] Auth header (x_tsara_signature) present:', config.headers["x_tsara_signature"] ? 'Yes' : 'NO SIGNATURE - API CALL WILL FAIL');
   
   // Warn if secret key is missing
   if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-    console.error('[Tsara API] CRITICAL: No secret key configured. This request will fail with 401 Unauthorized.');
+    console.error('[Tsara API] CRITICAL: TSARA_SECRET_KEY is not configured. This request will fail with 401 Unauthorized.');
   }
   
   return config;
