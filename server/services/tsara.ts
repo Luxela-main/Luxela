@@ -3,8 +3,13 @@ import { env } from "@/env";
 
 const TSARA_BASE_URL = env.TSARA_BASE_URL;
 const TSARA_SANDBOX_URL = "https://sandbox.tsara.ng/v1";
-const TSARA_SECRET_KEY = process.env.TSARA_SECRET_KEY!;
-export const TSARA_PUBLIC_KEY = process.env.TSARA_PUBLIC_KEY!;
+const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY;
+export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
+
+// Validate that required credentials are configured
+if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
+  console.error('[Tsara Config] CRITICAL: TSARA_SECRET_KEY is not configured. Payment functionality will fail.');
+}
 
 const BASE_URL = process.env.NODE_ENV === "production" ? TSARA_BASE_URL : TSARA_SANDBOX_URL;
 
@@ -21,9 +26,32 @@ export const tsaraApi = axios.create({
 tsaraApi.interceptors.request.use((config) => {
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
-  console.log('[Tsara API] Auth header:', config.headers.Authorization ? 'Bearer token present' : 'NO AUTH');
+  console.log('[Tsara API] Auth header present:', config.headers.Authorization ? 'Yes (Bearer token)' : 'NO AUTH HEADER - API CALL WILL FAIL');
+  
+  // Warn if secret key is missing
+  if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
+    console.error('[Tsara API] CRITICAL: No secret key configured. This request will fail with 401 Unauthorized.');
+  }
+  
   return config;
 });
+
+// Add response interceptor to catch common errors
+tsaraApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.error('[Tsara API] 401 Unauthorized - Check your TSARA_SECRET_KEY configuration');
+    } else if (error.response?.status === 403) {
+      console.error('[Tsara API] 403 Forbidden - Your API key may not have permission for this operation');
+    } else if (error.response?.status === 404) {
+      console.error('[Tsara API] 404 Not Found - Endpoint may be incorrect or resource does not exist');
+    } else if (error.response?.status >= 500) {
+      console.error('[Tsara API] Server error - Tsara API may be experiencing issues');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface TsaraResponse<T> {
   success: boolean;

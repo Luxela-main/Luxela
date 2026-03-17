@@ -60,21 +60,29 @@ export function TsaraPaymentModal({
       let displayMessage = 'Failed to create payment. Please try again.';
       let errorCode = 'UNKNOWN';
 
-      // For tRPC errors
+      // For tRPC errors - check multiple possible locations
       if (err?.message) {
         displayMessage = err.message;
-        errorCode = err?.code || 'TRPC_ERROR';
+        errorCode = err?.code || err?.data?.code || 'TRPC_ERROR';
       }
       // Fallback to API response structure
       else if (err?.data?.message) {
         displayMessage = err.data.message;
-        errorCode = err?.data?.code;
+        errorCode = err?.data?.code || 'API_ERROR';
       }
       // Try the getErrorMessage utility as last resort
       else {
         const fallbackMessage = getErrorMessage(err);
         if (fallbackMessage && fallbackMessage !== 'An unexpected error occurred') {
           displayMessage = fallbackMessage;
+        }
+      }
+
+      // Show developer-friendly message in development
+      if (process.env.NODE_ENV === 'development') {
+        // Include more details for debugging
+        if (displayMessage.includes('not configured') || displayMessage.includes('Failed to initialize customer')) {
+          displayMessage = `🔧 Dev Mode: ${displayMessage}`;
         }
       }
 
@@ -85,27 +93,31 @@ export function TsaraPaymentModal({
         buyerId,
         orderId,
         amount: totalAmount,
+        paymentMethod,
       };
 
       // Safely serialize error object - handle various error formats
       if (err) {
-        // Try to extract all properties from the error object
         try {
-          // For standard Error objects
           if (err.message) errorDetails.errorMessage = err.message;
           if (err.code) errorDetails.errorCode = err.code;
           if (err.data) errorDetails.errorData = err.data;
-          
-          // For tRPC TRPCClientError, check shape
           if (err.shape) errorDetails.shape = err.shape;
+          if (err.meta) errorDetails.meta = err.meta;
           
-          // Attempt to stringify the error if it's empty
+          // Check for specific error indicators
+          if (displayMessage.toLowerCase().includes('customer') || errorCode === 'INTERNAL_SERVER_ERROR') {
+            errorDetails.suggestion = 'Check if buyer account details exist and Tsara API keys are configured';
+          }
+          if (displayMessage.toLowerCase().includes('unauthorized') || displayMessage.includes('401')) {
+            errorDetails.suggestion = 'TSARA_SECRET_KEY may be invalid or missing';
+          }
+          
           const errStr = err.toString?.();
           if (errStr && errStr !== '[object Object]') {
             errorDetails.errorString = errStr;
           }
           
-          // Get all enumerable properties
           const props = Object.getOwnPropertyNames(err);
           if (props.length > 0) {
             errorDetails.errorProperties = {};
@@ -123,7 +135,8 @@ export function TsaraPaymentModal({
       }
 
       // Log as formatted string to avoid object serialization issues
-      console.error(`[TsaraPaymentModal] Payment Error - Message: ${displayMessage}, Code: ${errorCode}, Error Message: ${err?.message || 'N/A'}`);
+      console.error(`[TsaraPaymentModal] ❌ Payment Error - Message: ${displayMessage}, Code: ${errorCode}`);
+      console.error('[TsaraPaymentModal] Error Details:', errorDetails);
       console.error('[TsaraPaymentModal] Raw error:', err);
 
       toastSvc.error(displayMessage);

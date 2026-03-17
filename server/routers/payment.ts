@@ -16,6 +16,7 @@ import {
   type PaymentLink
 } from "../services/tsara";
 import { getOrCreateTsaraCustomer } from "../services/paymentCustomerHelper";
+import { runTsaraDiagnostics, isTsaraConfigured } from "../services/tsaraDiagnostic";
 
 
 export const paymentRouter = createTRPCRouter({
@@ -40,18 +41,44 @@ export const paymentRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ input }) => {
+      // Log incoming request for debugging
+      console.log('[Payment] Creating payment with input:', {
+        buyerId: input.buyerId,
+        orderId: input.orderId,
+        amount: input.amount,
+        currency: input.currency,
+        paymentMethod: input.paymentMethod,
+        paymentType: input.paymentType,
+      });
+
       try {
+        // Check if Tsara is properly configured
+        const { TSARA_SECRET_KEY, NEXT_PUBLIC_TSARA_PUBLIC_KEY } = env;
+        if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
+          console.error('[Payment] TSARA_SECRET_KEY is not configured');
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Payment service is not properly configured. Please contact support.",
+          });
+        }
+
         // Get or create Tsara customer ID from the database
         // This ensures we always have a valid customer_id before making payment requests
         let customerId: string;
         
         try {
+          console.log('[Payment] Getting or creating Tsara customer for buyer:', input.buyerId);
           customerId = await getOrCreateTsaraCustomer(input.buyerId);
+          console.log('[Payment] Successfully got Tsara customer ID:', customerId);
         } catch (error: any) {
-          console.error('[Tsara] Failed to get/create customer:', error);
+          console.error('[Payment] Failed to get/create Tsara customer:', {
+            buyerId: input.buyerId,
+            error: error.message,
+            stack: error.stack,
+          });
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to initialize payment. Please try again or contact support.",
+            message: `Failed to initialize customer: ${error.message}`,
             cause: error,
           });
         }
@@ -64,6 +91,8 @@ export const paymentRouter = createTRPCRouter({
         }
 
         let response;
+
+        console.log('[Payment] Creating payment link with customer ID:', customerId);
 
         // Create appropriate payment link based on type
         if (input.paymentType === "stablecoin") {
@@ -147,7 +176,18 @@ export const paymentRouter = createTRPCRouter({
           paymentId: response.data.id,
         };
       } catch (error: any) {
-        console.error("Payment creation error:", error);
+        // Already a TRPCError - rethrow it
+        if (error.code && error.message) {
+          throw error;
+        }
+
+        console.error("[Payment] Payment creation error:", {
+          message: error?.message,
+          code: error?.code,
+          responseStatus: error?.response?.status,
+          responseData: error?.response?.data,
+          stack: error?.stack,
+        });
         
         const errorMessage = 
           error?.response?.data?.error?.message || 
@@ -155,16 +195,8 @@ export const paymentRouter = createTRPCRouter({
           error?.message || 
           "Payment creation failed";
         
-        const errorContext = {
-          originalMessage: error?.message,
-          responseData: error?.response?.data,
-          responseStatus: error?.response?.status,
-          errorCode: error?.code,
-        };
-        console.error("Payment creation error context:", errorContext);
-        
         throw new TRPCError({
-          code: "BAD_REQUEST",
+          code: error?.response?.status === 401 ? "UNAUTHORIZED" : "BAD_REQUEST",
           message: errorMessage,
           cause: error,
         });
@@ -276,6 +308,32 @@ export const paymentRouter = createTRPCRouter({
           message: error?.message || "Failed to disable payment link",
         });
       }
+    }),
+
+  // Diagnostic endpoint for checking Tsara configuration
+  diagnose: publicProcedure
+    .query(async () => {
+      try {
+        const diagnostics = await runTsaraDiagnostics();
+        return {
+          success: true,
+          data: diagnostics,
+        };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error?.message || "Failed to run diagnostics",
+        });
+      }
+    }),
+
+  // Quick configuration check
+  isConfigured: publicProcedure
+    .query(() => {
+      return {
+        success: true,
+        isConfigured: isTsaraConfigured(),
+      };
     }),
 
 });

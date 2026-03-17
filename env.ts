@@ -29,6 +29,7 @@ export const env = {
   
   // Tsara Payment Configuration
   NEXT_PUBLIC_TSARA_PUBLIC_KEY: process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || '',
+  TSARA_PUBLIC_KEY: process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || '', // Alias for backward compatibility
   TSARA_SECRET_KEY: process.env.TSARA_SECRET_KEY || '',
   TSARA_WEBHOOK_SECRET: process.env.TSARA_WEBHOOK_SECRET || '',
   TSARA_API_URL: process.env.TSARA_API_URL || 'https://api.tsara.ng/v1',
