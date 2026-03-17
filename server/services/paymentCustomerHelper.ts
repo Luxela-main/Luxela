@@ -106,7 +106,12 @@ export async function getOrCreateTsaraCustomer(buyerId: string): Promise<string>
       `[Tsara] Error in getOrCreateTsaraCustomer for buyer ${buyerId}:`,
       {
         message: error.message,
-        error: error,
+        error: error.toString(),
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+        } : undefined,
       }
     );
     throw new Error(

@@ -154,40 +154,59 @@ async function generateAndStoreBuyerNotifications(
 
         const listingTitle = listing[0]?.title || 'Item';
 
-        try {
-          await db.insert(buyerNotifications).values({
-            buyerId,
-            type: 'new_review' as any,
-            title: 'Review Posted',
-            message: `Your ${review.rating}-star review on "${listingTitle}" has been posted successfully!`,
-            relatedEntityId: review.id,
-            relatedEntityType: 'review',
-            actionUrl: `/buyer/listings/${review.listingId}`,
-            isRead: false,
-            isStarred: false,
-            metadata: {
-              notificationType: 'review_posted',
+        // Retry logic for notification creation
+        let retryCount = 0;
+        const maxRetries = 3;
+        let notificationCreated = false;
+        
+        while (retryCount < maxRetries && !notificationCreated) {
+          try {
+            await db.insert(buyerNotifications).values({
+              buyerId,
+              type: 'new_review' as any,
+              title: 'Review Posted',
+              message: `Your ${review.rating}-star review on "${listingTitle}" has been posted successfully!`,
+              relatedEntityId: review.id,
+              relatedEntityType: 'review',
+              actionUrl: `/buyer/listings/${review.listingId}`,
+              isRead: false,
+              isStarred: false,
+              metadata: {
+                notificationType: 'review_posted',
+                reviewId: review.id,
+                listingId: review.listingId,
+                rating: review.rating,
+                preview: review.comment ? review.comment.substring(0, 100) : '',
+              },
+            });
+            notificationCreated = true;
+          } catch (notifError: any) {
+            retryCount++;
+            
+            // Log detailed error info
+            const errorDetail = {
+              message: notifError.message || String(notifError),
+              code: notifError.code || notifError.constraint || 'UNKNOWN_CODE',
+              detail: notifError.detail || notifError.hint || 'No detail provided',
+              state: notifError.state || undefined,
+              buyerId,
               reviewId: review.id,
               listingId: review.listingId,
+              listingTitle,
               rating: review.rating,
-              preview: review.comment ? review.comment.substring(0, 100) : '',
-            },
-          });
-        } catch (notifError: any) {
-          const errorDetail = {
-            message: notifError.message || String(notifError),
-            code: notifError.code || notifError.constraint || 'UNKNOWN_CODE',
-            detail: notifError.detail || notifError.hint || 'No detail provided',
-            state: notifError.state || undefined,
-            buyerId,
-            reviewId: review.id,
-            listingId: review.listingId,
-            listingTitle,
-            rating: review.rating,
-            type: 'new_review',
-            timestamp: new Date().toISOString(),
-          };
-          console.error(`[DB_ERROR] Failed to create review notification for buyer ${buyerId}:`, errorDetail);
+              type: 'new_review',
+              timestamp: new Date().toISOString(),
+              retryAttempt: retryCount,
+            };
+            
+            if (retryCount >= maxRetries) {
+              console.error(`[DB_ERROR] Failed to create review notification for buyer ${buyerId} after ${maxRetries} retries:`, errorDetail);
+            } else {
+              console.warn(`[DB_RETRY] Notification creation failed, retrying (${retryCount}/${maxRetries}):`, errorDetail.message);
+              // Exponential backoff: wait 100ms, 200ms, 400ms
+              await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, retryCount - 1)));
+            }
+          }
         }
       }
     }

@@ -22,8 +22,8 @@ if (IS_BUILD_TIME) {
 // Vercel-optimized pool configuration with build-time adjustments
 const poolConfig = {
   connectionString: DATABASE_URL,
-  max: IS_BUILD_TIME ? 3 : NODE_ENV === "production" ? 8 : 5,
-  min: IS_BUILD_TIME ? 0 : NODE_ENV === "production" ? 1 : 0,
+  max: IS_BUILD_TIME ? 3 : NODE_ENV === "production" ? 20 : 10,
+  min: IS_BUILD_TIME ? 0 : NODE_ENV === "production" ? 2 : 1,
   idleTimeoutMillis: IS_BUILD_TIME
     ? 15000
     : NODE_ENV === "production"
@@ -32,28 +32,36 @@ const poolConfig = {
   connectionTimeoutMillis: IS_BUILD_TIME
     ? 5000
     : NODE_ENV === "production"
-      ? 8000
-      : 10000,
+      ? 15000
+      : 20000,
   statement_timeout: IS_BUILD_TIME
     ? 15000
     : NODE_ENV === "production"
-      ? 30000
-      : 45000,
+      ? 60000
+      : 60000,
   query_timeout: IS_BUILD_TIME
     ? 15000
     : NODE_ENV === "production"
-      ? 30000
-      : 45000,
+      ? 60000
+      : 60000,
   application_name: `luxela-app${IS_BUILD_TIME ? "-build" : ""}`,
   allowExitOnIdle: true,
+  // Add connection retry settings
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 };
 
 const pool = new Pool(poolConfig);
 
 pool.on("error", (err: any) => {
-  console.error("[DB_POOL_ERROR]", err.message, err.code);
+  console.error("[DB_POOL_ERROR]", {
+    message: err.message,
+    code: err.code,
+    stack: err.stack,
+    timestamp: new Date().toISOString(),
+  });
   // Attempt to recover from transient errors
-  if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'EHOSTUNREACH') {
+  if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'EHOSTUNREACH' || err.code === '08000' || err.code === '08003') {
     console.warn("[DB_POOL] Transient connection error, pool will attempt to reconnect");
   }
 });

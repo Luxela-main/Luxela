@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Full error details if connection fails
  */
 export async function GET(req: NextRequest) {
-  // Check authorization (optional)
+  // Check authorization
   const authHeader = req.headers.get('authorization');
   const isAuthorized = authHeader === `Bearer ${process.env.DEBUG_TOKEN}` || 
                        process.env.NODE_ENV === 'development';

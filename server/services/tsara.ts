@@ -16,7 +16,7 @@ const BASE_URL = process.env.NODE_ENV === "production" ? TSARA_BASE_URL : TSARA_
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    "x_tsara_signature": TSARA_SECRET_KEY || "",
+    "Authorization": `Bearer ${TSARA_SECRET_KEY || ""}`,
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
@@ -27,7 +27,7 @@ tsaraApi.interceptors.request.use((config) => {
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
   console.log('[Tsara API] Base URL:', config.baseURL);
-  console.log('[Tsara API] Auth header (x_tsara_signature) present:', config.headers["x_tsara_signature"] ? 'Yes' : 'NO SIGNATURE - API CALL WILL FAIL');
+  console.log('[Tsara API] Auth header (Authorization) present:', config.headers["Authorization"] ? 'Yes' : 'NO AUTH - API CALL WILL FAIL');
   
   // Warn if secret key is missing
   if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {

@@ -24,10 +24,10 @@ export async function createCustomer(data: {
     
     const response = await tsaraApi.post("/customers", data);
     
-    // Log the FULL response for debugging
-    console.log('[Tsara] Full API Response:', JSON.stringify(response, null, 2));
+    // Log safe response data for debugging (avoid circular refs)
     console.log('[Tsara] Response status:', response.status);
     console.log('[Tsara] Response headers:', response.headers);
+    console.log('[Tsara] Response data:', response.data);
     
     if (!response.data) {
       console.error("[Tsara] Empty response from create customer API");
