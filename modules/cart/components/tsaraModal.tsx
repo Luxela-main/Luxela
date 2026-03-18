@@ -60,6 +60,11 @@ export function TsaraPaymentModal({
       let displayMessage = 'Failed to create payment. Please try again.';
       let errorCode = 'UNKNOWN';
 
+      // Log raw error first for debugging
+      console.error('[TsaraPaymentModal] Raw error received:', err);
+      console.error('[TsaraPaymentModal] Error type:', typeof err);
+      console.error('[TsaraPaymentModal] Error constructor:', err?.constructor?.name);
+
       // For tRPC errors - check multiple possible locations
       if (err?.message) {
         displayMessage = err.message;
@@ -69,6 +74,11 @@ export function TsaraPaymentModal({
       else if (err?.data?.message) {
         displayMessage = err.data.message;
         errorCode = err?.data?.code || 'API_ERROR';
+      }
+      // Check for error in shape property (tRPC error format)
+      else if (err?.shape?.message) {
+        displayMessage = err.shape.message;
+        errorCode = err?.shape?.data?.code || 'TRPC_SHAPE_ERROR';
       }
       // Try the getErrorMessage utility as last resort
       else {
@@ -86,24 +96,43 @@ export function TsaraPaymentModal({
         }
       }
 
-      // Prepare error details for logging
-      const errorDetails: Record<string, any> = {
-        message: displayMessage,
-        code: errorCode,
-        buyerId,
-        orderId,
-        amount: totalAmount,
-        paymentMethod,
-      };
+      // Prepare error details for logging - build incrementally to ensure it's populated
+      const errorDetails: Record<string, any> = {};
+      
+      // Add basic context (guaranteed to exist)
+      errorDetails.message = displayMessage;
+      errorDetails.code = errorCode;
+      errorDetails.buyerId = buyerId;
+      errorDetails.orderId = orderId;
+      errorDetails.amount = totalAmount;
+      errorDetails.paymentMethod = paymentMethod;
 
-      // Safely serialize error object - handle various error formats
-      if (err) {
+      // Safely extract all possible error properties
+      if (err && typeof err === 'object') {
         try {
-          if (err.message) errorDetails.errorMessage = err.message;
-          if (err.code) errorDetails.errorCode = err.code;
-          if (err.data) errorDetails.errorData = err.data;
-          if (err.shape) errorDetails.shape = err.shape;
-          if (err.meta) errorDetails.meta = err.meta;
+          // Direct properties
+          if (err.message !== undefined) errorDetails.errorMessage = err.message;
+          if (err.code !== undefined) errorDetails.errorCode = err.code;
+          
+          // tRPC data property
+          if (err.data !== undefined) {
+            errorDetails.errorData = err.data;
+            // Also check nested data properties
+            if (err.data.code !== undefined) errorDetails.dataCode = err.data.code;
+            if (err.data.httpStatus !== undefined) errorDetails.httpStatus = err.data.httpStatus;
+            if (err.data.path !== undefined) errorDetails.path = err.data.path;
+            if (err.data.stack !== undefined) errorDetails.stack = err.data.stack;
+          }
+          
+          // tRPC shape property (contains the actual error info)
+          if (err.shape !== undefined) {
+            errorDetails.shape = err.shape;
+            if (err.shape.message !== undefined) errorDetails.shapeMessage = err.shape.message;
+            if (err.shape.data !== undefined) errorDetails.shapeData = err.shape.data;
+          }
+          
+          // tRPC meta property
+          if (err.meta !== undefined) errorDetails.meta = err.meta;
           
           // Check for specific error indicators
           if (displayMessage.toLowerCase().includes('customer') || errorCode === 'INTERNAL_SERVER_ERROR') {
@@ -113,31 +142,62 @@ export function TsaraPaymentModal({
             errorDetails.suggestion = 'TSARA_SECRET_KEY may be invalid or missing';
           }
           
-          const errStr = err.toString?.();
-          if (errStr && errStr !== '[object Object]') {
-            errorDetails.errorString = errStr;
+          // Try toString if available
+          if (typeof err.toString === 'function') {
+            const errStr = err.toString();
+            if (errStr && errStr !== '[object Object]') {
+              errorDetails.errorString = errStr;
+            }
           }
           
-          const props = Object.getOwnPropertyNames(err);
-          if (props.length > 0) {
-            errorDetails.errorProperties = {};
-            for (const prop of props) {
+          // Get all enumerable properties
+          const enumerableProps = Object.keys(err);
+          if (enumerableProps.length > 0) {
+            errorDetails.enumerableProperties = {};
+            for (const prop of enumerableProps) {
               try {
-                errorDetails.errorProperties[prop] = err[prop];
+                errorDetails.enumerableProperties[prop] = err[prop];
               } catch (e) {
-                // Skip properties that can't be accessed
+                errorDetails.enumerableProperties[prop] = '<unreadable>';
               }
             }
           }
+          
+          // Get all own property names (including non-enumerable)
+          const ownProps = Object.getOwnPropertyNames(err);
+          if (ownProps.length > 0) {
+            errorDetails.ownProperties = {};
+            for (const prop of ownProps) {
+              try {
+                const descriptor = Object.getOwnPropertyDescriptor(err, prop);
+                if (descriptor && !descriptor.get && !descriptor.set) {
+                  errorDetails.ownProperties[prop] = err[prop];
+                } else {
+                  errorDetails.ownProperties[prop] = '<getter/setter>';
+                }
+              } catch (e) {
+                errorDetails.ownProperties[prop] = '<unreadable>';
+              }
+            }
+          }
+          
+          // Check prototype chain for additional properties
+          if (err.prototype) {
+            errorDetails.hasPrototype = true;
+          }
         } catch (serializeErr) {
-          errorDetails.serializationError = 'Failed to serialize error';
+          errorDetails.serializationError = serializeErr instanceof Error ? serializeErr.message : 'Failed to serialize error';
         }
+      } else if (err !== undefined && err !== null) {
+        // Handle non-object errors (strings, numbers, etc.)
+        errorDetails.nonObjectError = err;
+        errorDetails.errorType = typeof err;
       }
 
       // Log as formatted string to avoid object serialization issues
       console.error(`[TsaraPaymentModal] ❌ Payment Error - Message: ${displayMessage}, Code: ${errorCode}`);
       console.error('[TsaraPaymentModal] Error Details:', errorDetails);
-      console.error('[TsaraPaymentModal] Raw error:', err);
+      console.error('[TsaraPaymentModal] Raw error (repeated):', err);
 
       toastSvc.error(displayMessage);
     },

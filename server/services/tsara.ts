@@ -210,8 +210,16 @@ export async function createCheckoutSession(data: {
 
     if (response.data.success === false) {
       let errorMsg = "";  
+      // Check for error message in multiple possible locations in the response
       if (response.data.error?.message) {
         errorMsg = response.data.error.message
+          .toString()
+          .trim()
+          .replace(/[^\x20-\x7E\n\r]/g, "")
+          .substring(0, 500);
+      } else if (response.data.message) {
+        // Tsara API sometimes returns message directly in response.data.message
+        errorMsg = response.data.message
           .toString()
           .trim()
           .replace(/[^\x20-\x7E\n\r]/g, "")
@@ -222,8 +230,25 @@ export async function createCheckoutSession(data: {
         errorMsg = "Payment provider returned an error";
       }
       
-      const errorCode = (response.data.error?.code || "UNKNOWN_ERROR").toString().trim();
-      const errorStatus = response.data.error?.status || response.status || 500;
+      // Check for error code in multiple possible locations
+      let errorCode = "UNKNOWN_ERROR";
+      if (response.data.error?.code) {
+        errorCode = response.data.error.code.toString().trim();
+      } else if (response.data.status_code) {
+        // Use HTTP status code to determine error type
+        const statusCode = parseInt(response.data.status_code, 10);
+        if (statusCode === 401) {
+          errorCode = "AUTHENTICATION_FAILED";
+        } else if (statusCode === 403) {
+          errorCode = "FORBIDDEN";
+        } else if (statusCode === 404) {
+          errorCode = "NOT_FOUND";
+        } else if (statusCode >= 500) {
+          errorCode = "SERVICE_UNAVAILABLE";
+        }
+      }
+      
+      const errorStatus = response.data.error?.status || response.data.status_code || response.status || 500;
       
       console.error("Tsara API error:", {
         message: errorMsg,
@@ -255,8 +280,8 @@ export async function createCheckoutSession(data: {
         } else if (errorCode === "INVALID_REQUEST") {
           userFriendlyMessage = "Payment request is invalid. Please check your details and try again.";
         } else if (errorCode === "AUTHENTICATION_FAILED" || errorCode === "AUTH_ERROR") {
-          userFriendlyMessage = "Payment service authentication failed. Please contact support.";
-          console.error("CRITICAL: Tsara authentication issue. Check API credentials and keys.");
+          userFriendlyMessage = "Payment service authentication failed. Please check your API credentials or contact support.";
+          console.error("[Tsara] CRITICAL: Tsara API authentication failed (401). Check that TSARA_SECRET_KEY is correctly configured in your environment variables.");
         } else if (errorCode === "SERVICE_UNAVAILABLE") {
           userFriendlyMessage = "Payment service is temporarily unavailable. Please try again in a few moments.";
         } else if (errorCode === "INSUFFICIENT_FUNDS") {

@@ -383,6 +383,57 @@ export const paymentRouter = createTRPCRouter({
           }
         }
 
+        // Handle Tsara API errors that have error codes attached (from tsara.ts service functions)
+        // These errors have properties like 'code', 'status', 'tsaraError' attached to them
+        if (error?.code && error?.tsaraError) {
+          const errorCode = error.code as string;
+          const errorStatus = error.status as number;
+          
+          // Extract the detailed error message from tsaraError first, then fall back to error.message
+          // error.message is generic ("Payment provider returned an error"), 
+          // while error.tsaraError.message contains the actual API error details
+          const errorDetails = error.tsaraError as { message?: string; code?: string; requestId?: string } | undefined;
+          let errorMessage: string;
+          
+          if (errorDetails?.message) {
+            errorMessage = errorDetails.message;
+          } else if (error?.message) {
+            errorMessage = error.message;
+          } else {
+            errorMessage = "Payment processing failed";
+          }
+          
+          // If this is an internal server error from Tsara without a specific message, add context
+          if (errorCode === "INTERNAL_SERVER_ERROR" && errorMessage === "Payment processing failed") {
+            errorMessage = "Payment provider returned an error. Please try again later.";
+          }
+
+          // Map specific Tsara error codes to appropriate TRPC error codes
+          if (errorCode === "AUTHENTICATION_FAILED" || errorCode === "AUTH_ERROR" || errorCode === "UNAUTHORIZED") {
+            throw new TRPCError({
+              code: "UNAUTHORIZED",
+              message: "Payment service authentication failed. The API credentials may be invalid or missing. Please check your TSARA_SECRET_KEY configuration or contact support.",
+            });
+          } else if (errorCode === "RATE_LIMIT_EXCEEDED") {
+            throw new TRPCError({
+              code: "TOO_MANY_REQUESTS",
+              message: "Too many payment attempts. Please wait a moment and try again.",
+            });
+          } else if (errorCode === "SERVICE_UNAVAILABLE" || errorStatus >= 500) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Payment service is temporarily unavailable. Please try again later.",
+            });
+          } else {
+            // For all other Tsara errors (INVALID_AMOUNT, INVALID_CURRENCY, CUSTOMER_NOT_FOUND, etc.)
+            // Use BAD_REQUEST with the user-friendly message already constructed by tsara.ts
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: errorMessage,
+            });
+          }
+        }
+
         // Handle validation errors
         if (error?.name === 'ValidationError' || error?.name === 'ZodError') {
           throw new TRPCError({
