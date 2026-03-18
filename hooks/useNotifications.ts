@@ -25,7 +25,7 @@ export interface NotificationResponse {
   criticalCount?: number;
 }
 
-const POLL_INTERVAL = 5000; // 5 seconds for real-time updates
+const POLL_INTERVAL = 30000; // 30 seconds for real-time updates
 
 /**
  * Hook for buyer notifications with real-time polling

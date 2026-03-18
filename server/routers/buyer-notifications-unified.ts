@@ -9,7 +9,7 @@ import {
   disputes,
   buyerFavorites,
 } from '../db/schema';
-import { and, eq, gt, desc, sql } from 'drizzle-orm';
+import { and, eq, gt, desc, sql, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
@@ -81,7 +81,8 @@ async function generateAndStoreBuyerNotifications(
         .where(and(
           eq(buyerNotifications.buyerId, buyerId),
           eq(buyerNotifications.relatedEntityId, order.id),
-          sql`cast(${buyerNotifications.metadata}->>'notificationType' as text) = ${notifType}`
+          sql`cast(${buyerNotifications.metadata}->>'notificationType' as text) = ${notifType}`,
+          isNull(buyerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -140,7 +141,8 @@ async function generateAndStoreBuyerNotifications(
         .where(and(
           eq(buyerNotifications.buyerId, buyerId),
           eq(buyerNotifications.relatedEntityId, review.id),
-          sql`${buyerNotifications.metadata}->>'notificationType' = 'review_posted'`
+          sql`${buyerNotifications.metadata}->>'notificationType' = 'review_posted'`,
+          isNull(buyerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -239,7 +241,8 @@ async function generateAndStoreBuyerNotifications(
           .where(and(
             eq(buyerNotifications.buyerId, buyerId),
             eq(buyerNotifications.relatedEntityId, favorite.listingId),
-            sql`${buyerNotifications.metadata}->>'notificationType' = 'price_drop'`
+            sql`${buyerNotifications.metadata}->>'notificationType' = 'price_drop'`,
+            isNull(buyerNotifications.deletedAt)
           ))
           .limit(1);
 
@@ -294,7 +297,8 @@ async function generateAndStoreBuyerNotifications(
         .where(and(
           eq(buyerNotifications.buyerId, buyerId),
           eq(buyerNotifications.relatedEntityId, dispute.id),
-          sql`${buyerNotifications.metadata}->>'notificationType' = 'dispute_${dispute.status}'`
+          sql`${buyerNotifications.metadata}->>'notificationType' = 'dispute_${dispute.status}'`,
+          isNull(buyerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -408,13 +412,11 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Generate fresh notifications (non-blocking background task)
-      generateAndStoreBuyerNotifications(buyer.id).catch((err) =>
-        console.error('Error generating notifications:', err)
-      );
-
       // Build query conditions
-      const conditions = [eq(buyerNotifications.buyerId, buyer.id)];
+      const conditions = [
+        eq(buyerNotifications.buyerId, buyer.id),
+        isNull(buyerNotifications.deletedAt)
+      ];
 
       if (input.type) {
         conditions.push(eq(buyerNotifications.type, input.type as any));
@@ -438,7 +440,8 @@ export const buyerNotificationsRouter = createTRPCRouter({
         .from(buyerNotifications)
         .where(and(
           eq(buyerNotifications.buyerId, buyer.id),
-          eq(buyerNotifications.isRead, false)
+          eq(buyerNotifications.isRead, false),
+          isNull(buyerNotifications.deletedAt)
         ));
 
       const unreadCount = Number(unreadResult[0]?.count ?? 0);
@@ -498,10 +501,6 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Generate fresh notifications
-      await generateAndStoreBuyerNotifications(buyer.id).catch((err) =>
-        console.error('Error generating notifications:', err)
-      );
 
       const notifs = await db
         .select()
@@ -830,12 +829,17 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Delete with ownership check in single query
+      // Soft delete with ownership check
       const result = await db
-        .delete(buyerNotifications)
+        .update(buyerNotifications)
+        .set({ 
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
         .where(and(
           eq(buyerNotifications.id, input.notificationId),
-          eq(buyerNotifications.buyerId, buyer.id)
+          eq(buyerNotifications.buyerId, buyer.id),
+          isNull(buyerNotifications.deletedAt) // Only delete if not already deleted
         ))
         .returning({ id: buyerNotifications.id });
 

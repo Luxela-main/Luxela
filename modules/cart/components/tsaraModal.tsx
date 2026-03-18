@@ -172,7 +172,7 @@ export function TsaraPaymentModal({
       listingId: checkoutData.orders[0]?.listingId || "",
       orderId: orderId, // Use cart ID as reference
       amount: nairaAmount,
-      currency: "NGN",
+      currency: paymentMethod === "crypto" ? "USDC" : "NGN",
       description: `Luxela Order Payment - ${checkoutData.orders.length} item(s)`,
       paymentMethod: paymentMethod,
       paymentType: paymentMethod === "crypto" ? "stablecoin" : "fiat",

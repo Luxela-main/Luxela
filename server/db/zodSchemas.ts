@@ -639,6 +639,7 @@ export const buyerNotificationsSchema = z.object({
   metadata: z.record(z.string(), z.any()).nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
+  deletedAt: z.date().nullable().optional(),
 });
 
 // ========================== ADMIN NOTIFICATIONS ==========================
@@ -675,6 +676,7 @@ export const sellerNotificationsSchema = z.object({
   metadata: z.record(z.string(), z.any()).nullable().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
+  deletedAt: z.date().nullable().optional(),
 });
 
 // ========================== REVIEWS ==========================

@@ -8,7 +8,7 @@ import {
   disputes,
   listingReviews,
 } from '../db/schema';
-import { and, eq, gt, lt, desc, sql } from 'drizzle-orm';
+import { and, eq, gt, lt, desc, sql, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import type { SellerNotification } from '../db/types';
 import { TRPCError } from '@trpc/server';
@@ -55,7 +55,8 @@ async function generateAndStoreSellerNotifications(
         .where(and(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, order.id),
-          sql`${sellerNotifications.metadata}->>'notificationType' = 'new_order'`
+          sql`${sellerNotifications.metadata}->>'notificationType' = 'new_order'`,
+          isNull(sellerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -101,7 +102,8 @@ async function generateAndStoreSellerNotifications(
         .where(and(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, order.id),
-          sql`${sellerNotifications.metadata}->>'notificationType' = 'awaiting_shipment'`
+          sql`${sellerNotifications.metadata}->>'notificationType' = 'awaiting_shipment'`,
+          isNull(sellerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -142,7 +144,8 @@ async function generateAndStoreSellerNotifications(
         .where(and(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, dispute.id),
-          sql`${sellerNotifications.metadata}->>'notificationType' = 'dispute_open'`
+          sql`${sellerNotifications.metadata}->>'notificationType' = 'dispute_open'`,
+          isNull(sellerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -188,7 +191,8 @@ async function generateAndStoreSellerNotifications(
         .where(and(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, review.id),
-          sql`${sellerNotifications.metadata}->>'notificationType' = 'new_review'`
+          sql`${sellerNotifications.metadata}->>'notificationType' = 'new_review'`,
+          isNull(sellerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -236,7 +240,8 @@ async function generateAndStoreSellerNotifications(
         .where(and(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, listing.id),
-          sql`${sellerNotifications.metadata}->>'notificationType' = 'low_inventory'`
+          sql`${sellerNotifications.metadata}->>'notificationType' = 'low_inventory'`,
+          isNull(sellerNotifications.deletedAt)
         ))
         .limit(1);
 
@@ -315,15 +320,11 @@ export const sellerNotificationsRouter = createTRPCRouter({
           });
         }
 
-        // Generate fresh notifications (non-blocking background task)
-        if (shouldGenerateNotifications(seller.id)) {
-          void generateAndStoreSellerNotifications(seller.id).catch((err) => {
-            // Silent error - don't block response
-          });
-        }
-
         // Build query conditions
-        const conditions = [eq(sellerNotifications.sellerId, seller.id)];
+        const conditions = [
+          eq(sellerNotifications.sellerId, seller.id),
+          isNull(sellerNotifications.deletedAt)
+        ];
 
         if (input.type) {
           conditions.push(eq(sellerNotifications.type, input.type as any));
@@ -347,7 +348,8 @@ export const sellerNotificationsRouter = createTRPCRouter({
           .from(sellerNotifications)
           .where(and(
             eq(sellerNotifications.sellerId, seller.id),
-            eq(sellerNotifications.isRead, false)
+            eq(sellerNotifications.isRead, false),
+            isNull(sellerNotifications.deletedAt)
           ));
 
         const unreadCount = unreadResult[0]?.count ?? 0;
@@ -714,30 +716,28 @@ export const sellerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Verify ownership
-      const notif = await db
-        .select()
-        .from(sellerNotifications)
-        .where(eq(sellerNotifications.id, input.notificationId))
-        .limit(1);
+      // Soft delete with ownership check
+      const result = await db
+        .update(sellerNotifications)
+        .set({ 
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(sellerNotifications.id, input.notificationId),
+          eq(sellerNotifications.sellerId, seller.id),
+          isNull(sellerNotifications.deletedAt) // Only delete if not already deleted
+        ))
+        .returning({ id: sellerNotifications.id });
 
-      if (notif.length === 0) {
+      if (result.length === 0) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Notification not found',
+          message: 'Notification not found or access denied',
         });
       }
 
-      if (notif[0].sellerId !== seller.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Cannot delete other seller\'s notifications',
-        });
-      }
-
-      await db
-        .delete(sellerNotifications)
-        .where(eq(sellerNotifications.id, input.notificationId));
+      return { success: true };
 
       return { success: true };
     }),

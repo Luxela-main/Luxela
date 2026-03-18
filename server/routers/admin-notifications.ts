@@ -63,7 +63,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, review.listingId),
-            sql`${adminNotifications.metadata}->>'reviewId' = ${review.id}`
+            sql`${adminNotifications.metadata}->>'reviewId' = ${review.id}`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -108,7 +109,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
         .where(and(
           eq(adminNotifications.adminId, adminId),
           eq(adminNotifications.relatedEntityId, ticket.id),
-          sql`${adminNotifications.metadata}->>'ticketId' = ${ticket.id}`
+          sql`${adminNotifications.metadata}->>'ticketId' = ${ticket.id}`,
+          sql`${adminNotifications.deletedAt} IS NULL`
         ))
         .limit(1);
 
@@ -147,7 +149,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, breach.ticketId),
-            sql`${adminNotifications.metadata}->>'breachType' = 'response'`
+            sql`${adminNotifications.metadata}->>'breachType' = 'response'`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -180,7 +183,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, breach.ticketId),
-            sql`${adminNotifications.metadata}->>'breachType' = 'resolution'`
+            sql`${adminNotifications.metadata}->>'breachType' = 'resolution'`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -219,7 +223,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, member.id),
-            sql`${adminNotifications.metadata}->>'level' = 'critical'`
+            sql`${adminNotifications.metadata}->>'level' = 'critical'`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -251,7 +256,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, member.id),
-            sql`${adminNotifications.metadata}->>'level' = 'warning'`
+            sql`${adminNotifications.metadata}->>'level' = 'warning'`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -294,7 +300,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, ticket.id),
-            sql`${adminNotifications.type} = 'escalation'`
+            sql`${adminNotifications.type} = 'escalation'`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -340,7 +347,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, review.listingId),
-            sql`${adminNotifications.metadata}->>'status' = 'rejected'`
+            sql`${adminNotifications.metadata}->>'status' = 'rejected'`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -387,7 +395,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
           .where(and(
             eq(adminNotifications.adminId, adminId),
             eq(adminNotifications.relatedEntityId, review.listingId),
-            sql`${adminNotifications.metadata}->>'status' = 'revision_requested'`
+            sql`${adminNotifications.metadata}->>'status' = 'revision_requested'`,
+            sql`${adminNotifications.deletedAt} IS NULL`
           ))
           .limit(1);
 
@@ -434,7 +443,8 @@ async function generateAndStoreNotifications(adminId: string): Promise<void> {
               .where(and(
                 eq(adminNotifications.adminId, adminId),
                 eq(adminNotifications.relatedEntityId, ticket.id),
-                sql`${adminNotifications.type} = 'new_reply'`
+                sql`${adminNotifications.type} = 'new_reply'`,
+                sql`${adminNotifications.deletedAt} IS NULL`
               ))
               .limit(1);
 
@@ -492,15 +502,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      // Generate fresh notifications (non-blocking with cooldown)
-      if (shouldGenerateNotifications(userId)) {
-        void generateAndStoreNotifications(userId).catch(() => {
-          // Silent error - don't block response
-        });
-      }
-
       // Build query conditions
-      const conditions = [eq(adminNotifications.adminId, userId)];
+      const conditions = [eq(adminNotifications.adminId, userId), sql`${adminNotifications.deletedAt} IS NULL`];
       
       if (input.category) {
         conditions.push(eq(adminNotifications.type, input.category as any));
@@ -526,7 +529,7 @@ export const adminNotificationsRouter = createTRPCRouter({
       const unreadResult = await db
         .select({ unreadCount: count() })
         .from(adminNotifications)
-        .where(and(eq(adminNotifications.adminId, userId), eq(adminNotifications.isRead, false)));
+        .where(and(eq(adminNotifications.adminId, userId), eq(adminNotifications.isRead, false), sql`${adminNotifications.deletedAt} IS NULL`));
 
       const unreadCount = unreadResult[0]?.unreadCount ?? 0;
 
@@ -595,15 +598,10 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      // Generate fresh notifications
-      await generateAndStoreNotifications(userId).catch(err =>
-        console.error('Error generating notifications:', err)
-      );
-
       const notifs = await db
         .select()
         .from(adminNotifications)
-        .where(eq(adminNotifications.adminId, userId))
+        .where(and(eq(adminNotifications.adminId, userId), sql`${adminNotifications.deletedAt} IS NULL`))
         .orderBy(desc(adminNotifications.createdAt));
 
       const grouped: Record<string, any[]> = {};
@@ -652,7 +650,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         .from(adminNotifications)
         .where(and(
           eq(adminNotifications.adminId, userId),
-          eq(adminNotifications.isRead, false)
+          eq(adminNotifications.isRead, false),
+          sql`${adminNotifications.deletedAt} IS NULL`
         ));
 
       const unreadCount = result[0]?.unreadCount ?? 0;
@@ -685,7 +684,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         .set({ isRead: true, updatedAt: new Date() })
         .where(and(
           eq(adminNotifications.id, input.notificationId),
-          eq(adminNotifications.adminId, userId)
+          eq(adminNotifications.adminId, userId),
+          sql`${adminNotifications.deletedAt} IS NULL`
         ))
         .returning({ id: adminNotifications.id });
 
@@ -721,7 +721,7 @@ export const adminNotificationsRouter = createTRPCRouter({
       await db
         .update(adminNotifications)
         .set({ isRead: true, updatedAt: new Date() })
-        .where(eq(adminNotifications.adminId, userId));
+        .where(and(eq(adminNotifications.adminId, userId), sql`${adminNotifications.deletedAt} IS NULL`));
 
       return { success: true };
     }),
@@ -766,7 +766,8 @@ export const adminNotificationsRouter = createTRPCRouter({
         .from(adminNotifications)
         .where(and(
           eq(adminNotifications.id, input.notificationId),
-          eq(adminNotifications.adminId, userId)
+          eq(adminNotifications.adminId, userId),
+          sql`${adminNotifications.deletedAt} IS NULL`
         ))
         .limit(1);
 
@@ -813,7 +814,7 @@ export const adminNotificationsRouter = createTRPCRouter({
       const notif = await db
         .select()
         .from(adminNotifications)
-        .where(eq(adminNotifications.id, input.notificationId))
+        .where(and(eq(adminNotifications.id, input.notificationId), sql`${adminNotifications.deletedAt} IS NULL`))
         .limit(1);
 
       if (notif.length === 0) {
@@ -833,7 +834,7 @@ export const adminNotificationsRouter = createTRPCRouter({
       await db
         .update(adminNotifications)
         .set({ isStarred: input.starred, updatedAt: new Date() })
-        .where(eq(adminNotifications.id, input.notificationId));
+        .where(and(eq(adminNotifications.id, input.notificationId), sql`${adminNotifications.deletedAt} IS NULL`));
 
       return { success: true };
     }),
@@ -854,7 +855,7 @@ export const adminNotificationsRouter = createTRPCRouter({
       const notif = await db
         .select()
         .from(adminNotifications)
-        .where(eq(adminNotifications.id, input.notificationId))
+        .where(and(eq(adminNotifications.id, input.notificationId), sql`${adminNotifications.deletedAt} IS NULL`))
         .limit(1);
 
       if (notif.length === 0) {
@@ -872,7 +873,8 @@ export const adminNotificationsRouter = createTRPCRouter({
       }
 
       await db
-        .delete(adminNotifications)
+        .update(adminNotifications)
+        .set({ deletedAt: new Date() })
         .where(eq(adminNotifications.id, input.notificationId));
 
       return { success: true };

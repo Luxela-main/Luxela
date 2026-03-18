@@ -11,7 +11,7 @@ if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
   console.error('[Tsara Config] CRITICAL: TSARA_SECRET_KEY is not configured. Payment functionality will fail.');
 }
 
-const BASE_URL = process.env.NODE_ENV === "production" ? TSARA_BASE_URL : TSARA_SANDBOX_URL;
+const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
 
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
@@ -27,7 +27,7 @@ tsaraApi.interceptors.request.use((config) => {
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
   console.log('[Tsara API] Base URL:', config.baseURL);
-  console.log('[Tsara API] Auth header (Authorization) present:', config.headers["Authorization"] ? 'Yes' : 'NO AUTH - API CALL WILL FAIL');
+  console.log('[Tsara API] Authorization header present:', config.headers["Authorization"] ? 'Yes' : 'NO API KEY - API CALL WILL FAIL');
   
   // Warn if secret key is missing
   if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
@@ -127,6 +127,18 @@ export async function createFiatPaymentLink(data: {
 }): Promise<TsaraResponse<PaymentLink>> {
   try {
     const response = await tsaraApi.post("/payment-links", data);
+    
+    if (!response || !response.data || typeof response.data !== 'object') {
+      console.error("No response or invalid API response structure:", response?.data);
+      throw new Error("Invalid response structure from payment provider");
+    }
+
+    if (response.data.success === false) {
+      const errorMsg = response.data.error?.message || "Payment provider returned an error";
+      console.error("Tsara fiat API error:", response.data.error);
+      throw new Error(errorMsg);
+    }
+
     return response.data;
   } catch (error: any) {
     const errMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Failed to create fiat payment link";
@@ -145,6 +157,18 @@ export async function createStablecoinPaymentLink(data: {
 }): Promise<TsaraResponse<StablecoinPaymentLink>> {
   try {
     const response = await tsaraApi.post("/stablecoin/payment-links", data);
+    
+    if (!response || !response.data || typeof response.data !== 'object') {
+      console.error("No response or invalid API response structure:", response?.data);
+      throw new Error("Invalid response structure from payment provider");
+    }
+
+    if (response.data.success === false) {
+      const errorMsg = response.data.error?.message || "Payment provider returned an error";
+      console.error("Tsara stablecoin API error:", response.data.error);
+      throw new Error(errorMsg);
+    }
+
     return response.data;
   } catch (error: any) {
     const errMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Failed to create stablecoin payment link";
@@ -260,7 +284,7 @@ export async function createCheckoutSession(data: {
       throw error;
     }
 
-    const paymentLink = response.data.data;
+    const paymentLink = response.data.data || response.data;
     if (!paymentLink || typeof paymentLink !== 'object') {
       const errorDetails = response.data.error?.message || "Payment link data is missing in API response";
       console.error("Payment link data is missing or invalid:", {

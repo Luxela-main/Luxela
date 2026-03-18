@@ -83,14 +83,31 @@ export async function getOrCreateTsaraCustomer(buyerId: string): Promise<string>
         // Validate response structure - handle both {data: {id}} and {id} formats
         let customerId: string | null = null;
         
-        if (response?.data?.id) {
-          customerId = response.data.id;
-        } else if ((response as any)?.id) {
-          customerId = (response as any).id;
-        } else if (response?.data?.data?.id) {
-          // Nested data structure
-          customerId = response.data.data.id;
-        }
+        // Tsara returns inconsistent shapes. Normalize them safely.
+        type TsaraCustomerResponse = {
+        data?: any;
+        id?: string;
+      };
+
+        const result = response as TsaraCustomerResponse;
+
+        // Case 1: response.data.id
+        if (result?.data && typeof result.data === "object" && "id" in result.data) {
+        customerId = result.data.id;
+
+        // Case 2: response.id
+        } else if (result?.id) {
+        customerId = result.id;
+
+        // Case 3: response.data.data.id (deep nested)
+        } else if (
+        result?.data &&
+        typeof result.data === "object" &&
+        "data" in result.data &&
+        result.data.data?.id
+      ) {
+        customerId = result.data.data.id;
+      }
         
         if (!customerId) {
           lastError = new Error(

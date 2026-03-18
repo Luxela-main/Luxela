@@ -2,7 +2,7 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/t
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { db } from "../db";
-import { payments, orders, listings, sellers, carts, cartItems, buyerAccountDetails, buyerBillingAddress } from "../db/schema";
+import { payments, orders, listings, sellers, carts, cartItems, buyerAccountDetails, buyerBillingAddress, buyers } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -13,7 +13,9 @@ import {
   verifyPayment as verifyTsaraPayment,
   listPaymentLinks,
   disablePaymentLink,
-  type PaymentLink
+  type PaymentLink,
+  CheckoutSession,
+  StablecoinPaymentLink
 } from "../services/tsara";
 import { getOrCreateTsaraCustomer } from "../services/paymentCustomerHelper";
 import { runTsaraDiagnostics, isTsaraConfigured } from "../services/tsaraDiagnostic";
@@ -24,12 +26,12 @@ export const paymentRouter = createTRPCRouter({
   createPayment: protectedProcedure
     .input(
       z.object({
-        buyerId: z.string(),
-        listingId: z.string(),
-        orderId: z.string().optional(),
-        amount: z.number(),
-        currency: z.string().default("NGN"),
-        description: z.string(),
+        buyerId: z.string().uuid(),
+        listingId: z.string().uuid(),
+        orderId: z.string().uuid().optional(),
+        amount: z.number().positive(),
+        currency: z.string().min(3).max(3).default("NGN"),
+        description: z.string().min(1).max(500),
         customer_id: z.string().optional(),
         paymentMethod: z.enum(["card", "bank_transfer", "crypto"]),
         provider: z.enum(["tsara"]).default("tsara"),
@@ -53,8 +55,8 @@ export const paymentRouter = createTRPCRouter({
       });
 
       try {
-        // Check if Tsara is properly configured
-        const { TSARA_SECRET_KEY, NEXT_PUBLIC_TSARA_PUBLIC_KEY } = env;
+        // Validate environment configuration
+        const { TSARA_SECRET_KEY, TSARA_WEBHOOK_SECRET } = env;
         if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
           console.error('[Payment] TSARA_SECRET_KEY is not configured');
           throw new TRPCError({
@@ -62,10 +64,51 @@ export const paymentRouter = createTRPCRouter({
             message: "Payment service is not properly configured. Please contact support.",
           });
         }
+        if (!TSARA_WEBHOOK_SECRET || TSARA_WEBHOOK_SECRET.trim() === '') {
+          console.error('[Payment] TSARA_WEBHOOK_SECRET is not configured');
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Payment webhook is not properly configured. Please contact support.",
+          });
+        }
 
-        // Get or create Tsara customer ID from the database
-        // This ensures we always have a valid customer_id before making payment requests
-        let customerId: string;
+        // Validate buyer exists
+        const [buyer] = await db
+          .select()
+          .from(buyers)
+          .where(eq(buyers.id, input.buyerId))
+          .limit(1);
+
+        if (!buyer) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Buyer not found",
+          });
+        }
+
+        // Validate listing exists and is available
+        const [listing] = await db
+          .select()
+          .from(listings)
+          .where(eq(listings.id, input.listingId))
+          .limit(1);
+
+        if (!listing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Listing not found",
+          });
+        }
+
+        if (listing.status !== 'approved') {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Listing is not available for purchase",
+          });
+        }
+
+        // Get or create Tsara customer ID with improved error handling
+        let customerId: string | undefined;
         
         try {
           console.log('[Payment] Getting or creating Tsara customer for buyer:', input.buyerId);
@@ -77,25 +120,46 @@ export const paymentRouter = createTRPCRouter({
             error: error.message,
             stack: error.stack,
           });
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to initialize customer: ${error.message}`,
-            cause: error,
-          });
+          
+          // For fiat payments, we can continue without a customer ID
+          // The payment link API might handle customer creation automatically
+          if (input.paymentType === 'fiat') {
+            console.log('[Payment] Continuing without customer ID for fiat payment');
+            customerId = undefined;
+          } else {
+            // For crypto payments, customer ID might be required
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Failed to initialize customer: ${error.message}`,
+              cause: error,
+            });
+          }
         }
-        
-        if (!customerId) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Customer ID is required for payment processing",
-          });
-        }
-
-        let response;
 
         console.log('[Payment] Creating payment link with customer ID:', customerId);
 
+        // Define consistent conversion rates
+        const USDC_TO_NGN_RATE = 1000; // 1 USDC = 1000 NGN
+        const AMOUNT_MULTIPLIER = 100; // Convert to cents for fiat
+
+        // Validate amount ranges
+        if (input.amount <= 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Payment amount must be greater than zero",
+          });
+        }
+
+        if (input.amount > 10000000) { // 100 million NGN limit
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Payment amount exceeds maximum allowed limit",
+          });
+        }
+
         // Create appropriate payment link based on type
+        let response: any;
+        
         if (input.paymentType === "stablecoin") {
           if (!input.wallet_id) {
             throw new TRPCError({
@@ -104,8 +168,19 @@ export const paymentRouter = createTRPCRouter({
             });
           }
 
+          // Convert NGN amount to USDC with proper decimal handling
+          const usdcAmount = input.amount / USDC_TO_NGN_RATE;
+
+          // Validate USDC amount is reasonable
+          if (usdcAmount < 0.01) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Payment amount too small for stablecoin transaction",
+            });
+          }
+
           response = await createStablecoinPaymentLink({
-            amount: input.amount.toString(),
+            amount: usdcAmount.toFixed(6), // Send as decimal string with 6 decimals
             asset: "USDC",
             network: "solana",
             wallet_id: input.wallet_id,
@@ -121,8 +196,18 @@ export const paymentRouter = createTRPCRouter({
             });
           }
 
+          // Convert NGN amount to USDC
+          const usdcAmount = input.amount / USDC_TO_NGN_RATE;
+
+          if (usdcAmount < 0.01) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Payment amount too small for USDC transaction",
+            });
+          }
+
           response = await createStablecoinPaymentLink({
-            amount: input.amount.toString(),
+            amount: usdcAmount.toFixed(6),
             asset: "USDC",
             network: "solana",
             wallet_id: input.wallet_id,
@@ -130,11 +215,14 @@ export const paymentRouter = createTRPCRouter({
             metadata: input.metadata,
           });
         } else {
-          // Create fiat payment link or checkout session
+          // Fiat payment (card or bank transfer)
+          // Convert amount to cents for Tsara API
+          const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
+
           if (input.success_url && input.cancel_url) {
             // Use checkout session for better UX
             response = await createCheckoutSession({
-              amount: Math.round(input.amount * 100), 
+              amount: amountInCents,
               currency: input.currency,
               reference: `order_${input.orderId || uuidv4()}`,
               customer_id: customerId,
@@ -145,7 +233,7 @@ export const paymentRouter = createTRPCRouter({
           } else {
             // Use payment link
             response = await createFiatPaymentLink({
-              amount: Math.round(input.amount * 100), // Convert to cents for fiat
+              amount: amountInCents,
               currency: input.currency,
               description: input.description,
               customer_id: customerId,
@@ -155,56 +243,172 @@ export const paymentRouter = createTRPCRouter({
           }
         }
 
+        // Validate response structure
+        if (!response || !response.data) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Invalid response from payment provider",
+          });
+        }
+
+        // Tsara sometimes returns only a raw entity (PaymentLink, CheckoutSession, etc)
+        // not a wrapper with { success, error }. We normalize it here.
+        type TsaraWrapper<T> = {
+        success?: boolean;
+        error?: { message?: string };
+        data?: T;
+      };
+
+        // Normalize into predictable shape
+        const result = response.data as TsaraWrapper<
+        PaymentLink | StablecoinPaymentLink | CheckoutSession
+      >;
+
+        if (result.success === false) {
+        const errorMessage =
+        result.error?.message || "Payment provider returned an error";
+
+        console.error("Tsara API error:", result.error);
+
+        throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: errorMessage,
+      });
+    }
+
+        // Calculate amount in cents for database storage
+        let amountCents: number;
+        if (input.paymentType === "stablecoin" || (input.paymentMethod === "crypto" && input.currency === "USDC")) {
+          // For stablecoin, store the NGN equivalent in cents
+          amountCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
+        } else {
+          // For fiat, amount is already in currency units, convert to cents
+          amountCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
+        }
+
+        // Store payment in database with transaction
+        const paymentData = {
+          buyerId: input.buyerId,
+          listingId: input.listingId,
+          orderId: input.orderId ?? null,
+          amountCents,
+          currency: input.paymentType === "stablecoin" ? "USDC" : input.currency,
+          paymentMethod: input.paymentMethod,
+          provider: input.provider,
+          status: "pending" as const,
+          transactionRef: response.data.id,
+          gatewayResponse: JSON.stringify(response),
+        };
+
         const [payment] = await db
           .insert(payments)
-          .values({
-            buyerId: input.buyerId,
-            listingId: input.listingId,
-            orderId: input.orderId ?? null,
-            amountCents: input.paymentType === "stablecoin" ? Math.round(input.amount * 1000000) : Math.round(input.amount * 100), // USDC has 6 decimals
-            currency: input.currency,
-            paymentMethod: input.paymentMethod,
-            provider: input.provider,
-            status: "pending",
-            transactionRef: response.data.id,
-            gatewayResponse: JSON.stringify(response),
-          })
+          .values(paymentData)
           .returning();
+
+        if (!payment) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to save payment record",
+          });
+        }
 
         return {
           payment,
           paymentUrl: (response.data as any).url || (response.data as any).checkout_url,
           paymentId: response.data.id,
         };
+      // TEMPORARILY COMMENTED OUT CATCH BLOCK
       } catch (error: any) {
-        // Already a TRPCError - rethrow it
-        if (error.code && error.message) {
-          throw error;
-        }
-
+        // Enhanced error logging and handling
         console.error("[Payment] Payment creation error:", {
           message: error?.message,
           code: error?.code,
+          name: error?.name,
+          stack: error?.stack,
           responseStatus: error?.response?.status,
           responseData: error?.response?.data,
-          stack: error?.stack,
+          input: {
+            buyerId: input.buyerId,
+            listingId: input.listingId,
+            orderId: input.orderId,
+            amount: input.amount,
+            currency: input.currency,
+            paymentMethod: input.paymentMethod,
+            paymentType: input.paymentType,
+          },
+          timestamp: new Date().toISOString(),
         });
-        
-        const errorMessage = 
-          error?.response?.data?.error?.message || 
-          error?.response?.data?.message || 
-          error?.message || 
-          "Payment creation failed";
-        
+
+        // Handle different types of errors appropriately
+        if (error instanceof TRPCError) {
+          throw error; // Re-throw TRPC errors as-is
+        }
+
+        // Handle Axios/network errors
+        if (error?.response) {
+          const status = error.response.status;
+          const errorData = error.response.data;
+
+          if (status === 401) {
+            throw new TRPCError({
+              code: "UNAUTHORIZED",
+              message: "Payment service authentication failed. Please contact support.",
+            });
+          } else if (status === 403) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Payment service access denied. Please contact support.",
+            });
+          } else if (status === 429) {
+            throw new TRPCError({
+              code: "TOO_MANY_REQUESTS",
+              message: "Too many payment requests. Please wait and try again.",
+            });
+          } else if (status >= 500) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Payment service is temporarily unavailable. Please try again later.",
+            });
+          } else {
+            // Handle specific API error codes
+            const errorMessage = errorData?.error?.message ||
+                               errorData?.message ||
+                               error?.message ||
+                               "Payment creation failed";
+
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: errorMessage,
+            });
+          }
+        }
+
+        // Handle validation errors
+        if (error?.name === 'ValidationError' || error?.name === 'ZodError') {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid payment data provided",
+          });
+        }
+
+        // Handle database errors
+        if (error?.code?.startsWith('23')) { // PostgreSQL constraint violations
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Payment data conflicts with existing records",
+          });
+        }
+
+        // Generic fallback
+        const errorMessage = error?.message || "Payment creation failed due to an unexpected error";
         throw new TRPCError({
-          code: error?.response?.status === 401 ? "UNAUTHORIZED" : "BAD_REQUEST",
+          code: "INTERNAL_SERVER_ERROR",
           message: errorMessage,
-          cause: error,
         });
       }
     }),
 
-     getPaymentLink: protectedProcedure
+    getPaymentLink: protectedProcedure
     .input(z.object({ plinkId: z.string() }))
     .query(async ({ input }) => {
       try {

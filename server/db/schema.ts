@@ -634,10 +634,12 @@ export const buyerNotifications = pgTable('buyer_notifications', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
 }, (t) => [
   index('buyer_notifications_buyer_id_idx').on(t.buyerId),
   index('buyer_notifications_is_read_idx').on(t.isRead),
   index('buyer_notifications_created_at_idx').on(t.createdAt),
+  index('buyer_notifications_deleted_at_idx').on(t.deletedAt),
 ]);
 
 // Admin notifications - persistent storage for real-time updates
@@ -656,10 +658,12 @@ export const adminNotifications = pgTable('admin_notifications', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
 }, (t) => [
   index('admin_notifications_admin_id_idx').on(t.adminId),
   index('admin_notifications_is_read_idx').on(t.isRead),
   index('admin_notifications_created_at_idx').on(t.createdAt),
+  index('admin_notifications_deleted_at_idx').on(t.deletedAt),
 ]);
 
 // Seller notifications - persistent storage for real-time updates
@@ -678,10 +682,12 @@ export const sellerNotifications = pgTable('seller_notifications', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
 }, (t) => [
   index('seller_notifications_seller_id_idx').on(t.sellerId),
   index('seller_notifications_is_read_idx').on(t.isRead),
   index('seller_notifications_created_at_idx').on(t.createdAt),
+  index('seller_notifications_deleted_at_idx').on(t.deletedAt),
 ]);
 
 // Admin settings - persistent storage for admin configuration
@@ -1546,6 +1552,8 @@ export const listingActivityLogRelations = relations(listingActivityLog, ({ one 
 export const buyerBrandFollowsRelations = relations(buyerBrandFollows, ({ one }) => ({
   buyer: one(buyers),
   brand: one(brands),
-}));
-
-
+}));
+
+
+
+
