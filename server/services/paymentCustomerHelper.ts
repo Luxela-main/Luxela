@@ -5,14 +5,27 @@ import { createCustomer } from './tsaraCustomer';
 
 export async function getOrCreateTsaraCustomer(buyerId: string): Promise<string> {
   try {
-    // Fetch buyer record
-    const buyer = await db.query.buyers.findFirst({
-      where: eq(buyers.id, buyerId),
-    });
+    console.log(`[Tsara] Getting or creating customer for buyer: ${buyerId}`);
+    
+    // Fetch buyer record using proper drizzle query
+    const buyerResult = await db
+      .select()
+      .from(buyers)
+      .where(eq(buyers.id, buyerId))
+      .limit(1);
+    
+    const buyer = buyerResult[0];
 
     if (!buyer) {
+      console.error(`[Tsara] Buyer not found in database: ${buyerId}`);
       throw new Error(`Buyer not found: ${buyerId}`);
     }
+    
+    console.log(`[Tsara] Found buyer record:`, { 
+      buyerId: buyer.id, 
+      hasTsaraCustomerId: !!buyer.tsaraCustomerId,
+      tsaraCustomerId: buyer.tsaraCustomerId 
+    });
 
     // If buyer already has a Tsara customer ID, return it
     if (buyer.tsaraCustomerId) {
@@ -23,13 +36,24 @@ export async function getOrCreateTsaraCustomer(buyerId: string): Promise<string>
     }
 
     // Fetch buyer account details to get email
-    const buyerDetails = await db.query.buyerAccountDetails.findFirst({
-      where: eq(buyerAccountDetails.buyerId, buyerId),
-    });
+    const buyerDetailsResult = await db
+      .select()
+      .from(buyerAccountDetails)
+      .where(eq(buyerAccountDetails.buyerId, buyerId))
+      .limit(1);
+    
+    const buyerDetails = buyerDetailsResult[0];
 
     if (!buyerDetails) {
+      console.error(`[Tsara] Buyer account details not found for buyer: ${buyerId}`);
       throw new Error(`Buyer account details not found for buyer ${buyerId}`);
     }
+    
+    console.log(`[Tsara] Found buyer details:`, { 
+      email: buyerDetails.email,
+      hasFullName: !!buyerDetails.fullName,
+      hasPhone: !!buyerDetails.phoneNumber 
+    });
 
     // Create Tsara customer with retry logic
     console.log(
@@ -42,6 +66,8 @@ export async function getOrCreateTsaraCustomer(buyerId: string): Promise<string>
     // Retry up to 3 times with exponential backoff
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
+        console.log(`[Tsara] Attempt ${attempt}/3: Calling createCustomer API...`);
+        
         response = await createCustomer({
           email: buyerDetails.email,
           name: buyerDetails.fullName || undefined,
@@ -51,14 +77,29 @@ export async function getOrCreateTsaraCustomer(buyerId: string): Promise<string>
             username: buyerDetails.username,
           },
         });
+        
+        console.log(`[Tsara] Attempt ${attempt}/3: Raw response:`, JSON.stringify(response, null, 2));
 
-        // Validate response structure
-        if (!response?.data?.id) {
+        // Validate response structure - handle both {data: {id}} and {id} formats
+        let customerId: string | null = null;
+        
+        if (response?.data?.id) {
+          customerId = response.data.id;
+        } else if ((response as any)?.id) {
+          customerId = (response as any).id;
+        } else if (response?.data?.data?.id) {
+          // Nested data structure
+          customerId = response.data.data.id;
+        }
+        
+        if (!customerId) {
           lastError = new Error(
-            'Tsara customer creation failed: No customer ID in response'
+            `Tsara customer creation failed: No customer ID in response. Response: ${JSON.stringify(response)}`
           );
           console.warn(
-            `[Tsara] Attempt ${attempt}/3 failed: Missing customer ID in response. Retrying...`
+            `[Tsara] Attempt ${attempt}/3 failed: Missing customer ID in response.`,
+            `Response structure:`, Object.keys(response || {}),
+            `Data structure:`, Object.keys(response?.data || {})
           );
 
           // Only retry if not the last attempt
@@ -70,7 +111,7 @@ export async function getOrCreateTsaraCustomer(buyerId: string): Promise<string>
           continue;
         }
 
-        const tsaraCustomerId = response.data.id;
+        const tsaraCustomerId = customerId;
 
         // Save the Tsara customer ID to the buyers table
         await db

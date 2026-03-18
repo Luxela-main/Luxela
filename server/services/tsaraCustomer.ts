@@ -44,8 +44,19 @@ export async function createCustomer(data: {
     const customerData = response.data.data || response.data;
     console.log('[Tsara] Extracted customer data:', JSON.stringify(customerData, null, 2));
     
+    // Log full response for debugging
+    console.log('[Tsara] Full response structure:', {
+      responseKeys: Object.keys(response || {}),
+      responseDataKeys: Object.keys(response?.data || {}),
+      hasDataId: !!response?.data?.id,
+      hasNestedDataId: !!response?.data?.data?.id,
+    });
+    
     if (!customerData || !customerData.id) {
-      console.error('[Tsara] No customer ID found in response:', customerData);
+      console.error('[Tsara] No customer ID found in response:', {
+        customerData,
+        fullResponse: response?.data,
+      });
       throw new Error('Tsara API did not return a valid customer ID');
     }
     
