@@ -701,32 +701,22 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Verify ownership before updating
-      const notif = await db
-        .select()
-        .from(buyerNotifications)
-        .where(eq(buyerNotifications.id, input.notificationId))
-        .limit(1);
-
-      if (notif.length === 0) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Notification not found',
-        });
-      }
-
-      if (notif[0].buyerId !== buyer.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Cannot modify other buyer\'s notifications',
-        });
-      }
-
-      // Update notification
-      await db
+      // Update notification with ownership check in single query
+      const result = await db
         .update(buyerNotifications)
         .set({ isRead: true, updatedAt: new Date() })
-        .where(eq(buyerNotifications.id, input.notificationId));
+        .where(and(
+          eq(buyerNotifications.id, input.notificationId),
+          eq(buyerNotifications.buyerId, buyer.id)
+        ))
+        .returning({ id: buyerNotifications.id });
+
+      if (result.length === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Notification not found or access denied',
+        });
+      }
 
       return { success: true };
     }),
@@ -797,31 +787,22 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Verify ownership
-      const notif = await db
-        .select()
-        .from(buyerNotifications)
-        .where(eq(buyerNotifications.id, input.notificationId))
-        .limit(1);
-
-      if (notif.length === 0) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Notification not found',
-        });
-      }
-
-      if (notif[0].buyerId !== buyer.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Cannot modify other buyer\'s notifications',
-        });
-      }
-
-      await db
+      // Update with ownership check in single query
+      const result = await db
         .update(buyerNotifications)
         .set({ isStarred: input.starred, updatedAt: new Date() })
-        .where(eq(buyerNotifications.id, input.notificationId));
+        .where(and(
+          eq(buyerNotifications.id, input.notificationId),
+          eq(buyerNotifications.buyerId, buyer.id)
+        ))
+        .returning({ id: buyerNotifications.id });
+
+      if (result.length === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Notification not found or access denied',
+        });
+      }
 
       return { success: true };
     }),
@@ -849,30 +830,21 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
-      // Verify ownership
-      const notif = await db
-        .select()
-        .from(buyerNotifications)
-        .where(eq(buyerNotifications.id, input.notificationId))
-        .limit(1);
+      // Delete with ownership check in single query
+      const result = await db
+        .delete(buyerNotifications)
+        .where(and(
+          eq(buyerNotifications.id, input.notificationId),
+          eq(buyerNotifications.buyerId, buyer.id)
+        ))
+        .returning({ id: buyerNotifications.id });
 
-      if (notif.length === 0) {
+      if (result.length === 0) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Notification not found',
+          message: 'Notification not found or access denied',
         });
       }
-
-      if (notif[0].buyerId !== buyer.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Cannot delete other buyer\'s notifications',
-        });
-      }
-
-      await db
-        .delete(buyerNotifications)
-        .where(eq(buyerNotifications.id, input.notificationId));
 
       return { success: true };
     }),

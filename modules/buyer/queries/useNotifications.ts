@@ -55,8 +55,42 @@ export const useMarkNotificationAsRead = () => {
   const utils = trpc.useUtils();
 
   return (trpc.buyerNotifications as any).markAsRead.useMutation({
-    onSuccess: async () => {
-      // Invalidate the unified notifications endpoint to update badge count
+    onMutate: async (variables: { notificationId: string }) => {
+      // Cancel outgoing queries
+      await (utils.buyerNotifications as any).getNotifications.cancel();
+
+      // Get current data
+      const previousData = (utils.buyerNotifications as any).getNotifications.getData({});
+
+      // Optimistically update the data
+      if (previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.map((notif: any) =>
+              notif.id === variables.notificationId
+                ? { ...notif, isRead: true }
+                : notif
+            ),
+            unreadCount: Math.max(0, (previousData.unreadCount ?? 0) - 1),
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (err: any, variables: any, context: any) => {
+      // Rollback on error
+      if (context?.previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
       await (utils.buyerNotifications as any).getNotifications.invalidate();
       await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },
@@ -67,8 +101,40 @@ export const useMarkAllNotificationsAsRead = () => {
   const utils = trpc.useUtils();
 
   return (trpc.buyerNotifications as any).markAllAsRead.useMutation({
-    onSuccess: async () => {
-      // Invalidate both endpoints to update notifications and badge count
+    onMutate: async () => {
+      // Cancel outgoing queries
+      await (utils.buyerNotifications as any).getNotifications.cancel();
+
+      // Get current data
+      const previousData = (utils.buyerNotifications as any).getNotifications.getData({});
+
+      // Optimistically mark all as read
+      if (previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.map((notif: any) =>
+              notif.isRead ? notif : { ...notif, isRead: true }
+            ),
+            unreadCount: 0,
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (err: any, variables: any, context: any) => {
+      // Rollback on error
+      if (context?.previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
       await (utils.buyerNotifications as any).getNotifications.invalidate();
       await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },
@@ -79,8 +145,41 @@ export const useToggleNotificationFavorite = () => {
   const utils = trpc.useUtils();
 
   return (trpc.buyerNotifications as any).toggleStar.useMutation({
-    onSuccess: async () => {
-      // Invalidate the unified notifications endpoint
+    onMutate: async (variables: { notificationId: string; starred: boolean }) => {
+      // Cancel outgoing queries
+      await (utils.buyerNotifications as any).getNotifications.cancel();
+
+      // Get current data
+      const previousData = (utils.buyerNotifications as any).getNotifications.getData({});
+
+      // Optimistically update the data
+      if (previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.map((notif: any) =>
+              notif.id === variables.notificationId
+                ? { ...notif, isStarred: variables.starred }
+                : notif
+            ),
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (err: any, variables: any, context: any) => {
+      // Rollback on error
+      if (context?.previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
       await (utils.buyerNotifications as any).getNotifications.invalidate();
     },
   });
@@ -90,8 +189,44 @@ export const useDeleteNotification = () => {
   const utils = trpc.useUtils();
 
   return (trpc.buyerNotifications as any).deleteNotification.useMutation({
-    onSuccess: async () => {
-      // Invalidate both endpoints to update notifications and badge count
+    onMutate: async (variables: { notificationId: string }) => {
+      // Cancel outgoing queries
+      await (utils.buyerNotifications as any).getNotifications.cancel();
+
+      // Get current data
+      const previousData = (utils.buyerNotifications as any).getNotifications.getData({});
+
+      // Optimistically remove the notification
+      if (previousData) {
+        const deletedNotif = previousData.notifications.find((n: any) => n.id === variables.notificationId);
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.filter(
+              (notif: any) => notif.id !== variables.notificationId
+            ),
+            total: Math.max(0, (previousData.total ?? 0) - 1),
+            unreadCount: deletedNotif?.isRead 
+              ? previousData.unreadCount 
+              : Math.max(0, (previousData.unreadCount ?? 0) - 1),
+          }
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (err: any, variables: any, context: any) => {
+      // Rollback on error
+      if (context?.previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
       await (utils.buyerNotifications as any).getNotifications.invalidate();
       await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },
@@ -102,8 +237,33 @@ export const useDeleteAllNotifications = () => {
   const utils = trpc.useUtils();
 
   return (trpc.buyerNotifications as any).clearAll.useMutation({
-    onSuccess: async () => {
-      // Invalidate both endpoints to update notifications and badge count
+    onMutate: async () => {
+      // Cancel any outgoing queries
+      await (utils.buyerNotifications as any).getNotifications.cancel();
+      await (utils.buyerNotifications as any).getUnreadCount.cancel();
+
+      // Get current data for rollback
+      const previousData = (utils.buyerNotifications as any).getNotifications.getData({});
+
+      // Set optimistic data
+      (utils.buyerNotifications as any).getNotifications.setData(
+        {},
+        { notifications: [], total: 0, unreadCount: 0 }
+      );
+
+      return { previousData };
+    },
+    onError: (err: any, variables: any, context: any) => {
+      // Rollback on error
+      if (context?.previousData) {
+        (utils.buyerNotifications as any).getNotifications.setData(
+          {},
+          context.previousData
+        );
+      }
+    },
+    onSettled: async () => {
+      // Always refetch to ensure cache is in sync with server
       await (utils.buyerNotifications as any).getNotifications.invalidate();
       await (utils.buyerNotifications as any).getUnreadCount.invalidate();
     },

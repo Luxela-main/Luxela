@@ -18,6 +18,21 @@ import { and, eq, gt, desc, sql, count } from 'drizzle-orm';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
+// Cache to prevent excessive notification generation
+const notificationGenerationCache = new Map<string, number>();
+const GENERATION_COOLDOWN_MS = 30000; // 30 seconds
+
+function shouldGenerateNotifications(adminId: string): boolean {
+  const lastGeneration = notificationGenerationCache.get(adminId);
+  const now = Date.now();
+  
+  if (!lastGeneration || now - lastGeneration > GENERATION_COOLDOWN_MS) {
+    notificationGenerationCache.set(adminId, now);
+    return true;
+  }
+  return false;
+}
+
 
 
 /**
@@ -477,10 +492,12 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      // Generate fresh notifications (non-blocking background task)
-      generateAndStoreNotifications(userId).catch(err => 
-        console.error('Error generating notifications:', err)
-      );
+      // Generate fresh notifications (non-blocking with cooldown)
+      if (shouldGenerateNotifications(userId)) {
+        void generateAndStoreNotifications(userId).catch(() => {
+          // Silent error - don't block response
+        });
+      }
 
       // Build query conditions
       const conditions = [eq(adminNotifications.adminId, userId)];
@@ -662,32 +679,22 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
-      // Verify ownership before updating
-      const notif = await db
-        .select()
-        .from(adminNotifications)
-        .where(eq(adminNotifications.id, input.notificationId))
-        .limit(1);
-
-      if (notif.length === 0) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Notification not found',
-        });
-      }
-
-      if (notif[0].adminId !== userId) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Cannot modify other admin\'s notifications',
-        });
-      }
-
-      // Update notification
-      await db
+      // Update with ownership check in single query
+      const result = await db
         .update(adminNotifications)
         .set({ isRead: true, updatedAt: new Date() })
-        .where(eq(adminNotifications.id, input.notificationId));
+        .where(and(
+          eq(adminNotifications.id, input.notificationId),
+          eq(adminNotifications.adminId, userId)
+        ))
+        .returning({ id: adminNotifications.id });
+
+      if (result.length === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Notification not found or access denied',
+        });
+      }
 
       return { success: true };
     }),

@@ -32,6 +32,7 @@ const POLL_INTERVAL = 5000; // 5 seconds for real-time updates
  */
 export function useBuyerNotifications() {
   const [isPolling, setIsPolling] = useState(true);
+  const utils = trpc.useUtils();
 
   const { data, isLoading, error, refetch } = trpc.buyerNotifications.getNotifications.useQuery(
     {},
@@ -43,26 +44,128 @@ export function useBuyerNotifications() {
   );
 
   const markAsReadMutation = trpc.buyerNotifications.markAsRead.useMutation({
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      await utils.buyerNotifications.getNotifications.cancel();
+      const previousData = utils.buyerNotifications.getNotifications.getData({});
+      
+      if (previousData) {
+        utils.buyerNotifications.getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.map((notif) =>
+              notif.id === variables.notificationId
+                ? { ...notif, isRead: true }
+                : notif
+            ),
+            unreadCount: Math.max(0, previousData.unreadCount - 1),
+          }
+        );
+      }
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        utils.buyerNotifications.getNotifications.setData({}, context.previousData);
+      }
+    },
+    onSettled: () => {
       refetch();
+      utils.buyerNotifications.getUnreadCount.invalidate();
     },
   });
 
   const markAllAsReadMutation = trpc.buyerNotifications.markAllAsRead.useMutation({
-    onSuccess: () => {
+    onMutate: async () => {
+      await utils.buyerNotifications.getNotifications.cancel();
+      const previousData = utils.buyerNotifications.getNotifications.getData({});
+      
+      if (previousData) {
+        utils.buyerNotifications.getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.map((notif) =>
+              notif.isRead ? notif : { ...notif, isRead: true }
+            ),
+            unreadCount: 0,
+          }
+        );
+      }
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        utils.buyerNotifications.getNotifications.setData({}, context.previousData);
+      }
+    },
+    onSettled: () => {
       refetch();
+      utils.buyerNotifications.getUnreadCount.invalidate();
     },
   });
 
   const toggleStarMutation = trpc.buyerNotifications.toggleStar.useMutation({
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      await utils.buyerNotifications.getNotifications.cancel();
+      const previousData = utils.buyerNotifications.getNotifications.getData({});
+      
+      if (previousData) {
+        utils.buyerNotifications.getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.map((notif) =>
+              notif.id === variables.notificationId
+                ? { ...notif, isStarred: variables.starred }
+                : notif
+            ),
+          }
+        );
+      }
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        utils.buyerNotifications.getNotifications.setData({}, context.previousData);
+      }
+    },
+    onSettled: () => {
       refetch();
     },
   });
 
   const deleteNotificationMutation = trpc.buyerNotifications.deleteNotification.useMutation({
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      await utils.buyerNotifications.getNotifications.cancel();
+      const previousData = utils.buyerNotifications.getNotifications.getData({});
+      
+      if (previousData) {
+        const deletedNotif = previousData.notifications.find((n) => n.id === variables.notificationId);
+        utils.buyerNotifications.getNotifications.setData(
+          {},
+          {
+            ...previousData,
+            notifications: previousData.notifications.filter(
+              (notif) => notif.id !== variables.notificationId
+            ),
+            total: Math.max(0, previousData.total - 1),
+            unreadCount: deletedNotif?.isRead 
+              ? previousData.unreadCount 
+              : Math.max(0, previousData.unreadCount - 1),
+          }
+        );
+      }
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        utils.buyerNotifications.getNotifications.setData({}, context.previousData);
+      }
+    },
+    onSettled: () => {
       refetch();
+      utils.buyerNotifications.getUnreadCount.invalidate();
     },
   });
 
