@@ -17,7 +17,6 @@ import {
   CheckoutSession,
   StablecoinPaymentLink
 } from "../services/tsara";
-import { getOrCreateTsaraCustomer } from "../services/paymentCustomerHelper";
 import { runTsaraDiagnostics, isTsaraConfigured } from "../services/tsaraDiagnostic";
 import { env } from "@/env";
 
@@ -56,9 +55,9 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         // Validate environment configuration
-        const { TSARA_SECRET_KEY, TSARA_WEBHOOK_SECRET } = env;
-        if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-          console.error('[Payment] TSARA_SECRET_KEY is not configured');
+        const { NEXT_PUBLIC_TSARA_PUBLIC_KEY, TSARA_WEBHOOK_SECRET } = env;
+        if (!NEXT_PUBLIC_TSARA_PUBLIC_KEY || NEXT_PUBLIC_TSARA_PUBLIC_KEY.trim() === '') {
+          console.error('[Payment] NEXT_PUBLIC_TSARA_PUBLIC_KEY is not configured');
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Payment service is not properly configured. Please contact support.",
@@ -107,36 +106,8 @@ export const paymentRouter = createTRPCRouter({
           });
         }
 
-        // Get or create Tsara customer ID with improved error handling
-        let customerId: string | undefined;
-        
-        try {
-          console.log('[Payment] Getting or creating Tsara customer for buyer:', input.buyerId);
-          customerId = await getOrCreateTsaraCustomer(input.buyerId);
-          console.log('[Payment] Successfully got Tsara customer ID:', customerId);
-        } catch (error: any) {
-          console.error('[Payment] Failed to get/create Tsara customer:', {
-            buyerId: input.buyerId,
-            error: error.message,
-            stack: error.stack,
-          });
-          
-          // For fiat payments, we can continue without a customer ID
-          // The payment link API might handle customer creation automatically
-          if (input.paymentType === 'fiat') {
-            console.log('[Payment] Continuing without customer ID for fiat payment');
-            customerId = undefined;
-          } else {
-            // For crypto payments, customer ID might be required
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: `Failed to initialize customer: ${error.message}`,
-              cause: error,
-            });
-          }
-        }
-
-        console.log('[Payment] Creating payment link with customer ID:', customerId);
+        // Note: Tsara automatically creates customers, so we don't need to manage customer IDs
+        // Customer creation removed - customer info is passed via payment link metadata
 
         // Define consistent conversion rates
         const USDC_TO_NGN_RATE = 1000; // 1 USDC = 1000 NGN
@@ -225,7 +196,6 @@ export const paymentRouter = createTRPCRouter({
               amount: amountInCents,
               currency: input.currency,
               reference: `order_${input.orderId || uuidv4()}`,
-              customer_id: customerId,
               success_url: input.success_url,
               cancel_url: input.cancel_url,
               metadata: input.metadata,
@@ -236,7 +206,6 @@ export const paymentRouter = createTRPCRouter({
               amount: amountInCents,
               currency: input.currency,
               description: input.description,
-              customer_id: customerId,
               metadata: input.metadata,
               redirect_url: input.redirect_url,
             });

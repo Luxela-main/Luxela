@@ -14,7 +14,6 @@ export interface DiagnosticReport {
     name: string;
     configured: boolean;
     credentials: {
-      secretKey: boolean;
       publicKey: boolean;
     };
     connectivity: {
@@ -42,29 +41,16 @@ export async function generateDiagnosticReport(): Promise<DiagnosticReport> {
   const recommendations: string[] = [];
 
   // Check for missing credentials
-  if (!diagnosis.hasSecretKey) {
-    commonIssues.push({
-      title: 'Missing Tsara Secret Key',
-      description: 'The TSARA_SECRET_KEY environment variable is not set or empty.',
-      severity: 'critical' as const,
-      resolution: [
-        '1. Check your .env file for TSARA_SECRET_KEY',
-        '2. Ensure the value is not empty or malformed',
-        '3. Restart the server after updating .env',
-        '4. Contact Tsara support if you don\'t have a secret key',
-      ],
-    });
-  }
-
   if (!diagnosis.hasPublicKey) {
     commonIssues.push({
       title: 'Missing Tsara Public Key',
-      description: 'The TSARA_PUBLIC_KEY environment variable is not set or empty.',
+      description: 'The NEXT_PUBLIC_TSARA_PUBLIC_KEY environment variable is not set or empty.',
       severity: 'critical' as const,
       resolution: [
-        '1. Check your .env file for TSARA_PUBLIC_KEY',
+        '1. Check your .env file for NEXT_PUBLIC_TSARA_PUBLIC_KEY',
         '2. Ensure the value is not empty or malformed',
         '3. Restart the server after updating .env',
+        '4. Contact Tsara support if you don\'t have a public key',
       ],
     });
   }
@@ -112,7 +98,6 @@ export async function generateDiagnosticReport(): Promise<DiagnosticReport> {
       name: 'Tsara',
       configured: diagnosis.isConfigured,
       credentials: {
-        secretKey: diagnosis.hasSecretKey,
         publicKey: diagnosis.hasPublicKey,
       },
       connectivity: {

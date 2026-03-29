@@ -20,7 +20,6 @@ import {
   verifyPayment as verifyTsaraPayment,
 } from '../services/tsara';
 import { getBuyer } from './utils';
-import { ensureTsaraCustomerId } from '../services/tsaraCustomer';
 
 /**
  * Checkout Router - Handles buyer payment and order flow
@@ -411,23 +410,7 @@ export const checkoutRouter = createTRPCRouter({
         }
         // Orders will only be created AFTER payment is confirmed by Tsara
         // This prevents orphaned orders when payment is incomplete
-
-        // Ensure buyer has a Tsara customer ID for fiat payments
-        let tsaraCustomerId: string | undefined;
-        if (input.paymentMethod !== 'crypto') {
-          try {
-            tsaraCustomerId = await ensureTsaraCustomerId(
-              buyer.id,
-              input.customerEmail,
-              input.customerName,
-              input.customerPhone
-            );
-            console.log('[Checkout] Using Tsara customer ID:', tsaraCustomerId);
-          } catch (err: any) {
-            console.error('[Checkout] Failed to get/create Tsara customer:', err);
-            // Continue without Tsara customer ID - the payment link API might handle it
-          }
-        }
+        // Note: Tsara automatically creates customers, so we don't need to manage customer IDs
 
         // Create Tsara payment link
         let paymentResponse;
@@ -455,13 +438,12 @@ export const checkoutRouter = createTRPCRouter({
             metadata: paymentMetadata,
           });
         } else {
-          // Fiat payment (card or bank transfer) - use Tsara customer ID
+          // Fiat payment (card or bank transfer)
           if (input.successUrl && input.cancelUrl) {
             paymentResponse = await createCheckoutSession({
               amount: totalCents,
               currency: input.currency,
               reference: transactionRef,
-              customer_id: tsaraCustomerId || buyer.id,
               success_url: input.successUrl,
               cancel_url: input.cancelUrl,
               metadata: paymentMetadata,
@@ -471,7 +453,6 @@ export const checkoutRouter = createTRPCRouter({
               amount: totalCents,
               currency: input.currency,
               description: `Fashion purchase - Order ${orderId}`,
-              customer_id: tsaraCustomerId || buyer.id,
               redirect_url: input.redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
               metadata: paymentMetadata,
             });

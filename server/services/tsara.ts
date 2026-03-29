@@ -3,12 +3,12 @@ import { env } from "@/env";
 
 const TSARA_BASE_URL = "https://api.tsara.ng/v1";
 const TSARA_SANDBOX_URL = "https://sandbox.tsara.ng/v1";
-const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY;
 export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
+export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET;
 
 // Validate that required credentials are configured
-if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-  console.error('[Tsara Config] CRITICAL: TSARA_SECRET_KEY is not configured. Payment functionality will fail.');
+if (!TSARA_PUBLIC_KEY || TSARA_PUBLIC_KEY.trim() === '') {
+  console.error('[Tsara Config] CRITICAL: NEXT_PUBLIC_TSARA_PUBLIC_KEY is not configured. Payment functionality will fail.');
 }
 
 const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
@@ -16,7 +16,7 @@ const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    "Authorization": `Bearer ${TSARA_SECRET_KEY || ""}`,
+    "Authorization": `Bearer ${TSARA_PUBLIC_KEY || ""}`,
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
@@ -29,9 +29,9 @@ tsaraApi.interceptors.request.use((config) => {
   console.log('[Tsara API] Base URL:', config.baseURL);
   console.log('[Tsara API] Authorization header present:', config.headers["Authorization"] ? 'Yes' : 'NO API KEY - API CALL WILL FAIL');
   
-  // Warn if secret key is missing
-  if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-    console.error('[Tsara API] CRITICAL: TSARA_SECRET_KEY is not configured. This request will fail with 401 Unauthorized.');
+  // Warn if public key is missing
+  if (!TSARA_PUBLIC_KEY || TSARA_PUBLIC_KEY.trim() === '') {
+    console.error('[Tsara API] CRITICAL: NEXT_PUBLIC_TSARA_PUBLIC_KEY is not configured. This request will fail with 401 Unauthorized.');
   }
   
   return config;
@@ -42,7 +42,7 @@ tsaraApi.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.error('[Tsara API] 401 Unauthorized - Check your TSARA_SECRET_KEY configuration');
+      console.error('[Tsara API] 401 Unauthorized - Check your NEXT_PUBLIC_TSARA_PUBLIC_KEY configuration');
     } else if (error.response?.status === 403) {
       console.error('[Tsara API] 403 Forbidden - Your API key may not have permission for this operation');
     } else if (error.response?.status === 404) {
@@ -121,11 +121,11 @@ export async function createFiatPaymentLink(data: {
   amount: number;
   currency: string;
   description?: string;
-  customer_id?: string;
   metadata?: Record<string, any>;
   redirect_url?: string;
 }): Promise<TsaraResponse<PaymentLink>> {
   try {
+    // Note: Do not pass customer_id - Tsara creates customers automatically
     const response = await tsaraApi.post("/payment-links", data);
     
     if (!response || !response.data || typeof response.data !== 'object') {
@@ -181,17 +181,16 @@ export async function createCheckoutSession(data: {
   amount: number;
   currency: string;
   reference: string;
-  customer_id?: string;
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, any>;
 }): Promise<TsaraResponse<CheckoutSession>> {
   try {
+    // Note: Do not pass customer_id - Tsara creates customers automatically
     const paymentLinkData = {
       amount: data.amount,
       currency: data.currency,
       description: `Payment for order ${data.reference}`,
-      customer_id: data.customer_id,
       metadata: {
         ...data.metadata,
         reference: data.reference,
@@ -261,7 +260,6 @@ export async function createCheckoutSession(data: {
         requestData: {
           amount: data.amount,
           currency: data.currency,
-          customer_id: data.customer_id,
         },
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
@@ -281,7 +279,7 @@ export async function createCheckoutSession(data: {
           userFriendlyMessage = "Payment request is invalid. Please check your details and try again.";
         } else if (errorCode === "AUTHENTICATION_FAILED" || errorCode === "AUTH_ERROR") {
           userFriendlyMessage = "Payment service authentication failed. Please check your API credentials or contact support.";
-          console.error("[Tsara] CRITICAL: Tsara API authentication failed (401). Check that TSARA_SECRET_KEY is correctly configured in your environment variables.");
+          console.error("[Tsara] CRITICAL: Tsara API authentication failed (401). Check that NEXT_PUBLIC_TSARA_PUBLIC_KEY is correctly configured in your environment variables.");
         } else if (errorCode === "SERVICE_UNAVAILABLE") {
           userFriendlyMessage = "Payment service is temporarily unavailable. Please try again in a few moments.";
         } else if (errorCode === "INSUFFICIENT_FUNDS") {
@@ -501,9 +499,8 @@ export function formatErrorDetails(error: any): string {
 
 export async function diagnoseTsaraConnection() {
   const timestamp = new Date().toISOString();
-  const hasSecretKey = !!TSARA_SECRET_KEY && TSARA_SECRET_KEY.trim().length > 0;
   const hasPublicKey = !!TSARA_PUBLIC_KEY && TSARA_PUBLIC_KEY.trim().length > 0;
-  const isConfigured = hasSecretKey && hasPublicKey;
+  const isConfigured = hasPublicKey;
   const environment = process.env.NODE_ENV || 'development';
   const baseUrl = BASE_URL;
   
@@ -532,7 +529,6 @@ export async function diagnoseTsaraConnection() {
   return {
     timestamp,
     environment,
-    hasSecretKey,
     hasPublicKey,
     isConfigured,
     canReachApi,
@@ -544,7 +540,7 @@ export async function diagnoseTsaraConnection() {
 export async function verifyWebhookSignature(
   payload: string,
   signature: string,
-  secret: string = TSARA_SECRET_KEY
+  secret: string = TSARA_WEBHOOK_SECRET
 ): Promise<boolean> {
   if (typeof crypto?.subtle !== "undefined") {
     try {
