@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ interface TsaraPaymentModalProps {
   checkoutData?: any;
 }
 
-export function TsaraPaymentModal({
+function TsaraPaymentModalComponent({
   isOpen,
   onClose,
   totalAmount,
@@ -36,13 +36,7 @@ export function TsaraPaymentModal({
 
   const createPayment = trpc.payment.createPayment.useMutation({
     onSuccess: (data) => {
-      console.log('[TsaraPaymentModal] Payment created successfully:', {
-        paymentId: data.paymentId,
-        paymentUrl: data.paymentUrl,
-      });
-
       if (data.paymentUrl) {
-        console.log('[TsaraPaymentModal] Redirecting to payment URL:', data.paymentUrl);
         // Store payment reference in session storage for verification after return
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('pendingPaymentRef', data.payment.id); // Use internal payment ID
@@ -58,146 +52,20 @@ export function TsaraPaymentModal({
     onError: (err: any) => {
       // Extract error message - tRPC errors have message directly or in err.message
       let displayMessage = 'Failed to create payment. Please try again.';
-      let errorCode = 'UNKNOWN';
-
-      // Log raw error first for debugging
-      console.error('[TsaraPaymentModal] Raw error received:', err);
-      console.error('[TsaraPaymentModal] Error type:', typeof err);
-      console.error('[TsaraPaymentModal] Error constructor:', err?.constructor?.name);
 
       // For tRPC errors - check multiple possible locations
       if (err?.message) {
         displayMessage = err.message;
-        errorCode = err?.code || err?.data?.code || 'TRPC_ERROR';
-      }
-      // Fallback to API response structure
-      else if (err?.data?.message) {
+      } else if (err?.data?.message) {
         displayMessage = err.data.message;
-        errorCode = err?.data?.code || 'API_ERROR';
-      }
-      // Check for error in shape property (tRPC error format)
-      else if (err?.shape?.message) {
+      } else if (err?.shape?.message) {
         displayMessage = err.shape.message;
-        errorCode = err?.shape?.data?.code || 'TRPC_SHAPE_ERROR';
-      }
-      // Try the getErrorMessage utility as last resort
-      else {
+      } else {
         const fallbackMessage = getErrorMessage(err);
         if (fallbackMessage && fallbackMessage !== 'An unexpected error occurred') {
           displayMessage = fallbackMessage;
         }
       }
-
-      // Show developer-friendly message in development
-      if (process.env.NODE_ENV === 'development') {
-        // Include more details for debugging
-        if (displayMessage.includes('not configured') || displayMessage.includes('Failed to initialize customer')) {
-          displayMessage = `🔧 Dev Mode: ${displayMessage}`;
-        }
-      }
-
-      // Prepare error details for logging - build incrementally to ensure it's populated
-      const errorDetails: Record<string, any> = {};
-      
-      // Add basic context (guaranteed to exist)
-      errorDetails.message = displayMessage;
-      errorDetails.code = errorCode;
-      errorDetails.buyerId = buyerId;
-      errorDetails.orderId = orderId;
-      errorDetails.amount = totalAmount;
-      errorDetails.paymentMethod = paymentMethod;
-
-      // Safely extract all possible error properties
-      if (err && typeof err === 'object') {
-        try {
-          // Direct properties
-          if (err.message !== undefined) errorDetails.errorMessage = err.message;
-          if (err.code !== undefined) errorDetails.errorCode = err.code;
-          
-          // tRPC data property
-          if (err.data !== undefined) {
-            errorDetails.errorData = err.data;
-            // Also check nested data properties
-            if (err.data.code !== undefined) errorDetails.dataCode = err.data.code;
-            if (err.data.httpStatus !== undefined) errorDetails.httpStatus = err.data.httpStatus;
-            if (err.data.path !== undefined) errorDetails.path = err.data.path;
-            if (err.data.stack !== undefined) errorDetails.stack = err.data.stack;
-          }
-          
-          // tRPC shape property (contains the actual error info)
-          if (err.shape !== undefined) {
-            errorDetails.shape = err.shape;
-            if (err.shape.message !== undefined) errorDetails.shapeMessage = err.shape.message;
-            if (err.shape.data !== undefined) errorDetails.shapeData = err.shape.data;
-          }
-          
-          // tRPC meta property
-          if (err.meta !== undefined) errorDetails.meta = err.meta;
-          
-          // Check for specific error indicators
-          if (displayMessage.toLowerCase().includes('customer') || errorCode === 'INTERNAL_SERVER_ERROR') {
-            errorDetails.suggestion = 'Check if buyer account details exist and Tsara API keys are configured';
-          }
-          if (displayMessage.toLowerCase().includes('unauthorized') || displayMessage.includes('401')) {
-            errorDetails.suggestion = 'TSARA_SECRET_KEY may be invalid or missing';
-          }
-          
-          // Try toString if available
-          if (typeof err.toString === 'function') {
-            const errStr = err.toString();
-            if (errStr && errStr !== '[object Object]') {
-              errorDetails.errorString = errStr;
-            }
-          }
-          
-          // Get all enumerable properties
-          const enumerableProps = Object.keys(err);
-          if (enumerableProps.length > 0) {
-            errorDetails.enumerableProperties = {};
-            for (const prop of enumerableProps) {
-              try {
-                errorDetails.enumerableProperties[prop] = err[prop];
-              } catch (e) {
-                errorDetails.enumerableProperties[prop] = '<unreadable>';
-              }
-            }
-          }
-          
-          // Get all own property names (including non-enumerable)
-          const ownProps = Object.getOwnPropertyNames(err);
-          if (ownProps.length > 0) {
-            errorDetails.ownProperties = {};
-            for (const prop of ownProps) {
-              try {
-                const descriptor = Object.getOwnPropertyDescriptor(err, prop);
-                if (descriptor && !descriptor.get && !descriptor.set) {
-                  errorDetails.ownProperties[prop] = err[prop];
-                } else {
-                  errorDetails.ownProperties[prop] = '<getter/setter>';
-                }
-              } catch (e) {
-                errorDetails.ownProperties[prop] = '<unreadable>';
-              }
-            }
-          }
-          
-          // Check prototype chain for additional properties
-          if (err.prototype) {
-            errorDetails.hasPrototype = true;
-          }
-        } catch (serializeErr) {
-          errorDetails.serializationError = serializeErr instanceof Error ? serializeErr.message : 'Failed to serialize error';
-        }
-      } else if (err !== undefined && err !== null) {
-        // Handle non-object errors (strings, numbers, etc.)
-        errorDetails.nonObjectError = err;
-        errorDetails.errorType = typeof err;
-      }
-
-      // Log as formatted string to avoid object serialization issues
-      console.error(`[TsaraPaymentModal] ❌ Payment Error - Message: ${displayMessage}, Code: ${errorCode}`);
-      console.error('[TsaraPaymentModal] Error Details:', errorDetails);
-      console.error('[TsaraPaymentModal] Raw error (repeated):', err);
 
       toastSvc.error(displayMessage);
     },
@@ -205,15 +73,7 @@ export function TsaraPaymentModal({
 
   const nairaAmount = totalAmount / 100;
 
-  const handleConfirm = () => {
-    console.log('[TsaraPaymentModal] Payment initiated with:', {
-      buyerId: buyerId,
-      orderId: orderId,
-      amount: nairaAmount,
-      paymentMethod: paymentMethod,
-      checkoutData: checkoutData,
-    });
-
+  const handleConfirm = useCallback(() => {
     // For crypto, wallet selection is required
     if (paymentMethod === "crypto" && !selectedWallet) {
       toastSvc.error("Please select a wallet");
@@ -251,9 +111,8 @@ export function TsaraPaymentModal({
       paymentData.wallet_id = selectedWallet;
     }
 
-    console.log('[TsaraPaymentModal] Sending payment request:', paymentData);
     createPayment.mutate(paymentData);
-  };
+  }, [paymentMethod, selectedWallet, checkoutData, orderId, buyerId, nairaAmount, createPayment]);
 
   // Don't render if modal is closed
   if (!isOpen) {
@@ -366,3 +225,5 @@ export function TsaraPaymentModal({
     </Dialog>
   );
 }
+
+export const TsaraPaymentModal = memo(TsaraPaymentModalComponent);

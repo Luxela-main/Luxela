@@ -32,9 +32,6 @@ export default function AdminLayout({ children }: LayoutProps) {
         const supabase = createClient();
         // Refresh the session to ensure we have the latest user metadata
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.log('[Admin Layout] Session refresh error (non-blocking):', refreshError.message);
-        }
         
         const delayMs = 1500 + (retryCount * 500);
         await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -62,45 +59,33 @@ export default function AdminLayout({ children }: LayoutProps) {
 
         // Check if user is admin (check auth metadata first, then database as fallback)
         let userIsAdmin = user.user_metadata?.admin === true;
-        console.log('[Admin Layout] Checking user admin status - metadata.admin:', user.user_metadata?.admin);
         
         // If not found in metadata, check the database users table
         if (!userIsAdmin) {
-          console.log('[Admin Layout] Not admin in metadata, checking database for user:', user.id);
           const { data: userData, error: userError } = await supabase
             .from('users')
             .select('role')
             .eq('id', user.id)
             .single();
           
-          console.log('[Admin Layout] Database query result - data:', userData, 'error:', userError);
-          
           if (!userError && userData?.role === 'admin') {
-            console.log('[Admin Layout] User found as admin in database');
             userIsAdmin = true;
-          } else {
-            console.log('[Admin Layout] Database check failed - error:', userError, 'role:', userData?.role);
           }
-        } else {
-          console.log('[Admin Layout] User is admin via metadata');
         }
         
         if (!isMounted) return;
         
         if (userIsAdmin) {
           // User is admin - allow access
-          console.log('[Admin Layout] User verified as admin, allowing access');
           setIsAdmin(true);
           setIsLoading(false);
         } else {
           // User is not admin yet - retry a few times in case JWT is still syncing
           if (retryCount < MAX_RETRIES) {
-            console.log(`[Admin Layout] Admin check failed, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
             retryCount++;
             await checkAdminAccess();
           } else {
             // Max retries reached - user is definitely not admin
-            console.log('[Admin Layout] Max admin verification retries reached, user is not admin');
             setIsAdmin(false);
             setIsLoading(false);
             if (isMounted) {
@@ -109,17 +94,13 @@ export default function AdminLayout({ children }: LayoutProps) {
           }
         }
       } catch (error) {
-        console.error('[Admin Layout] Failed to check admin access:', error);
-        
         if (!isMounted) return;
         
         if (retryCount < MAX_RETRIES) {
-          console.log(`[Admin Layout] Error during admin check, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
           retryCount++;
           await checkAdminAccess();
         } else {
           // Max retries reached on error
-          console.log('[Admin Layout] Max retries reached due to error, redirecting to signin');
           setIsLoading(false);
           if (!isPublicAdminPage && isMounted) {
             router.push('/admin/signin');

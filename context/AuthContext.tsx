@@ -64,30 +64,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             (Date.now() - session.created_at < 24 * 60 * 60 * 1000); // 24 hours
           
           if (isValid && session.access_token && session.user) {
-            console.log("[AUTH] Recovering session from localStorage backup");
             // Try to refresh the token with Supabase
             try {
               const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
               if (refreshData?.session && !refreshError) {
-                console.log("[AUTH] Token refreshed from backup session");
                 return refreshData.session;
               }
             } catch (e) {
-              console.warn("[AUTH] Token refresh failed, using cached session", e);
               // Return cached session even if refresh fails
               return session;
             }
           }
         }
       } catch (e) {
-        console.warn("[AUTH] Error recovering from localStorage:", e);
+        // Error recovering from localStorage ignored
       }
       return null;
     };
 
     const initAuth = async (retryCount = 0) => {
       try {
-        console.log("[AUTH] Initializing session from cookies...");
         
         // Check if we're in OAuth callback (has fragment tokens)
         const fragment = typeof window !== 'undefined' ? window.location.hash : '';
@@ -102,21 +98,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // If OAuth callback or email verification callback, give Supabase time to process and set cookies
         if ((hasOAuthToken || isEmailVerificationCallback) && retryCount === 0) {
           const callbackType = isEmailVerificationCallback ? 'email verification' : 'OAuth';
-          console.log(`[AUTH] ${callbackType} callback detected, waiting for session sync...`);
           // Wait for cookies to be set (email verification happens server-side, so shorter wait is fine)
           const waitTime = isEmailVerificationCallback ? 500 : 1500;
           await new Promise(resolve => setTimeout(resolve, waitTime));
         } else if (isAuthCallbackPage && retryCount === 0) {
           // If we're on /auth/callback page but without token_hash (means we were redirected from the API route)
           // Give a brief moment for cookies to sync
-          console.log('[AUTH] Auth callback page detected, allowing cookie sync...');
           await new Promise(resolve => setTimeout(resolve, 300));
         }
         
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.warn("[AUTH] Session error:", error.message);
           // Try to recover from localStorage before retrying
           if (retryCount === 0) {
             const recoveredSession = await recoverFromLocalStorage();
@@ -133,7 +126,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Retry up to 5 times on error with backoff (OAuth callbacks need multiple retries)
           if (retryCount < 5) {
             const delay = 600 * (retryCount + 1);
-            console.log(`[AUTH] Retrying session initialization (attempt ${retryCount + 2}/6) after ${delay}ms...`);
             setTimeout(() => {
               if (mounted) initAuth(retryCount + 1);
             }, delay);
@@ -148,12 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // Store the access token for request injection
             if (data.session.access_token) {
               setToken(data.session.access_token);
-              console.log("[AUTH] Token stored for request injection");
             }
-            console.log(
-              "[AUTH] Session initialized from cookies (primary), user:",
-              data.session.user.id
-            );
             // Store session in localStorage as backup
             try {
               localStorage.setItem("sb-auth-session", JSON.stringify({
@@ -163,15 +150,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 expires_at: data.session.expires_at,
                 created_at: Date.now()
               }));
-              console.log("[AUTH] Session backed up to localStorage");
             } catch (e) {
-              console.warn("[AUTH] Failed to store session in localStorage:", e);
+              // Failed to store session in localStorage
             }
           }
         } else if (isAuthCallbackPage && retryCount < 2) {
           // On auth callback page with no session yet, retry a few times
           // This handles the case where cookies haven't been set yet
-          console.log(`[AUTH] On /auth/callback with no session, retrying (${retryCount + 1}/2)...`);
           const delay = 800 * (retryCount + 1);
           await new Promise(resolve => setTimeout(resolve, delay));
           if (mounted) {
@@ -180,29 +165,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         } else {
           // Secondary fallback: Check localStorage for persisted session
-          console.log("[AUTH] No session in cookies, checking localStorage backup...");
           const recoveredSession = await recoverFromLocalStorage();
           
           if (recoveredSession?.user && mounted) {
             setUser(recoveredSession.user);
             if (recoveredSession.access_token) {
               setToken(recoveredSession.access_token);
-              console.log("[AUTH] Token restored from localStorage backup");
             }
-            console.log(
-              "[AUTH] Session recovered from localStorage backup, user:",
-              recoveredSession.user.id
-            );
           } else {
             if (mounted) setUser(null);
           }
         }
       } catch (e) {
-        console.error("[AUTH] Init error:", e);
         // Retry on exception with backoff (up to 2 retries)
         if (mounted && retryCount < 2) {
           const delay = 600 * (retryCount + 1);
-          console.log(`[AUTH] Retrying after error (attempt ${retryCount + 2}/3) after ${delay}ms...`);
           setTimeout(() => {
             if (mounted) initAuth(retryCount + 1);
           }, delay);
@@ -219,7 +196,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event: any, session: any) => {
         if (!mounted) return;
-        console.log("[AUTH] Auth state changed:", event);
         setUser(session?.user ?? null);
         
         // Update token whenever auth state changes
@@ -235,9 +211,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               created_at: Date.now()
             }));
           } catch (e) {
-            console.warn("[AUTH] Failed to backup session to localStorage:", e);
+            // Failed to backup session to localStorage
           }
-          console.log("[AUTH] Token updated from auth state change:", event);
         } else {
           setToken(null);
           // Clear localStorage on logout
@@ -245,7 +220,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             localStorage.removeItem("sb-auth-session");
             localStorage.removeItem("sb-auth-user");
           } catch (e) {
-            console.warn("[AUTH] Failed to clear localStorage:", e);
+            // Failed to clear localStorage
           }
         }
       }
@@ -262,12 +237,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       // Sign out from Supabase first, then redirect to home
       await supabase.auth.signOut();
-      console.log("[AUTH] Successfully signed out from Supabase");
       router.push("/");
     } catch (e) {
-      console.error("[AUTH] Logout error:", e);
       // Even if logout fails, redirect to home to ensure user can log back in
-      console.log("[AUTH] Redirecting to home despite logout error");
       router.push("/");
     }
   };

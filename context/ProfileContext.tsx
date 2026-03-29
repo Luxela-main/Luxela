@@ -62,18 +62,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (user) refetch();
   }, [refetch, user]);
 
-  // Log profile data for debugging
-  React.useEffect(() => {
-    if (data) {
-      console.log('[ProfileContext] Profile data loaded:', {
-        id: data.id,
-        username: data.username,
-        email: data.email,
-      });
-    } else if (isFetched && !isLoading) {
-      console.log('[ProfileContext] No profile data available');
-    }
-  }, [data, isFetched, isLoading]);
+
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo<ProfileContextType>(
@@ -97,4 +86,4 @@ export function useProfile() {
   const ctx = useContext(ProfileContext);
   if (!ctx) throw new Error("useProfile must be used within ProfileProvider");
   return ctx;
-}
+}
