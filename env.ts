@@ -1,3 +1,10 @@
+// Load environment variables from .env file in development
+if (process.env.NODE_ENV !== 'production') {
+  import('dotenv').then(({ default: dotenv }) => {
+    dotenv.config();
+  });
+}
+
 export const env = {
   // Environment
   DATABASE_URL: process.env.DATABASE_URL || '',

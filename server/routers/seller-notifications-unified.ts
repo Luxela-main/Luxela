@@ -320,6 +320,11 @@ export const sellerNotificationsRouter = createTRPCRouter({
           });
         }
 
+        // Generate fresh seller notifications before query
+        void generateAndStoreSellerNotifications(seller.id).catch((err) => {
+          console.error('[sellerNotifications] Failed to generate derived notifications:', err);
+        });
+
         // Build query conditions
         const conditions = [
           eq(sellerNotifications.sellerId, seller.id),
@@ -376,7 +381,7 @@ export const sellerNotificationsRouter = createTRPCRouter({
           isRead: n.isRead,
           isStarred: n.isStarred,
           createdAt: n.createdAt instanceof Date ? n.createdAt.toISOString() : String(n.createdAt),
-          metadata: null,
+          metadata: n.metadata ?? null,
         }));
 
         if (transformedNotifications.length > 0) {
@@ -443,7 +448,8 @@ export const sellerNotificationsRouter = createTRPCRouter({
         .from(sellerNotifications)
         .where(and(
           eq(sellerNotifications.sellerId, seller.id),
-          eq(sellerNotifications.isRead, false)
+          eq(sellerNotifications.isRead, false),
+          isNull(sellerNotifications.deletedAt)
         ));
 
       const count = result[0]?.count ?? 0;
@@ -505,7 +511,10 @@ export const sellerNotificationsRouter = createTRPCRouter({
       const notifs = await db
         .select()
         .from(sellerNotifications)
-        .where(eq(sellerNotifications.sellerId, seller.id))
+        .where(and(
+          eq(sellerNotifications.sellerId, seller.id),
+          isNull(sellerNotifications.deletedAt)
+        ))
         .orderBy(desc(sellerNotifications.createdAt));
 
       const grouped: Record<string, any[]> = {};

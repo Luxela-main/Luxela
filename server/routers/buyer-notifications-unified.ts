@@ -412,6 +412,11 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
+      // Generate fresh buyer notifications every time endpoint is hit
+      void generateAndStoreBuyerNotifications(buyer.id).catch((err) => {
+        console.error('[buyerNotifications] Failed to generate derived notifications:', err);
+      });
+
       // Build query conditions
       const conditions = [
         eq(buyerNotifications.buyerId, buyer.id),
@@ -501,11 +506,18 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
+      // Ensure derived notifications are generated before serving
+      void generateAndStoreBuyerNotifications(buyer.id).catch((err) => {
+        console.error('[buyerNotifications] Failed to generate derived notifications:', err);
+      });
 
       const notifs = await db
         .select()
         .from(buyerNotifications)
-        .where(eq(buyerNotifications.buyerId, buyer.id))
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          isNull(buyerNotifications.deletedAt)
+        ))
         .orderBy(desc(buyerNotifications.createdAt))
         .limit(input.limit)
         .offset(input.offset);
@@ -513,7 +525,10 @@ export const buyerNotificationsRouter = createTRPCRouter({
       const totalResult = await db
         .select({ count: sql<number>`count(*)::integer` })
         .from(buyerNotifications)
-        .where(eq(buyerNotifications.buyerId, buyer.id));
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          isNull(buyerNotifications.deletedAt)
+        ));
 
       const total = Number(totalResult[0]?.count ?? 0);
 
@@ -522,7 +537,8 @@ export const buyerNotificationsRouter = createTRPCRouter({
         .from(buyerNotifications)
         .where(and(
           eq(buyerNotifications.buyerId, buyer.id),
-          eq(buyerNotifications.isRead, false)
+          eq(buyerNotifications.isRead, false),
+          isNull(buyerNotifications.deletedAt)
         ));
 
       const unreadCount = Number(unreadResult[0]?.count ?? 0);
@@ -583,7 +599,8 @@ export const buyerNotificationsRouter = createTRPCRouter({
           .from(buyerNotifications)
           .where(and(
             eq(buyerNotifications.buyerId, buyer.id),
-            eq(buyerNotifications.isRead, false)
+            eq(buyerNotifications.isRead, false),
+            isNull(buyerNotifications.deletedAt)
           ));
 
         const count = Number(result[0]?.count ?? 0);
@@ -648,7 +665,10 @@ export const buyerNotificationsRouter = createTRPCRouter({
       const notifs = await db
         .select()
         .from(buyerNotifications)
-        .where(eq(buyerNotifications.buyerId, buyer.id))
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          isNull(buyerNotifications.deletedAt)
+        ))
         .orderBy(desc(buyerNotifications.createdAt));
 
       const grouped: Record<string, any[]> = {};

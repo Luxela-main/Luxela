@@ -2,6 +2,7 @@ import { db } from '../db';
 import { notifications, orders, buyerAccountDetails, sellers } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { createBuyerNotification, createSellerNotification } from './notificationManager';
 
 let nodemailer: any = null;
 try {
@@ -44,7 +45,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<st
   const notificationId = uuidv4();
 
   try {
-    // Store in database
+    // Store in legacy notifications table
     await db.insert(notifications).values({
       id: notificationId,
       sellerId: payload.sellerId,
@@ -56,6 +57,46 @@ export async function sendNotification(payload: NotificationPayload): Promise<st
       isStarred: false,
       createdAt: new Date(),
     });
+
+    // Mirror notification into the unified buyer/seller notifications tables
+    const category = mapOldNotificationTypeToCategory(payload.type);
+    const title = getEmailSubject(payload.type);
+
+    if (payload.buyerId) {
+      void createBuyerNotification({
+        buyerId: payload.buyerId,
+        type: category,
+        title,
+        message: payload.message,
+        relatedEntityId: payload.orderId ?? null,
+        relatedEntityType: payload.orderId ? 'order' : null,
+        actionUrl: payload.orderId ? `/buyer/orders/${payload.orderId}` : null,
+        metadata: payload.metadata ?? {},
+      }).catch((err) => {
+        console.error('[notificationService] Failed to create buyer notification:', err);
+      });
+    }
+
+    if (payload.sellerId) {
+      void createSellerNotification({
+        sellerId: payload.sellerId,
+        type: category,
+        title,
+        message: payload.message,
+        relatedEntityId: payload.orderId ?? null,
+        relatedEntityType: payload.orderId ? 'order' : null,
+        actionUrl: payload.orderId ? `/seller/orders/${payload.orderId}` : null,
+        severity:
+          payload.type === 'payment_failed' || payload.type === 'refund_issued'
+            ? 'warning'
+            : payload.type === 'delivery_confirmed'
+            ? 'info'
+            : 'info',
+        metadata: payload.metadata ?? {},
+      }).catch((err) => {
+        console.error('[notificationService] Failed to create seller notification:', err);
+      });
+    }
 
     // Send email notification if configured
     if (emailTransporter && payload.buyerId) {
@@ -116,6 +157,29 @@ function getEmailSubject(type: NotificationType): string {
     delivery_confirmed: 'Delivery Confirmed',
   };
   return subjects[type] || 'Notification';
+}
+
+function mapOldNotificationTypeToCategory(type: NotificationType): string {
+  switch (type) {
+    case 'purchase':
+      return 'order_pending';
+    case 'review':
+      return 'review_request';
+    case 'comment':
+      return 'system_alert';
+    case 'reminder':
+      return 'reminder';
+    case 'order_confirmed':
+      return 'order_confirmed';
+    case 'payment_failed':
+      return 'payment_failed';
+    case 'refund_issued':
+      return 'refund_processed';
+    case 'delivery_confirmed':
+      return 'delivered';
+    default:
+      return 'system_alert';
+  }
 }
 
 function generateEmailHTML(payload: NotificationPayload): string {

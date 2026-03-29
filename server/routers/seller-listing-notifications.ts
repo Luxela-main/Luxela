@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "../trpc/trpc";
 import { db } from "../db";
 import { listings, listingReviews, sellers } from "../db/schema";
-import { eq, count as countFn } from "drizzle-orm";
+import { eq, count as countFn, and, gt, desc } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { TRPCContext } from "../trpc/context";
@@ -261,16 +261,15 @@ export const sellerListingNotificationsRouter = createTRPCRouter({
         })
         .from(listingReviews)
         .innerJoin(listings, eq(listingReviews.listingId, listings.id))
-        .where(
-          eq(listingReviews.sellerId, seller.id)
-        )
-        .orderBy((t: any) => t.review.updatedAt)
+        .where(and(
+          eq(listingReviews.sellerId, seller.id),
+          gt(listingReviews.updatedAt, lastPolledAt)
+        ))
+        .orderBy(desc(listingReviews.updatedAt))
         .limit(50);
 
       const now = new Date();
-      const newNotifications = newReviews
-        .filter((item: typeof newReviews[number]) => item.review.updatedAt > lastPolledAt)
-        .map((item: typeof newReviews[number]) => {
+      const newNotifications = newReviews.map((item: typeof newReviews[number]) => {
           const status = item.review.status;
           let message = "";
           

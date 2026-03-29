@@ -3,22 +3,15 @@ import { trpc as api } from '@/app/_trpc/client';
 
 export interface BuyerNotification {
   id: string;
-  type:
-    | 'purchase'
-    | 'review'
-    | 'comment'
-    | 'reminder'
-    | 'order_confirmed'
-    | 'payment_failed'
-    | 'refund_issued'
-    | 'delivery_confirmed'
-    | 'order_shipped'
-    | 'order_delayed';
+  type: string;
+  title?: string;
   message: string;
+  relatedEntityId?: string | null;
+  relatedEntityType?: string | null;
+  actionUrl?: string | null;
   isRead: boolean;
   isStarred: boolean;
   createdAt: Date;
-  orderId?: string | null;
   metadata?: Record<string, any>;
   isNew?: boolean;
 }
@@ -94,12 +87,17 @@ export function useBuyerNotificationPoller(
           if (!notification.isRead) {
             const notifWithDate: BuyerNotification = {
               id: notification.id,
-              type: 'purchase',
+              type: notification.type || 'order_update',
+              title: notification.title,
               message: notification.message,
+              relatedEntityId: notification.relatedEntityId,
+              relatedEntityType: notification.relatedEntityType,
+              actionUrl: notification.actionUrl,
               isRead: notification.isRead,
-              isStarred: false,
+              isStarred: notification.isStarred ?? false,
               createdAt: new Date(notification.createdAt),
               metadata: (notification.metadata as Record<string, any> | undefined) || undefined,
+              isNew: true,
             };
             onNewNotification?.(notifWithDate);
           }
@@ -108,10 +106,14 @@ export function useBuyerNotificationPoller(
         setNotifications((prev) => {
           const convertedNotifications = response.data!.notifications.map((nn) => ({
             id: nn.id,
-            type: 'purchase' as const,
+            type: nn.type || 'order_update',
+            title: nn.title,
             message: nn.message,
+            relatedEntityId: nn.relatedEntityId,
+            relatedEntityType: nn.relatedEntityType,
+            actionUrl: nn.actionUrl,
             isRead: nn.isRead,
-            isStarred: false,
+            isStarred: nn.isStarred ?? false,
             createdAt: new Date(nn.createdAt),
             metadata: nn.metadata,
           } as BuyerNotification));
