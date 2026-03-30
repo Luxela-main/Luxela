@@ -23,13 +23,49 @@ const VALID_PRODUCT_CATEGORIES = [
 ] as const;
 
 async function ensureBuyer(userId: string) {
-  const existing = await db.select().from(buyers).where(eq(buyers.userId, userId));
-  if (existing[0]) return existing[0];
-  const [created] = await db
-    .insert(buyers)
-    .values({ id: uuidv4(), userId, createdAt: new Date(), updatedAt: new Date() })
-    .returning();
-  return created;
+  try {
+    if (!userId || typeof userId !== 'string') {
+      console.error('[ensureBuyer] Invalid userId:', { userId, type: typeof userId });
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Invalid user ID provided",
+      });
+    }
+
+    console.log('[ensureBuyer] Looking for buyer with userId:', userId);
+
+    const existing = await db.select().from(buyers).where(eq(buyers.userId, userId));
+    
+    if (existing[0]) {
+      console.log('[ensureBuyer] Found existing buyer:', existing[0].id);
+      return existing[0];
+    }
+
+    console.log('[ensureBuyer] Creating new buyer...');
+
+    const [created] = await db
+      .insert(buyers)
+      .values({ id: uuidv4(), userId, createdAt: new Date(), updatedAt: new Date() })
+      .returning();
+
+    if (!created) {
+      throw new Error("Failed to create buyer record");
+    }
+
+    console.log('[ensureBuyer] Successfully created new buyer:', created.id);
+    return created;
+  } catch (err: any) {
+    console.error('[ensureBuyer] Error:', {
+      message: err?.message,
+      code: err?.code,
+      userId,
+      stack: err?.stack,
+    });
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to ensure buyer profile. Please try again.",
+    });
+  }
 }
 
 async function ensureCart(buyerId: string) {

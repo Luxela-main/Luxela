@@ -125,10 +125,16 @@ process.on("SIGINT", async () => {
 export async function checkDBHealth(): Promise<boolean> {
   try {
     const result = await pool.query("SELECT 1");
-    console.log("[DB_HEALTH_CHECK] Success");
+    if (process.env.DEBUG_DB_POOL === "true") {
+      console.log("[DB_HEALTH_CHECK] Success");
+    }
     return result.rows.length > 0;
   } catch (error) {
-    console.error("[DB_HEALTH_CHECK] Failed:", error);
+    console.error("[DB_HEALTH_CHECK] Failed:", {
+      message: (error as any)?.message,
+      code: (error as any)?.code,
+      detail: (error as any)?.detail,
+    });
     return false;
   }
 }
@@ -141,9 +147,55 @@ export async function ensureDBConnection(): Promise<void> {
       const isHealthy = await checkDBHealth();
       if (isHealthy) return;
     } catch (error) {
-      if (i === maxRetries - 1) throw error;
+      if (i === maxRetries - 1) {
+        console.error("[DB] Connection failed after retries:", (error as any)?.message);
+        throw error;
+      }
       console.log("[DB] Retrying connection...", i + 1);
       await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
     }
   }
+}
+
+// Middleware to handle database query errors
+export function wrapDBQuery<T>(queryFn: () => Promise<T>): () => Promise<T> {
+  return async () => {
+    const maxRetries = 2;
+    let lastError: any;
+
+    for (let i = 0; i <= maxRetries; i++) {
+      try {
+        return await queryFn();
+      } catch (error: any) {
+        lastError = error;
+
+        // Check if it's a retryable error
+        const isRetryable =
+          error?.code === '08000' || // connection_failure
+          error?.code === '08003' || // connection_does_not_exist
+          error?.code === '08006' || // connection_failure
+          error?.message?.includes('Client was closed by the application') ||
+          error?.message?.includes('connection terminated unexpectedly') ||
+          error?.message?.includes('socket hang up') ||
+          error?.message?.includes('ECONNREFUSED') ||
+          error?.message?.includes('ETIMEDOUT') ||
+          error?.message?.includes('EHOSTUNREACH');
+
+        if (!isRetryable || i === maxRetries) {
+          throw error;
+        }
+
+        console.warn(`[DB_QUERY_RETRY] Attempt ${i + 1}/${maxRetries + 1}:`, {
+          code: error?.code,
+          message: error?.message,
+          query: error?.query?.substring?.(0, 100),
+        });
+
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, i)));
+      }
+    }
+
+    throw lastError;
+  };
 }

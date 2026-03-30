@@ -2,6 +2,7 @@ export interface CacheEntry<T = any> {
   data: T;
   timestamp: number;
   ttl: number;
+  size?: number;
 }
 
 export interface CacheLayer {
@@ -23,10 +24,17 @@ const CACHE_TTL = {
   LOCAL_STORAGE: 30 * 60 * 1000,
 } as const;
 
+// Max size for localStorage entries (100KB per entry to avoid quota issues)
+const MAX_STORAGE_SIZE = 100 * 1024;
+
+// Total max for buyer cache (1MB to leave room for other data)
+const MAX_TOTAL_CACHE_SIZE = 1 * 1024 * 1024;
+
 class BuyerPageCache {
   private memoryCache: Map<string, CacheEntry> = new Map();
   private localStorage: Storage | null = null;
   private isInitialized = false;
+  private totalStorageSize = 0;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -52,6 +60,73 @@ class BuyerPageCache {
       return JSON.parse(raw);
     } catch {
       return null;
+    }
+  }
+
+  private estimateSize(data: any): number {
+    try {
+      return JSON.stringify(data).length;
+    } catch {
+      return 0;
+    }
+  }
+
+  private calculateTotalStorageSize(): number {
+    if (!this.localStorage) return 0;
+    
+    let total = 0;
+    try {
+      for (let i = 0; i < this.localStorage.length; i++) {
+        const key = this.localStorage.key(i);
+        if (key && key.startsWith('buyer:')) {
+          const value = this.localStorage.getItem(key);
+          if (value) total += value.length;
+        }
+      }
+    } catch (err) {
+      console.warn('[Cache] Error calculating storage size:', err);
+    }
+    
+    return total;
+  }
+
+  private cleanupOldestEntries(): void {
+    if (!this.localStorage) return;
+
+    try {
+      const entries: Array<[string, number]> = [];
+      
+      for (let i = 0; i < this.localStorage.length; i++) {
+        const key = this.localStorage.key(i);
+        if (key && key.startsWith('buyer:')) {
+          const value = this.localStorage.getItem(key);
+          if (value) {
+            try {
+              const cached = this.decodeValue(value);
+              if (cached?.timestamp) {
+                entries.push([key, cached.timestamp]);
+              }
+            } catch {
+              // Skip entries that can't be parsed
+            }
+          }
+        }
+      }
+
+      // Sort by timestamp (oldest first)
+      entries.sort((a, b) => a[1] - b[1]);
+
+      // Remove oldest entries until we're under the limit
+      for (const [key] of entries.slice(0, Math.ceil(entries.length / 4))) {
+        try {
+          this.localStorage.removeItem(key);
+          console.log(`[Cache] Cleaned up old entry: ${key}`);
+        } catch (err) {
+          console.warn(`[Cache] Error removing ${key}:`, err);
+        }
+      }
+    } catch (err) {
+      console.warn('[Cache] Error during cleanup:', err);
     }
   }
 
@@ -103,26 +178,61 @@ class BuyerPageCache {
   ): Promise<void> {
     const encodedKey = this.encodeKey(key, params);
     const timestamp = Date.now();
+    const dataSize = this.estimateSize(data);
 
     if (!options?.skipMemory) {
       this.memoryCache.set(encodedKey, {
         data,
         ttl: CACHE_TTL.MEMORY,
         timestamp,
+        size: dataSize,
       });
     }
 
     if (!options?.skipLocalStorage && this.localStorage) {
+      // Skip localStorage if data is too large
+      if (dataSize > MAX_STORAGE_SIZE) {
+        console.warn(`[Cache] Data too large for localStorage (${dataSize} bytes > ${MAX_STORAGE_SIZE} bytes): ${key}`);
+        return;
+      }
+
       try {
-        this.localStorage.setItem(
-          encodedKey,
-          JSON.stringify({
-            data,
-            timestamp,
-          })
-        );
-      } catch (err) {
-        console.warn(`[Cache] localStorage write error for ${key}:`, err);
+        const cacheEntry = JSON.stringify({
+          data,
+          timestamp,
+        });
+
+        // Check if we need to cleanup first
+        const currentSize = this.calculateTotalStorageSize();
+        if (currentSize + cacheEntry.length > MAX_TOTAL_CACHE_SIZE) {
+          console.warn(`[Cache] Total size (${currentSize} bytes) exceeds limit, cleaning up...`);
+          this.cleanupOldestEntries();
+        }
+
+        this.localStorage.setItem(encodedKey, cacheEntry);
+        console.log(`[Cache] Stored to localStorage: ${key} (${cacheEntry.length} bytes)`);
+      } catch (err: any) {
+        // Handle QuotaExceededError specifically
+        if (err instanceof DOMException && (
+          err.code === 22 ||
+          err.code === 1014 ||
+          err.name === 'QuotaExceededError' ||
+          err.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+        )) {
+          console.warn(`[Cache] localStorage quota exceeded for ${key}, attempting cleanup...`);
+          this.cleanupOldestEntries();
+          
+          // Try one more time after cleanup
+          try {
+            const cacheEntry = JSON.stringify({ data, timestamp });
+            this.localStorage?.setItem(encodedKey, cacheEntry);
+            console.log(`[Cache] Successfully stored after cleanup: ${key}`);
+          } catch (retryErr) {
+            console.warn(`[Cache] Failed to store even after cleanup for ${key}:`, retryErr);
+          }
+        } else {
+          console.warn(`[Cache] localStorage write error for ${key}:`, err);
+        }
       }
     }
   }
