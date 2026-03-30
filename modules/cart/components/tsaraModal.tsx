@@ -207,6 +207,11 @@ function TsaraPaymentModalComponent({
                       Discount: -₦{(checkoutData.discountCents / 100).toLocaleString('en-NG')}
                     </p>
                   )}
+                  {checkoutData.shippingCents > 0 ? (
+                    <p>Shipping: ₦{(checkoutData.shippingCents / 100).toLocaleString('en-NG')}</p>
+                  ) : (
+                    <p className="text-green-500">Shipping: FREE</p>
+                  )}
                 </div>
               </div>
             </div>

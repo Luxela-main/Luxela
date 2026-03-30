@@ -613,31 +613,32 @@ export const cartRouter = createTRPCRouter({
       })
     )
     .output(
-      z.object({
-        orders: z.array(
-          z.object({
-            listingId: z.string().uuid(),
-            sellerId: z.string().uuid(),
-            productTitle: z.string(),
-            productImage: z.string().optional(),
-            productCategory: z.string(),
-            quantity: z.number().int(),
-            amountCents: z.number().int(),
-            currency: z.string(),
-          })
-        ),
-        subtotal: z.number().int(),
-        discountCents: z.number().int(),
-        total: z.number().int(),
-        cartId: z.string().uuid(),
-        buyerId: z.string().uuid(),
-        accountDetails: z.object({
-          fullName: z.string(),
-          email: z.string().email(),
-          shippingAddress: z.string(),
-        }),
-      })
-    )
+    z.object({
+      orders: z.array(
+        z.object({
+          listingId: z.string().uuid(),
+          sellerId: z.string().uuid(),
+          productTitle: z.string(),
+          productImage: z.string().optional(),
+          productCategory: z.string(),
+          quantity: z.number().int(),
+          amountCents: z.number().int(),
+          currency: z.string(),
+        })
+      ),
+      subtotal: z.number().int(),
+      discountCents: z.number().int(),
+      shippingCents: z.number().int(),
+      total: z.number().int(),
+      cartId: z.string().uuid(),
+      buyerId: z.string().uuid(),
+      accountDetails: z.object({
+        fullName: z.string(),
+        email: z.string().email(),
+        shippingAddress: z.string(),
+      }),
+    })
+  )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id;
       if (!userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -764,7 +765,16 @@ export const cartRouter = createTRPCRouter({
           }
         }
 
-        const total = Math.max(0, subtotal - discountCents);
+        // Calculate shipping fees (same logic as client-side)
+        const FREE_SHIPPING_THRESHOLD = 5000000; // ₦50,000
+        const BASE_SHIPPING_CENTS = 200000; // ₦2,000
+        const PER_ITEM_SHIPPING_CENTS = 50000; // ₦500 per item
+        
+        const shippingCents = subtotal > FREE_SHIPPING_THRESHOLD 
+          ? 0 
+          : BASE_SHIPPING_CENTS + (items.length * PER_ITEM_SHIPPING_CENTS);
+        
+        const total = Math.max(0, subtotal - discountCents + shippingCents);
 
         // IMPORTANT: Orders are NOT created here. They will be created AFTER payment is confirmed.
         // This mutation only validates the cart and returns order details for the payment flow.
@@ -811,14 +821,17 @@ export const cartRouter = createTRPCRouter({
         console.log('[Checkout] Success - returning order preview for payment', {
           buyerId: buyer.id,
           itemCount: orderItems.length,
-          total: total,
-          discountCents: discountCents,
+          subtotal,
+          discountCents,
+          shippingCents,
+          total,
         });
         
         return { 
           orders: orderItems,  // Preview items for payment
           subtotal, 
-          discountCents, 
+          discountCents,
+          shippingCents,
           total,
           cartId: cart.id,  // Include cart ID for later clearing
           buyerId: buyer.id,
