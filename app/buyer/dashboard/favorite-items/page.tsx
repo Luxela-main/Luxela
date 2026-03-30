@@ -21,9 +21,36 @@ export default function FavoriteItemsPage() {
   const toastHandler = useToast();
 
   const removeFavoriteMutation = trpc.buyer.removeFavorite.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await utils.buyer.getFavorites.cancel();
+
+      // Get current favorites data
+      const previousData = utils.buyer.getFavorites.getData({ page: currentPage, limit: 10 });
+
+      // Optimistically remove the favorite
+      if (previousData) {
+        utils.buyer.getFavorites.setData(
+          { page: currentPage, limit: 10 },
+          {
+            ...previousData,
+            data: previousData.data.filter((fav: any) => fav.id !== variables.favoriteId),
+            total: Math.max(0, (previousData.total || 0) - 1),
+          }
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: async () => {
-      // Invalidate the favorites query to refetch data
-      await utils.buyer.getFavorites.invalidate();
+      // Invalidate to ensure cache matches server state
+      await utils.buyer.getFavorites.invalidate({ page: currentPage, limit: 10 });
+    },
+    onError: (error, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        utils.buyer.getFavorites.setData({ page: currentPage, limit: 10 }, context.previousData);
+      }
     },
   });
   const addToCartMutation = trpc.cart.addToCart.useMutation();

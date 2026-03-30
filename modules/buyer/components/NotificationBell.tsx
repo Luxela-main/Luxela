@@ -29,9 +29,13 @@ export function NotificationBell() {
     }
   }, [isOpen]);
 
-  const handleNotificationClick = (notificationId: string, isRead: boolean) => {
+  const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
     if (!isRead) {
-      markAsReadMutation.mutate({ notificationId, isRead: true });
+      try {
+        await markAsReadMutation.mutateAsync({ notificationId });
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      }
     }
   };
 

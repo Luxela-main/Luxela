@@ -207,14 +207,43 @@ const ProductListings: React.FC<ProductListingsProps> = ({ onAddProduct }) => {
   };
 
   const deleteMutation = (trpc.listing as any).deleteListing.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await (trpc.useContext().listing as any).getAllListings.cancel?.();
+
+      // Get current listings data
+      const previousData = (trpc.useContext().listing as any).getAllListings.getData?.();
+
+      // Optimistically remove the listing
+      if (previousData?.listings) {
+        (trpc.useContext().listing as any).getAllListings.setData?.(
+          {},
+          {
+            ...previousData,
+            listings: previousData.listings.filter((listing: any) => listing.id !== variables.listingId),
+          }
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: () => {
       toastSvc.success("Listing deleted successfully!");
-      refetch();
       setSelectedItems(new Set());
       setIsDeleteDialogOpen(false);
       setListingToDelete(null);
+      // Invalidate to ensure cache matches server state
+      (trpc.useContext().listing as any).getAllListings.invalidate?.();
+      refetch();
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        (trpc.useContext().listing as any).getAllListings.setData?.(
+          {},
+          context.previousData
+        );
+      }
       toastSvc.error(error.message || "Failed to delete listing");
     },
   });

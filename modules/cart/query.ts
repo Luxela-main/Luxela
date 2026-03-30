@@ -61,11 +61,40 @@ export const useUpdateCartItem = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.setItemQuantity.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await utils.cart.getCart.cancel?.();
+
+      // Get current cart data
+      const previousData = utils.cart.getCart.getData?.();
+
+      // Optimistically update the item quantity
+      if (previousData) {
+        utils.cart.getCart.setData?.(
+          undefined,
+          {
+            ...previousData,
+            items: previousData.items.map((item: any) =>
+              item.listingId === variables.listingId
+                ? { ...item, quantity: variables.quantity }
+                : item
+            ),
+          } as any
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: async () => {
       toastSvc.success("Cart updated successfully.");
-      await utils.cart.getCart.refetch();
+      // Invalidate to ensure cache matches server state
+      await utils.cart.getCart.invalidate?.();
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        utils.cart.getCart.setData?.(undefined, context.previousData as any);
+      }
       const errorMessage = error?.data?.message || error?.message || "Failed to update cart";
       toastSvc.error(errorMessage);
     },
@@ -76,11 +105,36 @@ export const useRemoveCartItem = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.removeItem.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries to prevent overwriting optimistic update
+      await utils.cart.getCart.cancel?.();
+
+      // Get current cart data
+      const previousData = utils.cart.getCart.getData?.();
+
+      // Optimistically remove the item from local cache
+      if (previousData) {
+        utils.cart.getCart.setData?.(
+          undefined,
+          {
+            ...previousData,
+            items: previousData.items.filter((item: any) => item.listingId !== variables.listingId),
+          } as any
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: async () => {
       toastSvc.success("Item removed from cart.");
-      await utils.cart.getCart.refetch();
+      // Invalidate to ensure cache matches server state
+      await utils.cart.getCart.invalidate?.();
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        utils.cart.getCart.setData?.(undefined, context.previousData as any);
+      }
       const errorMessage = error?.data?.message || error?.message || "Failed to remove item";
       toastSvc.error(errorMessage);
     },
@@ -91,11 +145,33 @@ export const useClearCart = () => {
   const utils = trpc.useContext();
 
   return trpc.cart.clearCart.useMutation({
+    onMutate: async () => {
+      // Cancel outgoing queries
+      await utils.cart.getCart.cancel?.();
+
+      // Get current cart data
+      const previousData = utils.cart.getCart.getData?.();
+
+      // Optimistically clear the cart
+      if (previousData) {
+        utils.cart.getCart.setData?.(undefined, {
+          ...previousData,
+          items: [],
+        } as any);
+      }
+
+      return { previousData };
+    },
     onSuccess: async () => {
       toastSvc.success("Cart cleared successfully.");
-      await utils.cart.getCart.refetch();
+      // Invalidate to ensure cache matches server state
+      await utils.cart.getCart.invalidate?.();
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        utils.cart.getCart.setData?.(undefined, context.previousData as any);
+      }
       const errorMessage = error?.data?.message || error?.message || "Failed to clear cart";
       toastSvc.error(errorMessage);
     },

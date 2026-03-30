@@ -60,13 +60,42 @@ export default function MyListings() {
   const refetch = activeTab === "single" ? refetchListings : refetchCollections;
 
   const deleteMutation = (trpc.listing as any).deleteListing.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      const utils = trpc.useContext();
+      await (utils.listing as any).getAllListings.cancel?.();
+
+      // Get current listings data
+      const previousData = (utils.listing as any).getAllListings.getData?.();
+
+      // Optimistically remove the listing
+      if (previousData?.listings) {
+        (utils.listing as any).getAllListings.setData?.(
+          {},
+          {
+            ...previousData,
+            listings: previousData.listings.filter((listing: any) => listing.id !== variables.listingId),
+          }
+        );
+      }
+
+      return { previousData };
+    },
     onSuccess: () => {
       toastSvc.success("Listing deleted successfully!");
       setIsDeleteDialogOpen(false);
       setListingToDelete(null);
       refetch();
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        const utils = trpc.useContext();
+        (utils.listing as any).getAllListings.setData?.(
+          {},
+          context.previousData
+        );
+      }
       toastSvc.error(error.message || "Failed to delete listing");
     },
     onSettled: () => {

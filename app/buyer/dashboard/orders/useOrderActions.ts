@@ -18,8 +18,74 @@ export function useOrderActions() {
   const requestReturnMutation = trpc.returns.requestReturn.useMutation();
   const createSupportTicketMutation = trpc.support.createTicket.useMutation();
   const sendMessageMutation = trpc.buyerOrderActions.sendMessage.useMutation();
-  const cancelOrderMutation = trpc.buyerOrderActions.cancelOrder.useMutation();
-  const deleteFromHistoryMutation = trpc.buyerOrderActions.deleteFromHistory.useMutation();
+  const cancelOrderMutation = trpc.buyerOrderActions.cancelOrder.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await utils.buyer.getPurchaseHistory.cancel?.();
+
+      // Get current purchase history data
+      const previousData = utils.buyer.getPurchaseHistory.getData?.();
+
+      // Optimistically update the order status
+      if (previousData?.data) {
+        utils.buyer.getPurchaseHistory.setData?.(
+          {},
+          {
+            ...previousData,
+            data: previousData.data.map((order: any) =>
+              order.orderId === variables.orderId
+                ? { ...order, status: 'cancelled' }
+                : order
+            ),
+          } as any
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (error, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        utils.buyer.getPurchaseHistory.setData?.({}, context.previousData as any);
+      }
+    },
+    onSettled: async () => {
+      // Invalidate to ensure cache matches server state
+      await utils.buyer.getPurchaseHistory.invalidate?.();
+    },
+  });
+  const deleteFromHistoryMutation = trpc.buyerOrderActions.deleteFromHistory.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing queries
+      await utils.buyer.getPurchaseHistory.cancel?.();
+
+      // Get current purchase history data
+      const previousData = utils.buyer.getPurchaseHistory.getData?.();
+
+      // Optimistically remove the order from history
+      if (previousData?.data) {
+        utils.buyer.getPurchaseHistory.setData?.(
+          {},
+          {
+            ...previousData,
+            data: previousData.data.filter((order: any) => order.orderId !== variables.orderId),
+          } as any
+        );
+      }
+
+      return { previousData };
+    },
+    onError: (error, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        utils.buyer.getPurchaseHistory.setData?.({}, context.previousData as any);
+      }
+    },
+    onSettled: async () => {
+      // Invalidate to ensure cache matches server state
+      await utils.buyer.getPurchaseHistory.invalidate?.();
+    },
+  });
 
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
