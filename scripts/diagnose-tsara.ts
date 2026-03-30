@@ -11,12 +11,16 @@
  * Usage: npx ts-node scripts/diagnose-tsara.ts
  */
 
-import { env } from '../env';
 import axios from 'axios';
+import * as dotenv from 'dotenv';
 
-const BASE_URL = env.TSARA_API_URL || 'https://api.tsara.ng/v1';
-const SECRET_KEY = env.TSARA_SECRET_KEY;
-const PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
+// Load environment variables from .env files
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
+
+const BASE_URL = process.env.TSARA_API_URL || 'https://api.tsara.ng/v1';
+const SECRET_KEY = process.env.TSARA_SECRET_KEY;
+const PUBLIC_KEY = process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
 
 interface DiagnosticResult {
   timestamp: string;
