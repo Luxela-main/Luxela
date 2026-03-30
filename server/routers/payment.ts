@@ -220,30 +220,19 @@ export const paymentRouter = createTRPCRouter({
           });
         }
 
-        // Tsara sometimes returns only a raw entity (PaymentLink, CheckoutSession, etc)
-        // not a wrapper with { success, error }. We normalize it here.
-        type TsaraWrapper<T> = {
-        success?: boolean;
-        error?: { message?: string };
-        data?: T;
-      };
+        // Tsara returns a consistent wrapper: { success, data, request_id, error? }
+        // The response variable is already the TsaraResponse<T> from the service functions
+        if (response.success === false) {
+          const errorMessage =
+            response.error?.message || "Payment provider returned an error";
 
-        // Normalize into predictable shape
-        const result = response.data as TsaraWrapper<
-        PaymentLink | StablecoinPaymentLink | CheckoutSession
-      >;
+          console.error("Tsara API error:", response.error);
 
-        if (result.success === false) {
-        const errorMessage =
-        result.error?.message || "Payment provider returned an error";
-
-        console.error("Tsara API error:", result.error);
-
-        throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: errorMessage,
-      });
-    }
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: errorMessage,
+          });
+        }
 
         // Calculate amount in cents for database storage
         let amountCents: number;
