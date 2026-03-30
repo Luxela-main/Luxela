@@ -247,6 +247,12 @@ export const paymentRouter = createTRPCRouter({
 
         // Validate response structure
         if (!response || !response.data) {
+          console.error('[Payment] Invalid Tsara response:', {
+            hasResponse: !!response,
+            hasData: !!response?.data,
+            response: response,
+          });
+          
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Invalid response from payment provider",
@@ -266,6 +272,26 @@ export const paymentRouter = createTRPCRouter({
             message: errorMessage,
           });
         }
+
+        // Validate we have a payment ID for the transaction reference
+        const tsaraPaymentId = response.data?.id;
+        if (!tsaraPaymentId) {
+          console.error('[Payment] No payment ID from Tsara:', {
+            responseData: response.data,
+          });
+          
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Payment provider did not return a payment ID",
+          });
+        }
+
+        console.log('[Payment] Tsara link created successfully:', {
+          paymentId: tsaraPaymentId,
+          amount: input.amount,
+          currency: input.currency,
+          paymentMethod: input.paymentMethod,
+        });
 
         // Calculate amount in cents for database storage
         let amountCents: number;
@@ -287,9 +313,17 @@ export const paymentRouter = createTRPCRouter({
           paymentMethod: input.paymentMethod,
           provider: input.provider,
           status: "pending" as const,
-          transactionRef: response.data.id,
+          transactionRef: tsaraPaymentId,
           gatewayResponse: JSON.stringify(response),
         };
+
+        console.log('[Payment] Inserting payment into database:', {
+          buyerId: paymentData.buyerId,
+          listingId: paymentData.listingId,
+          amountCents: paymentData.amountCents,
+          currency: paymentData.currency,
+          transactionRef: paymentData.transactionRef,
+        });
 
         const [payment] = await db
           .insert(payments)
@@ -297,11 +331,18 @@ export const paymentRouter = createTRPCRouter({
           .returning();
 
         if (!payment) {
+          console.error('[Payment] Database insertion returned no record:', { paymentData });
+          
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to save payment record",
           });
         }
+
+        console.log('[Payment] Payment saved successfully:', { 
+          paymentId: payment.id,
+          transactionRef: payment.transactionRef,
+        });
 
         return {
           payment,
@@ -316,6 +357,9 @@ export const paymentRouter = createTRPCRouter({
           code: error?.code,
           name: error?.name,
           stack: error?.stack,
+          errorType: error?.constructor?.name,
+          dbCode: error?.code, // PostgreSQL error code
+          digest: (error as any)?.digest, // Prisma/Drizzle digest
           responseStatus: error?.response?.status,
           responseData: error?.response?.data,
           input: {
@@ -330,13 +374,13 @@ export const paymentRouter = createTRPCRouter({
           timestamp: new Date().toISOString(),
         });
 
-        // Handle different types of errors appropriately
+        // Handle TRPC errors first - pass them through as-is
         if (error instanceof TRPCError) {
-          throw error; // Re-throw TRPC errors as-is
+          throw error;
         }
 
-        // Handle Axios/network errors
-        if (error?.response) {
+        // Handle Axios/HTTP response errors
+        if (error?.response?.status) {
           const status = error.response.status;
           const errorData = error.response.data;
 
@@ -381,8 +425,6 @@ export const paymentRouter = createTRPCRouter({
           const errorStatus = error.status as number;
           
           // Extract the detailed error message from tsaraError first, then fall back to error.message
-          // error.message is generic ("Payment provider returned an error"), 
-          // while error.tsaraError.message contains the actual API error details
           const errorDetails = error.tsaraError as { message?: string; code?: string; requestId?: string } | undefined;
           let errorMessage: string;
           
@@ -417,7 +459,6 @@ export const paymentRouter = createTRPCRouter({
             });
           } else {
             // For all other Tsara errors (INVALID_AMOUNT, INVALID_CURRENCY, CUSTOMER_NOT_FOUND, etc.)
-            // Use BAD_REQUEST with the user-friendly message already constructed by tsara.ts
             throw new TRPCError({
               code: "BAD_REQUEST",
               message: errorMessage,
@@ -433,16 +474,39 @@ export const paymentRouter = createTRPCRouter({
           });
         }
 
-        // Handle database errors
-        if (error?.code?.startsWith('23')) { // PostgreSQL constraint violations
+        // Handle database/Drizzle ORM errors
+        // PostgreSQL constraint violations (unique, foreign key, etc.)
+        if (error?.code?.startsWith?.('23') || error?.code?.includes?.('duplicate') || error?.message?.includes?.('unique')) {
+          console.error('[Payment] Database constraint violation:', {
+            message: error?.message,
+            code: error?.code,
+            transactionRef: (error as any).transactionRef,
+          });
+          
           throw new TRPCError({
             code: "CONFLICT",
-            message: "Payment data conflicts with existing records",
+            message: "Payment already exists or conflicts with existing data. Please try again or contact support if the problem persists.",
           });
         }
 
-        // Generic fallback
+        // Handle other database errors
+        if (error?.code || error?.name?.includes?.('Error')) {
+          console.error('[Payment] Database operation failed:', {
+            message: error?.message,
+            code: error?.code,
+            name: error?.name,
+          });
+          
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to save payment record. Please try again.",
+          });
+        }
+
+        // Generic fallback for any other errors
         const errorMessage = error?.message || "Payment creation failed due to an unexpected error";
+        console.error('[Payment] Unhandled error:', errorMessage);
+        
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: errorMessage,
