@@ -25,6 +25,13 @@ if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
   console.error('[Tsara Config] Available env keys:', Object.keys(process.env).filter(k => k.includes('TSARA') || k.includes('SECRET')));
 } else {
   console.log('[Tsara Config] TSARA_SECRET_KEY is configured (length:', TSARA_SECRET_KEY.length, ')');
+  // Validate key format - should be a long string
+  if (TSARA_SECRET_KEY.length < 20) {
+    console.error('[Tsara Config] WARNING: TSARA_SECRET_KEY seems too short. Expected 40+ characters, got', TSARA_SECRET_KEY.length);
+  }
+  // Check if it looks like a secret key (starts with certain patterns)
+  const firstChars = TSARA_SECRET_KEY.substring(0, 10);
+  console.log('[Tsara Config] Key prefix:', firstChars + '...');
 }
 
 const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
@@ -45,6 +52,7 @@ tsaraApi.interceptors.request.use((config) => {
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
   console.log('[Tsara API] Base URL:', config.baseURL);
+  console.log('[Tsara API] Full URL:', (config.baseURL || '') + (config.url || ''));
   
   // Check auth header
   const authHeader = config.headers["Authorization"] as string | undefined;
@@ -52,8 +60,16 @@ tsaraApi.interceptors.request.use((config) => {
   console.log('[Tsara API] Authorization header present:', hasAuth ? 'Yes' : 'NO API KEY - API CALL WILL FAIL');
   
   if (hasAuth && authHeader) {
-    const tokenPreview = authHeader.substring(0, 20) + '...';
+    const tokenPreview = authHeader.substring(0, 25) + '...';
     console.log('[Tsara API] Authorization header preview:', tokenPreview);
+    console.log('[Tsara API] Token length:', TSARA_SECRET_KEY.length);
+  } else {
+    // EMERGENCY: Try to add the key directly from process.env
+    const emergencyKey = process.env.TSARA_SECRET_KEY || env.TSARA_SECRET_KEY;
+    if (emergencyKey) {
+      console.log('[Tsara API] EMERGENCY: Adding key from environment variable');
+      config.headers["Authorization"] = `Bearer ${emergencyKey}`;
+    }
   }
   
   // Warn if secret key is missing (used for server-side API calls)
@@ -70,6 +86,14 @@ tsaraApi.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       console.error('[Tsara API] 401 Unauthorized - Check your TSARA_SECRET_KEY configuration (server-side secret key)');
+      console.error('[Tsara API] 401 Details:', {
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        hasAuthHeader: !!error.config?.headers?.['Authorization'],
+        authHeaderPreview: error.config?.headers?.['Authorization']?.substring(0, 30) + '...',
+        keyLength: TSARA_SECRET_KEY?.length,
+        keyIsEmpty: !TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '',
+      });
     } else if (error.response?.status === 403) {
       console.error('[Tsara API] 403 Forbidden - Your API key may not have permission for this operation');
     } else if (error.response?.status === 404) {
