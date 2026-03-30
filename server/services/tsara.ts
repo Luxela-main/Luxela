@@ -19,8 +19,9 @@ const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    // Use TSARA_PUBLIC_KEY for API authentication (Bearer token)
-    "Authorization": `Bearer ${TSARA_PUBLIC_KEY || ""}`,
+    // Use TSARA_SECRET_KEY for server-side API authentication (Bearer token)
+    // TSARA_PUBLIC_KEY is for client-side only
+    "Authorization": `Bearer ${TSARA_SECRET_KEY || ""}`,
     "Content-Type": "application/json",
     "Accept": "application/json",
   },

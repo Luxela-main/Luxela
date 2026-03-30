@@ -53,7 +53,10 @@ export const paymentRouter = createTRPCRouter({
         paymentType: input.paymentType,
       });
 
-      try {
+      // Define paymentData variable in outer scope so it's available in catch block
+        let paymentData: any;
+        
+        try {
         // Validate input data first
         if (!input.buyerId || input.buyerId.trim() === '') {
           throw new TRPCError({
@@ -275,9 +278,12 @@ export const paymentRouter = createTRPCRouter({
 
         // Validate we have a payment ID for the transaction reference
         const tsaraPaymentId = response.data?.id;
-        if (!tsaraPaymentId) {
+        console.log('[Payment] Extracted Tsara payment ID:', { tsaraPaymentId, type: typeof tsaraPaymentId });
+        
+        if (!tsaraPaymentId || tsaraPaymentId.trim?.() === '') {
           console.error('[Payment] No payment ID from Tsara:', {
             responseData: response.data,
+            responseDataKeys: response.data ? Object.keys(response.data) : null,
           });
           
           throw new TRPCError({
@@ -303,8 +309,22 @@ export const paymentRouter = createTRPCRouter({
           amountCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
         }
 
+        // Safely stringify gateway response to handle circular references
+        let gatewayResponseStr: string;
+        try {
+          gatewayResponseStr = JSON.stringify(response);
+        } catch (jsonError) {
+          console.error('[Payment] Failed to stringify gateway response:', jsonError);
+          gatewayResponseStr = JSON.stringify({ 
+            error: 'Failed to stringify response',
+            data: response?.data ? { id: response.data.id, status: response.data.status } : null
+          });
+        }
+        
+        console.log('[Payment] About to create payment data object...');
+        
         // Store payment in database with transaction
-        const paymentData = {
+        paymentData = {
           buyerId: input.buyerId,
           listingId: input.listingId,
           orderId: input.orderId ?? null,
@@ -314,7 +334,7 @@ export const paymentRouter = createTRPCRouter({
           provider: input.provider,
           status: "pending" as const,
           transactionRef: tsaraPaymentId,
-          gatewayResponse: JSON.stringify(response),
+          gatewayResponse: gatewayResponseStr,
         };
 
         console.log('[Payment] Inserting payment into database:', {
@@ -323,12 +343,31 @@ export const paymentRouter = createTRPCRouter({
           amountCents: paymentData.amountCents,
           currency: paymentData.currency,
           transactionRef: paymentData.transactionRef,
+          gatewayResponseLength: paymentData.gatewayResponse?.length,
         });
 
-        const [payment] = await db
-          .insert(payments)
-          .values(paymentData)
-          .returning();
+        let payment;
+        try {
+          const result = await db
+            .insert(payments)
+            .values(paymentData)
+            .returning();
+          console.log('[Payment] Database insert result:', { 
+            resultLength: result?.length,
+            resultType: typeof result,
+            isArray: Array.isArray(result)
+          });
+          payment = result[0];
+        } catch (dbError: any) {
+          console.error('[Payment] DATABASE INSERT ERROR:', {
+            message: dbError?.message,
+            code: dbError?.code,
+            detail: dbError?.detail,
+            constraint: dbError?.constraint,
+            stack: dbError?.stack,
+          });
+          throw dbError;
+        }
 
         if (!payment) {
           console.error('[Payment] Database insertion returned no record:', { paymentData });
@@ -475,31 +514,60 @@ export const paymentRouter = createTRPCRouter({
         }
 
         // Handle database/Drizzle ORM errors
-        // PostgreSQL constraint violations (unique, foreign key, etc.)
-        if (error?.code?.startsWith?.('23') || error?.code?.includes?.('duplicate') || error?.message?.includes?.('unique')) {
+        // PostgreSQL constraint violations (unique, foreign key, not null, etc.)
+        // PostgreSQL error codes: https://www.postgresql.org/docs/current/errcodes-appendix.html
+        const pgErrorCode = error?.code?.toString?.() || '';
+        const dbErrorMessage = error?.message?.toString?.() || '';
+        const dbErrorName = error?.name?.toString?.() || '';
+        
+        // 23505 = unique_violation, 23503 = foreign_key_violation, 23502 = not_null_violation
+        // 23514 = check_violation, 23P01 = exclusion_violation
+        const isConstraintViolation = pgErrorCode.startsWith('23') || 
+                                      dbErrorMessage.includes('unique') || 
+                                      dbErrorMessage.includes('constraint') ||
+                                      dbErrorMessage.includes('duplicate');
+        
+        if (isConstraintViolation) {
           console.error('[Payment] Database constraint violation:', {
-            message: error?.message,
-            code: error?.code,
-            transactionRef: (error as any).transactionRef,
+            message: dbErrorMessage,
+            code: pgErrorCode,
+            transactionRef: paymentData?.transactionRef,
           });
+          
+          // Provide more specific error messages based on the constraint type
+          let userMessage = "Payment record conflicts with existing data.";
+          if (dbErrorMessage.includes('transaction_ref') || dbErrorMessage.includes('transactionRef')) {
+            userMessage = "A payment with this transaction reference already exists. Please try again.";
+          } else if (dbErrorMessage.includes('buyer_id') || dbErrorMessage.includes('buyerId')) {
+            userMessage = "Invalid buyer account. Please log in again.";
+          } else if (dbErrorMessage.includes('listing_id') || dbErrorMessage.includes('listingId')) {
+            userMessage = "The item you're trying to purchase is no longer available.";
+          } else if (dbErrorMessage.includes('order_id') || dbErrorMessage.includes('orderId')) {
+            userMessage = "Invalid order reference. Please start the checkout process again.";
+          }
           
           throw new TRPCError({
             code: "CONFLICT",
-            message: "Payment already exists or conflicts with existing data. Please try again or contact support if the problem persists.",
+            message: `${userMessage} Please contact support if the problem persists.`,
           });
         }
 
-        // Handle other database errors
-        if (error?.code || error?.name?.includes?.('Error')) {
+        // Handle other database errors - include actual error details for debugging
+        // Only treat as database error if it looks like one (has PostgreSQL error code or Drizzle-specific properties)
+        const isDbError = pgErrorCode && /^[0-9A-Z]{5}$/.test(pgErrorCode); // PostgreSQL error codes are 5 chars
+        const isDrizzleError = dbErrorName.includes('Drizzle') || dbErrorName.includes('Postgres');
+        
+        if (isDbError || isDrizzleError) {
           console.error('[Payment] Database operation failed:', {
-            message: error?.message,
-            code: error?.code,
-            name: error?.name,
+            message: dbErrorMessage,
+            code: pgErrorCode,
+            name: dbErrorName,
+            stack: error?.stack,
           });
           
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to save payment record. Please try again.",
+            message: `Database error: ${dbErrorMessage || 'Unknown database error'}. Please try again or contact support.`,
           });
         }
 
