@@ -86,10 +86,25 @@ function TsaraPaymentModalComponent({
       return;
     }
 
+    // Validate listing ID exists and is valid UUID format
+    const firstOrder = checkoutData.orders[0];
+    if (!firstOrder?.listingId) {
+      toastSvc.error("Invalid order data. Please go back and try again.");
+      console.error('[TsaraModal] Missing listing ID:', { firstOrder, orders: checkoutData.orders });
+      return;
+    }
+
+    // Validate amount is valid
+    if (!nairaAmount || nairaAmount <= 0) {
+      toastSvc.error("Invalid payment amount. Please try again.");
+      console.error('[TsaraModal] Invalid amount:', { nairaAmount, totalAmount });
+      return;
+    }
+
     const paymentData: any = {
       buyerId,
       // For multiple orders, use the first one's listing ID
-      listingId: checkoutData.orders[0]?.listingId || "",
+      listingId: firstOrder.listingId,
       orderId: orderId, // Use cart ID as reference
       amount: nairaAmount,
       currency: paymentMethod === "crypto" ? "USDC" : "NGN",
@@ -110,6 +125,15 @@ function TsaraPaymentModalComponent({
     if (paymentMethod === "crypto") {
       paymentData.wallet_id = selectedWallet;
     }
+
+    console.log('[TsaraModal] Sending payment data:', {
+      buyerId,
+      listingId: firstOrder.listingId,
+      amount: nairaAmount,
+      currency: paymentData.currency,
+      paymentMethod,
+      itemCount: checkoutData.orders.length,
+    });
 
     createPayment.mutate(paymentData);
   }, [paymentMethod, selectedWallet, checkoutData, orderId, buyerId, nairaAmount, createPayment]);

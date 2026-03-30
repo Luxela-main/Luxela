@@ -54,6 +54,28 @@ export const paymentRouter = createTRPCRouter({
       });
 
       try {
+        // Validate input data first
+        if (!input.buyerId || input.buyerId.trim() === '') {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Buyer ID is required",
+          });
+        }
+
+        if (!input.listingId || input.listingId.trim() === '') {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Listing ID is required for payment",
+          });
+        }
+
+        if (!input.amount || input.amount <= 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Payment amount must be a positive number",
+          });
+        }
+
         // Validate environment configuration
         const { TSARA_SECRET_KEY } = env;
         if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
