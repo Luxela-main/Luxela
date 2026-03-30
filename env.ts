@@ -1,8 +1,11 @@
 // Load environment variables from .env file in development
 if (process.env.NODE_ENV !== 'production') {
-  import('dotenv').then(({ default: dotenv }) => {
+  try {
+    const dotenv = require('dotenv');
     dotenv.config();
-  });
+  } catch (e) {
+    // dotenv not installed or .env file missing, ignore
+  }
 }
 
 export const env = {

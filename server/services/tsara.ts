@@ -3,15 +3,28 @@ import { env } from "@/env";
 
 const TSARA_BASE_URL = "https://api.tsara.ng/v1";
 const TSARA_SANDBOX_URL = "https://sandbox.tsara.ng/v1";
+
+// DIAGNOSTIC: Log environment state at module load time
+console.log('[Tsara Config] Module loading...', {
+  nodeEnv: process.env.NODE_ENV,
+  hasTsaraSecretKey: !!process.env.TSARA_SECRET_KEY,
+  tsaraSecretKeyLength: process.env.TSARA_SECRET_KEY?.length,
+  envObjectHasKey: !!env.TSARA_SECRET_KEY,
+  envObjectKeyLength: env.TSARA_SECRET_KEY?.length,
+});
+
 // Use TSARA_SECRET_KEY for server-side API authentication
 // NEXT_PUBLIC_TSARA_PUBLIC_KEY is for client-side only
-export const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY;
-export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
-export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET;
+export const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY || process.env.TSARA_SECRET_KEY || '';
+export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || '';
+export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET || process.env.TSARA_WEBHOOK_SECRET || '';
 
 // Validate that required credentials are configured
 if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
   console.error('[Tsara Config] CRITICAL: TSARA_SECRET_KEY is not configured. Payment functionality will fail.');
+  console.error('[Tsara Config] Available env keys:', Object.keys(process.env).filter(k => k.includes('TSARA') || k.includes('SECRET')));
+} else {
+  console.log('[Tsara Config] TSARA_SECRET_KEY is configured (length:', TSARA_SECRET_KEY.length, ')');
 }
 
 const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
@@ -32,7 +45,16 @@ tsaraApi.interceptors.request.use((config) => {
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
   console.log('[Tsara API] Base URL:', config.baseURL);
-  console.log('[Tsara API] Authorization header present:', config.headers["Authorization"] ? 'Yes' : 'NO API KEY - API CALL WILL FAIL');
+  
+  // Check auth header
+  const authHeader = config.headers["Authorization"] as string | undefined;
+  const hasAuth = !!authHeader && authHeader !== 'Bearer ';
+  console.log('[Tsara API] Authorization header present:', hasAuth ? 'Yes' : 'NO API KEY - API CALL WILL FAIL');
+  
+  if (hasAuth && authHeader) {
+    const tokenPreview = authHeader.substring(0, 20) + '...';
+    console.log('[Tsara API] Authorization header preview:', tokenPreview);
+  }
   
   // Warn if secret key is missing (used for server-side API calls)
   if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
