@@ -55,7 +55,7 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         // Validate environment configuration
-        const { TSARA_SECRET_KEY, TSARA_WEBHOOK_SECRET } = env;
+        const { TSARA_SECRET_KEY } = env;
         if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
           console.error('[Payment] TSARA_SECRET_KEY is not configured');
           throw new TRPCError({
@@ -63,13 +63,8 @@ export const paymentRouter = createTRPCRouter({
             message: "Payment service is not properly configured. Please contact support.",
           });
         }
-        if (!TSARA_WEBHOOK_SECRET || TSARA_WEBHOOK_SECRET.trim() === '') {
-          console.error('[Payment] TSARA_WEBHOOK_SECRET is not configured');
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Payment webhook is not properly configured. Please contact support.",
-          });
-        }
+        // Note: TSARA_WEBHOOK_SECRET is only required for webhook verification, not payment creation
+        // It will be validated when receiving webhooks at /api/webhooks/tsara
 
         // Validate buyer exists
         const [buyer] = await db
