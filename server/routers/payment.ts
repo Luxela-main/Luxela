@@ -126,6 +126,21 @@ export const paymentRouter = createTRPCRouter({
         // Create appropriate payment link based on type
         let response: any;
         
+        // Sanitize metadata - ensure all values are strings for Tsara API
+        const sanitizedMetadata: Record<string, string> = {};
+        if (input.metadata) {
+          Object.entries(input.metadata).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              sanitizedMetadata[key] = typeof value === 'string' ? value : JSON.stringify(value);
+            }
+          });
+        }
+
+        // Add buyer and listing info to metadata for tracking
+        sanitizedMetadata.buyerId = input.buyerId;
+        sanitizedMetadata.listingId = input.listingId;
+        if (input.orderId) sanitizedMetadata.orderId = input.orderId;
+        
         if (input.paymentType === "stablecoin") {
           if (!input.wallet_id) {
             throw new TRPCError({
@@ -186,20 +201,6 @@ export const paymentRouter = createTRPCRouter({
           const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
 
           // Sanitize metadata - ensure all values are strings for Tsara API
-          const sanitizedMetadata: Record<string, string> = {};
-          if (input.metadata) {
-            Object.entries(input.metadata).forEach(([key, value]) => {
-              if (value !== undefined && value !== null) {
-                sanitizedMetadata[key] = typeof value === 'string' ? value : JSON.stringify(value);
-              }
-            });
-          }
-
-          // Add buyer and listing info to metadata for tracking
-          sanitizedMetadata.buyerId = input.buyerId;
-          sanitizedMetadata.listingId = input.listingId;
-          if (input.orderId) sanitizedMetadata.orderId = input.orderId;
-
           if (input.success_url && input.cancel_url) {
             // Use checkout session for better UX
             response = await createCheckoutSession({
