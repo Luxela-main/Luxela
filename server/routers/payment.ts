@@ -55,9 +55,9 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         // Validate environment configuration
-        const { NEXT_PUBLIC_TSARA_PUBLIC_KEY, TSARA_WEBHOOK_SECRET } = env;
-        if (!NEXT_PUBLIC_TSARA_PUBLIC_KEY || NEXT_PUBLIC_TSARA_PUBLIC_KEY.trim() === '') {
-          console.error('[Payment] NEXT_PUBLIC_TSARA_PUBLIC_KEY is not configured');
+        const { TSARA_SECRET_KEY, TSARA_WEBHOOK_SECRET } = env;
+        if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
+          console.error('[Payment] TSARA_SECRET_KEY is not configured');
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Payment service is not properly configured. Please contact support.",
