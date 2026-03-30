@@ -151,7 +151,7 @@ export const paymentRouter = createTRPCRouter({
             network: "solana",
             wallet_id: input.wallet_id,
             description: input.description,
-            metadata: input.metadata,
+            metadata: sanitizedMetadata,
           });
         } else if (input.paymentMethod === "crypto" && input.currency === "USDC") {
           // Handle USDC payments via stablecoin link
@@ -178,12 +178,27 @@ export const paymentRouter = createTRPCRouter({
             network: "solana",
             wallet_id: input.wallet_id,
             description: input.description,
-            metadata: input.metadata,
+            metadata: sanitizedMetadata,
           });
         } else {
           // Fiat payment (card or bank transfer)
           // Convert amount to cents for Tsara API
           const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
+
+          // Sanitize metadata - ensure all values are strings for Tsara API
+          const sanitizedMetadata: Record<string, string> = {};
+          if (input.metadata) {
+            Object.entries(input.metadata).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) {
+                sanitizedMetadata[key] = typeof value === 'string' ? value : JSON.stringify(value);
+              }
+            });
+          }
+
+          // Add buyer and listing info to metadata for tracking
+          sanitizedMetadata.buyerId = input.buyerId;
+          sanitizedMetadata.listingId = input.listingId;
+          if (input.orderId) sanitizedMetadata.orderId = input.orderId;
 
           if (input.success_url && input.cancel_url) {
             // Use checkout session for better UX
@@ -193,7 +208,7 @@ export const paymentRouter = createTRPCRouter({
               reference: `order_${input.orderId || uuidv4()}`,
               success_url: input.success_url,
               cancel_url: input.cancel_url,
-              metadata: input.metadata,
+              metadata: sanitizedMetadata,
             });
           } else {
             // Use payment link
@@ -201,7 +216,7 @@ export const paymentRouter = createTRPCRouter({
               amount: amountInCents,
               currency: input.currency,
               description: input.description,
-              metadata: input.metadata,
+              metadata: sanitizedMetadata,
               redirect_url: input.redirect_url,
             });
           }

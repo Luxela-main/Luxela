@@ -129,8 +129,31 @@ export async function createFiatPaymentLink(data: {
   redirect_url?: string;
 }): Promise<TsaraResponse<PaymentLink>> {
   try {
+    // Build request payload - ensure all fields are properly formatted
+    const payload: any = {
+      amount: Math.round(data.amount), // Ensure integer
+      currency: data.currency.toUpperCase(), // Ensure uppercase
+    };
+    
+    // Only add optional fields if they have values
+    if (data.description && data.description.trim()) {
+      payload.description = data.description.trim();
+    }
+    if (data.redirect_url && data.redirect_url.trim()) {
+      payload.redirect_url = data.redirect_url.trim();
+    }
+    if (data.metadata && Object.keys(data.metadata).length > 0) {
+      // Ensure metadata values are strings (API requirement)
+      payload.metadata = Object.entries(data.metadata).reduce((acc, [key, value]) => {
+        acc[key] = typeof value === 'string' ? value : JSON.stringify(value);
+        return acc;
+      }, {} as Record<string, string>);
+    }
+
+    console.log('[Tsara API] Creating fiat payment link:', JSON.stringify(payload, null, 2));
+    
     // Note: Do not pass customer_id - Tsara creates customers automatically
-    const response = await tsaraApi.post("/payment-links", data);
+    const response = await tsaraApi.post("/payment-links", payload);
     
     if (!response || !response.data || typeof response.data !== 'object') {
       console.error("No response or invalid API response structure:", response?.data);
@@ -145,6 +168,13 @@ export async function createFiatPaymentLink(data: {
 
     return response.data;
   } catch (error: any) {
+    console.error('[Tsara API] Full error response:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      requestPayload: error.config?.data,
+      headers: error.response?.headers,
+    });
     const errMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Failed to create fiat payment link";
     console.error("Create fiat payment link failed:", errMsg);
     throw new Error(errMsg);
@@ -190,19 +220,29 @@ export async function createCheckoutSession(data: {
   metadata?: Record<string, any>;
 }): Promise<TsaraResponse<CheckoutSession>> {
   try {
+    // Build metadata with string values only (API requirement)
+    const metadata: Record<string, string> = {};
+    if (data.metadata) {
+      Object.entries(data.metadata).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          metadata[key] = typeof value === 'string' ? value : JSON.stringify(value);
+        }
+      });
+    }
+    metadata.reference = data.reference;
+    if (data.success_url) metadata.success_url = data.success_url;
+    if (data.cancel_url) metadata.cancel_url = data.cancel_url;
+
     // Note: Do not pass customer_id - Tsara creates customers automatically
     const paymentLinkData = {
-      amount: data.amount,
-      currency: data.currency,
+      amount: Math.round(data.amount), // Ensure integer
+      currency: data.currency.toUpperCase(), // Ensure uppercase
       description: `Payment for order ${data.reference}`,
-      metadata: {
-        ...data.metadata,
-        reference: data.reference,
-        success_url: data.success_url,
-        cancel_url: data.cancel_url,
-      },
+      metadata,
       redirect_url: data.success_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
     };
+    
+    console.log('[Tsara API] Creating checkout session:', JSON.stringify(paymentLinkData, null, 2));
 
     const response = await tsaraApi.post("/payment-links", paymentLinkData);
     
