@@ -62,7 +62,7 @@ export function getApiKeyStatus(key?: string): { configured: boolean; valid: boo
 
 // Use TSARA_SECRET_KEY for server-side API authentication
 // NEXT_PUBLIC_TSARA_PUBLIC_KEY is for client-side only
-export const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY || process.env.TSARA_SECRET_KEY || '';
+export const TSARA_SECRET_KEY = (env.TSARA_SECRET_KEY || process.env.TSARA_SECRET_KEY || '').trim();
 export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || '';
 export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET || process.env.TSARA_WEBHOOK_SECRET || '';
 
@@ -86,18 +86,30 @@ const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    // Use TSARA_SECRET_KEY for server-side API authentication (Bearer token)
-    // TSARA_PUBLIC_KEY is for client-side only
-    "Authorization": `Bearer ${TSARA_SECRET_KEY || ""}`,
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
 });
 
+// Add auth header dynamically via interceptor to ensure fresh value
+tsaraApi.interceptors.request.use((config) => {
+  const key = TSARA_SECRET_KEY.trim();
+  if (key) {
+    config.headers["Authorization"] = `Bearer ${key}`;
+  }
+  return config;
+});
+
 // Add request interceptor to log auth attempts and validate API key
 tsaraApi.interceptors.request.use((config) => {
+  // Ensure fresh auth header with trimmed key
+  const key = TSARA_SECRET_KEY.trim();
+  if (key) {
+    config.headers["Authorization"] = `Bearer ${key}`;
+  }
+  
   // Validate API key before sending request
-  const keyValidation = validateApiKey(TSARA_SECRET_KEY);
+  const keyValidation = validateApiKey(key);
   
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
@@ -106,13 +118,13 @@ tsaraApi.interceptors.request.use((config) => {
   
   // Check auth header
   const authHeader = config.headers["Authorization"] as string | undefined;
-  const hasAuth = !!authHeader && authHeader !== 'Bearer ';
+  const hasAuth = !!authHeader && authHeader !== 'Bearer ' && authHeader.length > 10;
   console.log('[Tsara API] Authorization header present:', hasAuth ? 'Yes' : 'NO API KEY - API CALL WILL FAIL');
   
   if (hasAuth && authHeader) {
     const tokenPreview = authHeader.substring(0, 25) + '...';
     console.log('[Tsara API] Authorization header preview:', tokenPreview);
-    console.log('[Tsara API] Token length:', TSARA_SECRET_KEY?.length || 0);
+    console.log('[Tsara API] Token length:', key?.length || 0);
   }
   
   // Warn if secret key is missing or invalid (used for server-side API calls)
