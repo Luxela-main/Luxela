@@ -30,18 +30,7 @@ import { toastSvc } from '@/services/toast';
 import { Breadcrumb } from '@/components/buyer/dashboard/breadcrumb';
 import { Button } from '@/components/ui/button';
 
-// Debounce utility
-const debounce = (func: Function, wait: number) => {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      timeoutId = null;
-      func(...args);
-    };
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(later, wait);
-  };
-};
+
 
 interface Notification {
   id: string;
@@ -79,6 +68,27 @@ export default function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [optimisticStarred, setOptimisticStarred] = useState<{[key: string]: boolean}>({});
+  // Track local state changes to prevent polling from reverting them
+  const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
+  const [localDeletedIds, setLocalDeletedIds] = useState<Set<string>>(new Set());
+  
+  // Refs to hold latest state for debounced callbacks
+  const notificationsRef = useRef(notifications);
+  const localReadIdsRef = useRef(localReadIds);
+  const localDeletedIdsRef = useRef(localDeletedIds);
+  
+  // Keep refs in sync
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
+  
+  useEffect(() => {
+    localReadIdsRef.current = localReadIds;
+  }, [localReadIds]);
+  
+  useEffect(() => {
+    localDeletedIdsRef.current = localDeletedIds;
+  }, [localDeletedIds]);
 
   const {
     data: notificationsData,
@@ -91,7 +101,9 @@ export default function NotificationsPage() {
     },
     {
       enabled: !!user && !authLoading,
-      staleTime: 1000 * 30,
+      staleTime: 1000 * 60, // 1 minute
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     }
   );
 
@@ -127,20 +139,40 @@ export default function NotificationsPage() {
   // Handle success/error with custom logic
   const originalMarkAllMutate = markAllAsReadMutation.mutateAsync;
   const wrappedMarkAllMutate = useCallback(async () => {
+    // Track all unread notification IDs as locally read
+    const unreadIds = new Set(notifications.filter(n => !n.isRead).map(n => n.id));
+    setLocalReadIds((prev) => new Set([...prev, ...unreadIds]));
+    
+    // Optimistic update
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, isRead: true }))
+    );
+    setUnreadCount(0);
+    
     try {
       await originalMarkAllMutate();
-      refetchNotifications();
       toastSvc.success('All notifications marked as read');
     } catch (error: any) {
+      // On error, revert local state
+      setLocalReadIds((prev) => {
+        const next = new Set(prev);
+        unreadIds.forEach(id => next.delete(id));
+        return next;
+      });
+      await refetchNotifications();
       toastSvc.error(error?.message || 'Failed to mark all as read');
     }
-  }, [originalMarkAllMutate, refetchNotifications]);
+  }, [originalMarkAllMutate, refetchNotifications, notifications]);
 
   const deleteAllMutation = useDeleteAllNotifications();
 
   // Handle success/error for delete all
   const originalDeleteAllMutate = deleteAllMutation.mutateAsync;
   const wrappedDeleteAllMutate = useCallback(async () => {
+    // Track all current notification IDs as deleted
+    const allIds = new Set(notifications.map(n => n.id));
+    setLocalDeletedIds(allIds);
+    
     // Optimistic update - clear all notifications immediately
     setNotifications([]);
     setFilteredNotifications([]);
@@ -150,27 +182,39 @@ export default function NotificationsPage() {
       await originalDeleteAllMutate();
       await refetchNotifications();
       toastSvc.success('All notifications deleted');
+      // Clear local deleted IDs after successful refetch
+      setLocalDeletedIds(new Set());
     } catch (error: any) {
-      // On error, refetch to restore state
+      // On error, clear local deleted IDs to allow revert
+      setLocalDeletedIds(new Set());
       await refetchNotifications();
       toastSvc.error(error?.message || 'Failed to delete all notifications');
     }
-  }, [originalDeleteAllMutate, refetchNotifications]);
+  }, [originalDeleteAllMutate, refetchNotifications, notifications]);
 
   const toggleStarMutation = useToggleNotificationFavorite();
 
   // Handle starring/unstarring notifications
   const wrappedToggleStar = useCallback(async (notificationId: string, currentStarred: boolean) => {
+    const newStarredState = !currentStarred;
+    
     // Optimistic update
     setOptimisticStarred((prev) => ({
       ...prev,
-      [notificationId]: !currentStarred,
+      [notificationId]: newStarredState,
     }));
+    
+    // Also update local notifications state for immediate UI feedback
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notificationId ? { ...n, isStarred: newStarredState } : n
+      )
+    );
 
     try {
       await toggleStarMutation.mutateAsync({
         notificationId,
-        starred: !currentStarred,
+        starred: newStarredState,
       });
     } catch (error: any) {
       // Rollback optimistic update on error
@@ -179,6 +223,12 @@ export default function NotificationsPage() {
         delete updated[notificationId];
         return updated;
       });
+      // Revert local state
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, isStarred: currentStarred } : n
+        )
+      );
       refetchNotifications();
       toastSvc.error(error?.message || 'Failed to update notification');
     }
@@ -192,24 +242,29 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (notificationsData?.notifications) {
-      const convertedNotifications: Notification[] = notificationsData.notifications.map((notification: any) => {
-        const relatedEntityId = notification.relatedEntityId === null ? undefined : notification.relatedEntityId;
-        return {
-          id: notification.id,
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          isRead: notification.isRead,
-          isStarred: notification.isStarred || false,
-          createdAt: new Date(notification.createdAt),
-          relatedEntityId,
-          metadata: notification.metadata,
-        };
-      });
+      const convertedNotifications: Notification[] = notificationsData.notifications
+        .filter((notification: any) => !localDeletedIds.has(notification.id)) // Filter out locally deleted
+        .map((notification: any) => {
+          const relatedEntityId = notification.relatedEntityId === null ? undefined : notification.relatedEntityId;
+          return {
+            id: notification.id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            isRead: localReadIds.has(notification.id) ? true : notification.isRead, // Apply local read state
+            isStarred: notification.isStarred || false,
+            createdAt: new Date(notification.createdAt),
+            relatedEntityId,
+            metadata: notification.metadata,
+          };
+        });
       setNotifications(convertedNotifications);
-      setUnreadCount(notificationsData.unreadCount || 0);
+      // Calculate unread count based on merged state
+      const unreadFromServer = notificationsData.unreadCount || 0;
+      const locallyReadCount = localReadIds.size;
+      setUnreadCount(Math.max(0, unreadFromServer - locallyReadCount));
     }
-  }, [notificationsData]);
+  }, [notificationsData, localReadIds, localDeletedIds]);
 
   useEffect(() => {
     let filtered = notifications;
@@ -233,8 +288,18 @@ export default function NotificationsPage() {
     setFilteredNotifications(filtered);
   }, [notifications, selectedType, searchTerm, optimisticStarred]);
 
-  const handleMarkAsRead = useCallback(
-    debounce(async (notificationId: string) => {
+  // Debounced mark as read using ref to avoid stale closures
+  const markAsReadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const handleMarkAsRead = useCallback((notificationId: string) => {
+    if (markAsReadTimeoutRef.current) {
+      clearTimeout(markAsReadTimeoutRef.current);
+    }
+    
+    markAsReadTimeoutRef.current = setTimeout(async () => {
+      // Track locally read notification
+      setLocalReadIds((prev) => new Set([...prev, notificationId]));
+      
       // Optimistic update - update UI immediately
       setNotifications((prev) =>
         prev.map((n) =>
@@ -246,17 +311,33 @@ export default function NotificationsPage() {
       // Then mutate in background
       try {
         await wrappedMarkAsReadMutate(notificationId);
+        // Keep in localReadIds - server should now reflect this state
       } catch (error) {
-        // Error already handled in mutation onError
+        // On error, remove from localReadIds to allow revert
+        setLocalReadIds((prev) => {
+          const next = new Set(prev);
+          next.delete(notificationId);
+          return next;
+        });
       }
-    }, 300),
-    [wrappedMarkAsReadMutate]
-  );
+    }, 300);
+  }, [wrappedMarkAsReadMutate]);
 
-  const handleDeleteNotification = useCallback(
-    debounce(async (notificationId: string) => {
+  // Debounced delete using ref to avoid stale closures
+  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const handleDeleteNotification = useCallback((notificationId: string) => {
+    if (deleteTimeoutRef.current) {
+      clearTimeout(deleteTimeoutRef.current);
+    }
+    
+    deleteTimeoutRef.current = setTimeout(async () => {
+      // Track locally deleted notification
+      setLocalDeletedIds((prev) => new Set([...prev, notificationId]));
+      
       // Optimistic update - remove from UI immediately
-      const deletedNotification = notifications.find((n) => n.id === notificationId);
+      // Use ref to get latest notifications state
+      const deletedNotification = notificationsRef.current.find((n) => n.id === notificationId);
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
 
       // Update unread count if the deleted notification was unread
@@ -267,12 +348,17 @@ export default function NotificationsPage() {
       // Then mutate in background
       try {
         await wrappedDeleteMutate(notificationId);
+        // Keep in localDeletedIds - server should now reflect this state
       } catch (error) {
-        // Error already handled in mutation onError
+        // On error, remove from localDeletedIds to allow revert
+        setLocalDeletedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(notificationId);
+          return next;
+        });
       }
-    }, 300),
-    [notifications, wrappedDeleteMutate]
-  );
+    }, 300);
+  }, [wrappedDeleteMutate]);
 
   const handleMarkAllAsRead = async () => {
     await wrappedMarkAllMutate();
