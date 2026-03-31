@@ -41,6 +41,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "api.dicebear.com" },
       { protocol: "https", hostname: "bychpijffixdnqonbxyj.supabase.co" },
     ],
+    domains: ['bychpijffixdnqonbxyj.su', 'anotherdomain.com'],
     unoptimized: !isVercelEnv,
     formats: ['image/avif', 'image/webp'],
     // Performance: Optimize image sizes for different devices
