@@ -1,8 +1,8 @@
 import axios from "axios";
 import { env } from "@/env";
+import crypto from "crypto";
 
 const TSARA_BASE_URL = "https://api.tsara.ng/v1";
-const TSARA_SANDBOX_URL = "https://sandbox.tsara.ng/v1";
 
 // DIAGNOSTIC: Log environment state at module load time
 console.log('[Tsara Config] Module loading...', {
@@ -89,6 +89,26 @@ export const tsaraApi = axios.create({
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
+});
+
+tsaraApi.interceptors.request.use((config) => {
+  const key = TSARA_SECRET_KEY.trim();
+  if (!key) return config;
+
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const method = (config.method || "GET").toUpperCase();
+  const path = config.url || "";
+  const body = config.data ? JSON.stringify(config.data) : "";
+
+  // HMAC signature: timestamp + method + path + body
+  const payload = timestamp + method + path + body;
+  const signature = crypto.createHmac("sha256", key).update(payload).digest("hex");
+
+  config.headers["x-tsara-timestamp"] = timestamp;
+  config.headers["x-tsara-signature"] = signature;
+  config.headers["Authorization"] = `Bearer ${key}`;
+
+  return config;
 });
 
 // Add auth header dynamically via interceptor to ensure fresh value
