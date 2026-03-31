@@ -3,6 +3,7 @@ import { appRouter } from "@/server/trpc/router";
 import { createTRPCContext } from "@/server/trpc/context";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { TRPCError } from "@trpc/server";
 
 const handler = async (req: NextRequest) => {
   // Implement request timeout to fail fast (280s to leave buffer before Vercel's 300s limit)

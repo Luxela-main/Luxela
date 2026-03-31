@@ -13,6 +13,53 @@ console.log('[Tsara Config] Module loading...', {
   envObjectKeyLength: env.TSARA_SECRET_KEY?.length,
 });
 
+/**
+ * Validates the Tsara API key format
+ * Returns validation result with details
+ */
+export function validateApiKey(key: string | undefined): { valid: boolean; error?: string; details?: string } {
+  if (!key || key.trim() === '') {
+    return { valid: false, error: 'API key is missing', details: 'TSARA_SECRET_KEY environment variable is not set' };
+  }
+  
+  const trimmedKey = key.trim();
+  
+  // Check minimum length
+  if (trimmedKey.length < 20) {
+    return { valid: false, error: 'API key is too short', details: `Expected at least 20 characters, got ${trimmedKey.length}` };
+  }
+  
+  // Check for common placeholder values
+  const placeholders = ['your_api_key', 'xxx', 'placeholder', 'test', 'example', 'sk_test', 'sk_live'];
+  const lowerKey = trimmedKey.toLowerCase();
+  for (const placeholder of placeholders) {
+    if (lowerKey.includes(placeholder) && trimmedKey.length < 50) {
+      return { valid: false, error: 'API key appears to be a placeholder', details: 'The key contains placeholder text' };
+    }
+  }
+  
+  // Check for valid base64 or alphanumeric format (most API keys)
+  const validPattern = /^[A-Za-z0-9_-]+$/;
+  if (!validPattern.test(trimmedKey)) {
+    return { valid: false, error: 'API key contains invalid characters', details: 'Key should only contain alphanumeric characters, hyphens, and underscores' };
+  }
+  
+  return { valid: true, details: `Key validated successfully (${trimmedKey.length} characters)` };
+}
+
+/**
+ * Get API key status for diagnostics
+ */
+export function getApiKeyStatus(key?: string): { configured: boolean; valid: boolean; message: string } {
+  const keyToValidate = key || process.env.TSARA_SECRET_KEY || '';
+  const validation = validateApiKey(keyToValidate);
+  return {
+    configured: !!keyToValidate && keyToValidate.length > 0,
+    valid: validation.valid,
+    message: validation.valid ? (validation.details || 'Valid API key') : (validation.error || 'Invalid API key'),
+  };
+}
+
 // Use TSARA_SECRET_KEY for server-side API authentication
 // NEXT_PUBLIC_TSARA_PUBLIC_KEY is for client-side only
 export const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY || process.env.TSARA_SECRET_KEY || '';
@@ -47,8 +94,11 @@ export const tsaraApi = axios.create({
   },
 });
 
-// Add request interceptor to log auth attempts
+// Add request interceptor to log auth attempts and validate API key
 tsaraApi.interceptors.request.use((config) => {
+  // Validate API key before sending request
+  const keyValidation = validateApiKey(TSARA_SECRET_KEY);
+  
   // Log that we're sending the request
   console.log('[Tsara API] Request to:', config.url);
   console.log('[Tsara API] Base URL:', config.baseURL);
@@ -62,19 +112,14 @@ tsaraApi.interceptors.request.use((config) => {
   if (hasAuth && authHeader) {
     const tokenPreview = authHeader.substring(0, 25) + '...';
     console.log('[Tsara API] Authorization header preview:', tokenPreview);
-    console.log('[Tsara API] Token length:', TSARA_SECRET_KEY.length);
-  } else {
-    // EMERGENCY: Try to add the key directly from process.env
-    const emergencyKey = process.env.TSARA_SECRET_KEY || env.TSARA_SECRET_KEY;
-    if (emergencyKey) {
-      console.log('[Tsara API] EMERGENCY: Adding key from environment variable');
-      config.headers["Authorization"] = `Bearer ${emergencyKey}`;
-    }
+    console.log('[Tsara API] Token length:', TSARA_SECRET_KEY?.length || 0);
   }
   
-  // Warn if secret key is missing (used for server-side API calls)
-  if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-    console.error('[Tsara API] CRITICAL: TSARA_SECRET_KEY is not configured. This request will fail with 401 Unauthorized.');
+  // Warn if secret key is missing or invalid (used for server-side API calls)
+  if (!keyValidation.valid) {
+    console.error('[Tsara API] CRITICAL: TSARA_SECRET_KEY validation failed:', keyValidation.error);
+    console.error('[Tsara API] Details:', keyValidation.details);
+    console.error('[Tsara API] This request will fail with 401 Unauthorized.');
   }
   
   return config;
@@ -84,23 +129,48 @@ tsaraApi.interceptors.request.use((config) => {
 tsaraApi.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      console.error('[Tsara API] 401 Unauthorized - Check your TSARA_SECRET_KEY configuration (server-side secret key)');
-      console.error('[Tsara API] 401 Details:', {
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-        hasAuthHeader: !!error.config?.headers?.['Authorization'],
-        authHeaderPreview: error.config?.headers?.['Authorization']?.substring(0, 30) + '...',
-        keyLength: TSARA_SECRET_KEY?.length,
-        keyIsEmpty: !TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '',
+    const status = error.response?.status;
+    const errorData = error.response?.data;
+    
+    // Enhanced error logging with full context
+    const errorContext = {
+      status,
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
+      method: error.config?.method,
+      hasAuthHeader: !!error.config?.headers?.['Authorization'],
+      authHeaderPreview: error.config?.headers?.['Authorization']?.substring(0, 30) + '...',
+      keyLength: TSARA_SECRET_KEY?.length || 0,
+      keyIsEmpty: !TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '',
+      responseData: errorData,
+      timestamp: new Date().toISOString(),
+    };
+    
+    if (status === 401) {
+      const keyValidation = validateApiKey(TSARA_SECRET_KEY);
+      console.error('[Tsara API] 401 Unauthorized - API Key validation:', {
+        ...errorContext,
+        keyValidation,
+        recommendation: keyValidation.valid 
+          ? 'Key format is valid but may be incorrect or revoked. Verify TSARA_SECRET_KEY in environment.'
+          : 'TSARA_SECRET_KEY is invalid or missing. Check your environment variables.',
       });
-    } else if (error.response?.status === 403) {
-      console.error('[Tsara API] 403 Forbidden - Your API key may not have permission for this operation');
-    } else if (error.response?.status === 404) {
-      console.error('[Tsara API] 404 Not Found - Endpoint may be incorrect or resource does not exist');
-    } else if (error.response?.status >= 500) {
-      console.error('[Tsara API] Server error - Tsara API may be experiencing issues');
+    } else if (status === 403) {
+      console.error('[Tsara API] 403 Forbidden - Your API key may not have permission for this operation', errorContext);
+    } else if (status === 404) {
+      console.error('[Tsara API] 404 Not Found - Endpoint may be incorrect or resource does not exist', errorContext);
+    } else if (status === 429) {
+      console.error('[Tsara API] 429 Too Many Requests - Rate limit exceeded', errorContext);
+    } else if (status >= 500) {
+      console.error('[Tsara API] Server error - Tsara API may be experiencing issues', errorContext);
+    } else if (error.code === 'ECONNREFUSED') {
+      console.error('[Tsara API] Connection refused - Cannot reach Tsara API', errorContext);
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+      console.error('[Tsara API] Connection timeout - API not responding', errorContext);
+    } else if (status) {
+      console.error(`[Tsara API] HTTP ${status} error:`, errorContext);
     }
+    
     return Promise.reject(error);
   }
 );
@@ -590,32 +660,48 @@ export function formatErrorDetails(error: any): string {
 
 export async function diagnoseTsaraConnection() {
   const timestamp = new Date().toISOString();
-  const hasSecretKey = !!TSARA_SECRET_KEY && TSARA_SECRET_KEY.trim().length > 0;
-  const hasPublicKey = !!TSARA_PUBLIC_KEY && TSARA_PUBLIC_KEY.trim().length > 0;
-  const isConfigured = hasSecretKey;
   const environment = process.env.NODE_ENV || 'development';
   const baseUrl = BASE_URL;
   
+  // Use new validation function
+  const keyValidation = validateApiKey(TSARA_SECRET_KEY);
+  const hasSecretKey = keyValidation.valid;
+  const hasPublicKey = !!TSARA_PUBLIC_KEY && TSARA_PUBLIC_KEY.trim().length > 0;
+  const isConfigured = keyValidation.valid;
+  
   let canReachApi = false;
   let errorDetails: string | undefined;
+  let apiTestStatus: number | undefined;
   
-  try {
-    const response = await tsaraApi.get('/payment-links', {
-      timeout: 5000,
-      validateStatus: () => true,
-    });
-    canReachApi = response.status < 500;
-  } catch (err: any) {
-    canReachApi = false;
-    if (err?.code === 'ECONNREFUSED') {
-      errorDetails = 'Connection refused - API might be down';
-    } else if (err?.code === 'ENOTFOUND') {
-      errorDetails = 'API hostname not found - check internet connection';
-    } else if (err?.code === 'ETIMEDOUT') {
-      errorDetails = 'Connection timeout - API not responding';
-    } else {
-      errorDetails = err?.message || 'Unknown connection error';
+  // Only attempt API connection if key is valid
+  if (isConfigured) {
+    try {
+      const response = await tsaraApi.get('/payment-links', {
+        timeout: 10000,
+        validateStatus: () => true,
+      });
+      apiTestStatus = response.status;
+      canReachApi = response.status < 500;
+      
+      if (response.status === 401) {
+        errorDetails = 'API key rejected - verify TSARA_SECRET_KEY is correct';
+      } else if (response.status === 403) {
+        errorDetails = 'API key lacks permission for this operation';
+      }
+    } catch (err: any) {
+      canReachApi = false;
+      if (err?.code === 'ECONNREFUSED') {
+        errorDetails = 'Connection refused - API might be down or blocked by firewall';
+      } else if (err?.code === 'ENOTFOUND') {
+        errorDetails = 'API hostname not found - check DNS/internet connection';
+      } else if (err?.code === 'ETIMEDOUT' || err?.code === 'ECONNABORTED') {
+        errorDetails = 'Connection timeout - API not responding (10s timeout)';
+      } else {
+        errorDetails = err?.message || 'Unknown connection error';
+      }
     }
+  } else {
+    errorDetails = keyValidation.error || 'API key not configured';
   }
   
   return {
@@ -627,6 +713,11 @@ export async function diagnoseTsaraConnection() {
     canReachApi,
     baseUrl,
     errorDetails,
+    apiTestStatus,
+    keyValidation: {
+      valid: keyValidation.valid,
+      message: keyValidation.valid ? keyValidation.details : keyValidation.error,
+    },
   };
 }
 

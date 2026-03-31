@@ -15,7 +15,10 @@ import {
   disablePaymentLink,
   type PaymentLink,
   CheckoutSession,
-  StablecoinPaymentLink
+  StablecoinPaymentLink,
+  validateApiKey,
+  getApiKeyStatus,
+  diagnoseTsaraConnection,
 } from "../services/tsara";
 import { runTsaraDiagnostics, isTsaraConfigured } from "../services/tsaraDiagnostic";
 import { env } from "@/env";
@@ -720,6 +723,47 @@ export const paymentRouter = createTRPCRouter({
         success: true,
         isConfigured: isTsaraConfigured(),
       };
+    }),
+
+  // API key validation check - returns detailed validation results
+  validateApiKey: publicProcedure
+    .query(() => {
+      const validation = validateApiKey(process.env.TSARA_SECRET_KEY || env.TSARA_SECRET_KEY);
+      const status = getApiKeyStatus();
+      
+      return {
+        success: validation.valid,
+        valid: validation.valid,
+        message: validation.valid ? validation.details : validation.error,
+        details: validation.details,
+        keyLength: (process.env.TSARA_SECRET_KEY || env.TSARA_SECRET_KEY)?.length || 0,
+        environment: process.env.NODE_ENV,
+      };
+    }),
+
+  // Quick connection test - checks if API is reachable
+  testConnection: publicProcedure
+    .query(async () => {
+      try {
+        const connection = await diagnoseTsaraConnection();
+        return {
+          success: connection.isConfigured && connection.canReachApi,
+          configured: connection.isConfigured,
+          canReachApi: connection.canReachApi,
+          apiTestStatus: connection.apiTestStatus,
+          baseUrl: connection.baseUrl,
+          errorDetails: connection.errorDetails,
+          keyValidation: connection.keyValidation,
+          timestamp: connection.timestamp,
+        };
+      } catch (error: any) {
+        return {
+          success: false,
+          configured: false,
+          canReachApi: false,
+          errorDetails: error?.message || 'Unknown error during connection test',
+        };
+      }
     }),
 
 });
