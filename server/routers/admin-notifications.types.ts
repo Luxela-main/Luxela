@@ -10,6 +10,10 @@ export enum NotificationCategory {
   TEAM_CAPACITY = 'team_capacity',
   SYSTEM_ALERT = 'system_alert',
   NEW_REPLY = 'new_reply',
+  LISTING_PENDING_REVIEW = 'listing_pending_review',
+  LISTING_REJECTED = 'listing_rejected',
+  LISTING_REVISION_REQUESTED = 'listing_revision_requested',
+  LISTING_APPROVED = 'listing_approved',
 }
 
 export enum NotificationSeverity {

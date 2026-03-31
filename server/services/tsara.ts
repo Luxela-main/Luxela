@@ -283,7 +283,24 @@ export async function createFiatPaymentLink(data: {
       throw new Error(errorMsg);
     }
 
-    return response.data;
+    // Return properly structured TsaraResponse
+    const paymentLink = response.data.data || response.data;
+    return {
+      success: response.data.success ?? true,
+      data: {
+        id: paymentLink.id,
+        url: paymentLink.url,
+        status: paymentLink.status || 'active',
+        amount: paymentLink.amount,
+        currency: paymentLink.currency,
+        description: paymentLink.description,
+        customer_id: paymentLink.customer_id,
+        metadata: paymentLink.metadata,
+        created_at: paymentLink.created_at,
+        expires_at: paymentLink.expires_at,
+      },
+      request_id: response.data.request_id || response.data.requestId || '',
+    };
   } catch (error: any) {
     console.error('[Tsara API] Full error response:', {
       status: error.response?.status,
@@ -320,7 +337,23 @@ export async function createStablecoinPaymentLink(data: {
       throw new Error(errorMsg);
     }
 
-    return response.data;
+    // Return properly structured TsaraResponse
+    const paymentLink = response.data.data || response.data;
+    return {
+      success: response.data.success ?? true,
+      data: {
+        id: paymentLink.id,
+        url: paymentLink.url,
+        status: paymentLink.status || 'active',
+        amount: paymentLink.amount,
+        asset: paymentLink.asset,
+        network: paymentLink.network,
+        wallet_id: paymentLink.wallet_id,
+        description: paymentLink.description,
+        metadata: paymentLink.metadata,
+      },
+      request_id: response.data.request_id || response.data.requestId || '',
+    };
   } catch (error: any) {
     const errMsg = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Failed to create stablecoin payment link";
     console.error("Create stablecoin payment link failed:", errMsg);

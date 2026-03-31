@@ -502,6 +502,14 @@ export const adminNotificationsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
       }
 
+      // Auto-generate notifications from system data (with cooldown to prevent excessive generation)
+      if (shouldGenerateNotifications(userId)) {
+        // Run non-blocking to avoid slowing down the query
+        generateAndStoreNotifications(userId).catch((error) => {
+          console.error('[AdminNotifications] Error generating notifications:', error);
+        });
+      }
+
       // Build query conditions
       const conditions = [eq(adminNotifications.adminId, userId), sql`${adminNotifications.deletedAt} IS NULL`];
       

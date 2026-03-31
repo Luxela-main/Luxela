@@ -24,12 +24,12 @@ import Link from 'next/link';
 
 interface Notification {
   id: string;
-  category: 'urgent_ticket' | 'sla_breach' | 'escalation' | 'team_capacity' | 'system_alert' | 'new_reply';
+  category: 'urgent_ticket' | 'sla_breach' | 'escalation' | 'team_capacity' | 'system_alert' | 'new_reply' | 'listing_pending_review' | 'listing_rejected' | 'listing_revision_requested' | 'listing_approved';
   severity: NotificationSeverity;
   title: string;
   message: string;
   relatedEntityId: string | null;
-  relatedEntityType: 'ticket' | 'team_member' | 'system' | null;
+  relatedEntityType: 'ticket' | 'team_member' | 'system' | 'listing' | null;
   actionUrl: string | null;
   isRead: boolean;
   createdAt: string | Date; 
@@ -72,6 +72,30 @@ const categoryConfig = {
     color: 'text-green-400',
     bgColor: 'bg-slate-800/60 border-[#2B2B2B]',
     icon: Ticket,
+  },
+  listing_pending_review: {
+    label: 'Listings Pending Review',
+    color: 'text-cyan-400',
+    bgColor: 'bg-slate-800/60 border-[#2B2B2B]',
+    icon: BarChart3,
+  },
+  listing_rejected: {
+    label: 'Listings Rejected',
+    color: 'text-rose-400',
+    bgColor: 'bg-slate-800/60 border-[#2B2B2B]',
+    icon: AlertCircle,
+  },
+  listing_revision_requested: {
+    label: 'Listings Requiring Revision',
+    color: 'text-amber-400',
+    bgColor: 'bg-slate-800/60 border-[#2B2B2B]',
+    icon: Clock,
+  },
+  listing_approved: {
+    label: 'Listings Approved',
+    color: 'text-emerald-400',
+    bgColor: 'bg-slate-800/60 border-[#2B2B2B]',
+    icon: CheckCircle,
   },
 };
 
@@ -257,6 +281,10 @@ export default function NotificationsPage() {
       team_capacity: [],
       system_alert: [],
       new_reply: [],
+      listing_pending_review: [],
+      listing_rejected: [],
+      listing_revision_requested: [],
+      listing_approved: [],
     };
 
     (filteredNotifications as Notification[]).forEach((notif: Notification) => {
