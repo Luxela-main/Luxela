@@ -2,8 +2,8 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/t
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { db } from "../db";
-import { payments, orders, listings, sellers, carts, cartItems, buyerAccountDetails, buyerBillingAddress, buyers } from "../db/schema";
-import { eq, and } from "drizzle-orm";
+import { payments, listings, buyers } from "../db/schema";
+import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import {
   createFiatPaymentLink,
@@ -14,8 +14,6 @@ import {
   listPaymentLinks,
   disablePaymentLink,
   type PaymentLink,
-  CheckoutSession,
-  StablecoinPaymentLink,
   validateApiKey,
   getApiKeyStatus,
   diagnoseTsaraConnection,
@@ -38,12 +36,11 @@ export const paymentRouter = createTRPCRouter({
         amount: z.number().positive(),
         currency: z.string().min(3).max(3).default("NGN"),
         description: z.string().min(1).max(500),
-        customer_id: z.string().optional(),
         paymentMethod: z.enum(["card", "bank_transfer", "crypto"]),
         provider: z.enum(["tsara"]).default("tsara"),
         paymentType: z.enum(["fiat", "stablecoin"]).default("fiat"),
         wallet_id: z.string().optional(),
-        metadata: z.record(z.string(), z.any()as z.ZodTypeAny).optional(),
+        metadata: z.record(z.string(), z.any()).optional(),
         redirect_url: z.string().url().optional(),
         success_url: z.string().url().optional(),
         cancel_url: z.string().url().optional(),
@@ -54,8 +51,8 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         // --- Validate buyer and listing ---
-        const [buyer] = await db.select().from(buyers).where(eq(buyers.id, input.buyerId)).limit(1);
-        if (!buyer) throw new TRPCError({ code: "NOT_FOUND", message: "Buyer not found" });
+        const buyerExists = await db.select({ id: buyers.id }).from(buyers).where(eq(buyers.id, input.buyerId)).limit(1);
+        if (!buyerExists.length) throw new TRPCError({ code: "NOT_FOUND", message: "Buyer not found" });
 
         const [listing] = await db.select().from(listings).where(eq(listings.id, input.listingId)).limit(1);
         if (!listing) throw new TRPCError({ code: "NOT_FOUND", message: "Listing not found" });
@@ -70,11 +67,22 @@ export const paymentRouter = createTRPCRouter({
           });
         }
 
-        // --- Sanitize metadata ---
+        // --- Validate amount ranges ---
+        if (input.amount <= 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Payment amount must be greater than zero" });
+        }
+
+        if (input.amount > 10000000) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Payment amount exceeds maximum allowed limit" });
+        }
+
+        // --- Build safe metadata ---
         const sanitizedMetadata: Record<string, string> = {};
         if (input.metadata) {
           Object.entries(input.metadata).forEach(([key, value]) => {
-            sanitizedMetadata[key] = typeof value === "string" ? value : JSON.stringify(value);
+            if (value !== undefined && value !== null) {
+              sanitizedMetadata[key] = typeof value === "string" ? value : JSON.stringify(value);
+            }
           });
         }
         sanitizedMetadata.buyerId = input.buyerId;
@@ -85,12 +93,22 @@ export const paymentRouter = createTRPCRouter({
         let response: any;
         const USDC_TO_NGN_RATE = 1000; // 1 USDC = 1000 NGN
         const AMOUNT_MULTIPLIER = 100; // convert to kobo/cents
+        const currencyCode = input.currency.toUpperCase();
+        const isStablecoinPayment = input.paymentType === "stablecoin" || (input.paymentMethod === "crypto" && currencyCode === "USDC");
+        const paymentCurrency = isStablecoinPayment ? "USDC" : currencyCode;
 
-        if (input.paymentType === "stablecoin" || (input.paymentMethod === "crypto" && input.currency === "USDC")) {
-          if (!input.wallet_id) throw new TRPCError({ code: "BAD_REQUEST", message: "wallet_id required for stablecoin" });
+        if (isStablecoinPayment) {
+          if (currencyCode !== "USDC") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Stablecoin payments must use USDC currency." });
+          }
+          if (!input.wallet_id) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "wallet_id is required for stablecoin payments" });
+          }
 
           const usdcAmount = input.amount / USDC_TO_NGN_RATE;
-          if (usdcAmount < 0.01) throw new TRPCError({ code: "BAD_REQUEST", message: "Amount too small for USDC" });
+          if (usdcAmount < 0.01) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Amount too small for USDC" });
+          }
 
           response = await createStablecoinPaymentLink({
             amount: usdcAmount.toFixed(6),
@@ -101,13 +119,12 @@ export const paymentRouter = createTRPCRouter({
             metadata: sanitizedMetadata,
           });
         } else {
-          // --- Fiat payment (card/bank transfer) ---
           const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
 
           if (input.success_url && input.cancel_url) {
             response = await createCheckoutSession({
               amount: amountInCents,
-              currency: input.currency,
+              currency: currencyCode,
               reference: `order_${input.orderId || uuidv4()}`,
               success_url: input.success_url,
               cancel_url: input.cancel_url,
@@ -116,7 +133,7 @@ export const paymentRouter = createTRPCRouter({
           } else {
             response = await createFiatPaymentLink({
               amount: amountInCents,
-              currency: input.currency,
+              currency: currencyCode,
               description: input.description,
               metadata: sanitizedMetadata,
               redirect_url: input.redirect_url,
@@ -125,24 +142,37 @@ export const paymentRouter = createTRPCRouter({
         }
 
         // --- Validate Tsara response ---
-        if (!response?.data || !response.data.id) {
+        if (!response || response.success === false || !response.data || !response.data.id) {
           console.error("[Payment] Invalid response from Tsara:", response);
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payment provider returned invalid data" });
         }
 
         const tsaraPaymentId = response.data.id;
-        const amountCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
-        paymentData = {
+        const amountCents = isStablecoinPayment
+          ? Math.round((input.amount / USDC_TO_NGN_RATE) * 1000000)
+          : Math.round(input.amount * AMOUNT_MULTIPLIER);
+
+        const paymentData = {
           buyerId: input.buyerId,
           listingId: input.listingId,
           orderId: input.orderId || null,
           amountCents,
-          currency: input.paymentType === "stablecoin" ? "USDC" : input.currency,
+          currency: paymentCurrency,
           paymentMethod: input.paymentMethod,
           provider: input.provider,
           status: "pending" as const,
           transactionRef: tsaraPaymentId,
-          gatewayResponse: JSON.stringify(response),
+          gatewayResponse: (() => {
+            try {
+              return JSON.stringify(response);
+            } catch (jsonError) {
+              console.error('[Payment] Failed to stringify provider response:', jsonError);
+              return JSON.stringify({
+                error: 'Failed to stringify response',
+                data: response?.data ? { id: response.data.id, status: response.data.status } : null,
+              });
+            }
+          })(),
         };
 
         const [payment] = await db.insert(payments).values(paymentData).returning();
@@ -188,12 +218,12 @@ export const paymentRouter = createTRPCRouter({
       }
     }),
 
-  verifyPayment: publicProcedure
+  verifyPayment: protectedProcedure
     .input(z.object({ reference: z.string().min(1, "Payment reference is required") }))
-    .query(async ({ input }) => {
+    .mutation(async ({ input }) => {
       try {
         const response = await verifyTsaraPayment(input.reference);
-        if (response.success && response.data) {
+        if (response.success && response.data && response.data.status) {
           const statusMap: Record<string, "pending" | "processing" | "completed" | "failed" | "refunded"> = {
             "pending": "pending",
             "processing": "processing",
@@ -201,8 +231,9 @@ export const paymentRouter = createTRPCRouter({
             "failed": "failed",
             "refunded": "refunded"
           };
+          const mappedStatus = statusMap[response.data.status] || "pending";
           await db.update(payments).set({
-            status: statusMap[response.data.status] || "pending",
+            status: mappedStatus,
             updatedAt: new Date(),
             gatewayResponse: JSON.stringify(response),
           }).where(eq(payments.transactionRef, input.reference));
