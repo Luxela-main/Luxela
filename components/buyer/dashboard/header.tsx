@@ -10,6 +10,10 @@ export default function Header() {
   const { logout } = useAuth();
   const { profile } = useProfile();
 
+  const profileDisplayName = profile?.fullName || profile?.username || profile?.name || 'User';
+  const profileInitial = profileDisplayName?.[0]?.toUpperCase() || 'U';
+  const profilePictureSrc = profile?.profilePicture ? `${profile.profilePicture}?v=${Date.now()}` : undefined;
+
   const handleLogout = useCallback(async () => {
     await logout();
   }, [logout, router]);
@@ -29,22 +33,26 @@ export default function Header() {
             className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           >
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-600 flex-shrink-0">
-              {profile?.profilePicture ? (
+              {profilePictureSrc ? (
                 <img
-                  key={profile.profilePicture}
-                  src={`${profile.profilePicture}?v=${Date.now()}`}
+                  key={profilePictureSrc}
+                  src={profilePictureSrc}
                   alt="Profile"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/images/seller/sparkles.svg';
+                  }}
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
-                  {profile?.name?.[0]?.toUpperCase() || 'U'}
+                  {profileInitial}
                 </div>
               )}
             </div>
             <div className="flex flex-col">
               <span className="text-white font-medium text-sm">
-                {profile?.name || 'User'}
+                {profileDisplayName}
               </span>
               <span className="text-gray-400 text-xs">Profile</span>
             </div>

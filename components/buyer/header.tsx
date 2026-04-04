@@ -70,10 +70,8 @@ const BuyerHeader = () => {
     setMounted(true);
   }, []);
 
-  const username = profile?.username || user?.email?.split("@")[0] || "User";
-  const userPicture = profile?.profilePicture 
-    ? `${profile.profilePicture}?t=${Date.now()}` 
-    : "/images/seller/sparkles.svg";
+  const username = profile?.fullName || profile?.username || user?.email?.split("@")[0] || "User";
+  const userPicture = profile?.profilePicture || "/images/seller/sparkles.svg";
 
   const handleLogout = async () => {
     try {
@@ -254,12 +252,16 @@ const BuyerHeader = () => {
                 <DropdownMenuTrigger asChild>
                   <button className="flex cursor-pointer items-center gap-2 text-xs lg:text-sm text-[#F2F2F2] px-2 lg:px-4 py-1 shadow-[inset_0_0_0_1px_#212121] rounded-[4px] hover:bg-[#1a1a1a] flex-shrink-0">
                     <div className="size-7 lg:size-8 overflow-hidden rounded-full flex-shrink-0">
-                      <Image
+                      <img
                         src={userPicture}
                         width={40}
                         height={40}
                         alt="User avatar"
-                        className="size-full rounded-full"
+                        className="size-full rounded-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/images/seller/sparkles.svg';
+                        }}
                       />
                     </div>
                     <span className="max-w-20 truncate hidden xl:block">
