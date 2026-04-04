@@ -389,7 +389,7 @@ export const orders = pgTable('orders', {
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   buyerId: uuid('buyer_id').notNull().references(() => buyers.id, { onDelete: 'cascade' }),
-  listingId: uuid('listing_id').notNull().references(() => listings.id, { onDelete: 'cascade' }),
+  listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'cascade' }),
   orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
   amountCents: integer('amount_cents').notNull(),
   currency: varchar('currency', { length: 16 }).notNull(),
@@ -1556,4 +1556,4 @@ export const buyerBrandFollowsRelations = relations(buyerBrandFollows, ({ one })
 
 
 
-
+

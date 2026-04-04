@@ -239,6 +239,13 @@
       "when": 1774956416935,
       "tag": "0034_keen_living_tribunal",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1775323115856,
+      "tag": "0035_square_random",
+      "breakpoints": true
     }
   ]
 }

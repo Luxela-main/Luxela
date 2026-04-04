@@ -1,0 +1,1 @@
+ALTER TABLE "payments" ALTER COLUMN "listing_id" DROP NOT NULL;
