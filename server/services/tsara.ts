@@ -37,12 +37,22 @@ export function validateApiKey(key: string | undefined): { valid: boolean; error
     return { valid: false, error: 'API key is too short', details: `Expected at least 20 characters, got ${trimmedKey.length}` };
   }
   
-  // Check for common placeholder values
-  const placeholders = ['your_api_key', 'xxx', 'placeholder', 'test', 'example', 'sk_test', 'sk_live'];
+  // Check for common placeholder values - be more specific to avoid flagging real keys
+  const exactPlaceholders = ['your_api_key', 'xxx', 'placeholder', 'test_key', 'example_key', 'api_key_here'];
   const lowerKey = trimmedKey.toLowerCase();
-  for (const placeholder of placeholders) {
-    if (lowerKey.includes(placeholder) && trimmedKey.length < 50) {
-      return { valid: false, error: 'API key appears to be a placeholder', details: 'The key contains placeholder text' };
+  
+  // Check for exact placeholder matches
+  if (exactPlaceholders.includes(lowerKey)) {
+    return { valid: false, error: 'API key appears to be a placeholder', details: 'The key matches a known placeholder value' };
+  }
+  
+  // Check for very short keys that are likely placeholders (under 25 chars and contain placeholder words)
+  if (trimmedKey.length < 25) {
+    const placeholderWords = ['your', 'api', 'key', 'test', 'example', 'placeholder', 'xxx'];
+    for (const word of placeholderWords) {
+      if (lowerKey.includes(word)) {
+        return { valid: false, error: 'API key appears to be a placeholder', details: 'Short key contains placeholder text' };
+      }
     }
   }
   
