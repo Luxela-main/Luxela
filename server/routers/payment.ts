@@ -347,13 +347,14 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         // --- Validate buyer ---
-        const buyer = await db.select().from(buyers).where(eq(buyers.id, userId)).limit(1);
+        const buyer = await db.select().from(buyers).where(eq(buyers.userId, userId)).limit(1);
         if (!buyer.length) throw new TRPCError({ code: "NOT_FOUND", message: "Buyer not found" });
+        const buyerId = buyer[0].id;
 
         // --- Validate cart exists and belongs to buyer ---
         const cart = await db.select().from(carts).where(eq(carts.id, input.cartId)).limit(1);
         if (!cart.length) throw new TRPCError({ code: "NOT_FOUND", message: "Cart not found" });
-        if (cart[0].buyerId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Cart does not belong to you" });
+        if (cart[0].buyerId !== buyerId) throw new TRPCError({ code: "FORBIDDEN", message: "Cart does not belong to you" });
 
         // --- Validate cart has items ---
         const items = await db.select().from(cartItems).where(eq(cartItems.cartId, input.cartId));
@@ -459,7 +460,7 @@ export const paymentRouter = createTRPCRouter({
           : Math.round(input.amount * AMOUNT_MULTIPLIER);
 
         const paymentData = {
-          buyerId: userId,
+          buyerId: buyerId,
           listingId: null, // Cart payment, not tied to single listing
           orderId: input.cartId, // Use cart ID as reference
           amountCents,
