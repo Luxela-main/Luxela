@@ -65,10 +65,15 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const repoUrl =
+              github.context.payload.repository?.html_url ||
+              `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}`;
+            const runId = github.context.runId || process.env.GITHUB_RUN_ID;
+
             await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner: github.context.repo.owner,
+              repo: github.context.repo.repo,
               title: '❌ Escrow Maintenance Job Failed',
-              body: `The daily escrow maintenance workflow failed on ${new Date().toISOString()}.\n\nPlease check the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}).`,
+              body: `The daily escrow maintenance workflow failed on ${new Date().toISOString()}.\n\nPlease check the [workflow logs](${repoUrl}/actions/runs/${runId}).`,
               labels: ['bug', 'automation']
             });
