@@ -5,10 +5,18 @@ import crypto from "crypto";
 const TSARA_BASE_URL = "https://api.tsara.ng/v1";
 
 // DIAGNOSTIC: Log environment state at module load time
+const rawTsaraSecretKey =
+  env.TSARA_SECRET_KEY ||
+  process.env.TSARA_SECRET_KEY ||
+  process.env.TSARA_KEY ||
+  process.env.TSARA_API_KEY ||
+  process.env.TSARA_SECRET ||
+  '';
+
 console.log('[Tsara Config] Module loading...', {
   nodeEnv: process.env.NODE_ENV,
-  hasTsaraSecretKey: !!process.env.TSARA_SECRET_KEY,
-  tsaraSecretKeyLength: process.env.TSARA_SECRET_KEY?.length,
+  hasTsaraSecretKey: !!rawTsaraSecretKey,
+  tsaraSecretKeyLength: rawTsaraSecretKey.length,
   envObjectHasKey: !!env.TSARA_SECRET_KEY,
   envObjectKeyLength: env.TSARA_SECRET_KEY?.length,
 });
@@ -38,10 +46,10 @@ export function validateApiKey(key: string | undefined): { valid: boolean; error
     }
   }
   
-  // Check for valid base64 or alphanumeric format (most API keys)
-  const validPattern = /^[A-Za-z0-9_-]+$/;
+  // Check for valid key characters. Tsara keys may include alphanumerics, hyphens, underscores, dots, slashes and padding symbols.
+  const validPattern = /^[A-Za-z0-9._\-+=\/]+$/;
   if (!validPattern.test(trimmedKey)) {
-    return { valid: false, error: 'API key contains invalid characters', details: 'Key should only contain alphanumeric characters, hyphens, and underscores' };
+    return { valid: false, error: 'API key contains invalid characters', details: 'Key should only contain alphanumeric characters, hyphens, underscores, dots, slashes, plus signs or equals padding' };
   }
   
   return { valid: true, details: `Key validated successfully (${trimmedKey.length} characters)` };
@@ -51,7 +59,14 @@ export function validateApiKey(key: string | undefined): { valid: boolean; error
  * Get API key status for diagnostics
  */
 export function getApiKeyStatus(key?: string): { configured: boolean; valid: boolean; message: string } {
-  const keyToValidate = key || process.env.TSARA_SECRET_KEY || '';
+  const keyToValidate =
+    key ||
+    env.TSARA_SECRET_KEY ||
+    process.env.TSARA_SECRET_KEY ||
+    process.env.TSARA_KEY ||
+    process.env.TSARA_API_KEY ||
+    process.env.TSARA_SECRET ||
+    '';
   const validation = validateApiKey(keyToValidate);
   return {
     configured: !!keyToValidate && keyToValidate.length > 0,
@@ -62,14 +77,14 @@ export function getApiKeyStatus(key?: string): { configured: boolean; valid: boo
 
 // Use TSARA_SECRET_KEY for server-side API authentication
 // NEXT_PUBLIC_TSARA_PUBLIC_KEY is for client-side only
-export const TSARA_SECRET_KEY = (env.TSARA_SECRET_KEY || process.env.TSARA_SECRET_KEY || '').trim();
+export const TSARA_SECRET_KEY = rawTsaraSecretKey.trim();
 export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || '';
 export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET || process.env.TSARA_WEBHOOK_SECRET || '';
 
 // Validate that required credentials are configured
 if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
   console.error('[Tsara Config] CRITICAL: TSARA_SECRET_KEY is not configured. Payment functionality will fail.');
-  console.error('[Tsara Config] Available env keys:', Object.keys(process.env).filter(k => k.includes('TSARA') || k.includes('SECRET')));
+  console.error('[Tsara Config] Available env keys:', Object.keys(process.env).filter(k => /TSARA|SECRET/i.test(k)));
 } else {
   console.log('[Tsara Config] TSARA_SECRET_KEY is configured (length:', TSARA_SECRET_KEY.length, ')');
   // Validate key format - should be a long string
@@ -81,7 +96,7 @@ if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
   console.log('[Tsara Config] Key prefix:', firstChars + '...');
 }
 
-const BASE_URL = env.TSARA_BASE_URL || TSARA_BASE_URL;
+const BASE_URL = env.TSARA_BASE_URL || env.TSARA_API_URL || TSARA_BASE_URL;
 
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,

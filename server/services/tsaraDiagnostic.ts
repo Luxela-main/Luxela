@@ -30,23 +30,29 @@ export async function runTsaraDiagnostics(): Promise<TsaraDiagnostics> {
   const recommendations: string[] = [];
 
   // Check 1: Environment variables
-  const secretKey = env.TSARA_SECRET_KEY;
+  const secretKey =
+    env.TSARA_SECRET_KEY ||
+    process.env.TSARA_SECRET_KEY ||
+    process.env.TSARA_KEY ||
+    process.env.TSARA_API_KEY ||
+    process.env.TSARA_SECRET ||
+    '';
   const publicKey = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
 
   if (!secretKey || secretKey.trim() === '') {
     checks.push({
       status: 'fail',
       message: 'TSARA_SECRET_KEY is not configured',
-      details: 'Add TSARA_SECRET_KEY to your .env file or environment variables',
+      details: 'Add TSARA_SECRET_KEY, TSARA_KEY, or TSARA_API_KEY to your environment variables',
     });
-    recommendations.push('Set TSARA_SECRET_KEY in your environment (server-side only)');
+    recommendations.push('Set the Tsara server secret in your environment variables');
   } else if (secretKey.length < 20) {
     checks.push({
       status: 'warn',
       message: 'TSARA_SECRET_KEY appears to be too short',
       details: 'API keys are typically longer than 20 characters',
     });
-    recommendations.push('Verify your TSARA_SECRET_KEY is complete and correct');
+    recommendations.push('Verify your Tsara secret key is complete and correct');
   } else {
     checks.push({
       status: 'pass',

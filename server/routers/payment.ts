@@ -59,7 +59,12 @@ export const paymentRouter = createTRPCRouter({
         if (listing.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Listing not available" });
 
         // --- Validate Tsara API key ---
-        const TSARA_SECRET_KEY = env.TSARA_SECRET_KEY || process.env.TSARA_SECRET_KEY;
+        const TSARA_SECRET_KEY =
+          env.TSARA_SECRET_KEY ||
+          process.env.TSARA_SECRET_KEY ||
+          process.env.TSARA_KEY ||
+          process.env.TSARA_API_KEY ||
+          process.env.TSARA_SECRET;
         if (!TSARA_SECRET_KEY) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -271,14 +276,21 @@ export const paymentRouter = createTRPCRouter({
 
   validateApiKey: publicProcedure
     .query(() => {
-      const validation = validateApiKey(process.env.TSARA_SECRET_KEY || env.TSARA_SECRET_KEY);
+      const key =
+        process.env.TSARA_SECRET_KEY ||
+        env.TSARA_SECRET_KEY ||
+        process.env.TSARA_KEY ||
+        process.env.TSARA_API_KEY ||
+        process.env.TSARA_SECRET ||
+        '';
+      const validation = validateApiKey(key);
       const status = getApiKeyStatus();
       return {
         success: validation.valid,
         valid: validation.valid,
         message: validation.valid ? validation.details : validation.error,
         details: validation.details,
-        keyLength: (process.env.TSARA_SECRET_KEY || env.TSARA_SECRET_KEY)?.length || 0,
+        keyLength: key.length || 0,
         environment: process.env.NODE_ENV,
       };
     }),
