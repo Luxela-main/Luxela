@@ -2,7 +2,7 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc/t
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { db } from "../db";
-import { payments, listings, buyers } from "../db/schema";
+import { payments, listings, buyers, carts, cartItems } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -316,6 +316,183 @@ export const paymentRouter = createTRPCRouter({
           canReachApi: false,
           errorDetails: error?.message || 'Unknown error during connection test',
         };
+      }
+    }),
+
+  // =======================
+  // CREATE CART PAYMENT
+  // =======================
+  createCartPayment: protectedProcedure
+    .input(
+      z.object({
+        cartId: z.string().uuid(),
+        amount: z.number().positive(),
+        currency: z.string().min(3).max(3).default("NGN"),
+        description: z.string().min(1).max(500),
+        paymentMethod: z.enum(["card", "bank_transfer", "crypto"]),
+        provider: z.enum(["tsara"]).default("tsara"),
+        paymentType: z.enum(["fiat", "stablecoin"]).default("fiat"),
+        wallet_id: z.string().optional(),
+        metadata: z.record(z.string(), z.any()).optional(),
+        redirect_url: z.string().url().optional(),
+        success_url: z.string().url().optional(),
+        cancel_url: z.string().url().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      let paymentData: any;
+
+      try {
+        // --- Validate buyer ---
+        const buyer = await db.select().from(buyers).where(eq(buyers.id, userId)).limit(1);
+        if (!buyer.length) throw new TRPCError({ code: "NOT_FOUND", message: "Buyer not found" });
+
+        // --- Validate cart exists and belongs to buyer ---
+        const cart = await db.select().from(carts).where(eq(carts.id, input.cartId)).limit(1);
+        if (!cart.length) throw new TRPCError({ code: "NOT_FOUND", message: "Cart not found" });
+        if (cart[0].buyerId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Cart does not belong to you" });
+
+        // --- Validate cart has items ---
+        const items = await db.select().from(cartItems).where(eq(cartItems.cartId, input.cartId));
+        if (items.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Cart is empty" });
+
+        // --- Validate Tsara API key ---
+        const TSARA_SECRET_KEY =
+          env.TSARA_SECRET_KEY ||
+          process.env.TSARA_SECRET_KEY ||
+          process.env.TSARA_KEY ||
+          process.env.TSARA_API_KEY ||
+          process.env.TSARA_SECRET;
+        if (!TSARA_SECRET_KEY) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Payment service is not configured. Contact support.",
+          });
+        }
+
+        // --- Validate amount ranges ---
+        if (input.amount <= 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Payment amount must be greater than zero" });
+        }
+
+        if (input.amount > 10000000) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Payment amount exceeds maximum allowed limit" });
+        }
+
+        // --- Build safe metadata ---
+        const sanitizedMetadata: Record<string, string> = {};
+        if (input.metadata) {
+          Object.entries(input.metadata).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              sanitizedMetadata[key] = typeof value === "string" ? value : JSON.stringify(value);
+            }
+          });
+        }
+        sanitizedMetadata.buyerId = userId;
+        sanitizedMetadata.cartId = input.cartId;
+        sanitizedMetadata.itemCount = items.length.toString();
+
+        // --- Handle stablecoin payments ---
+        let response: any;
+        const USDC_TO_NGN_RATE = 1000; // 1 USDC = 1000 NGN
+        const AMOUNT_MULTIPLIER = 100; // convert to kobo/cents
+        const currencyCode = input.currency.toUpperCase();
+        const isStablecoinPayment = input.paymentType === "stablecoin" || (input.paymentMethod === "crypto" && currencyCode === "USDC");
+        const paymentCurrency = isStablecoinPayment ? "USDC" : currencyCode;
+
+        if (isStablecoinPayment) {
+          if (currencyCode !== "USDC") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Stablecoin payments must use USDC currency." });
+          }
+          if (!input.wallet_id) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "wallet_id is required for stablecoin payments" });
+          }
+
+          const usdcAmount = input.amount / USDC_TO_NGN_RATE;
+          if (usdcAmount < 0.01) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Amount too small for USDC" });
+          }
+
+          response = await createStablecoinPaymentLink({
+            amount: usdcAmount.toFixed(6),
+            asset: "USDC",
+            network: "solana",
+            wallet_id: input.wallet_id,
+            description: input.description,
+            metadata: sanitizedMetadata,
+          });
+        } else {
+          const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
+
+          if (input.success_url && input.cancel_url) {
+            response = await createCheckoutSession({
+              amount: amountInCents,
+              currency: currencyCode,
+              reference: `cart_${input.cartId}`,
+              success_url: input.success_url,
+              cancel_url: input.cancel_url,
+              metadata: sanitizedMetadata,
+            });
+          } else {
+            response = await createFiatPaymentLink({
+              amount: amountInCents,
+              currency: currencyCode,
+              description: input.description,
+              metadata: sanitizedMetadata,
+              redirect_url: input.redirect_url,
+            });
+          }
+        }
+
+        // --- Validate Tsara response ---
+        if (!response || response.success === false || !response.data || !response.data.id) {
+          console.error("[Cart Payment] Invalid response from Tsara:", response);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payment provider returned invalid data" });
+        }
+
+        const tsaraPaymentId = response.data.id;
+        const amountCents = isStablecoinPayment
+          ? Math.round((input.amount / USDC_TO_NGN_RATE) * 1000000)
+          : Math.round(input.amount * AMOUNT_MULTIPLIER);
+
+        const paymentData = {
+          buyerId: userId,
+          listingId: null, // Cart payment, not tied to single listing
+          orderId: input.cartId, // Use cart ID as reference
+          amountCents,
+          currency: paymentCurrency,
+          paymentMethod: input.paymentMethod,
+          provider: input.provider,
+          status: "pending" as const,
+          transactionRef: tsaraPaymentId,
+          gatewayResponse: (() => {
+            try {
+              return JSON.stringify(response);
+            } catch (jsonError) {
+              console.error('[Cart Payment] Failed to stringify provider response:', jsonError);
+              return JSON.stringify({
+                error: 'Failed to stringify response',
+                data: response?.data ? { id: response.data.id, status: response.data.status } : null,
+              });
+            }
+          })(),
+        };
+
+        const [payment] = await db.insert(payments).values(paymentData).returning();
+
+        return {
+          payment,
+          paymentUrl: response.data.url || response.data.checkout_url,
+          paymentId: tsaraPaymentId,
+        };
+
+      } catch (error: any) {
+        console.error("[Cart Payment] createCartPayment error:", error, { input });
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error?.message || "Cart payment creation failed" });
       }
     }),
 });

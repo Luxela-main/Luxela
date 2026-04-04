@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -34,7 +35,7 @@ function TsaraPaymentModalComponent({
 }: TsaraPaymentModalProps) {
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
 
-  const createPayment = trpc.payment.createPayment.useMutation({
+  const createPayment = trpc.payment.createCartPayment.useMutation({
     onSuccess: (data) => {
       if (data.paymentUrl) {
         // Store payment reference in session storage for verification after return
@@ -102,10 +103,7 @@ function TsaraPaymentModalComponent({
     }
 
     const paymentData: any = {
-      buyerId,
-      // For multiple orders, use the first one's listing ID
-      listingId: firstOrder.listingId,
-      orderId: orderId, // Use cart ID as reference
+      cartId: orderId, // Use cart ID for cart payment
       amount: nairaAmount,
       currency: paymentMethod === "crypto" ? "USDC" : "NGN",
       description: `Luxela Order Payment - ${checkoutData.orders.length} item(s)`,
@@ -127,8 +125,7 @@ function TsaraPaymentModalComponent({
     }
 
     console.log('[TsaraModal] Sending payment data:', {
-      buyerId,
-      listingId: firstOrder.listingId,
+      cartId: orderId,
       amount: nairaAmount,
       currency: paymentData.currency,
       paymentMethod,
@@ -160,6 +157,9 @@ function TsaraPaymentModalComponent({
                 <p> Pay with Tsara</p>
               </div>
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Complete your payment securely through Tsara payment gateway
+            </DialogDescription>
           </DialogHeader>
 
           <p className="text-gray-400 text-sm mb-10 px-6 leading-relaxed">
