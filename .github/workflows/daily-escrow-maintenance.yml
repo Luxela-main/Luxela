@@ -11,25 +11,53 @@ on:
 jobs:
   escrow-maintenance:
     runs-on: ubuntu-latest
+    env:
+      API_URL: ${{ secrets.API_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run escrow daily maintenance
-        env:
-          API_URL: ${{ secrets.API_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      - name: Validate required secrets
         run: |
+          set -euo pipefail
+          if [ -z "${API_URL:-}" ]; then
+            echo "ERROR: API_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "ERROR: CRON_SECRET secret is not set"
+            exit 1
+          fi
+          echo "Secrets validated."
+
+      - name: Run escrow daily maintenance
+        run: |
+          set -euo pipefail
           echo "🕐 Running daily escrow maintenance..."
-          
-          # Call the daily maintenance endpoint
-          curl -X POST \
+
+          response=$(curl --silent --show-error --write-out "\nHTTP_STATUS:%{http_code}" \
+            -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             "${API_URL}/api/trpc/cron.dailyMaintenance" \
-            -d '{}' \
-            -w "\nHTTP Status: %{http_code}\n"
+            -d '{"input":{}}')
+
+          echo "$response"
+          http_status=$(printf "%s" "$response" | awk -F"HTTP_STATUS:" '{print $2}' | tr -d '\r' | tr -d '\n')
+
+          if [ -z "$http_status" ]; then
+            echo "ERROR: Failed to determine HTTP status from response"
+            exit 1
+          fi
+
+          if [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
+            echo "ERROR: Escrow maintenance endpoint returned status $http_status"
+            exit 1
+          fi
+
+          echo "Escrow maintenance completed successfully."
 
       - name: Notify on failure
         if: failure()
