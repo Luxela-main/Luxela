@@ -42,22 +42,13 @@ export default function CreateBuyerProfileForm() {
     profilePicture: "",
   });
 
-  // Restore form data from localStorage on mount
+  // Check if user already has a profile and redirect if so
   useEffect(() => {
-    try {
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      if (savedData && !toastShownRef.current) {
-        const parsed = JSON.parse(savedData);
-        setInitialValues(parsed);
-        toastSvc.success('Your previous profile details have been restored');
-        toastShownRef.current = true;
-      }
-    } catch (err) {
-      // Silently fail
-    } finally {
-      setHydrated(true);
+    if (profile && !profileLoading && isInitialized) {
+      console.log("User already has profile, redirecting to profile page");
+      router.push("/buyer/profile");
     }
-  }, []);
+  }, [profile, profileLoading, isInitialized, router]);
 
   const formik = useFormik({
     initialValues,
@@ -107,32 +98,47 @@ export default function CreateBuyerProfileForm() {
   const createProfileMutation = trpc.buyer.createBuyerProfile.useMutation({
     onSuccess: async (response) => {
       toastSvc.success("Buyer profile created successfully");
-      
+
       // Clear saved form data on successful submission
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (err) {
         // Silently fail
       }
-      
+
       // Refresh profile data immediately
       await refreshProfile();
-      
+
       // Invalidate the profile query cache for future refreshes
       await utils.buyer.getAccountDetails.invalidate();
-      
-      // Redirect to profile page immediately
+
+      // Small delay to ensure profile context is updated
       setTimeout(() => {
         router.push("/buyer/profile");
-      }, 300);
+      }, 500);
     },
     onError: (error: any): void => {
+      console.error("Profile creation error:", error);
+
       // If profile already exists, redirect to profile page
-      if (error.message?.includes("already exists")) {
+      if (error.message?.includes("already exists") || error.message?.includes("Buyer profile already exists")) {
         toastSvc.info("Your profile already exists");
         router.push("/buyer/profile");
         return;
       }
+
+      // Handle username taken error
+      if (error.message?.includes("Username is already taken")) {
+        formik.setFieldError("username", "This username is already taken");
+        return;
+      }
+
+      // Handle email exists error
+      if (error.message?.includes("email already exists")) {
+        toastSvc.error("An account with this email already exists");
+        return;
+      }
+
       toastSvc.error(error.message || "Failed to create profile");
     },
   });
@@ -216,10 +222,13 @@ export default function CreateBuyerProfileForm() {
     }
   };
 
-  if (!hydrated) {
+  if (!hydrated || profileLoading) {
     return (
       <div className="bg-[#1a1a1a] rounded-lg p-6 max-w-md mx-auto mt-10">
-        <div className="text-center text-gray-400">Loading...</div>
+        <div className="text-center text-gray-400">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-400 mx-auto mb-4"></div>
+          Loading...
+        </div>
       </div>
     );
   }

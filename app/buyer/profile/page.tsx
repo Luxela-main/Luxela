@@ -35,12 +35,12 @@ const ProfilePage = () => {
 
   
   useEffect(() => {
-    
-    
-    if (isInitialized && !profileLoading && !profile) {
+    // Only redirect if we're fully initialized and have no profile
+    if (isInitialized && !profileLoading && !profile && user) {
+      console.log("No profile found, redirecting to create profile");
       router.push("/buyer/profile/create");
     }
-  }, [profile, profileLoading, isInitialized, router]);
+  }, [profile, profileLoading, isInitialized, router, user]);
 
   async function compressImage(
     file: File,
@@ -102,8 +102,14 @@ const ProfilePage = () => {
   
 
   
-  const { data: loyaltyData, isLoading: loyaltyLoading } = trpc.buyer.getLoyaltyNFTs.useQuery(undefined, {
+  const { data: loyaltyData, isLoading: loyaltyLoading, error: loyaltyError } = trpc.buyer.getLoyaltyNFTs.useQuery(undefined, {
     enabled: !!user && activeTab === "loyalty",
+    retry: (failureCount, error) => {
+      if (error?.data?.httpStatus === 401 || error?.data?.httpStatus === 403) {
+        return false;
+      }
+      return failureCount < 1;
+    },
   });
 
   const uploadProfilePicMutation =
@@ -124,10 +130,10 @@ const ProfilePage = () => {
       return;
     }
 
-    const maxSize = 3 * 1024 * 1024;
+    const maxSize = 5 * 1024 * 1024; // 5MB limit
     if (file.size > maxSize) {
       toastSvc.error(
-        "Image is too large. Maximum size is 3MB. Please choose a smaller image."
+        "Image is too large. Maximum size is 5MB. Please choose a smaller image."
       );
       if (profilePicInputRef.current) profilePicInputRef.current.value = "";
       return;
@@ -143,6 +149,7 @@ const ProfilePage = () => {
     setUploadingProfilePic(true);
 
     try {
+      // Use the same compression logic as create form
       const compressedFile = await compressImage(file, 1);
       const base64Data = await fileToBase64(compressedFile);
 
@@ -158,6 +165,7 @@ const ProfilePage = () => {
         await refreshProfile();
       }
     } catch (err: any) {
+      console.error("Profile picture upload error:", err);
       toastSvc.error(err.message || "Failed to upload profile picture");
     } finally {
       setUploadingProfilePic(false);
@@ -177,7 +185,23 @@ const ProfilePage = () => {
     );
   }
 
-  
+  // If profile loading failed and user exists, show error state
+  if (isInitialized && !profileLoading && !profile && user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-red-400 mb-4">Failed to load profile</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-white"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -197,7 +221,7 @@ const ProfilePage = () => {
 
   const userSince = user?.created_at
     ? new Date(user.created_at).getFullYear()
-    : "2023";
+    : new Date().getFullYear();
 
   const nftItems = loyaltyData?.nfts || [];
 
@@ -334,30 +358,52 @@ const ProfilePage = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        {activeTab === "loyalty" &&
-          nftItems.map((item, index) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <div className="bg-gradient-to-br from-gray-900 to-gray-950 rounded-lg overflow-hidden border border-gray-800 p-4">
-                <div className="aspect-square bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                  <span className="text-gray-600 text-sm">NFT Placeholder</span>
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <span className="text-xs px-2 py-1 bg-purple-900/30 text-purple-400 rounded">
-                    {item.rarity}
-                  </span>
-                  <span className="text-xs px-2 py-1 bg-gray-800 text-gray-400 rounded">
-                    {item.property}
-                  </span>
-                </div>
+        {activeTab === "loyalty" && (
+          <motion.div className="col-span-full">
+            {loyaltyLoading ? (
+              <div className="text-center py-16 text-gray-400">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-400 mx-auto mb-4"></div>
+                Loading loyalty NFTs...
               </div>
-            </motion.div>
-          ))}
+            ) : loyaltyError ? (
+              <div className="text-center py-16 text-red-400">
+                <p className="mb-2">Failed to load loyalty NFTs</p>
+                <p className="text-sm text-gray-500">
+                  {loyaltyError.message || 'Please try again later'}
+                </p>
+              </div>
+            ) : nftItems.length === 0 ? (
+              <div className="text-center py-16 text-gray-500">
+                <p className="mb-2">No loyalty NFTs yet</p>
+                <p className="text-sm">Complete purchases to earn NFTs</p>
+              </div>
+            ) : (
+              nftItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <div className="bg-gradient-to-br from-gray-900 to-gray-950 rounded-lg overflow-hidden border border-gray-800 p-4">
+                    <div className="aspect-square bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                      <span className="text-gray-600 text-sm">NFT Placeholder</span>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <span className="text-xs px-2 py-1 bg-purple-900/30 text-purple-400 rounded">
+                        {item.rarity}
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-gray-800 text-gray-400 rounded">
+                        {item.property}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </motion.div>
+        )}
 
         {activeTab === "purchase" && (
           <motion.div className="col-span-full">

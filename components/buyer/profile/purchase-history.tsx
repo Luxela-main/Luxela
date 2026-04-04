@@ -8,25 +8,36 @@ const PurchaseHistory = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch orders from backend based on active tab
-  const { data: ordersData, isLoading } = trpc.buyer.getPurchaseHistory.useQuery({
+  const { data: ordersData, isLoading, error } = trpc.buyer.getPurchaseHistory.useQuery({
     status: activeTab === 'shipped' ? 'ongoing' : 'canceled',
     page: 1,
     limit: 50,
+  }, {
+    retry: (failureCount, error) => {
+      // Don't retry on auth errors
+      if (error?.data?.httpStatus === 401 || error?.data?.httpStatus === 403) {
+        return false;
+      }
+      return failureCount < 1;
+    },
   });
 
   // Transform backend data to match component structure
   const orders = ordersData?.data.map((order) => ({
     id: order.orderId,
-    name: order.productTitle,
-    type: order.productCategory,
+    name: order.productTitle || 'Unknown Product',
+    type: order.productCategory || 'General',
     status: order.deliveryStatus === 'delivered' ? 'Delivered' :
             order.deliveryStatus === 'in_transit' ? 'Shipped' :
             order.orderStatus === 'canceled' ? 'Cancelled' : 'Processing',
-    price: `₦${(order.priceCents / 100).toFixed(2)}`,  // Always show Naira since this is Nigeria
+    price: order.currency === 'NGN' ? `₦${(order.priceCents / 100).toFixed(2)}` :
+           `$${((order.priceCents / 100) / 1700).toFixed(2)}`, // Rough NGN to USD conversion
     priceColor: order.deliveryStatus === 'delivered' ? 'text-green-400' :
                  order.deliveryStatus === 'in_transit' ? 'text-purple-400' :
                  order.orderStatus === 'canceled' ? 'text-red-400' : 'text-yellow-500',
-    image: order.productImage,
+    image: order.productImage || '/images/placeholder-product.png',
+    orderDate: order.orderDate,
+    trackingNumber: order.trackingNumber,
   })) || [];
 
   // ✅ Filter based on search query
@@ -144,7 +155,15 @@ const PurchaseHistory = () => {
       {/* Loading State */}
       {isLoading ? (
         <div className="text-center py-16 text-gray-400">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-400 mx-auto mb-4"></div>
           Loading orders...
+        </div>
+      ) : error ? (
+        <div className="text-center py-16 text-red-400">
+          <p className="mb-2">Failed to load purchase history</p>
+          <p className="text-sm text-gray-500">
+            {error.message || 'Please try again later'}
+          </p>
         </div>
       ) : (
         <>
@@ -224,4 +243,4 @@ const PurchaseHistory = () => {
   );
 };
 
-export default PurchaseHistory;
+export default PurchaseHistory;

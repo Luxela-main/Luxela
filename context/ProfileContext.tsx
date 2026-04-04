@@ -53,13 +53,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     isLoading,
     isFetched,
     refetch,
+    error,
   } = trpc.buyer.getAccountDetails.useQuery(undefined, {
-    enabled: !!user, 
-    retry: false,
+    enabled: !!user,
+    retry: (failureCount, error) => {
+      // Don't retry on 401/403 errors (auth issues)
+      if (error?.data?.httpStatus === 401 || error?.data?.httpStatus === 403) {
+        return false;
+      }
+      // Retry up to 2 times for other errors
+      return failureCount < 2;
+    },
+    retryDelay: 1000,
   });
 
   const refreshProfile = useCallback(() => {
-    if (user) refetch();
+    if (user) {
+      refetch();
+    }
   }, [refetch, user]);
 
 
