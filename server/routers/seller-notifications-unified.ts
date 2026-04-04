@@ -49,6 +49,7 @@ async function generateAndStoreSellerNotifications(
       .limit(100);
 
     for (const order of newOrders) {
+      // Check ONLY for active (non-deleted) notifications - if deleted, we should not regenerate it
       const existing = await db
         .select()
         .from(sellerNotifications)
@@ -56,7 +57,8 @@ async function generateAndStoreSellerNotifications(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, order.id),
           sql`${sellerNotifications.metadata}->>'notificationType' = 'new_order'`,
-          isNull(sellerNotifications.deletedAt)
+          isNull(sellerNotifications.deletedAt),  // Only check for non-deleted
+          eq(sellerNotifications.isRead, false)   // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -96,6 +98,7 @@ async function generateAndStoreSellerNotifications(
       .limit(100);
 
     for (const order of confirmedOrders) {
+      // Check ONLY for active (non-deleted) notifications
       const existing = await db
         .select()
         .from(sellerNotifications)
@@ -103,7 +106,8 @@ async function generateAndStoreSellerNotifications(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, order.id),
           sql`${sellerNotifications.metadata}->>'notificationType' = 'awaiting_shipment'`,
-          isNull(sellerNotifications.deletedAt)
+          isNull(sellerNotifications.deletedAt),  // Only check for non-deleted
+          eq(sellerNotifications.isRead, false)   // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -138,6 +142,7 @@ async function generateAndStoreSellerNotifications(
       .limit(50);
 
     for (const dispute of openDisputes) {
+      // Check ONLY for active (non-deleted) dispute notifications
       const existing = await db
         .select()
         .from(sellerNotifications)
@@ -145,7 +150,8 @@ async function generateAndStoreSellerNotifications(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, dispute.id),
           sql`${sellerNotifications.metadata}->>'notificationType' = 'dispute_open'`,
-          isNull(sellerNotifications.deletedAt)
+          isNull(sellerNotifications.deletedAt),  // Only check for non-deleted
+          eq(sellerNotifications.isRead, false)   // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -185,6 +191,7 @@ async function generateAndStoreSellerNotifications(
       .limit(50);
 
     for (const review of recentReviews) {
+      // Check ONLY for active (non-deleted) review notifications
       const existing = await db
         .select()
         .from(sellerNotifications)
@@ -192,7 +199,8 @@ async function generateAndStoreSellerNotifications(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, review.id),
           sql`${sellerNotifications.metadata}->>'notificationType' = 'new_review'`,
-          isNull(sellerNotifications.deletedAt)
+          isNull(sellerNotifications.deletedAt),  // Only check for non-deleted
+          eq(sellerNotifications.isRead, false)   // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -234,6 +242,7 @@ async function generateAndStoreSellerNotifications(
       .limit(50);
 
     for (const listing of lowInventoryListings) {
+      // Check ONLY for active (non-deleted) low inventory notifications
       const existing = await db
         .select()
         .from(sellerNotifications)
@@ -241,7 +250,8 @@ async function generateAndStoreSellerNotifications(
           eq(sellerNotifications.sellerId, sellerId),
           eq(sellerNotifications.relatedEntityId, listing.id),
           sql`${sellerNotifications.metadata}->>'notificationType' = 'low_inventory'`,
-          isNull(sellerNotifications.deletedAt)
+          isNull(sellerNotifications.deletedAt),  // Only check for non-deleted
+          eq(sellerNotifications.isRead, false)   // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -637,10 +647,14 @@ export const sellerNotificationsRouter = createTRPCRouter({
         });
       }
 
+      // Mark all active notifications as read (exclude soft-deleted)
       await db
         .update(sellerNotifications)
         .set({ isRead: true, updatedAt: new Date() })
-        .where(eq(sellerNotifications.sellerId, seller.id));
+        .where(and(
+          eq(sellerNotifications.sellerId, seller.id),
+          isNull(sellerNotifications.deletedAt)  // Only mark active notifications
+        ));
 
       return { success: true };
     }),
@@ -747,12 +761,10 @@ export const sellerNotificationsRouter = createTRPCRouter({
       }
 
       return { success: true };
-
-      return { success: true };
     }),
 
   /**
-   * Delete all notifications for a seller
+   * Delete all notifications for a seller (soft delete)
    */
   deleteAllNotifications: protectedProcedure
     .output(z.object({ success: z.literal(true), deletedCount: z.number() }))
@@ -777,14 +789,70 @@ export const sellerNotificationsRouter = createTRPCRouter({
       const countResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(sellerNotifications)
-        .where(eq(sellerNotifications.sellerId, seller.id));
+        .where(and(
+          eq(sellerNotifications.sellerId, seller.id),
+          isNull(sellerNotifications.deletedAt)  // Only count active notifications
+        ));
 
       const deletedCount = countResult[0]?.count ?? 0;
 
+      // Use soft delete instead of hard delete
       await db
-        .delete(sellerNotifications)
-        .where(eq(sellerNotifications.sellerId, seller.id));
+        .update(sellerNotifications)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(sellerNotifications.sellerId, seller.id),
+          isNull(sellerNotifications.deletedAt)  // Only soft delete active notifications
+        ));
 
-      return { success: true, deletedCount };
+      return { success: true, deletedCount: Number(deletedCount) };
+    }),
+
+  /**
+   * Clear all notifications (soft delete - alias for deleteAllNotifications)
+   */
+  clearAll: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'DELETE',
+        path: '/seller/notifications/clear-all',
+        tags: ['Seller Notifications'],
+        summary: 'Clear all notifications',
+      },
+    })
+    .output(z.object({ success: z.literal(true) }))
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+      }
+
+      const seller = await db.query.sellers.findFirst({
+        where: eq(sellers.userId, userId),
+      });
+
+      if (!seller) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a seller',
+        });
+      }
+
+      // Use soft delete instead of hard delete
+      await db
+        .update(sellerNotifications)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(sellerNotifications.sellerId, seller.id),
+          isNull(sellerNotifications.deletedAt)  // Only soft delete active notifications
+        ));
+
+      return { success: true };
     }),
 });

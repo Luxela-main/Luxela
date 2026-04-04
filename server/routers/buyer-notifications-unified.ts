@@ -75,6 +75,7 @@ async function generateAndStoreBuyerNotifications(
         severity = 'warning';
       }
 
+      // Check ONLY for active (non-deleted) notifications - if deleted, we should not regenerate it
       const existing = await db
         .select()
         .from(buyerNotifications)
@@ -82,7 +83,8 @@ async function generateAndStoreBuyerNotifications(
           eq(buyerNotifications.buyerId, buyerId),
           eq(buyerNotifications.relatedEntityId, order.id),
           sql`cast(${buyerNotifications.metadata}->>'notificationType' as text) = ${notifType}`,
-          isNull(buyerNotifications.deletedAt)
+          isNull(buyerNotifications.deletedAt),  // Only check for non-deleted notifications
+          eq(buyerNotifications.isRead, false) // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -135,6 +137,7 @@ async function generateAndStoreBuyerNotifications(
       .limit(100);
 
     for (const review of buyerReviews) {
+      // Check ONLY for active (non-deleted) and unread notifications
       const existing = await db
         .select()
         .from(buyerNotifications)
@@ -142,7 +145,8 @@ async function generateAndStoreBuyerNotifications(
           eq(buyerNotifications.buyerId, buyerId),
           eq(buyerNotifications.relatedEntityId, review.id),
           sql`${buyerNotifications.metadata}->>'notificationType' = 'review_posted'`,
-          isNull(buyerNotifications.deletedAt)
+          isNull(buyerNotifications.deletedAt),  // Only check for non-deleted
+          eq(buyerNotifications.isRead, false)   // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -234,7 +238,7 @@ async function generateAndStoreBuyerNotifications(
         const currentPrice = (listing[0].priceCents ?? 0) / 100;
         const listingTitle = listing[0].title || 'Item';
 
-        // Check if we already have a price drop notification for this favorite
+        // Check if we already have an active price drop notification for this favorite
         const existing = await db
           .select()
           .from(buyerNotifications)
@@ -242,7 +246,8 @@ async function generateAndStoreBuyerNotifications(
             eq(buyerNotifications.buyerId, buyerId),
             eq(buyerNotifications.relatedEntityId, favorite.listingId),
             sql`${buyerNotifications.metadata}->>'notificationType' = 'price_drop'`,
-            isNull(buyerNotifications.deletedAt)
+            isNull(buyerNotifications.deletedAt),  // Only check active notifications
+            eq(buyerNotifications.isRead, false)   // Don't regenerate read notifications
           ))
           .limit(1);
 
@@ -291,6 +296,7 @@ async function generateAndStoreBuyerNotifications(
       .limit(50);
 
     for (const dispute of buyerDisputes) {
+      // Check ONLY for active (non-deleted) dispute notifications
       const existing = await db
         .select()
         .from(buyerNotifications)
@@ -298,7 +304,8 @@ async function generateAndStoreBuyerNotifications(
           eq(buyerNotifications.buyerId, buyerId),
           eq(buyerNotifications.relatedEntityId, dispute.id),
           sql`${buyerNotifications.metadata}->>'notificationType' = 'dispute_${dispute.status}'`,
-          isNull(buyerNotifications.deletedAt)
+          isNull(buyerNotifications.deletedAt),  // Only check active notifications
+          eq(buyerNotifications.isRead, false)   // Don't regenerate read notifications
         ))
         .limit(1);
 
@@ -913,7 +920,8 @@ export const buyerNotificationsRouter = createTRPCRouter({
         .from(buyerNotifications)
         .where(and(
           eq(buyerNotifications.buyerId, buyer.id),
-          eq(buyerNotifications.isStarred, true)
+          eq(buyerNotifications.isStarred, true),
+          isNull(buyerNotifications.deletedAt)  // Exclude soft-deleted notifications
         ))
         .orderBy(desc(buyerNotifications.createdAt))
         .limit(input.limit)
@@ -924,7 +932,8 @@ export const buyerNotificationsRouter = createTRPCRouter({
         .from(buyerNotifications)
         .where(and(
           eq(buyerNotifications.buyerId, buyer.id),
-          eq(buyerNotifications.isStarred, true)
+          eq(buyerNotifications.isStarred, true),
+          isNull(buyerNotifications.deletedAt)  // Exclude soft-deleted notifications
         ));
 
       const total = Number(totalResult[0]?.count ?? 0);
@@ -948,7 +957,7 @@ export const buyerNotificationsRouter = createTRPCRouter({
     }),
 
   /**
-   * Clear all notifications
+   * Clear all notifications (soft delete)
    */
   clearAll: protectedProcedure
     .meta({
@@ -977,10 +986,74 @@ export const buyerNotificationsRouter = createTRPCRouter({
         });
       }
 
+      // Use soft delete instead of hard delete
       await db
-        .delete(buyerNotifications)
-        .where(eq(buyerNotifications.buyerId, buyer.id));
+        .update(buyerNotifications)
+        .set({ 
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          isNull(buyerNotifications.deletedAt)  // Only soft delete active notifications
+        ));
 
       return { success: true };
+    }),
+
+  /**
+   * Delete all notifications (soft delete)
+   */
+  deleteAllNotifications: protectedProcedure
+    .meta({
+      openapi: {
+        method: 'DELETE',
+        path: '/buyer/notifications/delete-all',
+        tags: ['Buyer Notifications'],
+        summary: 'Delete all notifications',
+      },
+    })
+    .output(z.object({ success: z.literal(true), deletedCount: z.number() }))
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+      }
+
+      const buyer = await db.query.buyers.findFirst({
+        where: eq(buyers.userId, userId),
+      });
+
+      if (!buyer) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a buyer',
+        });
+      }
+
+      // Get count of active notifications before deletion
+      const countResult = await db
+        .select({ count: sql<number>`count(*)::integer` })
+        .from(buyerNotifications)
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          isNull(buyerNotifications.deletedAt)
+        ));
+
+      const deletedCount = Number(countResult[0]?.count ?? 0);
+
+      // Use soft delete instead of hard delete
+      await db
+        .update(buyerNotifications)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(buyerNotifications.buyerId, buyer.id),
+          isNull(buyerNotifications.deletedAt)  // Only soft delete active notifications
+        ));
+
+      return { success: true, deletedCount };
     }),
 });
