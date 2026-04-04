@@ -95,6 +95,7 @@ export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET || process.env.TSAR
 if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
   console.error('[Tsara Config] CRITICAL: TSARA_SECRET_KEY is not configured. Payment functionality will fail.');
   console.error('[Tsara Config] Available env keys:', Object.keys(process.env).filter(k => /TSARA|SECRET/i.test(k)));
+  console.error('[Tsara Config] Please set one of these environment variables on your deployment: TSARA_SECRET_KEY, TSARA_KEY, TSARA_API_KEY, or TSARA_SECRET');
 } else {
   console.log('[Tsara Config] TSARA_SECRET_KEY is configured (length:', TSARA_SECRET_KEY.length, ')');
   // Validate key format - should be a long string
@@ -529,8 +530,12 @@ export async function createCheckoutSession(data: {
         } else if (errorCode === "INVALID_REQUEST") {
           userFriendlyMessage = "Payment request is invalid. Please check your details and try again.";
         } else if (errorCode === "AUTHENTICATION_FAILED" || errorCode === "AUTH_ERROR") {
-          userFriendlyMessage = "Payment service authentication failed. Please check your API credentials or contact support.";
-          console.error("[Tsara] CRITICAL: Tsara API authentication failed (401). Check that TSARA_SECRET_KEY is correctly configured in your environment variables (server-side secret key, not the public key).");
+          userFriendlyMessage = "Payment service authentication failed. The API credentials are not properly configured.";
+          console.error("[Tsara] CRITICAL: Tsara API authentication failed (401). This means:");
+          console.error("[Tsara]  1. TSARA_SECRET_KEY environment variable is not set, OR");
+          console.error("[Tsara]  2. The value is incorrect or has been revoked");
+          console.error("[Tsara] Please verify that one of these is set on your deployment: TSARA_SECRET_KEY, TSARA_KEY, TSARA_API_KEY, or TSARA_SECRET");
+          console.error("[Tsara] For testing, add to your .env file or system environment");
         } else if (errorCode === "SERVICE_UNAVAILABLE") {
           userFriendlyMessage = "Payment service is temporarily unavailable. Please try again in a few moments.";
         } else if (errorCode === "INSUFFICIENT_FUNDS") {

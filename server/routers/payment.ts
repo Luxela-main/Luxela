@@ -50,6 +50,21 @@ export const paymentRouter = createTRPCRouter({
       let paymentData: any;
 
       try {
+        // --- FIRST: Validate Tsara API key is configured ---
+        const TSARA_SECRET_KEY =
+          env.TSARA_SECRET_KEY ||
+          process.env.TSARA_SECRET_KEY ||
+          process.env.TSARA_KEY ||
+          process.env.TSARA_API_KEY ||
+          process.env.TSARA_SECRET;
+        if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
+          console.error('[Payment] CRITICAL: TSARA_SECRET_KEY is not configured');
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Payment service is not properly configured. Please contact support.",
+          });
+        }
+
         // --- Validate buyer and listing ---
         const buyerExists = await db.select({ id: buyers.id }).from(buyers).where(eq(buyers.id, input.buyerId)).limit(1);
         if (!buyerExists.length) throw new TRPCError({ code: "NOT_FOUND", message: "Buyer not found" });
@@ -57,20 +72,6 @@ export const paymentRouter = createTRPCRouter({
         const [listing] = await db.select().from(listings).where(eq(listings.id, input.listingId)).limit(1);
         if (!listing) throw new TRPCError({ code: "NOT_FOUND", message: "Listing not found" });
         if (listing.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Listing not available" });
-
-        // --- Validate Tsara API key ---
-        const TSARA_SECRET_KEY =
-          env.TSARA_SECRET_KEY ||
-          process.env.TSARA_SECRET_KEY ||
-          process.env.TSARA_KEY ||
-          process.env.TSARA_API_KEY ||
-          process.env.TSARA_SECRET;
-        if (!TSARA_SECRET_KEY) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Payment service is not configured. Contact support.",
-          });
-        }
 
         // --- Validate amount ranges ---
         if (input.amount <= 0) {
@@ -346,6 +347,23 @@ export const paymentRouter = createTRPCRouter({
       let paymentData: any;
 
       try {
+        // --- FIRST: Validate Tsara API key is configured ---
+        const TSARA_SECRET_KEY =
+          env.TSARA_SECRET_KEY ||
+          process.env.TSARA_SECRET_KEY ||
+          process.env.TSARA_KEY ||
+          process.env.TSARA_API_KEY ||
+          process.env.TSARA_SECRET;
+        console.log('[Cart Payment] TSARA_SECRET_KEY check: configured=', !!TSARA_SECRET_KEY, 'length=', TSARA_SECRET_KEY?.length || 0);
+        if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
+          console.error('[Cart Payment] CRITICAL: TSARA_SECRET_KEY is not configured');
+          console.error('[Cart Payment] Available env keys with TSARA/SECRET:', Object.keys(process.env).filter(k => /TSARA|SECRET/i.test(k)));
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Payment service is not properly configured. Please contact support.",
+          });
+        }
+
         console.log('[Cart Payment] Starting createCartPayment for user:', userId, 'cart:', input.cartId);
 
         // --- Validate buyer ---
@@ -371,20 +389,7 @@ export const paymentRouter = createTRPCRouter({
         console.log('[Cart Payment] Cart items query result:', items.length, 'items');
         if (items.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Cart is empty" });
 
-        // --- Validate Tsara API key ---
-        const TSARA_SECRET_KEY =
-          env.TSARA_SECRET_KEY ||
-          process.env.TSARA_SECRET_KEY ||
-          process.env.TSARA_KEY ||
-          process.env.TSARA_API_KEY ||
-          process.env.TSARA_SECRET;
-        console.log('[Cart Payment] TSARA_SECRET_KEY configured:', !!TSARA_SECRET_KEY);
-        if (!TSARA_SECRET_KEY) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Payment service is not configured. Contact support.",
-          });
-        }
+        // Note: TSARA_SECRET_KEY already validated above
 
         // --- Validate amount ranges ---
         if (input.amount <= 0) {
