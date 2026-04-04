@@ -23,7 +23,7 @@ const STORAGE_KEY = 'buyer_profile_form_data';
 
 export default function CreateBuyerProfileForm() {
   const router = useRouter();
-  const { refreshProfile } = useProfile();
+  const { refreshProfile, profile, loading, isInitialized } = useProfile();
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const toastShownRef = useRef(false);
@@ -44,11 +44,11 @@ export default function CreateBuyerProfileForm() {
 
   // Check if user already has a profile and redirect if so
   useEffect(() => {
-    if (profile && !profileLoading && isInitialized) {
+    if (profile && !loading && isInitialized) {
       console.log("User already has profile, redirecting to profile page");
       router.push("/buyer/profile");
     }
-  }, [profile, profileLoading, isInitialized, router]);
+  }, [profile, loading, isInitialized, router]);
 
   const formik = useFormik({
     initialValues,
@@ -222,7 +222,7 @@ export default function CreateBuyerProfileForm() {
     }
   };
 
-  if (!hydrated || profileLoading) {
+  if (!hydrated || loading) {
     return (
       <div className="bg-[#1a1a1a] rounded-lg p-6 max-w-md mx-auto mt-10">
         <div className="text-center text-gray-400">
