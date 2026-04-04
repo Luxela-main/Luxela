@@ -346,18 +346,29 @@ export const paymentRouter = createTRPCRouter({
       let paymentData: any;
 
       try {
+        console.log('[Cart Payment] Starting createCartPayment for user:', userId, 'cart:', input.cartId);
+
         // --- Validate buyer ---
         const buyer = await db.select().from(buyers).where(eq(buyers.userId, userId)).limit(1);
+        console.log('[Cart Payment] Buyer query result:', buyer.length, 'records');
         if (!buyer.length) throw new TRPCError({ code: "NOT_FOUND", message: "Buyer not found" });
         const buyerId = buyer[0].id;
+        console.log('[Cart Payment] Found buyer:', buyerId);
 
         // --- Validate cart exists and belongs to buyer ---
         const cart = await db.select().from(carts).where(eq(carts.id, input.cartId)).limit(1);
+        console.log('[Cart Payment] Cart query result:', cart.length, 'records');
         if (!cart.length) throw new TRPCError({ code: "NOT_FOUND", message: "Cart not found" });
+
+        console.log('[Cart Payment] Cart buyerId:', cart[0].buyerId, 'expected buyerId:', buyerId);
+        if (!cart[0].buyerId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Cart has no associated buyer" });
+        }
         if (cart[0].buyerId !== buyerId) throw new TRPCError({ code: "FORBIDDEN", message: "Cart does not belong to you" });
 
         // --- Validate cart has items ---
         const items = await db.select().from(cartItems).where(eq(cartItems.cartId, input.cartId));
+        console.log('[Cart Payment] Cart items query result:', items.length, 'items');
         if (items.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Cart is empty" });
 
         // --- Validate Tsara API key ---
@@ -367,6 +378,7 @@ export const paymentRouter = createTRPCRouter({
           process.env.TSARA_KEY ||
           process.env.TSARA_API_KEY ||
           process.env.TSARA_SECRET;
+        console.log('[Cart Payment] TSARA_SECRET_KEY configured:', !!TSARA_SECRET_KEY);
         if (!TSARA_SECRET_KEY) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -404,6 +416,8 @@ export const paymentRouter = createTRPCRouter({
         const isStablecoinPayment = input.paymentType === "stablecoin" || (input.paymentMethod === "crypto" && currencyCode === "USDC");
         const paymentCurrency = isStablecoinPayment ? "USDC" : currencyCode;
 
+        console.log('[Cart Payment] Payment type:', { isStablecoinPayment, currencyCode, paymentCurrency, amount: input.amount });
+
         if (isStablecoinPayment) {
           if (currencyCode !== "USDC") {
             throw new TRPCError({ code: "BAD_REQUEST", message: "Stablecoin payments must use USDC currency." });
@@ -417,6 +431,7 @@ export const paymentRouter = createTRPCRouter({
             throw new TRPCError({ code: "BAD_REQUEST", message: "Amount too small for USDC" });
           }
 
+          console.log('[Cart Payment] Creating stablecoin payment link for amount:', usdcAmount);
           response = await createStablecoinPaymentLink({
             amount: usdcAmount.toFixed(6),
             asset: "USDC",
@@ -429,6 +444,7 @@ export const paymentRouter = createTRPCRouter({
           const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
 
           if (input.success_url && input.cancel_url) {
+            console.log('[Cart Payment] Creating checkout session for amount:', amountInCents, currencyCode);
             response = await createCheckoutSession({
               amount: amountInCents,
               currency: currencyCode,
@@ -438,6 +454,7 @@ export const paymentRouter = createTRPCRouter({
               metadata: sanitizedMetadata,
             });
           } else {
+            console.log('[Cart Payment] Creating fiat payment link for amount:', amountInCents, currencyCode);
             response = await createFiatPaymentLink({
               amount: amountInCents,
               currency: currencyCode,
@@ -449,6 +466,7 @@ export const paymentRouter = createTRPCRouter({
         }
 
         // --- Validate Tsara response ---
+        console.log('[Cart Payment] Tsara API response:', response ? 'received' : 'null', response?.success, response?.data?.id);
         if (!response || response.success === false || !response.data || !response.data.id) {
           console.error("[Cart Payment] Invalid response from Tsara:", response);
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payment provider returned invalid data" });
@@ -459,6 +477,7 @@ export const paymentRouter = createTRPCRouter({
           ? Math.round((input.amount / USDC_TO_NGN_RATE) * 1000000)
           : Math.round(input.amount * AMOUNT_MULTIPLIER);
 
+        console.log('[Cart Payment] Creating payment record:', { buyerId, amountCents, currency: paymentCurrency, tsaraPaymentId });
         const paymentData = {
           buyerId: buyerId,
           listingId: null, // Cart payment, not tied to single listing
@@ -483,6 +502,7 @@ export const paymentRouter = createTRPCRouter({
         };
 
         const [payment] = await db.insert(payments).values(paymentData).returning();
+        console.log('[Cart Payment] Payment record created:', payment.id);
 
         return {
           payment,

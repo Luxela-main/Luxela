@@ -6,7 +6,7 @@
     "dev": "cross-env NODE_ENV=development pnpm run dev:next",
     "dev:local": "concurrently -n NEXT,SERVER -c cyan,green \"pnpm run dev:server\" \"pnpm run dev:next\"",
     "dev:server": "echo 'Express server temporarily disabled - using Next.js API routes'",
-    "dev:next": "next dev -p 3000",
+    "dev:next": "next dev",
     "dev:check-db": "ts-node-dev --respawn server/check-db.ts",
     "dev:express-server": "ts-node-dev --respawn --transpile-only server/index.ts",
     "db:generate": "drizzle-kit generate",
