@@ -292,9 +292,11 @@ export async function createFiatPaymentLink(data: {
 }): Promise<TsaraResponse<PaymentLink>> {
   try {
     // Build request payload - ensure all fields are properly formatted
+    // Build request payload - ensure all fields are properly formatted
     const payload: any = {
-      amount: Math.round(data.amount), // Ensure integer
+      amount: Math.round(data.amount), // Ensure integer (in minor units for NGN)
       currency: data.currency.toUpperCase(), // Ensure uppercase
+      title: data.description || 'Luxela Payment', // REQUIRED field per Tsara docs
     };
     
     // Only add optional fields if they have values
@@ -369,7 +371,30 @@ export async function createStablecoinPaymentLink(data: {
   metadata?: Record<string, any>;
 }): Promise<TsaraResponse<StablecoinPaymentLink>> {
   try {
-    const response = await tsaraApi.post("/stablecoin/payment-links", data);
+    // Build request payload - ensure all fields are properly formatted
+    const payload: any = {
+      amount: data.amount, // Stablecoin amounts in full units
+      asset: data.asset,
+      network: data.network,
+      wallet_id: data.wallet_id,
+      title: data.description || 'Luxela USDC Payment', // REQUIRED field per Tsara docs
+    };
+    
+    // Only add optional fields if they have values
+    if (data.description && data.description.trim()) {
+      payload.description = data.description.trim();
+    }
+    if (data.metadata && Object.keys(data.metadata).length > 0) {
+      // Ensure metadata values are strings (API requirement)
+      payload.metadata = Object.entries(data.metadata).reduce((acc, [key, value]) => {
+        acc[key] = typeof value === 'string' ? value : JSON.stringify(value);
+        return acc;
+      }, {} as Record<string, string>);
+    }
+
+    console.log('[Tsara API] Creating stablecoin payment link:', JSON.stringify(payload, null, 2));
+    
+    const response = await tsaraApi.post("/stablecoin/payment-links", payload);
     
     if (!response || !response.data || typeof response.data !== 'object') {
       console.error("No response or invalid API response structure:", response?.data);
@@ -430,11 +455,13 @@ export async function createCheckoutSession(data: {
 
     // Note: Do not pass customer_id - Tsara creates customers automatically
     const paymentLinkData = {
-      amount: Math.round(data.amount), // Ensure integer
+      amount: Math.round(data.amount), // Ensure integer (in minor units for NGN)
       currency: data.currency.toUpperCase(), // Ensure uppercase
+      title: `Payment for order ${data.reference}`, // REQUIRED field per Tsara docs
       description: `Payment for order ${data.reference}`,
       metadata,
-      redirect_url: data.success_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
+      success_url: data.success_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
+      cancel_url: data.cancel_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout`,
     };
     
     console.log('[Tsara API] Creating checkout session:', JSON.stringify(paymentLinkData, null, 2));
