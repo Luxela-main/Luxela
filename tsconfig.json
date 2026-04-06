@@ -24,7 +24,6 @@
     "outDir": "dist",
     "incremental": true,
     "moduleResolution": "bundler",
-    "ignoreDeprecations": "6.0",
     "plugins": [
       {
         "name": "next"

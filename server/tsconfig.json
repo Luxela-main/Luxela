@@ -19,7 +19,6 @@
     "noImplicitAny": false,
     "isolatedModules": true,
     "allowJs": true,
-    "ignoreDeprecations": "6.0",
     "types": ["node"],
     "paths": {
       "@/*": ["../*"]
