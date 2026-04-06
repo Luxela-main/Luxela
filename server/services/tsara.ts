@@ -21,6 +21,15 @@ console.log('[Tsara Config] Module loading...', {
   envObjectKeyLength: env.TSARA_SECRET_KEY?.length,
 });
 
+// Additional diagnostics at startup
+console.log('[Tsara Config] Environment variables check:', {
+  'TSARA_SECRET_KEY': process.env.TSARA_SECRET_KEY ? '✓ SET' : '✗ NOT SET',
+  'TSARA_KEY': process.env.TSARA_KEY ? '✓ SET' : '✗ NOT SET',
+  'TSARA_API_KEY': process.env.TSARA_API_KEY ? '✓ SET' : '✗ NOT SET',
+  'TSARA_SECRET': process.env.TSARA_SECRET ? '✓ SET' : '✗ NOT SET',
+  'env.TSARA_SECRET_KEY': env.TSARA_SECRET_KEY ? '✓ SET' : '✗ NOT SET',
+});
+
 /**
  * Validates the Tsara API key format
  * Returns validation result with details
@@ -437,7 +446,8 @@ export async function createCheckoutSession(data: {
       throw new Error("Invalid response structure from payment provider");
     }
 
-    if (response.data.success === false) {
+    // Check if response indicates an error (either success=false or any error status)
+    if (response.data.success === false || response.status >= 400) {
       let errorMsg = "";  
       // Check for error message in multiple possible locations in the response
       if (response.data.error?.message) {
@@ -475,9 +485,23 @@ export async function createCheckoutSession(data: {
         } else if (statusCode >= 500) {
           errorCode = "SERVICE_UNAVAILABLE";
         }
+      } else if (response.status === 401) {
+        // Check HTTP status code directly
+        errorCode = "AUTHENTICATION_FAILED";
+      } else if (response.status === 403) {
+        errorCode = "FORBIDDEN";
       }
       
       const errorStatus = response.data.error?.status || response.data.status_code || response.status || 500;
+      
+      // Log detailed error info for debugging
+      console.error("Tsara API error details:", {
+        httpStatus: response.status,
+        errorCode,
+        errorMessage: response.data.error?.message || response.data.message,
+        fullResponse: response.data,
+        headers: response.headers,
+      });
       
       console.error("Tsara API error:", {
         message: errorMsg,
@@ -512,7 +536,13 @@ export async function createCheckoutSession(data: {
           console.error("[Tsara] CRITICAL: Tsara API authentication failed (401). This means:");
           console.error("[Tsara]  1. TSARA_SECRET_KEY environment variable is not set, OR");
           console.error("[Tsara]  2. The value is incorrect or has been revoked");
+          console.error("[Tsara]  3. The API endpoint might be incorrect");
           console.error("[Tsara] Please verify that one of these is set on your deployment: TSARA_SECRET_KEY, TSARA_KEY, TSARA_API_KEY, or TSARA_SECRET");
+          console.error("[Tsara] Current configuration:");
+          console.error("[Tsara]   - API Key Length:", TSARA_SECRET_KEY?.length || 0);
+          console.error("[Tsara]   - API Key Prefix:", TSARA_SECRET_KEY?.substring(0, 10) + '...' || 'NOT SET');
+          console.error("[Tsara]   - Base URL:", BASE_URL);
+          console.error("[Tsara]   - Endpoint:", data.reference ? `/payment-links` : '/payment-links');
           console.error("[Tsara] For testing, add to your .env file or system environment");
         } else if (errorCode === "SERVICE_UNAVAILABLE") {
           userFriendlyMessage = "Payment service is temporarily unavailable. Please try again in a few moments.";
