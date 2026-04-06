@@ -468,6 +468,13 @@ export async function createCheckoutSession(data: {
 
     const response = await tsaraApi.post("/payment-links", paymentLinkData);
     
+    console.log('[Tsara API] Full response from /payment-links:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      data: response.data,
+    });
+    
     if (!response || !response.data || typeof response.data !== 'object') {
       console.error("No response or invalid API response structure:", response?.data);
       throw new Error("Invalid response structure from payment provider");

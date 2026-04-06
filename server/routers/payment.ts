@@ -504,6 +504,7 @@ export const paymentRouter = createTRPCRouter({
 
         // --- Validate Tsara response ---
         console.log('[Cart Payment] Tsara API response:', response ? 'received' : 'null', response?.success, response?.data?.id);
+        console.log('[Cart Payment] Full Tsara response data:', JSON.stringify(response?.data, null, 2));
         if (!response || response.success === false || !response.data || !response.data.id) {
           console.error("[Cart Payment] Invalid response from Tsara:", response);
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payment provider returned invalid data" });
