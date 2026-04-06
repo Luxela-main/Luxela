@@ -255,7 +255,7 @@ export default function CheckoutPage() {
         shippingCountry: checkoutForm.country.trim(),
       };
 
-      const successUrl = `${appUrl}/buyer/checkout/success?payment_id={paymentId}&reference={reference}`;
+      const successUrl = `${appUrl}/buyer/checkout/success`;
       const cancelUrl = `${appUrl}/buyer/checkout`;
 
       await initializePayment.mutateAsync({

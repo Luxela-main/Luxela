@@ -768,7 +768,7 @@ export const checkoutRouter = createTRPCRouter({
           await db.insert(buyerNotifications).values({
             id: uuidv4(),
             buyerId: buyer.id,
-            type: 'order_placed' as any,
+            type: 'payment_success' as any,
             title: 'Order Placed Successfully',
             message: `Your order #${order.id.slice(0, 8)} for ${order.currency} ${order.amountCents / 100} has been placed successfully! Payment confirmed.`,
             relatedEntityId: order.id,

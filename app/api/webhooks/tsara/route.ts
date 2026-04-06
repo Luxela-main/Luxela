@@ -13,7 +13,7 @@ async function verifyWebhookSignature(
 ): Promise<boolean> {
   try {
     const expectedSignature = crypto
-      .createHmac("sha256", secret)
+      .createHmac("sha512", secret)
       .update(rawBody, "utf8")
       .digest("hex");
 
@@ -48,8 +48,8 @@ export const GET = () =>
 
 export const POST = async (req: NextRequest) => {
   try {
-    const signature = req.headers.get("x-tsara-signature");
-    const secret = process.env.TSARA_WEBHOOK_SECRET;
+    const signature = req.headers.get("x-tsara-signature") || req.headers.get("HTTP_X_TSARA_SIGNATURE");
+    const secret = process.env.TSARA_WEBHOOK_SECRET || process.env.TSARA_SECRET_KEY;
 
     console.log("[Tsara Webhook] Received webhook request:", {
       hasSignature: !!signature,

@@ -275,6 +275,38 @@ export const paymentRouter = createTRPCRouter({
   isConfigured: publicProcedure
     .query(() => ({ success: true, isConfigured: isTsaraConfigured() })),
 
+  getUserPayments: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(50).default(10),
+      status: z.enum(["pending", "processing", "completed", "failed", "refunded"]).optional(),
+      offset: z.number().min(0).default(0),
+    }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user?.id;
+      if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Get buyer
+      const [buyer] = await db.select().from(buyers).where(eq(buyers.userId, userId)).limit(1);
+      if (!buyer) throw new TRPCError({ code: "NOT_FOUND", message: "Buyer profile not found" });
+
+      const query = db.select().from(payments).where(eq(payments.buyerId, buyer.id));
+
+      if (input.status) {
+        query.where(eq(payments.status, input.status));
+      }
+
+      const userPayments = await query
+        .orderBy(payments.createdAt)
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return {
+        success: true,
+        data: userPayments,
+        count: userPayments.length,
+      };
+    }),
+
   validateApiKey: publicProcedure
     .query(() => {
       const key =

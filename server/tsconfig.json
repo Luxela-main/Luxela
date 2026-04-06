@@ -13,13 +13,13 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "incremental": true,
     "noImplicitAny": false,
     "isolatedModules": true,
     "allowJs": true,
-    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "types": ["node"],
     "paths": {
       "@/*": ["../*"]

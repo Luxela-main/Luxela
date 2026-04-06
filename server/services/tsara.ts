@@ -137,15 +137,6 @@ tsaraApi.interceptors.request.use((config) => {
   return config;
 });
 
-// Add auth header dynamically via interceptor to ensure fresh value
-tsaraApi.interceptors.request.use((config) => {
-  const key = TSARA_SECRET_KEY.trim();
-  if (key) {
-    config.headers["Authorization"] = `Bearer ${key}`;
-  }
-  return config;
-});
-
 // Add request interceptor to log auth attempts and validate API key
 tsaraApi.interceptors.request.use((config) => {
   // Ensure fresh auth header with trimmed key

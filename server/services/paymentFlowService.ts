@@ -126,7 +126,7 @@ export async function handlePaymentFailure(paymentData: PaymentWebhookData): Pro
   await db
     .update(payments)
     .set({
-      status: 'failed',
+      status: paymentData.status === 'refunded' ? 'refunded' : 'failed',
       updatedAt: new Date(),
     })
     .where(eq(payments.id, payment.id));
