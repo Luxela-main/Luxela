@@ -119,8 +119,32 @@ export const tsaraApi = axios.create({
 
 tsaraApi.interceptors.request.use((config) => {
   const key = TSARA_SECRET_KEY.trim();
-  if (!key) return config;
+  
+  // Log request attempt
+  console.log('[Tsara API] Request to:', config.url);
+  console.log('[Tsara API] Base URL:', config.baseURL);
+  console.log('[Tsara API] Full URL:', (config.baseURL || '') + (config.url || ''));
+  
+  if (!key) {
+    console.error('[Tsara API] WARNING: No API key available');
+    return config;
+  }
 
+  // Add Bearer token authentication (as per Tsara documentation)
+  config.headers["Authorization"] = `Bearer ${key}`;
+  
+  // Log authentication status
+  console.log('[Tsara API] Authorization header present: Yes');
+  console.log('[Tsara API] Token length:', key.length);
+  
+  // Validate API key format
+  const keyValidation = validateApiKey(key);
+  if (!keyValidation.valid) {
+    console.error('[Tsara API] CRITICAL: TSARA_SECRET_KEY validation failed:', keyValidation.error);
+    console.error('[Tsara API] Details:', keyValidation.details);
+    console.error('[Tsara API] This request will fail with 401 Unauthorized.');
+  }
+  
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const method = (config.method || "GET").toUpperCase();
   const path = config.url || "";
@@ -130,47 +154,10 @@ tsaraApi.interceptors.request.use((config) => {
   const payload = timestamp + method + path + body;
   const signature = crypto.createHmac("sha256", key).update(payload).digest("hex");
 
+  // Add signature headers for Tsara API
   config.headers["x-tsara-timestamp"] = timestamp;
   config.headers["x-tsara-signature"] = signature;
-  config.headers["Authorization"] = `Bearer ${key}`;
 
-  return config;
-});
-
-// Add request interceptor to log auth attempts and validate API key
-tsaraApi.interceptors.request.use((config) => {
-  // Ensure fresh auth header with trimmed key
-  const key = TSARA_SECRET_KEY.trim();
-  if (key) {
-    config.headers["Authorization"] = `Bearer ${key}`;
-  }
-  
-  // Validate API key before sending request
-  const keyValidation = validateApiKey(key);
-  
-  // Log that we're sending the request
-  console.log('[Tsara API] Request to:', config.url);
-  console.log('[Tsara API] Base URL:', config.baseURL);
-  console.log('[Tsara API] Full URL:', (config.baseURL || '') + (config.url || ''));
-  
-  // Check auth header
-  const authHeader = config.headers["Authorization"] as string | undefined;
-  const hasAuth = !!authHeader && authHeader !== 'Bearer ' && authHeader.length > 10;
-  console.log('[Tsara API] Authorization header present:', hasAuth ? 'Yes' : 'NO API KEY - API CALL WILL FAIL');
-  
-  if (hasAuth && authHeader) {
-    const tokenPreview = authHeader.substring(0, 25) + '...';
-    console.log('[Tsara API] Authorization header preview:', tokenPreview);
-    console.log('[Tsara API] Token length:', key?.length || 0);
-  }
-  
-  // Warn if secret key is missing or invalid (used for server-side API calls)
-  if (!keyValidation.valid) {
-    console.error('[Tsara API] CRITICAL: TSARA_SECRET_KEY validation failed:', keyValidation.error);
-    console.error('[Tsara API] Details:', keyValidation.details);
-    console.error('[Tsara API] This request will fail with 401 Unauthorized.');
-  }
-  
   return config;
 });
 
