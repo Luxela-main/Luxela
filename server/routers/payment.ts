@@ -518,7 +518,7 @@ export const paymentRouter = createTRPCRouter({
         console.log('[Cart Payment] Creating payment record:', { buyerId, amountCents, currency: paymentCurrency, tsaraPaymentId });
         const paymentData = {
           buyerId: buyerId,
-          listingId: null, // Cart payment, not tied to single listing
+          listingId: '00000000-0000-0000-0000-000000000000', // Cart payment placeholder - schema requires NOT NULL
           orderId: input.cartId, // Use cart ID as reference
           amountCents,
           currency: paymentCurrency,
