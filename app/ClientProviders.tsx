@@ -127,6 +127,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
             }
             return {};
           },
+
         }),
       ],
     });

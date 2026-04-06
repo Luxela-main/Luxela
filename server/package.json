@@ -27,10 +27,11 @@
   "description": "",
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
-    "@trpc/client": "^10.45.2",
+    "@tanstack/react-query": "^5",
+    "@trpc/client": "^11.10.0",
     "@trpc/next": "^10.45.2",
     "@trpc/react-query": "^10.45.2",
-    "@trpc/server": "^10.45.2",
+    "@trpc/server": "^11.10.0",
     "@types/pg": "^8.15.5",
     "bcryptjs": "^3.0.2",
     "body-parser": "^1.20.2",
@@ -40,20 +41,19 @@
     "express": "^5.1.0",
     "ioredis": "^5.8.2",
     "nanoid": "^5.1.6",
+    "next": "^16.0.0",
     "node-cron": "^4.2.1",
     "pg": "^8.16.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-toastify": "^9",
+    "server": "^1.0.42",
     "swagger-ui-express": "^5.0.1",
     "trpc-to-openapi": "^3.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
     "zod": "^3.22.4",
-    "zod-openapi": "^5.4.3",
-    "next": "^16.0.0",
-    "react": "^19.0.0",
-    "server": "^1.0.42",
-    "react-dom": "^19.0.0",
-    "@tanstack/react-query": "^5",
-    "react-toastify": "^9"
+    "zod-openapi": "^5.4.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.5",
@@ -68,4 +68,4 @@
     "pnpm": ">=10.20",
     "npm": "11.6.2"
   }
-} 
+}
