@@ -12,11 +12,20 @@ const handler = async (req: NextRequest) => {
   }, 280000);
 
   try {
+    // Enhanced logging to diagnose method issues
+    const url = new URL(req.url);
+    const procedurePath = url.pathname.replace('/api/trpc/', '');
+    
     console.log('[tRPC] Incoming request:', {
       method: req.method,
       url: req.url,
       pathname: req.nextUrl.pathname,
+      procedurePath: procedurePath || '(batch)',
       searchParams: req.nextUrl.search,
+      headers: {
+        'content-type': req.headers.get('content-type'),
+        'authorization': req.headers.get('authorization') ? 'present' : 'missing',
+      },
     });
 
     const response = await fetchRequestHandler({

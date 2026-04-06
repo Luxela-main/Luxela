@@ -27,8 +27,12 @@ export function getVanillaTRPCClient() {
               data: { session },
             } = await supabase.auth.getSession();
 
+            // Explicitly preserve the HTTP method to prevent GET requests to mutations
+            const method = init?.method || 'POST';
+
             return fetch(input, {
               ...init,
+              method,
               credentials: 'include',
               headers: {
                 ...(init?.headers || {}),
@@ -41,8 +45,11 @@ export function getVanillaTRPCClient() {
           } catch (error) {
             console.error('Error getting auth token:', error);
             // Fallback to unauthenticated request
+            const method = init?.method || 'POST';
+
             return fetch(input, {
               ...init,
+              method,
               credentials: 'include',
               headers: {
                 ...(init?.headers || {}),

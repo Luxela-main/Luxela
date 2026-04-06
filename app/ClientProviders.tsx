@@ -5,14 +5,13 @@ import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
 import { trpc } from "./_trpc/client";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import { createClient } from "@/utils/supabase/client";
 import { CartProvider } from "@/modules/cart/context";
 import { TRPCReadyProvider } from "@/context/TRPCReadyContext";
 import { ProfileProvider } from "@/context/ProfileContext";
 import { ListingsProvider } from "@/context/ListingsContext";
 import { PendingToastHandler } from "@/components/utils/pending-toast-handler";
-import "react-toastify/dist/ReactToastify.css";
 
 const ToastContainer = dynamic(
   () => import("react-toastify").then(mod => ({ default: mod.ToastContainer })),
@@ -106,6 +105,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     };
   }, []);
 
+  // Compute API URL synchronously to ensure it's available for trpcClient creation
   const apiUrl = useMemo(() => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
     if (baseUrl) {
@@ -115,19 +115,51 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   }, []);
 
   const [trpcClient] = useState(() => {
+    // Get URL synchronously to avoid closure staleness
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const url = baseUrl ? `${baseUrl}/api/trpc` : '/api/trpc';
+    
     return trpc.createClient({
       links: [
-        httpBatchLink({
-          url: apiUrl,
-          headers() {
-            // Use the cached token from the ref
-            // This is updated every 10 seconds by the effect above
-            if (sessionTokenRef.current) {
-              return { authorization: `Bearer ${sessionTokenRef.current}` };
-            }
-            return {};
-          },
-
+        // Use splitLink to handle mutations and queries differently
+        // This ensures mutations always use POST and never GET
+        splitLink({
+          // Check if the operation is a mutation
+          condition: (op) => op.type === 'mutation',
+          // Use regular httpLink for mutations (no batching, always POST)
+          true: httpLink({
+            url,
+            headers() {
+              if (sessionTokenRef.current) {
+                return { authorization: `Bearer ${sessionTokenRef.current}` };
+              }
+              return {};
+            },
+            fetch: (input, init) => {
+              // Explicitly ensure POST method for mutations
+              return fetch(input, {
+                ...init,
+                method: 'POST',
+                credentials: 'include',
+              });
+            },
+          }),
+          // Use batch link for queries (allows GET for caching)
+          false: httpBatchLink({
+            url,
+            headers() {
+              if (sessionTokenRef.current) {
+                return { authorization: `Bearer ${sessionTokenRef.current}` };
+              }
+              return {};
+            },
+            fetch: (input, init) => {
+              return fetch(input, {
+                ...init,
+                credentials: 'include',
+              });
+            },
+          }),
         }),
       ],
     });
