@@ -870,7 +870,7 @@ export async function verifyWebhookSignature(
       const cryptoKey = await crypto.subtle.importKey(
         "raw",
         keyData,
-        { name: "HMAC", hash: "SHA-256" },
+        { name: "HMAC", hash: "SHA-512" },
         false,
         ["verify"]
       );
