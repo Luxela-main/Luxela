@@ -478,7 +478,7 @@ export const paymentRouter = createTRPCRouter({
             metadata: sanitizedMetadata,
           });
         } else {
-          const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
+          const amountInCents = Math.round(input.amount); // Amount already in kobo from client
 
           if (input.success_url && input.cancel_url) {
             console.log('[Cart Payment] Creating checkout session for amount:', amountInCents, currencyCode);
@@ -512,7 +512,7 @@ export const paymentRouter = createTRPCRouter({
         const tsaraPaymentId = response.data.id;
         const amountCents = isStablecoinPayment
           ? Math.round((input.amount / USDC_TO_NGN_RATE) * 1000000)
-          : Math.round(input.amount * AMOUNT_MULTIPLIER);
+          : Math.round(input.amount); // Amount already in kobo from client
 
         console.log('[Cart Payment] Creating payment record:', { buyerId, amountCents, currency: paymentCurrency, tsaraPaymentId });
         const paymentData = {
