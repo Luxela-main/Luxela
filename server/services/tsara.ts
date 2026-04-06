@@ -161,7 +161,7 @@ tsaraApi.interceptors.request.use((config) => {
 
   // HMAC signature: timestamp + method + path + body
   const payload = timestamp + method + path + body;
-  const signature = crypto.createHmac("sha256", key).update(payload).digest("hex");
+  const signature = crypto.createHmac("sha512", key).update(payload).digest("hex");
 
   // Add signature headers for Tsara API
   config.headers["x-tsara-timestamp"] = timestamp;
@@ -880,7 +880,7 @@ export async function verifyWebhookSignature(
   } else {
     try {
       const crypto = await import("crypto");
-      const hash = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+      const hash = crypto.createHmac("sha512", secret).update(payload).digest("hex");
       return hash === signature;
     } catch (err) {
       console.error("Node signature verification failed:", err);
