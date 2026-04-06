@@ -27,20 +27,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const originalFetch = window.fetch;
     
     window.fetch = function(...args) {
-      const [resource, config] = args;
+      const [resource, config = {}] = args;
+      // Create a shallow copy to avoid mutating the original config
       const newConfig = { ...config };
       
-      // Only inject token for same-origin requests
-      if (token && typeof resource === 'string' && (resource.startsWith('/') || resource.startsWith(window.location.origin))) {
+      // Only inject token for TRPC API requests
+      if (token && typeof resource === 'string' && resource.includes('/api/trpc')) {
         newConfig.headers = {
           ...newConfig.headers,
           'Authorization': `Bearer ${token}`
         };
         // Ensure credentials are sent with cross-site requests if needed
+        // Do NOT override or delete method - preserve POST for mutations
+        // Do NOT override or delete body - preserve TRPC batch request body
         newConfig.credentials = 'include';
       }
       
-      return originalFetch.apply(this, [resource, newConfig]);
+      return originalFetch.call(this, resource, newConfig);
     };
     
     return () => {
