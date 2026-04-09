@@ -5,30 +5,38 @@ import crypto from "crypto";
 const TSARA_BASE_URL = "https://api.tsara.ng/v1";
 
 // DIAGNOSTIC: Log environment state at module load time
+// Force reload environment variables in case of caching issues
 const rawTsaraSecretKey =
-  env.TSARA_SECRET_KEY ||
   process.env.TSARA_SECRET_KEY ||
   process.env.TSARA_KEY ||
   process.env.TSARA_API_KEY ||
   process.env.TSARA_SECRET ||
+  env.TSARA_SECRET_KEY ||
   '';
 
-console.log('[Tsara Config] Module loading...', {
+console.log('[Tsara Config] ============================================');
+console.log('[Tsara Config] Module loading...');
+console.log('[Tsara Config] ============================================');
+console.log('[Tsara Config] Environment check:', {
   nodeEnv: process.env.NODE_ENV,
   hasTsaraSecretKey: !!rawTsaraSecretKey,
   tsaraSecretKeyLength: rawTsaraSecretKey.length,
   envObjectHasKey: !!env.TSARA_SECRET_KEY,
-  envObjectKeyLength: env.TSARA_SECRET_KEY?.length,
+  envObjectKeyLength: env.TSARA_SECRET_KEY?.length || 0,
 });
 
-// Additional diagnostics at startup
-console.log('[Tsara Config] Environment variables check:', {
-  'TSARA_SECRET_KEY': process.env.TSARA_SECRET_KEY ? '✓ SET' : '✗ NOT SET',
-  'TSARA_KEY': process.env.TSARA_KEY ? '✓ SET' : '✗ NOT SET',
-  'TSARA_API_KEY': process.env.TSARA_API_KEY ? '✓ SET' : '✗ NOT SET',
-  'TSARA_SECRET': process.env.TSARA_SECRET ? '✓ SET' : '✗ NOT SET',
-  'env.TSARA_SECRET_KEY': env.TSARA_SECRET_KEY ? '✓ SET' : '✗ NOT SET',
-});
+// Detailed environment variable diagnostics
+const envCheck = {
+  'process.env.TSARA_SECRET_KEY': process.env.TSARA_SECRET_KEY ? `✓ SET (${process.env.TSARA_SECRET_KEY.length} chars)` : '✗ NOT SET',
+  'process.env.TSARA_KEY': process.env.TSARA_KEY ? `✓ SET (${process.env.TSARA_KEY.length} chars)` : '✗ NOT SET',
+  'process.env.TSARA_API_KEY': process.env.TSARA_API_KEY ? `✓ SET (${process.env.TSARA_API_KEY.length} chars)` : '✗ NOT SET',
+  'process.env.TSARA_SECRET': process.env.TSARA_SECRET ? `✓ SET (${process.env.TSARA_SECRET.length} chars)` : '✗ NOT SET',
+  'env.TSARA_SECRET_KEY': env.TSARA_SECRET_KEY ? `✓ SET (${env.TSARA_SECRET_KEY.length} chars)` : '✗ NOT SET',
+  'Selected Key Length': rawTsaraSecretKey.length,
+  'Selected Key Prefix': rawTsaraSecretKey ? rawTsaraSecretKey.substring(0, 15) + '...' : 'N/A',
+};
+console.log('[Tsara Config] Environment variables check:', envCheck);
+console.log('[Tsara Config] ============================================');
 
 /**
  * Validates the Tsara API key format

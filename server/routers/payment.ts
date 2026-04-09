@@ -381,18 +381,31 @@ export const paymentRouter = createTRPCRouter({
       try {
         // --- FIRST: Validate Tsara API key is configured ---
         const TSARA_SECRET_KEY =
-          env.TSARA_SECRET_KEY ||
           process.env.TSARA_SECRET_KEY ||
           process.env.TSARA_KEY ||
           process.env.TSARA_API_KEY ||
-          process.env.TSARA_SECRET;
-        console.log('[Cart Payment] TSARA_SECRET_KEY check: configured=', !!TSARA_SECRET_KEY, 'length=', TSARA_SECRET_KEY?.length || 0);
+          process.env.TSARA_SECRET ||
+          env.TSARA_SECRET_KEY ||
+          '';
+        
+        console.log('[Cart Payment] ============================================');
+        console.log('[Cart Payment] TSARA_SECRET_KEY check:');
+        console.log('[Cart Payment]   Configured:', !!TSARA_SECRET_KEY);
+        console.log('[Cart Payment]   Length:', TSARA_SECRET_KEY?.length || 0);
+        console.log('[Cart Payment]   Prefix:', TSARA_SECRET_KEY ? TSARA_SECRET_KEY.substring(0, 15) + '...' : 'N/A');
+        console.log('[Cart Payment] ============================================');
+        
         if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
           console.error('[Cart Payment] CRITICAL: TSARA_SECRET_KEY is not configured');
-          console.error('[Cart Payment] Available env keys with TSARA/SECRET:', Object.keys(process.env).filter(k => /TSARA|SECRET/i.test(k)));
+          console.error('[Cart Payment] Checked variables:');
+          console.error('  - process.env.TSARA_SECRET_KEY:', process.env.TSARA_SECRET_KEY ? 'SET' : 'NOT SET');
+          console.error('  - process.env.TSARA_KEY:', process.env.TSARA_KEY ? 'SET' : 'NOT SET');
+          console.error('  - process.env.TSARA_API_KEY:', process.env.TSARA_API_KEY ? 'SET' : 'NOT SET');
+          console.error('  - process.env.TSARA_SECRET:', process.env.TSARA_SECRET ? 'SET' : 'NOT SET');
+          console.error('  - env.TSARA_SECRET_KEY:', env.TSARA_SECRET_KEY ? 'SET' : 'NOT SET');
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Payment service is not properly configured. Please contact support.",
+            message: "Payment service is not properly configured. Please check your .env file and restart the server.",
           });
         }
 

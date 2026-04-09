@@ -5,6 +5,31 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { TRPCError } from "@trpc/server";
 
+// GET handler - returns informative error for mutation endpoints
+// This helps diagnose why GET requests are being made to mutation procedures
+const getHandler = async (req: NextRequest) => {
+  const url = new URL(req.url);
+  const procedurePath = url.pathname.replace('/api/trpc/', '');
+  
+  console.error('[tRPC] GET request received (not allowed):', {
+    method: req.method,
+    url: req.url,
+    procedurePath: procedurePath || '(batch)',
+    userAgent: req.headers.get('user-agent'),
+    referer: req.headers.get('referer'),
+    timestamp: new Date().toISOString(),
+  });
+
+  return NextResponse.json(
+    {
+      error: 'Method not allowed',
+      message: `GET requests are not supported for tRPC procedures. Use POST instead. Path: ${procedurePath}`,
+      code: 'METHOD_NOT_SUPPORTED',
+    },
+    { status: 405 }
+  );
+};
+
 const handler = async (req: NextRequest) => {
   // Implement request timeout to fail fast (280s to leave buffer before Vercel's 300s limit)
   const timeoutId = setTimeout(() => {
@@ -57,9 +82,6 @@ const handler = async (req: NextRequest) => {
 };
 
 export const POST = handler;
-// GET handler restored - tRPC queries can use GET or POST
-// Mutations will still require POST (enforced by tRPC internally)
-export const GET = handler;
-export const PUT = handler;
-export const DELETE = handler;
-export const PATCH = handler;
+export const GET = getHandler;
+// POST handler handles all tRPC requests (httpBatchLink uses POST for both queries and mutations)
+// GET handler returns 405 error to help diagnose any misconfigured requests

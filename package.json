@@ -21,7 +21,8 @@
     "start:server": "node dist/server/index.js",
     "lint": "next lint",
     "swagger:server": "ts-node server/openapi/server.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:tsara": "tsx scripts/test-tsara-config.ts"
   },
   "engines": {
     "node": ">=24 || >=25",
