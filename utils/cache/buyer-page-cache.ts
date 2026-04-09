@@ -308,13 +308,19 @@ export async function prefetchBuyerPageData(limit: number = 8) {
   const startTime = performance.now();
 
   try {
+    // Use GET for tRPC query procedures (POST is only for mutations)
+    const brandsInput = encodeURIComponent(JSON.stringify({ page: 1, limit, sortBy: 'followers' }));
+    const collectionsInput = encodeURIComponent(JSON.stringify({ limit, offset: 0 }));
+    
     const [brands, collections] = await Promise.all([
-      fetch(`/api/trpc/brands.getAllBrands?input=${JSON.stringify({ page: 1, limit, sortBy: 'followers' })}`).then(
-        (r) => r.json()
-      ),
-      fetch(`/api/trpc/collection.getApprovedCollections?input=${JSON.stringify({ limit, offset: 0 })}`).then(
-        (r) => r.json()
-      ),
+      fetch(`/api/trpc/brands.getAllBrands?input=${brandsInput}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }).then((r) => r.json()),
+      fetch(`/api/trpc/collection.getApprovedCollections?input=${collectionsInput}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }).then((r) => r.json()),
     ]);
 
     const brandsData = Array.isArray(brands) ? brands[0]?.result?.data : brands.result?.data;

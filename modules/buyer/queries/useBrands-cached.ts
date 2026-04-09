@@ -58,21 +58,17 @@ export function useBrandsCached(options: {
           return;
         }
 
-        const queryParams = new URLSearchParams();
-        queryParams.set(
-          'input',
-          JSON.stringify({
-            page,
-            limit,
-            search: search || undefined,
-            sortBy: sortBy || undefined,
-          })
-        );
-
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-        const response = await fetch(`/api/trpc/brands.getAllBrands?${queryParams.toString()}`, {
+        // Use GET for tRPC query procedures
+        const queryInput = encodeURIComponent(JSON.stringify({
+          page,
+          limit,
+          search: search || undefined,
+          sortBy: sortBy || undefined,
+        }));
+        const response = await fetch(`/api/trpc/brands.getAllBrands?input=${queryInput}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,

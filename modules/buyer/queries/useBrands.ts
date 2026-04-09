@@ -288,14 +288,6 @@ export function useBrands({
         setError(null);
       }
 
-      const queryParams = new URLSearchParams();
-      queryParams.set('input', JSON.stringify({
-        page,
-        limit,
-        search: search || undefined,
-        sortBy: sortBy || undefined,
-      }));
-
       // Create controller outside async IIFE to ensure proper scope
       controller = new AbortController();
       
@@ -308,8 +300,15 @@ export function useBrands({
 
       const fetchPromise: Promise<BrandFetchResult> = (async () => {
       
+        // Use GET for tRPC query procedures
+        const queryInput = encodeURIComponent(JSON.stringify({
+          page,
+          limit,
+          search: search || undefined,
+          sortBy: sortBy || undefined,
+        }));
         const response = await fetch(
-          `/api/trpc/brands.getAllBrands?${queryParams.toString()}`,
+          `/api/trpc/brands.getAllBrands?input=${queryInput}`,
           {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
@@ -530,15 +529,14 @@ export function useBrandDetails(brandId: string, page = 1, limit = 20) {
       setIsLoading(true);
       setError(null);
 
-      const queryParams = new URLSearchParams();
-      queryParams.set('input', JSON.stringify({
+      // Use GET for tRPC query procedures
+      const queryInput = encodeURIComponent(JSON.stringify({
         brandId,
         page: page || undefined,
         limit: limit || undefined,
       }));
-
       const response = await fetch(
-        `/api/trpc/brands.getBrandDetails?${queryParams.toString()}`,
+        `/api/trpc/brands.getBrandDetails?input=${queryInput}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -636,11 +634,14 @@ export function useIsFollowingBrand(brandId: string) {
 
     setIsLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set('input', JSON.stringify({ brandId }));
-
+      // Use GET for tRPC query procedures
+      const queryInput = encodeURIComponent(JSON.stringify({ brandId }));
       const response = await fetch(
-        `/api/trpc/buyer.isFollowingBrand?${params.toString()}`
+        `/api/trpc/buyer.isFollowingBrand?input=${queryInput}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
       );
 
       if (response.ok) {

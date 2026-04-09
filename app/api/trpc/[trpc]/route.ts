@@ -57,9 +57,9 @@ const handler = async (req: NextRequest) => {
 };
 
 export const POST = handler;
-// GET handler removed - tRPC doesn't support GET requests for security reasons
-// All tRPC requests must use POST method
-// export const GET = handler;
+// GET handler restored - tRPC queries can use GET or POST
+// Mutations will still require POST (enforced by tRPC internally)
+export const GET = handler;
 export const PUT = handler;
 export const DELETE = handler;
 export const PATCH = handler;

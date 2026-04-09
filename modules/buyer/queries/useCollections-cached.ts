@@ -96,17 +96,8 @@ export function useCollectionsCached(options: {
           return;
         }
 
-        const queryParams = new URLSearchParams();
-        queryParams.set(
-          'input',
-          JSON.stringify({
-            limit: limit || 20,
-            offset: 0,
-          })
-        );
-
         const response = await fetch(
-          `/api/trpc/collection.getApprovedCollections?${queryParams.toString()}`,
+          `/api/trpc/collection.getApprovedCollections?input=${encodeURIComponent(JSON.stringify({ limit: limit || 20, offset: 0 }))}`,
           {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
