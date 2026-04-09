@@ -131,14 +131,6 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
             }
             return {};
           },
-          fetch: (input, init) => {
-            // Always use POST for all tRPC requests
-            return fetch(input, {
-              ...init,
-              method: 'POST',
-              credentials: 'include',
-            });
-          },
         }),
       ],
     });

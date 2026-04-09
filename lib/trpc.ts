@@ -52,14 +52,9 @@ export function getVanillaTRPCClient() {
   
   return createTRPCClient<AppRouter>({
     links: [
-      // Use httpBatchLink for all requests to ensure POST method is always used
-      // This prevents GET requests to mutation endpoints
       httpBatchLink({
         url,
-        fetch: (input, init) => {
-          // Always use POST for all tRPC requests
-          return fetchWithAuth(input, { ...init, method: 'POST' });
-        },
+        fetch: fetchWithAuth,
       }),
     ],
   });
