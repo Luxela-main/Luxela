@@ -82,6 +82,7 @@ const handler = async (req: NextRequest) => {
 };
 
 export const POST = handler;
-export const GET = getHandler;
-// POST handler handles all tRPC requests (httpBatchLink uses POST for both queries and mutations)
-// GET handler returns 405 error to help diagnose any misconfigured requests
+export const GET = handler;
+export const PUT = handler;
+export const DELETE = handler;
+export const PATCH = handler;
