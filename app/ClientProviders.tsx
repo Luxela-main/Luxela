@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
 import { trpc } from "./_trpc/client";
-import { httpBatchLink } from "@trpc/client";
+import { httpLink } from "@trpc/client";
 import { createClient } from "@/utils/supabase/client";
 import { CartProvider } from "@/modules/cart/context";
 import { TRPCReadyProvider } from "@/context/TRPCReadyContext";
@@ -121,9 +121,9 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     
     return trpc.createClient({
       links: [
-        // Use httpBatchLink for all requests (both queries and mutations)
-        // This ensures all requests use POST method consistently
-        httpBatchLink({
+        // Use httpLink to ensure all requests (especially mutations) use POST method
+        // httpLink is more reliable than httpBatchLink for ensuring correct HTTP methods
+        httpLink({
           url,
           headers() {
             if (sessionTokenRef.current) {
