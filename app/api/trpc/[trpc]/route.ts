@@ -5,29 +5,10 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { TRPCError } from "@trpc/server";
 
-// GET handler - returns informative error for mutation endpoints
-// This helps diagnose why GET requests are being made to mutation procedures
+// GET handler - passes through to tRPC handler
+// tRPC queries support GET, mutations will be rejected by tRPC with proper error
 const getHandler = async (req: NextRequest) => {
-  const url = new URL(req.url);
-  const procedurePath = url.pathname.replace('/api/trpc/', '');
-  
-  console.error('[tRPC] GET request received (not allowed):', {
-    method: req.method,
-    url: req.url,
-    procedurePath: procedurePath || '(batch)',
-    userAgent: req.headers.get('user-agent'),
-    referer: req.headers.get('referer'),
-    timestamp: new Date().toISOString(),
-  });
-
-  return NextResponse.json(
-    {
-      error: 'Method not allowed',
-      message: `GET requests are not supported for tRPC procedures. Use POST instead. Path: ${procedurePath}`,
-      code: 'METHOD_NOT_SUPPORTED',
-    },
-    { status: 405 }
-  );
+  return handler(req);
 };
 
 const handler = async (req: NextRequest) => {
