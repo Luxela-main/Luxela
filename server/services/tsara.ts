@@ -126,6 +126,11 @@ if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
 
 const BASE_URL = env.TSARA_BASE_URL || env.TSARA_API_URL || TSARA_BASE_URL;
 
+// Tsara API authentication configuration
+// Some deployments use Bearer token only, others use HMAC signature
+// Set TSARA_USE_HMAC=true to enable HMAC signature authentication
+const USE_HMAC_AUTH = process.env.TSARA_USE_HMAC === 'true' || env.TSARA_USE_HMAC === 'true';
+
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -141,6 +146,7 @@ tsaraApi.interceptors.request.use((config) => {
   console.log('[Tsara API] Request to:', config.url);
   console.log('[Tsara API] Base URL:', config.baseURL);
   console.log('[Tsara API] Full URL:', (config.baseURL || '') + (config.url || ''));
+  console.log('[Tsara API] Authentication mode:', USE_HMAC_AUTH ? 'HMAC + Bearer' : 'Bearer Token Only');
   
   if (!key) {
     console.error('[Tsara API] WARNING: No API key available');
@@ -148,6 +154,7 @@ tsaraApi.interceptors.request.use((config) => {
   }
 
   // Add Bearer token authentication (as per Tsara documentation)
+  // This is the standard authentication method for most REST APIs
   config.headers["Authorization"] = `Bearer ${key}`;
   
   // Log authentication status
@@ -162,18 +169,24 @@ tsaraApi.interceptors.request.use((config) => {
     console.error('[Tsara API] This request will fail with 401 Unauthorized.');
   }
   
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const method = (config.method || "GET").toUpperCase();
-  const path = config.url || "";
-  const body = config.data ? JSON.stringify(config.data) : "";
+  // Only add HMAC signature headers if explicitly enabled
+  // Some Tsara API deployments don't support HMAC and will reject requests with these headers
+  if (USE_HMAC_AUTH) {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const method = (config.method || "GET").toUpperCase();
+    const path = config.url || "";
+    const body = config.data ? JSON.stringify(config.data) : "";
 
-  // HMAC signature: timestamp + method + path + body
-  const payload = timestamp + method + path + body;
-  const signature = crypto.createHmac("sha512", key).update(payload).digest("hex");
+    // HMAC signature: timestamp + method + path + body
+    const payload = timestamp + method + path + body;
+    const signature = crypto.createHmac("sha512", key).update(payload).digest("hex");
 
-  // Add signature headers for Tsara API
-  config.headers["x-tsara-timestamp"] = timestamp;
-  config.headers["x-tsara-signature"] = signature;
+    // Add signature headers for Tsara API
+    config.headers["x-tsara-timestamp"] = timestamp;
+    config.headers["x-tsara-signature"] = signature;
+    
+    console.log('[Tsara API] HMAC signature added');
+  }
 
   return config;
 });

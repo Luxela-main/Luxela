@@ -49,4 +49,7 @@ export const env = {
   TSARA_WEBHOOK_SECRET: process.env.TSARA_WEBHOOK_SECRET || '',
   TSARA_API_URL: process.env.TSARA_API_URL || 'https://api.tsara.ng/v1',
   TSARA_BASE_URL: process.env.TSARA_BASE_URL || process.env.TSARA_API_URL || 'https://api.tsara.ng/v1',
+  // HMAC authentication - set to 'true' to enable HMAC signature headers
+  // Default is Bearer token only which works for most Tsara API deployments
+  TSARA_USE_HMAC: process.env.TSARA_USE_HMAC === 'true',
 };
