@@ -129,7 +129,7 @@ const BASE_URL = env.TSARA_BASE_URL || env.TSARA_API_URL || TSARA_BASE_URL;
 // Tsara API authentication configuration
 // Some deployments use Bearer token only, others use HMAC signature
 // Set TSARA_USE_HMAC=true to enable HMAC signature authentication
-const USE_HMAC_AUTH = process.env.TSARA_USE_HMAC === 'true' || env.TSARA_USE_HMAC === 'true';
+const USE_HMAC_AUTH = process.env.TSARA_USE_HMAC === 'true' || env.TSARA_USE_HMAC;
 
 export const tsaraApi = axios.create({
   baseURL: BASE_URL,
