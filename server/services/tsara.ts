@@ -6,6 +6,7 @@ const TSARA_BASE_URL = "https://api.tsara.ng/v1";
 
 // DIAGNOSTIC: Log environment state at module load time
 // Force reload environment variables in case of caching issues
+// NOTE: In serverless environments, always use getTsaraSecretKey() to get fresh value
 const rawTsaraSecretKey =
   process.env.TSARA_SECRET_KEY ||
   process.env.TSARA_KEY ||
@@ -13,6 +14,22 @@ const rawTsaraSecretKey =
   process.env.TSARA_SECRET ||
   env.TSARA_SECRET_KEY ||
   '';
+
+/**
+ * Get the Tsara API key fresh from environment variables.
+ * CRITICAL: Use this instead of the cached TSARA_SECRET_KEY constant
+ * in serverless environments where module-level constants may become stale.
+ */
+export function getTsaraSecretKey(): string {
+  const key =
+    process.env.TSARA_SECRET_KEY ||
+    process.env.TSARA_KEY ||
+    process.env.TSARA_API_KEY ||
+    process.env.TSARA_SECRET ||
+    env.TSARA_SECRET_KEY ||
+    '';
+  return key.trim();
+}
 
 console.log('[Tsara Config] ============================================');
 console.log('[Tsara Config] Module loading...');
@@ -104,6 +121,11 @@ export function getApiKeyStatus(key?: string): { configured: boolean; valid: boo
 
 // Use TSARA_SECRET_KEY for server-side API authentication
 // NEXT_PUBLIC_TSARA_PUBLIC_KEY is for client-side only
+// 
+// ⚠️ DEPRECATED: Do not use TSARA_SECRET_KEY directly in serverless environments.
+// It is captured at module load time and may become stale.
+// Use getTsaraSecretKey() instead to get a fresh value from environment variables.
+/** @deprecated Use getTsaraSecretKey() for serverless environments */
 export const TSARA_SECRET_KEY = rawTsaraSecretKey.trim();
 export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || '';
 export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET || process.env.TSARA_WEBHOOK_SECRET || '';
@@ -140,7 +162,9 @@ export const tsaraApi = axios.create({
 });
 
 tsaraApi.interceptors.request.use((config) => {
-  const key = TSARA_SECRET_KEY.trim();
+  // CRITICAL: Always get fresh key from environment - don't use cached module-level constant
+  // In serverless environments, module-level constants can become stale
+  const key = getTsaraSecretKey();
   
   // Log request attempt
   console.log('[Tsara API] Request to:', config.url);
@@ -206,14 +230,14 @@ tsaraApi.interceptors.response.use(
       method: error.config?.method,
       hasAuthHeader: !!error.config?.headers?.['Authorization'],
       authHeaderPreview: error.config?.headers?.['Authorization']?.substring(0, 30) + '...',
-      keyLength: TSARA_SECRET_KEY?.length || 0,
-      keyIsEmpty: !TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '',
+      keyLength: getTsaraSecretKey()?.length || 0,
+      keyIsEmpty: !getTsaraSecretKey() || getTsaraSecretKey().trim() === '',
       responseData: errorData,
       timestamp: new Date().toISOString(),
     };
     
     if (status === 401) {
-      const keyValidation = validateApiKey(TSARA_SECRET_KEY);
+      const keyValidation = validateApiKey(getTsaraSecretKey());
       console.error('[Tsara API] 401 Unauthorized - API Key validation:', {
         ...errorContext,
         keyValidation,
@@ -594,8 +618,8 @@ export async function createCheckoutSession(data: {
           console.error("[Tsara]  3. The API endpoint might be incorrect");
           console.error("[Tsara] Please verify that one of these is set on your deployment: TSARA_SECRET_KEY, TSARA_KEY, TSARA_API_KEY, or TSARA_SECRET");
           console.error("[Tsara] Current configuration:");
-          console.error("[Tsara]   - API Key Length:", TSARA_SECRET_KEY?.length || 0);
-          console.error("[Tsara]   - API Key Prefix:", TSARA_SECRET_KEY?.substring(0, 10) + '...' || 'NOT SET');
+          console.error("[Tsara]   - API Key Length:", getTsaraSecretKey()?.length || 0);
+          console.error("[Tsara]   - API Key Prefix:", getTsaraSecretKey()?.substring(0, 10) + '...' || 'NOT SET');
           console.error("[Tsara]   - Base URL:", BASE_URL);
           console.error("[Tsara]   - Endpoint:", data.reference ? `/payment-links` : '/payment-links');
           console.error("[Tsara] For testing, add to your .env file or system environment");
@@ -821,8 +845,8 @@ export async function diagnoseTsaraConnection() {
   const environment = process.env.NODE_ENV || 'development';
   const baseUrl = BASE_URL;
   
-  // Use new validation function
-  const keyValidation = validateApiKey(TSARA_SECRET_KEY);
+  // Use new validation function - get fresh key from environment
+  const keyValidation = validateApiKey(getTsaraSecretKey());
   const hasSecretKey = keyValidation.valid;
   const hasPublicKey = !!TSARA_PUBLIC_KEY && TSARA_PUBLIC_KEY.trim().length > 0;
   const isConfigured = keyValidation.valid;
