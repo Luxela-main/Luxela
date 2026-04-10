@@ -5,6 +5,17 @@ import type { CollectionItem } from '../db/types';
 import { and, eq, desc, asc, sql, count as countFn, ilike, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { getCached, invalidateCache } from '../lib/redis';
+import { TRPCError } from '@trpc/server';
+
+// Helper to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, ms: number, context: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(`Query timeout: ${context} exceeded ${ms}ms`)), ms)
+    )
+  ]);
+}
 
 // Helper function to fetch listing directly from database
 async function fetchListingById(listingId: string) {
@@ -968,8 +979,15 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         .offset(offset);
 
       let total = 0;
+      const COUNT_TIMEOUT_MS = 5000;
+      const DATA_TIMEOUT_MS = 15000; // 15s max for main query
+      
       const countTimeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Count timeout')), 3000)
+        setTimeout(() => reject(new Error('Count timeout')), COUNT_TIMEOUT_MS)
+      );
+      
+      const dataTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Data query timeout')), DATA_TIMEOUT_MS)
       );
       
       try {
@@ -980,7 +998,16 @@ export const buyerListingsCatalogRouter = createTRPCRouter({
         total = -1;
       }
 
-      const approvedListings = await dataPromise;
+      let approvedListings: any[];
+      try {
+        approvedListings = await Promise.race([dataPromise, dataTimeout]);
+      } catch (e: any) {
+        console.error('[BUYER_CATALOG] Data query failed or timed out:', e.message);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch listings. Please try again.',
+        });
+      }
       
       console.log('[DEBUG getApprovedListingsCatalog] Listings query result:', {
         fetchedCount: approvedListings.length,
