@@ -314,6 +314,8 @@ export const paymentRouter = createTRPCRouter({
         env.TSARA_SECRET_KEY ||
         process.env.TSARA_KEY ||
         process.env.TSARA_API_KEY ||
+        process.env.TSARA_PUBLIC_KEY ||
+        process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ||
         process.env.TSARA_SECRET ||
         '';
       const validation = validateApiKey(key);
@@ -339,7 +341,7 @@ export const paymentRouter = createTRPCRouter({
           apiTestStatus: connection.apiTestStatus,
           baseUrl: connection.baseUrl,
           errorDetails: connection.errorDetails,
-          keyValidation: connection.keyValidation,
+          PublicKeyValidation: connection.publicKeyValidation,
           timestamp: connection.timestamp,
         };
       } catch (error: any) {
