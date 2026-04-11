@@ -5,9 +5,33 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { TRPCError } from "@trpc/server";
 
-// GET handler - passes through to tRPC handler
-// tRPC queries support GET, mutations will be rejected by tRPC with proper error
+// GET handler - for queries only, block mutations early with clearer error
 const getHandler = async (req: NextRequest) => {
+  const url = new URL(req.url);
+  const procedurePath = url.pathname.replace('/api/trpc/', '');
+  
+  // List of known mutation procedures to block GET requests
+  const mutationProcedures = [
+    'payment.createCartPayment',
+    'payment.createPayment',
+    'payment.verifyPayment',
+    'payment.createCheckout',
+  ];
+  
+  // If this is a known mutation, return 405 Method Not Allowed immediately
+  if (mutationProcedures.includes(procedurePath)) {
+    console.warn(`[tRPC] Blocked GET request to mutation: ${procedurePath}`);
+    return NextResponse.json(
+      {
+        error: 'Method Not Allowed',
+        message: `Cannot GET ${procedurePath}. Use POST for mutations.`,
+        code: 'METHOD_NOT_SUPPORTED',
+      },
+      { status: 405 }
+    );
+  }
+  
+  // Pass through to tRPC handler for queries
   return handler(req);
 };
 

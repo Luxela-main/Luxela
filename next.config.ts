@@ -94,11 +94,19 @@ const nextConfig: NextConfig = {
             { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
           ],
         },
-        // Cache pages with revalidation (1 hour)
+        // Cache pages with revalidation (1 hour) - EXCLUDE API routes
         {
-          source: "/(.*)",
+          source: "/((?!api/).*)",
+          headers: [            { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
+          ],
+        },
+        // Explicitly prevent caching for API routes
+        {
+          source: "/api/(.*)",
           headers: [
-            { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
+            { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, proxy-revalidate" },
+            { key: "Pragma", value: "no-cache" },
+            { key: "Expires", value: "0" },
           ],
         },
       ];

@@ -361,12 +361,14 @@ export async function createFiatPaymentLink(data: {
   redirect_url?: string;
 }): Promise<TsaraResponse<PaymentLink>> {
   try {
-    // Build request payload - ensure all fields are properly formatted
+    // Generate unique identifier to prevent slug collisions
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    
     // Build request payload - ensure all fields are properly formatted
     const payload: any = {
       amount: Math.round(data.amount), // Ensure integer (in minor units for NGN)
       currency: data.currency.toUpperCase(), // Ensure uppercase
-      title: data.description || 'Luxela Payment', // REQUIRED field per Tsara docs
+      title: `${data.description || 'Luxela Payment'} - ${uniqueId}`, // REQUIRED field per Tsara docs - must be unique
     };
     
     // Only add optional fields if they have values
@@ -441,13 +443,16 @@ export async function createStablecoinPaymentLink(data: {
   metadata?: Record<string, any>;
 }): Promise<TsaraResponse<StablecoinPaymentLink>> {
   try {
+    // Generate unique identifier to prevent slug collisions
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    
     // Build request payload - ensure all fields are properly formatted
     const payload: any = {
       amount: data.amount, // Stablecoin amounts in full units
       asset: data.asset,
       network: data.network,
       wallet_id: data.wallet_id,
-      title: data.description || 'Luxela USDC Payment', // REQUIRED field per Tsara docs
+      title: `${data.description || 'Luxela USDC Payment'} - ${uniqueId}`, // REQUIRED field per Tsara docs - must be unique
     };
     
     // Only add optional fields if they have values
@@ -523,11 +528,15 @@ export async function createCheckoutSession(data: {
     if (data.success_url) metadata.success_url = data.success_url;
     if (data.cancel_url) metadata.cancel_url = data.cancel_url;
 
+    // Generate a unique identifier to prevent slug collisions
+    // Tsara auto-generates slugs from the title, so we need uniqueness
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    
     // Note: Do not pass customer_id - Tsara creates customers automatically
     const paymentLinkData = {
       amount: Math.round(data.amount), // Ensure integer (in minor units for NGN)
       currency: data.currency.toUpperCase(), // Ensure uppercase
-      title: `Payment for order ${data.reference}`, // REQUIRED field per Tsara docs
+      title: `Payment for order ${data.reference} - ${uniqueId}`, // REQUIRED field per Tsara docs - must be unique
       description: `Payment for order ${data.reference}`,
       metadata,
       success_url: data.success_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
