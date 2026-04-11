@@ -22,10 +22,19 @@ export function getVanillaTRPCClient() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
 
+      // Only add Content-Type for requests with a body (POST, PUT, PATCH, DELETE)
+      // GET requests should NOT have Content-Type as they have no body
+      const method = init?.method?.toUpperCase() || 'GET';
+      const hasBody = method !== 'GET' && method !== 'HEAD';
+
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
         ...(init?.headers as Record<string, string> || {}),
       };
+
+      // Only set Content-Type for methods that can have a body
+      if (hasBody) {
+        headers['Content-Type'] = 'application/json';
+      }
       
       if (session?.access_token) {
         headers.authorization = `Bearer ${session.access_token}`;
@@ -39,13 +48,21 @@ export function getVanillaTRPCClient() {
     } catch (error) {
       console.error('Error getting auth token:', error);
       // Fallback to unauthenticated request
+      const method = init?.method?.toUpperCase() || 'GET';
+      const hasBody = method !== 'GET' && method !== 'HEAD';
+      
+      const headers: Record<string, string> = {
+        ...(init?.headers as Record<string, string> || {}),
+      };
+
+      if (hasBody) {
+        headers['Content-Type'] = 'application/json';
+      }
+
       return fetch(input, {
         ...init,
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(init?.headers as Record<string, string> || {}),
-        },
+        headers,
       });
     }
   }

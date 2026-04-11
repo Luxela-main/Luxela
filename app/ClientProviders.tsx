@@ -119,18 +119,45 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
     const url = baseUrl ? `${baseUrl}/api/trpc` : '/api/trpc';
     
+    // Custom fetch that conditionally sets Content-Type to avoid 415 errors on GET requests
+    const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method?.toUpperCase() || 'GET';
+      const hasBody = method !== 'GET' && method !== 'HEAD';
+      
+      // Clone init to avoid mutating the original
+      const modifiedInit: RequestInit = {
+        ...init,
+        credentials: 'include',
+      };
+      
+      // Build headers
+      const headers: Record<string, string> = {
+        ...(init?.headers as Record<string, string> || {}),
+      };
+      
+      // Only set Content-Type for methods that can have a body
+      // This prevents 415 Unsupported Media Type errors on GET requests
+      if (hasBody) {
+        headers['Content-Type'] = 'application/json';
+      }
+      
+      // Add auth token if available
+      if (sessionTokenRef.current) {
+        headers.authorization = `Bearer ${sessionTokenRef.current}`;
+      }
+      
+      modifiedInit.headers = headers;
+      
+      return fetch(input, modifiedInit);
+    };
+    
     return trpc.createClient({
       links: [
         // Use httpLink to ensure all requests (especially mutations) use POST method
         // httpLink is more reliable than httpBatchLink for ensuring correct HTTP methods
         httpLink({
           url,
-          headers() {
-            if (sessionTokenRef.current) {
-              return { authorization: `Bearer ${sessionTokenRef.current}` };
-            }
-            return {};
-          },
+          fetch: customFetch,
         }),
       ],
     });
