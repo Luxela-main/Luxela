@@ -402,17 +402,45 @@ export async function createFiatPaymentLink(data: {
       throw new Error(errorMsg);
     }
 
+    // Log the full raw response for debugging
+    console.log('[Tsara API Fiat] Full raw response:', JSON.stringify(response.data, null, 2));
+    
     // Extract payment link data from various possible response structures
     let paymentLink = response.data.data || response.data;
     
-    // Handle nested data structures (some APIs wrap in data.data)
-    if (paymentLink && typeof paymentLink === 'object' && paymentLink.data) {
-      paymentLink = paymentLink.data;
+    // Handle deeply nested data structures
+    if (paymentLink && typeof paymentLink === 'object') {
+      if (paymentLink.data) {
+        paymentLink = paymentLink.data;
+      } else if (paymentLink.paymentLink) {
+        paymentLink = paymentLink.paymentLink;
+      } else if (paymentLink.link) {
+        paymentLink = paymentLink.link;
+      } else if (paymentLink.result) {
+        paymentLink = paymentLink.result;
+      }
     }
     
+    console.log('[Tsara API Fiat] Extracted paymentLink:', JSON.stringify(paymentLink, null, 2));
+    console.log('[Tsara API Fiat] Available fields:', paymentLink ? Object.keys(paymentLink) : 'null');
+    
     // Handle different field name variations from the API
-    const linkId = paymentLink.id || paymentLink.link_id || paymentLink.payment_id;
-    const linkUrl = paymentLink.url || paymentLink.checkout_url || paymentLink.link || paymentLink.payment_url;
+    const linkId = paymentLink?.id || 
+                   paymentLink?.link_id || 
+                   paymentLink?.payment_id ||
+                   paymentLink?.paymentId ||
+                   paymentLink?.reference ||
+                   paymentLink?.ref;
+    
+    const linkUrl = paymentLink?.url || 
+                    paymentLink?.checkout_url || 
+                    paymentLink?.checkoutUrl ||
+                    paymentLink?.link || 
+                    paymentLink?.payment_url ||
+                    paymentLink?.paymentUrl ||
+                    paymentLink?.redirect_url ||
+                    paymentLink?.redirectUrl ||
+                    paymentLink?.href;
     
     if (!linkId || !linkUrl) {
       console.error("[Tsara API] Required fields missing in fiat payment link:", {
@@ -500,17 +528,45 @@ export async function createStablecoinPaymentLink(data: {
       throw new Error(errorMsg);
     }
 
+    // Log the full raw response for debugging
+    console.log('[Tsara API Stablecoin] Full raw response:', JSON.stringify(response.data, null, 2));
+    
     // Extract payment link data from various possible response structures
     let paymentLink = response.data.data || response.data;
     
-    // Handle nested data structures (some APIs wrap in data.data)
-    if (paymentLink && typeof paymentLink === 'object' && paymentLink.data) {
-      paymentLink = paymentLink.data;
+    // Handle deeply nested data structures
+    if (paymentLink && typeof paymentLink === 'object') {
+      if (paymentLink.data) {
+        paymentLink = paymentLink.data;
+      } else if (paymentLink.paymentLink) {
+        paymentLink = paymentLink.paymentLink;
+      } else if (paymentLink.link) {
+        paymentLink = paymentLink.link;
+      } else if (paymentLink.result) {
+        paymentLink = paymentLink.result;
+      }
     }
     
+    console.log('[Tsara API Stablecoin] Extracted paymentLink:', JSON.stringify(paymentLink, null, 2));
+    console.log('[Tsara API Stablecoin] Available fields:', paymentLink ? Object.keys(paymentLink) : 'null');
+    
     // Handle different field name variations from the API
-    const linkId = paymentLink.id || paymentLink.link_id || paymentLink.payment_id;
-    const linkUrl = paymentLink.url || paymentLink.checkout_url || paymentLink.link || paymentLink.payment_url;
+    const linkId = paymentLink?.id || 
+                   paymentLink?.link_id || 
+                   paymentLink?.payment_id ||
+                   paymentLink?.paymentId ||
+                   paymentLink?.reference ||
+                   paymentLink?.ref;
+    
+    const linkUrl = paymentLink?.url || 
+                    paymentLink?.checkout_url || 
+                    paymentLink?.checkoutUrl ||
+                    paymentLink?.link || 
+                    paymentLink?.payment_url ||
+                    paymentLink?.paymentUrl ||
+                    paymentLink?.redirect_url ||
+                    paymentLink?.redirectUrl ||
+                    paymentLink?.href;
     
     if (!linkId || !linkUrl) {
       console.error("[Tsara API] Required fields missing in stablecoin payment link:", {
@@ -721,12 +777,23 @@ export async function createCheckoutSession(data: {
       throw error;
     }
 
+    // Log the full raw response for debugging
+    console.log('[Tsara API Checkout] Full raw response:', JSON.stringify(response.data, null, 2));
+    
     // Extract payment link data from various possible response structures
     let paymentLink = response.data.data || response.data;
     
-    // Handle nested data structures (some APIs wrap in data.data)
-    if (paymentLink && typeof paymentLink === 'object' && paymentLink.data) {
-      paymentLink = paymentLink.data;
+    // Handle deeply nested data structures
+    if (paymentLink && typeof paymentLink === 'object') {
+      if (paymentLink.data) {
+        paymentLink = paymentLink.data;
+      } else if (paymentLink.paymentLink) {
+        paymentLink = paymentLink.paymentLink;
+      } else if (paymentLink.link) {
+        paymentLink = paymentLink.link;
+      } else if (paymentLink.result) {
+        paymentLink = paymentLink.result;
+      }
     }
     
     if (!paymentLink || typeof paymentLink !== 'object') {
@@ -742,20 +809,35 @@ export async function createCheckoutSession(data: {
     }
 
     // Log the actual payment link structure for debugging
-    console.log('[Tsara API] Payment link object keys:', Object.keys(paymentLink));
-    console.log('[Tsara API] Payment link object:', JSON.stringify(paymentLink, null, 2));
+    console.log('[Tsara API Checkout] Extracted paymentLink:', JSON.stringify(paymentLink, null, 2));
+    console.log('[Tsara API Checkout] Available fields:', Object.keys(paymentLink));
 
     // Handle different field name variations from the API
     // Some versions return 'url', others 'checkout_url', 'link', or 'payment_url'
-    const linkId = paymentLink.id || paymentLink.link_id || paymentLink.payment_id || paymentLink.reference;
-    const linkUrl = paymentLink.url || paymentLink.checkout_url || paymentLink.link || paymentLink.payment_url || paymentLink.checkoutUrl;
+    const linkId = paymentLink?.id || 
+                   paymentLink?.link_id || 
+                   paymentLink?.payment_id || 
+                   paymentLink?.paymentId ||
+                   paymentLink?.reference ||
+                   paymentLink?.ref;
+    
+    const linkUrl = paymentLink?.url || 
+                    paymentLink?.checkout_url || 
+                    paymentLink?.checkoutUrl ||
+                    paymentLink?.link || 
+                    paymentLink?.payment_url ||
+                    paymentLink?.paymentUrl ||
+                    paymentLink?.redirect_url ||
+                    paymentLink?.redirectUrl ||
+                    paymentLink?.href;
     
     if (!linkId || !linkUrl) {
-      console.error("Required fields missing in payment link:", {
+      console.error("[Tsara API Checkout] Required fields missing in payment link:", {
         paymentLink,
         availableFields: Object.keys(paymentLink),
         extractedId: linkId,
         extractedUrl: linkUrl,
+        fullResponse: response.data,
       });
       throw new Error("Payment link missing required fields (id or url)");
     }
