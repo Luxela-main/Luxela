@@ -17,7 +17,6 @@ const rawTsaraSecretKey =
 
 /**
  * Get the Tsara API key fresh from environment variables.
- * CRITICAL: Use this instead of the cached TSARA_SECRET_KEY constant
  * in serverless environments where module-level constants may become stale.
  */
 export function getTsaraSecretKey(): string {
@@ -31,26 +30,43 @@ export function getTsaraSecretKey(): string {
   return key.trim();
 }
 
+/**
+ * Get the Tsara PUBLIC KEY for Bearer authentication.
+ * Tsara API uses PUBLIC KEY for Authorization: Bearer headers,
+ * NOT the secret key (which is for server-side webhooks only).
+ */
+export function getTsaraPublicKey(): string {
+  const key =
+    process.env.TSARA_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ||
+    env.TSARA_PUBLIC_KEY ||
+    env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ||
+    '';
+  return key.trim();
+}
+
 console.log('[Tsara Config] ============================================');
 console.log('[Tsara Config] Module loading...');
 console.log('[Tsara Config] ============================================');
 console.log('[Tsara Config] Environment check:', {
   nodeEnv: process.env.NODE_ENV,
+  hasTsaraPublicKey: !!getTsaraPublicKey(),
+  tsaraPublicKeyLength: getTsaraPublicKey().length,
   hasTsaraSecretKey: !!rawTsaraSecretKey,
   tsaraSecretKeyLength: rawTsaraSecretKey.length,
-  envObjectHasKey: !!env.TSARA_SECRET_KEY,
-  envObjectKeyLength: env.TSARA_SECRET_KEY?.length || 0,
 });
 
 // Detailed environment variable diagnostics
 const envCheck = {
+  'process.env.TSARA_PUBLIC_KEY': process.env.TSARA_PUBLIC_KEY ? `✓ SET (${process.env.TSARA_PUBLIC_KEY.length} chars)` : '✗ NOT SET',
+  'process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY': process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ? `✓ SET (${process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY.length} chars)` : '✗ NOT SET',
   'process.env.TSARA_SECRET_KEY': process.env.TSARA_SECRET_KEY ? `✓ SET (${process.env.TSARA_SECRET_KEY.length} chars)` : '✗ NOT SET',
   'process.env.TSARA_KEY': process.env.TSARA_KEY ? `✓ SET (${process.env.TSARA_KEY.length} chars)` : '✗ NOT SET',
   'process.env.TSARA_API_KEY': process.env.TSARA_API_KEY ? `✓ SET (${process.env.TSARA_API_KEY.length} chars)` : '✗ NOT SET',
   'process.env.TSARA_SECRET': process.env.TSARA_SECRET ? `✓ SET (${process.env.TSARA_SECRET.length} chars)` : '✗ NOT SET',
-  'env.TSARA_SECRET_KEY': env.TSARA_SECRET_KEY ? `✓ SET (${env.TSARA_SECRET_KEY.length} chars)` : '✗ NOT SET',
-  'Selected Key Length': rawTsaraSecretKey.length,
-  'Selected Key Prefix': rawTsaraSecretKey ? rawTsaraSecretKey.substring(0, 15) + '...' : 'N/A',
+  'Public Key Length': getTsaraPublicKey().length,
+  'Public Key Prefix': getTsaraPublicKey() ? getTsaraPublicKey().substring(0, 15) + '...' : 'N/A',
+  'Secret Key Length': rawTsaraSecretKey.length,
 };
 console.log('[Tsara Config] Environment variables check:', envCheck);
 console.log('[Tsara Config] ============================================');
@@ -119,8 +135,9 @@ export function getApiKeyStatus(key?: string): { configured: boolean; valid: boo
   };
 }
 
-// Use TSARA_SECRET_KEY for server-side API authentication
-// NEXT_PUBLIC_TSARA_PUBLIC_KEY is for client-side only
+// Tsara API Authentication:
+// - PUBLIC KEY: Used for Authorization: Bearer headers (API calls from server)
+// - SECRET KEY: Used only for webhook signature verification (server-side)
 // 
 // ⚠️ DEPRECATED: Do not use TSARA_SECRET_KEY directly in serverless environments.
 // It is captured at module load time and may become stale.
@@ -131,19 +148,23 @@ export const TSARA_PUBLIC_KEY = env.NEXT_PUBLIC_TSARA_PUBLIC_KEY || process.env.
 export const TSARA_WEBHOOK_SECRET = env.TSARA_WEBHOOK_SECRET || process.env.TSARA_WEBHOOK_SECRET || '';
 
 // Validate that required credentials are configured
-if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-  console.error('[Tsara Config] CRITICAL: TSARA_SECRET_KEY is not configured. Payment functionality will fail.');
-  console.error('[Tsara Config] Available env keys:', Object.keys(process.env).filter(k => /TSARA|SECRET/i.test(k)));
-  console.error('[Tsara Config] Please set one of these environment variables on your deployment: TSARA_SECRET_KEY, TSARA_KEY, TSARA_API_KEY, or TSARA_SECRET');
+// CRITICAL: PUBLIC KEY is required for API authentication (Bearer header)
+if (!TSARA_PUBLIC_KEY || TSARA_PUBLIC_KEY.trim() === '') {
+  console.error('[Tsara Config] CRITICAL: TSARA_PUBLIC_KEY is not configured. Payment functionality will fail.');
+  console.error('[Tsara Config] Available env keys:', Object.keys(process.env).filter(k => /TSARA|PUBLIC/i.test(k)));
+  console.error('[Tsara Config] Please set TSARA_PUBLIC_KEY or NEXT_PUBLIC_TSARA_PUBLIC_KEY on your deployment');
 } else {
-  console.log('[Tsara Config] TSARA_SECRET_KEY is configured (length:', TSARA_SECRET_KEY.length, ')');
+  console.log('[Tsara Config] TSARA_PUBLIC_KEY is configured (length:', TSARA_PUBLIC_KEY.length, ')');
   // Validate key format - should be a long string
-  if (TSARA_SECRET_KEY.length < 20) {
-    console.error('[Tsara Config] WARNING: TSARA_SECRET_KEY seems too short. Expected 40+ characters, got', TSARA_SECRET_KEY.length);
+  if (TSARA_PUBLIC_KEY.length < 20) {
+    console.error('[Tsara Config] WARNING: TSARA_PUBLIC_KEY seems too short. Expected 40+ characters, got', TSARA_PUBLIC_KEY.length);
   }
-  // Check if it looks like a secret key (starts with certain patterns)
-  const firstChars = TSARA_SECRET_KEY.substring(0, 10);
-  console.log('[Tsara Config] Key prefix:', firstChars + '...');
+  // Check if it looks like a public key (starts with pk_)
+  const firstChars = TSARA_PUBLIC_KEY.substring(0, 10);
+  console.log('[Tsara Config] Public Key prefix:', firstChars + '...');
+  if (!TSARA_PUBLIC_KEY.startsWith('pk_')) {
+    console.warn('[Tsara Config] WARNING: TSARA_PUBLIC_KEY does not start with "pk_". Public keys typically start with "pk_test_" or "pk_live_"');
+  }
 }
 
 const BASE_URL = env.TSARA_BASE_URL || env.TSARA_API_URL || TSARA_BASE_URL;
@@ -162,9 +183,10 @@ export const tsaraApi = axios.create({
 });
 
 tsaraApi.interceptors.request.use((config) => {
-  // CRITICAL: Always get fresh key from environment - don't use cached module-level constant
-  // In serverless environments, module-level constants can become stale
-  const key = getTsaraSecretKey();
+  // CRITICAL: Use PUBLIC KEY for Bearer authentication, NOT secret key
+  // Tsara API requires: Authorization: Bearer TSARA_PUBLIC_KEY
+  // Secret key is only for server-side webhook verification
+  const publicKey = getTsaraPublicKey();
   
   // Log request attempt
   console.log('[Tsara API] Request to:', config.url);
@@ -172,30 +194,33 @@ tsaraApi.interceptors.request.use((config) => {
   console.log('[Tsara API] Full URL:', (config.baseURL || '') + (config.url || ''));
   console.log('[Tsara API] Authentication mode:', USE_HMAC_AUTH ? 'HMAC + Bearer' : 'Bearer Token Only');
   
-  if (!key) {
-    console.error('[Tsara API] WARNING: No API key available');
+  if (!publicKey) {
+    console.error('[Tsara API] WARNING: No PUBLIC KEY available for Bearer authentication');
+    console.error('[Tsara API] Please set TSARA_PUBLIC_KEY or NEXT_PUBLIC_TSARA_PUBLIC_KEY environment variable');
     return config;
   }
 
-  // Add Bearer token authentication (as per Tsara documentation)
-  // This is the standard authentication method for most REST APIs
-  config.headers["Authorization"] = `Bearer ${key}`;
+  // Add Bearer token authentication using PUBLIC KEY (as per Tsara documentation)
+  // This is the standard authentication method for Tsara API
+  config.headers["Authorization"] = `Bearer ${publicKey}`;
   
   // Log authentication status
   console.log('[Tsara API] Authorization header present: Yes');
-  console.log('[Tsara API] Token length:', key.length);
+  console.log('[Tsara API] Public Key length:', publicKey.length);
   
   // Validate API key format
-  const keyValidation = validateApiKey(key);
+  const keyValidation = validateApiKey(publicKey);
   if (!keyValidation.valid) {
-    console.error('[Tsara API] CRITICAL: TSARA_SECRET_KEY validation failed:', keyValidation.error);
+    console.error('[Tsara API] CRITICAL: TSARA_PUBLIC_KEY validation failed:', keyValidation.error);
     console.error('[Tsara API] Details:', keyValidation.details);
     console.error('[Tsara API] This request will fail with 401 Unauthorized.');
   }
   
   // Only add HMAC signature headers if explicitly enabled
   // Some Tsara API deployments don't support HMAC and will reject requests with these headers
+  // HMAC uses the SECRET KEY (not public key) for signing
   if (USE_HMAC_AUTH) {
+    const secretKey = getTsaraSecretKey();
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const method = (config.method || "GET").toUpperCase();
     const path = config.url || "";
@@ -203,13 +228,13 @@ tsaraApi.interceptors.request.use((config) => {
 
     // HMAC signature: timestamp + method + path + body
     const payload = timestamp + method + path + body;
-    const signature = crypto.createHmac("sha512", key).update(payload).digest("hex");
+    const signature = crypto.createHmac("sha512", secretKey).update(payload).digest("hex");
 
     // Add signature headers for Tsara API
     config.headers["x-tsara-timestamp"] = timestamp;
     config.headers["x-tsara-signature"] = signature;
     
-    console.log('[Tsara API] HMAC signature added');
+    console.log('[Tsara API] HMAC signature added (using secret key)');
   }
 
   return config;
@@ -230,20 +255,20 @@ tsaraApi.interceptors.response.use(
       method: error.config?.method,
       hasAuthHeader: !!error.config?.headers?.['Authorization'],
       authHeaderPreview: error.config?.headers?.['Authorization']?.substring(0, 30) + '...',
-      keyLength: getTsaraSecretKey()?.length || 0,
-      keyIsEmpty: !getTsaraSecretKey() || getTsaraSecretKey().trim() === '',
+      publicKeyLength: getTsaraPublicKey()?.length || 0,
+      publicKeyIsEmpty: !getTsaraPublicKey() || getTsaraPublicKey().trim() === '',
       responseData: errorData,
       timestamp: new Date().toISOString(),
     };
     
     if (status === 401) {
-      const keyValidation = validateApiKey(getTsaraSecretKey());
+      const keyValidation = validateApiKey(getTsaraPublicKey());
       console.error('[Tsara API] 401 Unauthorized - API Key validation:', {
         ...errorContext,
         keyValidation,
         recommendation: keyValidation.valid 
-          ? 'Key format is valid but may be incorrect or revoked. Verify TSARA_SECRET_KEY in environment.'
-          : 'TSARA_SECRET_KEY is invalid or missing. Check your environment variables.',
+          ? 'Public key format is valid but may be incorrect or revoked. Verify TSARA_PUBLIC_KEY in environment.'
+          : 'TSARA_PUBLIC_KEY is invalid or missing. Check your environment variables.',
       });
     } else if (status === 403) {
       console.error('[Tsara API] 403 Forbidden - Your API key may not have permission for this operation', errorContext);
@@ -613,16 +638,17 @@ export async function createCheckoutSession(data: {
         } else if (errorCode === "AUTHENTICATION_FAILED" || errorCode === "AUTH_ERROR") {
           userFriendlyMessage = "Payment service authentication failed. The API credentials are not properly configured.";
           console.error("[Tsara] CRITICAL: Tsara API authentication failed (401). This means:");
-          console.error("[Tsara]  1. TSARA_SECRET_KEY environment variable is not set, OR");
+          console.error("[Tsara]  1. TSARA_PUBLIC_KEY environment variable is not set, OR");
           console.error("[Tsara]  2. The value is incorrect or has been revoked");
           console.error("[Tsara]  3. The API endpoint might be incorrect");
-          console.error("[Tsara] Please verify that one of these is set on your deployment: TSARA_SECRET_KEY, TSARA_KEY, TSARA_API_KEY, or TSARA_SECRET");
+          console.error("[Tsara] NOTE: Tsara uses PUBLIC KEY for Bearer auth, NOT the secret key!");
+          console.error("[Tsara] Please verify that TSARA_PUBLIC_KEY or NEXT_PUBLIC_TSARA_PUBLIC_KEY is set on your deployment");
           console.error("[Tsara] Current configuration:");
-          console.error("[Tsara]   - API Key Length:", getTsaraSecretKey()?.length || 0);
-          console.error("[Tsara]   - API Key Prefix:", getTsaraSecretKey()?.substring(0, 10) + '...' || 'NOT SET');
+          console.error("[Tsara]   - Public Key Length:", getTsaraPublicKey()?.length || 0);
+          console.error("[Tsara]   - Public Key Prefix:", getTsaraPublicKey()?.substring(0, 10) + '...' || 'NOT SET');
           console.error("[Tsara]   - Base URL:", BASE_URL);
           console.error("[Tsara]   - Endpoint:", data.reference ? `/payment-links` : '/payment-links');
-          console.error("[Tsara] For testing, add to your .env file or system environment");
+          console.error("[Tsara] For testing, add to your .env file: TSARA_PUBLIC_KEY=pk_test_...");
         } else if (errorCode === "SERVICE_UNAVAILABLE") {
           userFriendlyMessage = "Payment service is temporarily unavailable. Please try again in a few moments.";
         } else if (errorCode === "INSUFFICIENT_FUNDS") {
@@ -845,17 +871,19 @@ export async function diagnoseTsaraConnection() {
   const environment = process.env.NODE_ENV || 'development';
   const baseUrl = BASE_URL;
   
-  // Use new validation function - get fresh key from environment
-  const keyValidation = validateApiKey(getTsaraSecretKey());
-  const hasSecretKey = keyValidation.valid;
-  const hasPublicKey = !!TSARA_PUBLIC_KEY && TSARA_PUBLIC_KEY.trim().length > 0;
-  const isConfigured = keyValidation.valid;
+  // Validate PUBLIC KEY for API authentication (Bearer header)
+  const publicKeyValidation = validateApiKey(getTsaraPublicKey());
+  const secretKeyValidation = validateApiKey(getTsaraSecretKey());
+  const hasSecretKey = secretKeyValidation.valid;
+  const hasPublicKey = publicKeyValidation.valid;
+  // API calls require public key for Bearer auth
+  const isConfigured = publicKeyValidation.valid;
   
   let canReachApi = false;
   let errorDetails: string | undefined;
   let apiTestStatus: number | undefined;
   
-  // Only attempt API connection if key is valid
+  // Only attempt API connection if public key is valid
   if (isConfigured) {
     try {
       const response = await tsaraApi.get('/payment-links', {
@@ -866,9 +894,9 @@ export async function diagnoseTsaraConnection() {
       canReachApi = response.status < 500;
       
       if (response.status === 401) {
-        errorDetails = 'API key rejected - verify TSARA_SECRET_KEY is correct';
+        errorDetails = 'Public key rejected - verify TSARA_PUBLIC_KEY is correct (not the secret key!)';
       } else if (response.status === 403) {
-        errorDetails = 'API key lacks permission for this operation';
+        errorDetails = 'Public key lacks permission for this operation';
       }
     } catch (err: any) {
       canReachApi = false;
@@ -883,7 +911,7 @@ export async function diagnoseTsaraConnection() {
       }
     }
   } else {
-    errorDetails = keyValidation.error || 'API key not configured';
+    errorDetails = publicKeyValidation.error || 'TSARA_PUBLIC_KEY not configured';
   }
   
   return {
@@ -896,9 +924,13 @@ export async function diagnoseTsaraConnection() {
     baseUrl,
     errorDetails,
     apiTestStatus,
-    keyValidation: {
-      valid: keyValidation.valid,
-      message: keyValidation.valid ? keyValidation.details : keyValidation.error,
+    publicKeyValidation: {
+      valid: publicKeyValidation.valid,
+      message: publicKeyValidation.valid ? publicKeyValidation.details : publicKeyValidation.error,
+    },
+    secretKeyValidation: {
+      valid: secretKeyValidation.valid,
+      message: secretKeyValidation.valid ? secretKeyValidation.details : secretKeyValidation.error,
     },
   };
 }
