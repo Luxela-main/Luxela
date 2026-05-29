@@ -602,6 +602,9 @@ export async function createCheckoutSession(data: {
   amount: number;
   currency: string;
   reference: string;
+  email?: string;
+  name?: string;
+  phone?: string;
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, any>;
@@ -620,26 +623,27 @@ export async function createCheckoutSession(data: {
     if (data.success_url) metadata.success_url = data.success_url;
     if (data.cancel_url) metadata.cancel_url = data.cancel_url;
 
-    // Generate a unique identifier to prevent slug collisions
-    // Tsara auto-generates slugs from the title, so we need uniqueness
-    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    
-    // Note: Do not pass customer_id - Tsara creates customers automatically
-    const paymentLinkData = {
-      amount: Math.round(data.amount), // Ensure integer (in minor units for NGN)
-      currency: data.currency.toUpperCase(), // Ensure uppercase
-      title: `Payment for order ${data.reference} - ${uniqueId}`, // REQUIRED field per Tsara docs - must be unique
-      description: `Payment for order ${data.reference}`,
+    const redirectUrl =
+      data.success_url ||
+      `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://theluxela.com"}/checkout/success`;
+
+    const checkoutData = {
+      trx_id: data.reference,
+      amount: Math.round(data.amount),
+      amount_type: "fiat",
+      currency: data.currency.toUpperCase(),
+      email: data.email || metadata.customerEmail || metadata.email || "customer@theluxela.com",
+      name: data.name || metadata.customerName || metadata.name || "Luxela Customer",
+      phone: data.phone || metadata.customerPhone || metadata.phone || "08000000000",
+      redirect_url: redirectUrl,
       metadata,
-      success_url: data.success_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`,
-      cancel_url: data.cancel_url || `${process.env.NEXT_PUBLIC_APP_URL}/checkout`,
     };
     
-    console.log('[Tsara API] Creating checkout session:', JSON.stringify(paymentLinkData, null, 2));
+    console.log('[Tsara API] Creating checkout session:', JSON.stringify(checkoutData, null, 2));
 
-    const response = await tsaraApi.post("/payment-links", paymentLinkData);
+    const response = await tsaraApi.post("/checkout", checkoutData);
     
-    console.log('[Tsara API] Full response from /payment-links:', {
+    console.log('[Tsara API] Full response from /checkout:', {
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
@@ -748,7 +752,7 @@ export async function createCheckoutSession(data: {
           console.error("[Tsara]   - Public Key Length:", getTsaraPublicKey()?.length || 0);
           console.error("[Tsara]   - Public Key Prefix:", getTsaraPublicKey()?.substring(0, 10) + '...' || 'NOT SET');
           console.error("[Tsara]   - Base URL:", BASE_URL);
-          console.error("[Tsara]   - Endpoint:", data.reference ? `/payment-links` : '/payment-links');
+          console.error("[Tsara]   - Endpoint:", '/checkout');
           console.error("[Tsara] For testing, add to your .env file: TSARA_PUBLIC_KEY=pk_test_...");
         } else if (errorCode === "SERVICE_UNAVAILABLE") {
           userFriendlyMessage = "Payment service is temporarily unavailable. Please try again in a few moments.";
@@ -819,7 +823,8 @@ export async function createCheckoutSession(data: {
                    paymentLink?.payment_id || 
                    paymentLink?.paymentId ||
                    paymentLink?.reference ||
-                   paymentLink?.ref;
+                   paymentLink?.ref ||
+                   data.reference;
     
     const linkUrl = paymentLink?.url || 
                     paymentLink?.checkout_url || 
@@ -843,7 +848,7 @@ export async function createCheckoutSession(data: {
     }
 
     return {
-      success: response.data.success,
+      success: response.data.success ?? response.data.status === "success",
       data: {
         id: linkId,
         status: (paymentLink.status === "active" ? "open" : paymentLink.status) as any,
@@ -888,8 +893,27 @@ export async function retrieveStablecoinPaymentLink(splinkId: string): Promise<T
 
 export async function verifyPayment(reference: string): Promise<TsaraResponse<Payment>> {
   try {
-    const response = await tsaraApi.get(`/payments/${reference}`);
-    return response.data;
+    const response = await tsaraApi.get(`/checkout/verify?trx_id=${encodeURIComponent(reference)}`);
+    const payload = response.data;
+    const payment = payload?.data || payload;
+
+    const rawStatus = payment?.status || payload?.status;
+
+    return {
+      success: payload?.success ?? ["success", "paid", "completed"].includes(String(rawStatus)),
+      data: {
+        id: payment?.id || payment?.trx_id || reference,
+        reference: payment?.reference || payment?.trx_id || reference,
+        status: rawStatus === "paid" || rawStatus === "completed" ? "success" : rawStatus,
+        amount: payment?.amount,
+        currency: payment?.currency,
+        customer_id: payment?.customer_id,
+        metadata: payment?.metadata,
+        created_at: payment?.created_at,
+        updated_at: payment?.updated_at,
+      },
+      request_id: payload?.request_id || payload?.requestId || "",
+    };
   } catch (error: any) {
     console.error("Verify payment failed:", error.response?.data || error.message);
     throw new Error(error.response?.data?.error?.message || "Failed to verify payment");

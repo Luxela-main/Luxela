@@ -104,9 +104,17 @@ export const POST = async (req: NextRequest) => {
     }
     console.log("[Tsara Webhook] Signature verified successfully");
 
-    const { event, data, id: eventId } = JSON.parse(rawBody);
-    if (!eventId) {
-      return NextResponse.json({ error: "Missing event ID" }, { status: 400 });
+    const { event, data, id } = JSON.parse(rawBody);
+    const reference = data?.reference || data?.trx_id;
+    const eventStatus = String(event || "").split(".").pop();
+    const statusValue = data?.status || eventStatus || "unknown";
+    const eventId = id || `${event}:${reference}:${statusValue}`;
+
+    if (!event || !data || !reference) {
+      return NextResponse.json(
+        { error: "Invalid webhook payload" },
+        { status: 400 }
+      );
     }
 
     // Idempotency check
@@ -126,21 +134,23 @@ export const POST = async (req: NextRequest) => {
       pending: "pending" as const,
       processing: "processing" as const,
       success: "completed" as const,
+      paid: "completed" as const,
+      completed: "completed" as const,
       failed: "failed" as const,
       refunded: "refunded" as const,
     };
 
-    const mappedStatus = statusMap[String(data.status) as keyof typeof statusMap] ?? "pending";
+    const mappedStatus = statusMap[String(statusValue) as keyof typeof statusMap] ?? "pending";
 
     // Find payment record
     const paymentRecords = await db
       .select()
       .from(payments)
-      .where(eq(payments.transactionRef, data.reference))
+      .where(eq(payments.transactionRef, reference))
       .limit(1);
 
     if (!paymentRecords.length) {
-      console.warn(`[Tsara Webhook] Payment not found for reference ${data.reference}`);
+      console.warn(`[Tsara Webhook] Payment not found for reference ${reference}`);
       // Still record the webhook event for audit
       await db.insert(webhookEvents).values({
         eventId,
@@ -185,7 +195,7 @@ export const POST = async (req: NextRequest) => {
       );
 
       // Handle payment success
-      if (["success", "completed"].includes(data.status)) {
+      if (["success", "completed", "paid"].includes(statusValue)) {
         try {
           await handlePaymentSuccess({
             id: payment.transactionRef,
@@ -205,7 +215,7 @@ export const POST = async (req: NextRequest) => {
       }
 
       // Handle payment failure
-      if (data.status === "failed") {
+      if (statusValue === "failed") {
         try {
           await handlePaymentFailure({
             id: payment.transactionRef,
