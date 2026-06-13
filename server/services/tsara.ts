@@ -505,9 +505,55 @@ export async function createFiatPaymentLink(data: {
                     paymentLink?.href;
     
     if (!linkId || !linkUrl) {
-      console.error("[Tsara API] Required fields missing in fiat payment link:", {
+      console.warn("[Tsara API] Required fields missing in fiat payment link, attempting fallback retrieval...", {
         paymentLink,
-        availableFields: Object.keys(paymentLink),
+        availableFields: paymentLink ? Object.keys(paymentLink) : [],
+        request_id: response.data?.request_id,
+      });
+
+      // Try to resolve using common candidate identifiers
+      const candidates = [
+        paymentLink?.id,
+        response.data?.id,
+        response.data?.request_id,
+        response.data?.reference,
+        response.data?.payment_id,
+      ].filter(Boolean) as string[];
+
+      for (const candidate of candidates) {
+        try {
+          console.log(`[Tsara API] Attempting to retrieve payment link by id candidate: ${candidate}`);
+          const fetched = await retrievePaymentLink(candidate);
+          const fetchedAny = (fetched as any) || {};
+          const fetchedLink = fetchedAny.data || fetchedAny;
+          const fetchedUrl = (fetchedLink as any)?.url || (fetchedLink as any)?.checkout_url || (fetchedLink as any)?.link || (fetchedLink as any)?.payment_url;
+          const fetchedId = (fetchedLink as any)?.id || (fetchedLink as any)?.payment_id || (fetchedLink as any)?.link_id || candidate;
+          if (fetchedId && fetchedUrl) {
+            console.log('[Tsara API] Fallback retrieval succeeded:', { fetchedId, fetchedUrl });
+            return {
+              success: true,
+              data: {
+                id: fetchedId,
+                url: fetchedUrl,
+                status: fetchedLink.status || 'active',
+                amount: fetchedLink.amount,
+                asset: fetchedLink.asset || 'NGN',
+                network: fetchedLink.network,
+                wallet_id: fetchedLink.wallet_id,
+                description: fetchedLink.description,
+                metadata: fetchedLink.metadata,
+              },
+              request_id: fetched.request_id || response.data?.request_id,
+            } as any;
+          }
+        } catch (e) {
+          console.warn('[Tsara API] Fallback retrieval failed for candidate:', candidate, (e as any)?.message || String(e));
+        }
+      }
+
+      console.error("[Tsara API] Required fields missing after fallback retrieval:", {
+        paymentLink,
+        fullResponse: response.data,
       });
       throw new Error("Payment link missing required fields (id or url)");
     }
@@ -923,11 +969,54 @@ export async function createCheckoutSession(data: {
                     paymentLink?.href;
     
     if (!linkId || !linkUrl) {
-      console.error("[Tsara API Checkout] Required fields missing in payment link:", {
+      console.warn("[Tsara API Checkout] Required fields missing in payment link, attempting fallback retrieval...", {
         paymentLink,
-        availableFields: Object.keys(paymentLink),
+        availableFields: paymentLink ? Object.keys(paymentLink) : [],
         extractedId: linkId,
         extractedUrl: linkUrl,
+        request_id: response.data?.request_id,
+      });
+
+      const candidates = [
+        paymentLink?.id,
+        response.data?.id,
+        response.data?.request_id,
+        paymentLink?.payment_id,
+        paymentLink?.link_id,
+        data.reference,
+      ].filter(Boolean) as string[];
+
+      for (const candidate of candidates) {
+        try {
+          console.log(`[Tsara API Checkout] Attempting to retrieve payment link by id candidate: ${candidate}`);
+          const fetched = await retrievePaymentLink(candidate);
+          const fetchedAny = (fetched as any) || {};
+          const fetchedLink = fetchedAny.data || fetchedAny;
+          const fetchedUrl = (fetchedLink as any)?.url || (fetchedLink as any)?.checkout_url || (fetchedLink as any)?.link || (fetchedLink as any)?.payment_url;
+          const fetchedId = (fetchedLink as any)?.id || (fetchedLink as any)?.payment_id || (fetchedLink as any)?.link_id || candidate;
+          if (fetchedId && fetchedUrl) {
+            console.log('[Tsara API Checkout] Fallback retrieval succeeded:', { fetchedId, fetchedUrl });
+            return {
+              success: true,
+              data: {
+                id: fetchedId,
+                status: (fetchedLink.status === 'active' ? 'open' : fetchedLink.status) as any,
+                checkout_url: fetchedUrl,
+                amount: fetchedLink.amount,
+                currency: fetchedLink.currency,
+                reference: data.reference,
+                expires_at: fetchedLink.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              },
+              request_id: fetched.request_id || response.data?.request_id,
+            } as any;
+          }
+        } catch (e) {
+          console.warn('[Tsara API Checkout] Fallback retrieval failed for candidate:', candidate, (e as any)?.message || String(e));
+        }
+      }
+
+      console.error("[Tsara API Checkout] Required fields missing after fallback retrieval:", {
+        paymentLink,
         fullResponse: response.data,
       });
       throw new Error("Payment link missing required fields (id or url)");
