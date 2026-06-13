@@ -222,7 +222,10 @@ tsaraApi.interceptors.request.use((config) => {
   // Only add HMAC signature headers if explicitly enabled
   // Some Tsara API deployments don't support HMAC and will reject requests with these headers
   // HMAC uses the SECRET KEY (not public key) for signing
-  if (USE_HMAC_AUTH) {
+  // Only add HMAC signature headers if explicitly enabled AND not disabled per-request
+  // Some Tsara endpoints (or deployments) may not accept HMAC-signed requests for certain paths.
+  const disableHmac = config.headers && (config.headers['x-tsara-no-hmac'] || config.headers['X-TSARA-NO-HMAC']);
+  if (USE_HMAC_AUTH && !disableHmac) {
     const secretKey = getTsaraSecretKey();
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const method = (config.method || "GET").toUpperCase();
@@ -272,7 +275,15 @@ async function postWithRetries(path: string, payload: any, opts: any = {}, retri
       throw err;
     }
   }
-  throw new Error('Retries exhausted');
+  // Final attempt: try without HMAC if enabled globally (some endpoints reject HMAC)
+  try {
+    console.warn('[Tsara API] Retries exhausted; attempting final request without HMAC headers');
+    const finalOpts = { ...(opts || {}), headers: { ...(opts?.headers || {}), 'x-tsara-no-hmac': '1' } };
+    const finalResp = await tsaraApi.post(path, payload, finalOpts);
+    return finalResp;
+  } catch (finalErr) {
+    throw new Error('Retries exhausted');
+  }
 }
 
 // Add response interceptor to catch common errors

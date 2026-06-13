@@ -539,7 +539,7 @@ export const paymentRouter = createTRPCRouter({
         const paymentData = {
           buyerId: buyerId,
           listingId: null, // Cart payments don't have a single listing (multiple cart items may have different listings)
-          orderId: input.cartId, // Use cart ID as reference
+          orderId: null, // Do NOT store cartId in order_id (FK to orders) — store cartId in gatewayResponse instead
           amountCents,
           currency: paymentCurrency,
           paymentMethod: input.paymentMethod,
@@ -548,12 +548,15 @@ export const paymentRouter = createTRPCRouter({
           transactionRef: tsaraPaymentId,
           gatewayResponse: (() => {
             try {
-              return JSON.stringify(response);
+              // Attach cartId in the gatewayResponse for cart flows so we don't violate orders FK
+              const wrapped = { response, cartId: input.cartId };
+              return JSON.stringify(wrapped);
             } catch (jsonError) {
               console.error('[Cart Payment] Failed to stringify provider response:', jsonError);
               return JSON.stringify({
                 error: 'Failed to stringify response',
                 data: response?.data ? { id: response.data.id, status: response.data.status } : null,
+                cartId: input.cartId,
               });
             }
           })(),
