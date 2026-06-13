@@ -180,6 +180,9 @@ export const tsaraApi = axios.create({
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
+  timeout: 10000, // 10s default timeout
+  maxContentLength: 200 * 1024, // 200 KB
+  maxBodyLength: 200 * 1024,
 });
 
 tsaraApi.interceptors.request.use((config) => {
@@ -239,6 +242,38 @@ tsaraApi.interceptors.request.use((config) => {
 
   return config;
 });
+
+// Add response interceptor to catch common errors
+// Helper: sleep for retries
+function sleep(ms: number) {
+  return new Promise((res) => setTimeout(res, ms));
+}
+
+async function postWithRetries(path: string, payload: any, opts: any = {}, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const resp = await tsaraApi.post(path, payload, opts);
+      // Treat empty object responses as potentially transient
+      const data = resp?.data;
+      const isEmptyObject = data && typeof data === 'object' && Object.keys(data).length === 0;
+      if ((resp.status >= 500 || isEmptyObject) && attempt < retries) {
+        console.warn(`[Tsara API] Transient response (status=${resp.status}, empty=${isEmptyObject}). Retrying attempt ${attempt + 1}/${retries}`);
+        await sleep(500 * (attempt + 1));
+        continue;
+      }
+      return resp;
+    } catch (err: any) {
+      const shouldRetry = attempt < retries && (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT' || err.response?.status >= 500 || err.code === 'ECONNRESET');
+      if (shouldRetry) {
+        console.warn(`[Tsara API] Request error ${err?.code || err?.message}. Retrying attempt ${attempt + 1}/${retries}`);
+        await sleep(500 * (attempt + 1));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Retries exhausted');
+}
 
 // Add response interceptor to catch common errors
 tsaraApi.interceptors.response.use(
@@ -403,7 +438,7 @@ export async function createFiatPaymentLink(data: {
     console.log('[Tsara API] Creating fiat payment link:', JSON.stringify(payload, null, 2));
     
     // Note: Do not pass customer_id - Tsara creates customers automatically
-    const response = await tsaraApi.post("/payment-links", payload);
+    const response = await postWithRetries("/payment-links", payload, { timeout: 10000 }, 2);
 
     // Normalize response payload to tolerate string/array shapes from provider
     try {
@@ -542,7 +577,7 @@ export async function createStablecoinPaymentLink(data: {
 
     console.log('[Tsara API] Creating stablecoin payment link:', JSON.stringify(payload, null, 2));
     
-    const response = await tsaraApi.post("/stablecoin/payment-links", payload);
+    const response = await postWithRetries("/stablecoin/payment-links", payload, { timeout: 10000 }, 2);
 
     // Normalize response payload to tolerate string/array shapes from provider
     try {
@@ -680,7 +715,7 @@ export async function createCheckoutSession(data: {
     
     console.log('[Tsara API] Creating checkout session:', JSON.stringify(checkoutData, null, 2));
 
-    const response = await tsaraApi.post("/checkout", checkoutData);
+    const response = await postWithRetries("/checkout", checkoutData, { timeout: 10000 }, 2);
 
     // Normalize response payload to tolerate string/array shapes from provider
     try {
