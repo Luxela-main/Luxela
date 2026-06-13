@@ -242,7 +242,21 @@ tsaraApi.interceptors.request.use((config) => {
 
 // Add response interceptor to catch common errors
 tsaraApi.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    try {
+      let data: any = response?.data;
+      if (data === null || typeof data === 'undefined') {
+        data = {};
+      } else if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch (e) { data = { raw: response.data }; }
+      }
+      if (Array.isArray(data) && data.length > 0) data = { data: data[0] };
+      try { Object.defineProperty(response, 'data', { value: data, writable: true }); } catch (e) { /* ignore */ }
+    } catch (e) {
+      // ignore
+    }
+    return response;
+  },
   (error) => {
     const status = error.response?.status;
     const errorData = error.response?.data;
@@ -1171,41 +1185,6 @@ export async function verifyWebhookSignature(
       return false;
     }
   } else {
-    // Global response interceptor: normalize response.data shapes (string, array, nested)
-    tsaraApi.interceptors.response.use(
-      (resp) => {
-        try {
-          let data: any = resp?.data;
-          if (data === null || typeof data === 'undefined') {
-            data = {};
-          } else if (typeof data === 'string') {
-            try { data = JSON.parse(data); } catch (e) { data = { raw: resp.data }; }
-          }
-          if (Array.isArray(data) && data.length > 0) data = { data: data[0] };
-          try { Object.defineProperty(resp, 'data', { value: data, writable: true }); } catch (e) { /* ignore */ }
-        } catch (e) {
-          // ignore normalization errors
-        }
-        return resp;
-      },
-      (error) => {
-        try {
-          if (error?.response) {
-            let data: any = error.response.data;
-            if (data === null || typeof data === 'undefined') {
-              data = { raw: error.response.data };
-            } else if (typeof data === 'string') {
-              try { data = JSON.parse(data); } catch (e) { data = { raw: error.response.data }; }
-            }
-            if (Array.isArray(data) && data.length > 0) data = { data: data[0] };
-            try { Object.defineProperty(error.response, 'data', { value: data, writable: true }); } catch (e) { /* ignore */ }
-          }
-        } catch (e) {
-          // ignore
-        }
-        return Promise.reject(error);
-      }
-    );
     try {
       const crypto = await import("crypto");
       const hash = crypto.createHmac("sha512", secret).update(payload).digest("hex");
