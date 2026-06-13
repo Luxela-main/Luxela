@@ -109,8 +109,8 @@ function TsaraPaymentModalComponent({
       description: `Luxela Order Payment - ${checkoutData.orders.length} item(s)`,
       paymentMethod: paymentMethod,
       paymentType: paymentMethod === "crypto" ? "stablecoin" : "fiat",
-      success_url: `${window.location.origin}/cart/success`,
-      cancel_url: `${window.location.origin}/cart/checkout`,
+      // Use redirect_url and let server create a payment link instead of the /checkout session
+      redirect_url: `${window.location.origin}/cart/success`,
       metadata: {
         cartId: orderId,
         itemCount: checkoutData.orders.length,
