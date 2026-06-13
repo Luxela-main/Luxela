@@ -44,8 +44,16 @@ function TsaraPaymentModalComponent({
           sessionStorage.setItem('pendingTransactionRef', data.paymentId); // Store Tsara payment ID as transaction ref
           sessionStorage.setItem('checkoutOrderId', orderId);
         }
-        // Redirect to Tsara payment page
-        window.location.href = data.paymentUrl;
+        // Redirect via local server endpoint which verifies the canonical Tsara URL
+        if (data.paymentId) {
+          const redirectTo = `/api/payment/redirect?plinkId=${encodeURIComponent(data.paymentId)}${data.paymentUrl ? `&url=${encodeURIComponent(data.paymentUrl)}` : ''}`;
+          window.location.href = redirectTo;
+        } else if (data.paymentUrl) {
+          // Fallback: direct URL from server
+          window.location.href = data.paymentUrl;
+        } else {
+          toastSvc.error('Payment URL not received from gateway');
+        }
       } else {
         toastSvc.error('Payment URL not received from gateway');
       }

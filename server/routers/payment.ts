@@ -186,9 +186,33 @@ export const paymentRouter = createTRPCRouter({
 
         const [payment] = await db.insert(payments).values(paymentData).returning();
 
+        // Prefer the canonical URL from Tsara by attempting a retrieval
+        let finalPaymentUrl = response.data?.url || response.data?.checkout_url || null;
+        try {
+          const providerId = response.data?.id || response.data?.payment_id || response.data?.plink_id || null;
+          if (providerId) {
+            console.log('[Cart Payment] Verifying payment link with Tsara for id:', providerId);
+            try {
+              const fetched = await retrievePaymentLink(providerId);
+              const fetchedData = (fetched as any)?.data || fetched;
+              const fetchedUrl = fetchedData?.url || fetchedData?.checkout_url || fetchedData?.link || fetchedData?.payment_url || null;
+              if (fetchedUrl) {
+                console.log('[Cart Payment] Using fetched canonical payment URL from Tsara:', fetchedUrl);
+                finalPaymentUrl = fetchedUrl;
+              } else {
+                console.warn('[Cart Payment] retrievePaymentLink returned no url; keeping original URL');
+              }
+            } catch (e: any) {
+              console.warn('[Cart Payment] retrievePaymentLink failed:', e?.message || String(e));
+            }
+          }
+        } catch (e) {
+          console.warn('[Cart Payment] verify payment link step failed:', (e as any)?.message || String(e));
+        }
+
         return {
           payment,
-          paymentUrl: response.data.url || response.data.checkout_url,
+          paymentUrl: finalPaymentUrl,
           paymentId: tsaraPaymentId,
         };
 
