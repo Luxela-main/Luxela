@@ -444,6 +444,8 @@ export const checkoutRouter = createTRPCRouter({
               amount: totalCents,
               currency: input.currency,
               reference: transactionRef,
+              email: input.customerEmail,
+              name: input.customerName,
               success_url: input.successUrl,
               cancel_url: input.cancelUrl,
               metadata: paymentMetadata,

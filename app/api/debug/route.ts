@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const secretKey = process.env.TSARA_SECRET_KEY;
+    const apiKey = process.env.TSARA_PUBLIC_KEY || process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
     const baseUrl = process.env.TSARA_BASE_URL;
     const sandboxUrl = 'https://sandbox.tsara.ng/v1';
     const nodeEnv = process.env.NODE_ENV || 'development';
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     const apiUrl = nodeEnv === 'production' ? baseUrl : sandboxUrl;
 
     console.log('[DEBUG] Tsara Configuration Check:', {
-      hasSecretKey: !!secretKey,
+      hasApiKey: !!apiKey,
       hasBaseUrl: !!baseUrl,
       apiUrl: apiUrl,
       nodeEnv: nodeEnv,
@@ -40,13 +40,13 @@ export async function GET(req: NextRequest) {
     });
 
     // Validate configuration
-    if (!secretKey) {
+    if (!apiKey) {
       return NextResponse.json(
         {
           status: 'error',
-          message: 'Missing TSARA_SECRET_KEY environment variable',
+          message: 'Missing TSARA_PUBLIC_KEY or NEXT_PUBLIC_TSARA_PUBLIC_KEY environment variable',
           config: {
-            secretKey: 'NOT_SET',
+            apiKey: 'NOT_SET',
             apiUrl: apiUrl,
             environment: nodeEnv,
           },
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
           status: 'error',
           message: 'Missing TSARA_BASE_URL environment variable',
           config: {
-            secretKey: secretKey ? '***SET***' : 'NOT_SET',
+            apiKey: apiKey ? '***SET***' : 'NOT_SET',
             apiUrl: 'NOT_SET',
             environment: nodeEnv,
           },
@@ -86,16 +86,16 @@ export async function GET(req: NextRequest) {
       url: `${apiUrl}/customers`,
       payload: testPayload,
       headers: {
-        'Authorization': `Bearer ${secretKey ? '***SET***' : 'NOT_SET'}`,
+        'Authorization': `Bearer ${apiKey ? '***SET***' : 'NOT_SET'}`,
         'Content-Type': 'application/json',
       },
-      secretKeyFormat: secretKey ? `${secretKey.substring(0, 10)}...${secretKey.substring(secretKey.length - 5)}` : 'NOT_SET',
+      apiKeyFormat: apiKey ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 5)}` : 'NOT_SET',
     });
 
     const response = await fetch(`${apiUrl}/customers`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${secretKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
           status: 'error',
           message: `Tsara API returned ${response.status}: ${response.statusText}`,
           config: {
-            secretKey: secretKey ? '***SET***' : 'NOT_SET',
+            apiKey: apiKey ? '***SET***' : 'NOT_SET',
             apiUrl: apiUrl,
             environment: nodeEnv,
           },
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
           status: 'partial_error',
           message: 'Tsara API succeeded but no customer ID in response',
           config: {
-            secretKey: secretKey ? '***SET***' : 'NOT_SET',
+            apiKey: apiKey ? '***SET***' : 'NOT_SET',
             apiUrl: apiUrl,
             environment: nodeEnv,
           },
@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
         status: 'success',
         message: 'Tsara API connection verified successfully',
         config: {
-          secretKey: secretKey ? '***SET***' : 'NOT_SET',
+          apiKey: apiKey ? '***SET***' : 'NOT_SET',
           apiUrl: apiUrl,
           environment: nodeEnv,
         },
@@ -198,7 +198,7 @@ export async function GET(req: NextRequest) {
           name: error.name,
           stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
         },
-        help: 'Make sure TSARA_SECRET_KEY is set in your environment variables',
+        help: 'Make sure TSARA_PUBLIC_KEY or NEXT_PUBLIC_TSARA_PUBLIC_KEY is set in your environment variables',
       },
       { status: 500 }
     );
@@ -208,9 +208,20 @@ export async function GET(req: NextRequest) {
 // Allow POST for direct testing
 export async function POST(req: NextRequest) {
   try {
+    const authHeader = req.headers.get('authorization');
+    const isAuthorized = authHeader === `Bearer ${process.env.DEBUG_TOKEN}` ||
+                         process.env.NODE_ENV === 'development';
+
+    if (!isAuthorized && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     
-    const secretKey = process.env.TSARA_SECRET_KEY;
+    const apiKey = process.env.TSARA_PUBLIC_KEY || process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
     const baseUrl = process.env.TSARA_BASE_URL;
     const sandboxUrl = 'https://sandbox.tsara.ng/v1';
     const nodeEnv = process.env.NODE_ENV || 'development';
@@ -218,9 +229,9 @@ export async function POST(req: NextRequest) {
     // Use sandbox in development, production URL in production
     const apiUrl = nodeEnv === 'production' ? baseUrl : sandboxUrl;
 
-    if (!secretKey || !apiUrl) {
+    if (!apiKey || !apiUrl) {
       return NextResponse.json(
-        { error: 'Missing Tsara configuration', help: 'Set TSARA_SECRET_KEY in environment' },
+        { error: 'Missing Tsara configuration', help: 'Set TSARA_PUBLIC_KEY or NEXT_PUBLIC_TSARA_PUBLIC_KEY in environment' },
         { status: 400 }
       );
     }
@@ -228,7 +239,7 @@ export async function POST(req: NextRequest) {
     const response = await fetch(`${apiUrl}/customers`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${secretKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },

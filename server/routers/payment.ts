@@ -51,14 +51,13 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         // --- FIRST: Validate Tsara API key is configured ---
-        const TSARA_SECRET_KEY =
-          env.TSARA_SECRET_KEY ||
-          process.env.TSARA_SECRET_KEY ||
-          process.env.TSARA_KEY ||
-          process.env.TSARA_API_KEY ||
-          process.env.TSARA_SECRET;
-        if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-          console.error('[Payment] CRITICAL: TSARA_SECRET_KEY is not configured');
+        const TSARA_PUBLIC_KEY =
+          process.env.TSARA_PUBLIC_KEY ||
+          process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ||
+          env.TSARA_PUBLIC_KEY ||
+          env.NEXT_PUBLIC_TSARA_PUBLIC_KEY;
+        if (!TSARA_PUBLIC_KEY || TSARA_PUBLIC_KEY.trim() === '') {
+          console.error('[Payment] CRITICAL: TSARA_PUBLIC_KEY is not configured');
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Payment service is not properly configured. Please contact support.",
@@ -127,11 +126,13 @@ export const paymentRouter = createTRPCRouter({
         } else {
           const amountInCents = Math.round(input.amount * AMOUNT_MULTIPLIER);
 
+          const transactionRef = `order_${input.orderId || uuidv4()}`;
+
           if (input.success_url && input.cancel_url) {
             response = await createCheckoutSession({
               amount: amountInCents,
               currency: currencyCode,
-              reference: `order_${input.orderId || uuidv4()}`,
+              reference: transactionRef,
               success_url: input.success_url,
               cancel_url: input.cancel_url,
               metadata: sanitizedMetadata,
@@ -153,7 +154,9 @@ export const paymentRouter = createTRPCRouter({
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payment provider returned invalid data" });
         }
 
-        const tsaraPaymentId = response.data.id;
+        const tsaraPaymentId = isStablecoinPayment
+          ? response.data.id
+          : response.data.reference || response.data.id;
         const amountCents = isStablecoinPayment
           ? Math.round((input.amount / USDC_TO_NGN_RATE) * 1000000)
           : Math.round(input.amount * AMOUNT_MULTIPLIER);
@@ -382,29 +385,27 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         // --- FIRST: Validate Tsara API key is configured ---
-        const TSARA_SECRET_KEY =
-          process.env.TSARA_SECRET_KEY ||
-          process.env.TSARA_KEY ||
-          process.env.TSARA_API_KEY ||
-          process.env.TSARA_SECRET ||
-          env.TSARA_SECRET_KEY ||
+        const TSARA_PUBLIC_KEY =
+          process.env.TSARA_PUBLIC_KEY ||
+          process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ||
+          env.TSARA_PUBLIC_KEY ||
+          env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ||
           '';
         
         console.log('[Cart Payment] ============================================');
-        console.log('[Cart Payment] TSARA_SECRET_KEY check:');
-        console.log('[Cart Payment]   Configured:', !!TSARA_SECRET_KEY);
-        console.log('[Cart Payment]   Length:', TSARA_SECRET_KEY?.length || 0);
-        console.log('[Cart Payment]   Prefix:', TSARA_SECRET_KEY ? TSARA_SECRET_KEY.substring(0, 15) + '...' : 'N/A');
+        console.log('[Cart Payment] TSARA_PUBLIC_KEY check:');
+        console.log('[Cart Payment]   Configured:', !!TSARA_PUBLIC_KEY);
+        console.log('[Cart Payment]   Length:', TSARA_PUBLIC_KEY?.length || 0);
+        console.log('[Cart Payment]   Prefix:', TSARA_PUBLIC_KEY ? TSARA_PUBLIC_KEY.substring(0, 15) + '...' : 'N/A');
         console.log('[Cart Payment] ============================================');
         
-        if (!TSARA_SECRET_KEY || TSARA_SECRET_KEY.trim() === '') {
-          console.error('[Cart Payment] CRITICAL: TSARA_SECRET_KEY is not configured');
+        if (!TSARA_PUBLIC_KEY || TSARA_PUBLIC_KEY.trim() === '') {
+          console.error('[Cart Payment] CRITICAL: TSARA_PUBLIC_KEY is not configured');
           console.error('[Cart Payment] Checked variables:');
-          console.error('  - process.env.TSARA_SECRET_KEY:', process.env.TSARA_SECRET_KEY ? 'SET' : 'NOT SET');
-          console.error('  - process.env.TSARA_KEY:', process.env.TSARA_KEY ? 'SET' : 'NOT SET');
-          console.error('  - process.env.TSARA_API_KEY:', process.env.TSARA_API_KEY ? 'SET' : 'NOT SET');
-          console.error('  - process.env.TSARA_SECRET:', process.env.TSARA_SECRET ? 'SET' : 'NOT SET');
-          console.error('  - env.TSARA_SECRET_KEY:', env.TSARA_SECRET_KEY ? 'SET' : 'NOT SET');
+          console.error('  - process.env.TSARA_PUBLIC_KEY:', process.env.TSARA_PUBLIC_KEY ? 'SET' : 'NOT SET');
+          console.error('  - process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY:', process.env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ? 'SET' : 'NOT SET');
+          console.error('  - env.TSARA_PUBLIC_KEY:', env.TSARA_PUBLIC_KEY ? 'SET' : 'NOT SET');
+          console.error('  - env.NEXT_PUBLIC_TSARA_PUBLIC_KEY:', env.NEXT_PUBLIC_TSARA_PUBLIC_KEY ? 'SET' : 'NOT SET');
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Payment service is not properly configured. Please check your .env file and restart the server.",
@@ -436,7 +437,7 @@ export const paymentRouter = createTRPCRouter({
         console.log('[Cart Payment] Cart items query result:', items.length, 'items');
         if (items.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Cart is empty" });
 
-        // Note: TSARA_SECRET_KEY already validated above
+        // Note: TSARA_PUBLIC_KEY already validated above
 
         // --- Validate amount ranges ---
         if (input.amount <= 0) {
@@ -495,12 +496,14 @@ export const paymentRouter = createTRPCRouter({
         } else {
           const amountInCents = Math.round(input.amount); // Amount already in kobo from client
 
+          const transactionRef = `cart_${input.cartId}`;
+
           if (input.success_url && input.cancel_url) {
             console.log('[Cart Payment] Creating checkout session for amount:', amountInCents, currencyCode);
             response = await createCheckoutSession({
               amount: amountInCents,
               currency: currencyCode,
-              reference: `cart_${input.cartId}`,
+              reference: transactionRef,
               success_url: input.success_url,
               cancel_url: input.cancel_url,
               metadata: sanitizedMetadata,
@@ -525,7 +528,9 @@ export const paymentRouter = createTRPCRouter({
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payment provider returned invalid data" });
         }
 
-        const tsaraPaymentId = response.data.id;
+        const tsaraPaymentId = isStablecoinPayment
+          ? response.data.id
+          : response.data.reference || response.data.id;
         const amountCents = isStablecoinPayment
           ? Math.round((input.amount / USDC_TO_NGN_RATE) * 1000000)
           : Math.round(input.amount); // Amount already in kobo from client
