@@ -22,8 +22,10 @@ const getHandler = async (req: NextRequest) => {
   // Log all GET requests for debugging
   console.warn(`[tRPC] GET request received: ${procedurePath || '(batch)'}, Query params: ${url.searchParams.toString()}`);
   
-  // If this looks like a mutation request (has input params), forward to POST handler
-  if (mutationProcedures.includes(procedurePath) || url.searchParams.has('input')) {
+  // Only forward known mutation procedures to the POST handler.
+  // Forwarding all GETs that include `input` causes POST requests to be sent
+  // to query procedures (which tRPC rejects) — so only forward explicit mutations.
+  if (mutationProcedures.includes(procedurePath)) {
     console.warn(`[tRPC] Forwarding GET mutation request to POST handler: ${procedurePath}`);
     
     // Clone the request but change method to POST
