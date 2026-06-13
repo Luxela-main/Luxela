@@ -390,6 +390,19 @@ export async function createFiatPaymentLink(data: {
     
     // Note: Do not pass customer_id - Tsara creates customers automatically
     const response = await tsaraApi.post("/payment-links", payload);
+
+    // Normalize response payload to tolerate string/array shapes from provider
+    try {
+      let respPayload: any = response?.data;
+      if (typeof respPayload === 'string') {
+        try { respPayload = JSON.parse(respPayload); } catch (e) { respPayload = { raw: response.data }; }
+      }
+      if (Array.isArray(respPayload) && respPayload.length > 0) respPayload = { data: respPayload[0] };
+      // Override response.data to keep rest of function unchanged
+      try { Object.defineProperty(response, 'data', { value: respPayload, writable: true }); } catch (e) { /* ignore */ }
+    } catch (e) {
+      // If normalization fails, proceed and let existing checks handle it
+    }
     
     if (!response || !response.data || typeof response.data !== 'object') {
       console.error("No response or invalid API response structure:", response?.data);
@@ -516,6 +529,18 @@ export async function createStablecoinPaymentLink(data: {
     console.log('[Tsara API] Creating stablecoin payment link:', JSON.stringify(payload, null, 2));
     
     const response = await tsaraApi.post("/stablecoin/payment-links", payload);
+
+    // Normalize response payload to tolerate string/array shapes from provider
+    try {
+      let respPayload: any = response?.data;
+      if (typeof respPayload === 'string') {
+        try { respPayload = JSON.parse(respPayload); } catch (e) { respPayload = { raw: response.data }; }
+      }
+      if (Array.isArray(respPayload) && respPayload.length > 0) respPayload = { data: respPayload[0] };
+      try { Object.defineProperty(response, 'data', { value: respPayload, writable: true }); } catch (e) { /* ignore */ }
+    } catch (e) {
+      // ignore
+    }
     
     if (!response || !response.data || typeof response.data !== 'object') {
       console.error("No response or invalid API response structure:", response?.data);
@@ -642,6 +667,18 @@ export async function createCheckoutSession(data: {
     console.log('[Tsara API] Creating checkout session:', JSON.stringify(checkoutData, null, 2));
 
     const response = await tsaraApi.post("/checkout", checkoutData);
+
+    // Normalize response payload to tolerate string/array shapes from provider
+    try {
+      let respPayload: any = response?.data;
+      if (typeof respPayload === 'string') {
+        try { respPayload = JSON.parse(respPayload); } catch (e) { respPayload = { raw: response.data }; }
+      }
+      if (Array.isArray(respPayload) && respPayload.length > 0) respPayload = { data: respPayload[0] };
+      try { Object.defineProperty(response, 'data', { value: respPayload, writable: true }); } catch (e) { /* ignore */ }
+    } catch (e) {
+      // ignore
+    }
     
     console.log('[Tsara API] Full response from /checkout:', {
       status: response.status,
@@ -1134,6 +1171,37 @@ export async function verifyWebhookSignature(
       return false;
     }
   } else {
+    // Global response interceptor: normalize response.data shapes (string, array, nested)
+    tsaraApi.interceptors.response.use(
+      (resp) => {
+        try {
+          let data: any = resp?.data;
+          if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch (e) { data = { raw: resp.data }; }
+          }
+          if (Array.isArray(data) && data.length > 0) data = { data: data[0] };
+          try { Object.defineProperty(resp, 'data', { value: data, writable: true }); } catch (e) { /* ignore */ }
+        } catch (e) {
+          // ignore normalization errors
+        }
+        return resp;
+      },
+      (error) => {
+        try {
+          if (error?.response) {
+            let data: any = error.response.data;
+            if (typeof data === 'string') {
+              try { data = JSON.parse(data); } catch (e) { data = { raw: error.response.data }; }
+            }
+            if (Array.isArray(data) && data.length > 0) data = { data: data[0] };
+            try { Object.defineProperty(error.response, 'data', { value: data, writable: true }); } catch (e) { /* ignore */ }
+          }
+        } catch (e) {
+          // ignore
+        }
+        return Promise.reject(error);
+      }
+    );
     try {
       const crypto = await import("crypto");
       const hash = crypto.createHmac("sha512", secret).update(payload).digest("hex");
