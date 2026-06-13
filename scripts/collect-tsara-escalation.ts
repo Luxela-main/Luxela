@@ -17,7 +17,7 @@ async function run() {
       let fetchResult: any = null;
       if (url) {
         try {
-          const resp = await fetch(url, { method: 'GET', timeout: 15000 });
+          const resp = await fetch(url, { method: 'GET' });
           const text = await resp.text();
           fetchResult = { status: resp.status, headers: Object.fromEntries(resp.headers.entries()), body: text.substring(0, 2000) };
         } catch (e: any) {
