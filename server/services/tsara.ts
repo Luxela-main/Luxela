@@ -1176,7 +1176,9 @@ export async function verifyWebhookSignature(
       (resp) => {
         try {
           let data: any = resp?.data;
-          if (typeof data === 'string') {
+          if (data === null || typeof data === 'undefined') {
+            data = {};
+          } else if (typeof data === 'string') {
             try { data = JSON.parse(data); } catch (e) { data = { raw: resp.data }; }
           }
           if (Array.isArray(data) && data.length > 0) data = { data: data[0] };
@@ -1190,7 +1192,9 @@ export async function verifyWebhookSignature(
         try {
           if (error?.response) {
             let data: any = error.response.data;
-            if (typeof data === 'string') {
+            if (data === null || typeof data === 'undefined') {
+              data = { raw: error.response.data };
+            } else if (typeof data === 'string') {
               try { data = JSON.parse(data); } catch (e) { data = { raw: error.response.data }; }
             }
             if (Array.isArray(data) && data.length > 0) data = { data: data[0] };
